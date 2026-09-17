@@ -36,7 +36,12 @@ Phase 8 local UI  →  Phase 9 identity  →  Phase 10 pairing + room identity
      →  Phase 5 offline  →  Phase 7 hardening + recovery from local loss
 ```
 
-Phase 8 is **the UI, alone**: every experiment so far measured whether Claude
+Phase 8 (the local UI) is **done** — `http://127.0.0.1:4782`, embedded in the
+binary, live over SSE. **Room content is untrusted**: it arrives from other peers,
+so `ui.html` escapes before applying markup and a test asserts that order. Next is
+Phase 9, peer identity.
+
+Phase 8 was **the UI, alone**: every experiment so far measured whether Claude
 understands a teammate, never whether a person finds watching one useful. That is
 half of §30 and it is untested. It depends on nothing else, so nothing precedes it.
 

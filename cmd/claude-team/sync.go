@@ -108,6 +108,8 @@ func (d *Daemon) pullFrom(client *http.Client, addr string) (int, error) {
 		return 0, err
 	}
 
+	d.markPeerSeen(addr)
+
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	stored := 0
@@ -126,6 +128,9 @@ func (d *Daemon) pullFrom(client *http.Client, addr string) (int, error) {
 			log.Printf("sync: CONFLICT from %s — peer %s sequence %d is already held by a different event; run `claude-team conflicts`",
 				addr, PeerName(ev.PeerID), ev.PeerSequence)
 		}
+	}
+	if stored > 0 {
+		d.notify()
 	}
 	return stored, nil
 }

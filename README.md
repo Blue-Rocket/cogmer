@@ -55,6 +55,17 @@ CLAUDE_TEAM_ROOM=demo claude -p "I don't think her explanation is right. Check t
 CLAUDE_TEAM_ROOM=demo ./bin/claude-team log
 ```
 
+## The room, in a browser
+
+```sh
+claude-team daemon        # then open http://127.0.0.1:4782
+```
+
+Live-updating over server-sent events, with attribution anchored on each peer's
+derived name rather than the display name it asserts, timestamps, code and
+Markdown rendering, connection status, and peer reachability. Served from the
+binary — no assets, no build step, no external requests.
+
 ## Commands
 
 | Command | Purpose |

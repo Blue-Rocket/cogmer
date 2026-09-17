@@ -1,0 +1,124 @@
+<!-- Served from the binary; no external requests. Room content arrives from other
+     peers and is therefore untrusted: it is escaped before any markup is applied,
+     and only the constructs this file generates are ever produced. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>claude-team</title>
+<style>
+  :root {
+    --bg:#faf9f7; --fg:#1c1b19; --dim:#6b6660; --line:#e3e0db;
+    --card:#fff; --code:#f2f0ec; --me:#2f6f4f; --them:#3a5a8c; --warn:#a3521f;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --bg:#16150f; --fg:#e8e4dc; --dim:#8f8a82; --line:#2b2924;
+           --card:#1d1c16; --code:#23211b; --me:#7fc0a0; --them:#8fb3e0; --warn:#d99a5e; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:15px/1.6 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);
+         padding:14px 20px;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+  h1{margin:0;font-size:15px;font-weight:600;letter-spacing:.14em;text-transform:uppercase}
+  .status{margin-left:auto;font-size:12px;color:var(--dim);display:flex;gap:14px;align-items:center}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;
+       background:var(--dim);vertical-align:middle}
+  .dot.live{background:var(--me)} .dot.down{background:var(--warn)}
+  main{max-width:820px;margin:0 auto;padding:22px 20px 80px}
+  .turn{margin:0 0 26px}
+  .who{display:flex;gap:10px;align-items:baseline;margin-bottom:5px}
+  .name{font-weight:600;font-size:13px}
+  .name.me{color:var(--me)} .name.them{color:var(--them)}
+  .peer{font-size:11px;color:var(--dim)}
+  .unverified{font-size:10px;color:var(--warn);border:1px solid var(--warn);
+              border-radius:3px;padding:0 4px;text-transform:uppercase;letter-spacing:.05em}
+  .time{margin-left:auto;font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+  .body{background:var(--card);border:1px solid var(--line);border-radius:7px;padding:12px 15px;
+        overflow-wrap:anywhere}
+  .body p{margin:0 0 .7em} .body p:last-child{margin:0}
+  .body pre{background:var(--code);padding:10px 12px;border-radius:5px;overflow-x:auto;margin:.7em 0}
+  .body code{background:var(--code);padding:1px 5px;border-radius:3px;
+             font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+  .body pre code{background:none;padding:0}
+  .body ul{margin:.5em 0;padding-left:1.3em}
+  .tools{font-size:12px;color:var(--dim);margin-top:6px}
+  .empty{color:var(--dim);text-align:center;padding:60px 20px}
+  .empty code{background:var(--code);padding:2px 6px;border-radius:3px;font-size:13px}
+</style>
+<header>
+  <h1 id="room">—</h1>
+  <div class="status">
+    <span id="conn"><span class="dot" id="connDot"></span><span id="connText">connecting</span></span>
+    <span id="peers"></span>
+  </div>
+</header>
+<main id="feed"><div class="empty">Waiting for the room…</div></main>
+<script>
+(function(){
+  const feed=document.getElementById('feed');
+  let lastKey='';
+
+  // Everything below treats room content as hostile: escape first, then apply only
+  // the small set of constructs we generate ourselves.
+  const esc=s=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function render(md){
+    const blocks=esc(md).split(/```/);
+    return blocks.map((b,i)=>{
+      if(i%2) return '<pre><code>'+b.replace(/^\w*\n/,'')+'</code></pre>';
+      return b.split(/\n{2,}/).filter(p=>p.trim()).map(p=>{
+        const lines=p.split('\n');
+        if(lines.every(l=>/^\s*[-*]\s+/.test(l)))
+          return '<ul>'+lines.map(l=>'<li>'+inline(l.replace(/^\s*[-*]\s+/,''))+'</li>').join('')+'</ul>';
+        return '<p>'+inline(p).replace(/\n/g,'<br>')+'</p>';
+      }).join('');
+    }).join('');
+  }
+  const inline=s=>s
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+
+  function draw(state){
+    document.getElementById('room').textContent=state.roomName||state.room;
+    const key=state.events.map(e=>e.eventId).join(',');
+    if(key===lastKey) return; lastKey=key;
+
+    if(!state.events.length){
+      feed.innerHTML='<div class="empty">No conversation yet. Start a Claude Code session with the hooks registered.</div>';
+      return;
+    }
+    const pinned=window.scrollY+window.innerHeight>=document.body.scrollHeight-80;
+    feed.innerHTML=state.events.map(e=>{
+      const mine=e.peerId===state.selfPeerId;
+      const claude=e.eventType==='ASSISTANT_MESSAGE';
+      const name=claude?('Claude — '+e.userDisplayName):e.userDisplayName;
+      const tools=(e.toolCalls||0)>0?'<div class="tools">▸ '+e.toolCalls+' tool operation'+(e.toolCalls>1?'s':'')+'</div>':'';
+      return '<div class="turn"><div class="who">'
+        +'<span class="name '+(mine?'me':'them')+'">'+esc(name)+'</span>'
+        +'<span class="peer">'+esc(e.peerName)+'</span>'
+        +(mine?'':'<span class="unverified">unverified</span>')
+        +'<span class="time">'+esc(e.clock)+'</span></div>'
+        +'<div class="body">'+render(e.content)+tools+'</div></div>';
+    }).join('');
+    if(pinned) window.scrollTo(0,document.body.scrollHeight);
+  }
+
+  function peers(list){
+    const el=document.getElementById('peers');
+    if(!list||!list.length){el.textContent='';return;}
+    el.innerHTML=list.map(p=>'<span><span class="dot '+(p.online?'live':'down')+'"></span>'
+      +esc(p.name)+(p.online?'':' · '+esc(p.since))+'</span>').join(' ');
+  }
+
+  let es;
+  function connect(){
+    es=new EventSource('/stream');
+    es.onopen=()=>{document.getElementById('connDot').className='dot live';
+                   document.getElementById('connText').textContent='live';};
+    es.onmessage=ev=>{const s=JSON.parse(ev.data); draw(s); peers(s.peers);};
+    es.onerror=()=>{document.getElementById('connDot').className='dot down';
+                    document.getElementById('connText').textContent='reconnecting';
+                    es.close(); setTimeout(connect,1500);};
+  }
+  connect();
+})();
+</script>

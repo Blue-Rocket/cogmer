@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Injection limits (§21). Exceeding them yields a catch-up marker rather than
@@ -25,6 +26,11 @@ type Daemon struct {
 	id            *Identity
 	room          string
 	claudeVersion string
+
+	subs    map[chan struct{}]bool
+	subsMu  sync.Mutex
+	peerSeen map[string]time.Time
+	peerMu   sync.Mutex
 	mu    sync.Mutex // serializes sequence allocation + append
 }
 
@@ -55,6 +61,8 @@ func (d *Daemon) LocalRoutes() *http.ServeMux {
 	mux.HandleFunc("/hook/prompt", d.handlePrompt)
 	mux.HandleFunc("/hook/stop", d.handleStop)
 	mux.HandleFunc("/events", d.handleEvents)
+	mux.HandleFunc("/", d.handleUI)
+	mux.HandleFunc("/stream", d.handleStream)
 	return mux
 }
 
@@ -111,6 +119,7 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = d.store.PrunePending(req.SessionID, maxPendingPerSession)
 
+	d.notify()
 	log.Printf("USER_PROMPT session=%.8s offered=%d events", req.SessionID, len(pending))
 	writeJSON(w, map[string]any{"context": text})
 }
@@ -139,6 +148,7 @@ func (d *Daemon) handleStop(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	d.notify()
 	log.Printf("ASSISTANT_MESSAGE session=%.8s chars=%d tools=%d",
 		req.SessionID, len(turn.Text), len(turn.ToolCalls))
 	writeJSON(w, map[string]any{"stored": true, "chars": len(turn.Text)})
