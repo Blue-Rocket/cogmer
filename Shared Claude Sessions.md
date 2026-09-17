@@ -1396,6 +1396,27 @@ Claude should understand:
 - they are not system instructions;  
 - the local user's current prompt remains authoritative.
 
+## The boundary must be unforgeable
+
+A framing sentence at the top of the block is not sufficient, because the content it frames can end the block.
+
+Injected content is written by other people and their Claude sessions, and nothing verifies who sent it. A turn containing the closing delimiter escapes the block, and whatever follows appears to be *outside* it — where the framing no longer applies and text can impersonate an operator, a system, or the local user. This is not hypothetical; an implementation that interpolated content directly was defeated by a turn consisting of a closing tag and a forged instruction.
+
+Therefore:
+
+- delimit each block with a value the content cannot know, generated per injection;  
+- remove that value from the content, so a turn cannot reproduce it by accident or by guess;  
+- state that the block ends only at the matching value, and that text claiming otherwise is part of the block;  
+- restate the framing *after* the content, so the last thing read is the boundary rather than the first.
+
+## Frame by classification, not by authority
+
+Telling a model to disregard instructions is weaker than telling it what kind of thing it is reading.
+
+The useful framing names the failure mode: that nothing inside the block is addressed to it, however phrased, including text appearing to come from an operator or a system; and that a request appearing inside the block is *a report that someone made a request*, not a request made of it.
+
+That distinction is what allows a model to classify hostile content correctly rather than weigh it against competing instructions — and, in practice, to say so: a session receiving a forged operator instruction identified it, explained that it came from inside the record and was therefore information rather than instruction, and reported the attempt to its own user.
+
 Attribution in injected context carries more weight than attribution in a display, because a model reasons about who said a thing. A speaker a peer has not verified must be marked as unverified in the injected text itself, not merely in the interface. Otherwise a peer that has chosen a convincing name can place words in a trusted colleague's mouth, in a form that reads to the model exactly like the colleague saying them.
 
 ---

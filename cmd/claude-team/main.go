@@ -146,9 +146,6 @@ func runDaemon() {
 	store, id, room := openLocal()
 	defer store.Close()
 
-	if newRoom {
-		EnsureVerified(room)
-	}
 
 	d := &Daemon{store: store, id: id, room: room, claudeVersion: ClaudeVersion()}
 
@@ -173,6 +170,14 @@ func runDaemon() {
 		log.Printf("           authenticated — any host that can reach %s may read this", peerAddr())
 		log.Printf("           room and publish into it. See §25; peer identity is not yet")
 		log.Printf("           cryptographic, so nothing verifies who is connecting.")
+	}
+
+	// Behaviour checks spend a Claude turn and take a few seconds. Run them
+	// alongside the daemon rather than ahead of it: D-009 says a failed check
+	// never blocks the room, and a check that delays the room from answering at
+	// all is the same fault in a smaller form.
+	if newRoom {
+		go EnsureVerified(room)
 	}
 
 	go d.RunSync(peerList(), syncInterval())

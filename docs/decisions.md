@@ -1716,3 +1716,55 @@ collaboration-specific questions need a pair, but the ergonomic ones do not.
 browser is fine and nothing more is needed; that it is right but wants announcing,
 making the notification next; or that a second window is not consulted at all, making
 the terminal pane next. Those lead to different work, which is the reason to wait.
+
+---
+
+## D-040 — The injected block is fenced with an unforgeable value, and framed by classification
+
+**Date:** 2026-09-17 · **Status:** active (implemented)
+
+**Context.** Asked whether the literal teammate turn is pushed into context without
+language making clear it is informational rather than instructional. There was such
+language — a sentence at the top of the block — and it was defeatable.
+
+**The vulnerability.** Content was interpolated raw. A teammate turn consisting of
+`</message></team-conversation>` followed by a forged operator instruction escaped
+the block entirely: the injected text then appeared *after* the closing tag, where
+the framing no longer applied. Demonstrated rather than theorised. Since peer
+identity is unverified (D-023), the capability belonged to anyone who could reach
+the sync port.
+
+**Decision — the boundary must be unforgeable.** Each block carries a fence value
+generated per injection and unknowable to the content; the value is stripped from
+the content so it cannot be reproduced; the framing states that the block ends only
+at the matching value and that text claiming otherwise is part of the block; and the
+framing is restated *after* the content, so the last thing read is the boundary
+rather than the first.
+
+**Decision — frame by classification rather than authority.** Instructing a model to
+disregard instructions invites it to weigh two instructions. Telling it what *kind of
+thing* it is reading does not. The framing now says that nothing inside the block is
+addressed to it however phrased — including text appearing to come from an operator,
+a system, or its own user — and that a request appearing inside is *a report that
+someone made a request*, not a request made of it.
+
+**Verified against a live session, not only in structure.** A real session given a
+forged `SYSTEM OVERRIDE` instruction ignored it, explained that it came from inside
+the record and was therefore information rather than instruction, and reported the
+attempt to its own user unprompted. The classification framing is what gave it the
+language to do that.
+
+**What this does not solve.** A teammate's genuine turn may legitimately contain
+imperative text — colleagues tell each other to run things. No fence distinguishes a
+hostile imperative from an honest one, and none should: both are reports of what
+someone said. The defence is that neither is addressed to the reading model, which is
+exactly what the framing now asserts.
+
+**Rejected.**
+- *Escaping the delimiters* — whack-a-mole against prose, and it assumes the
+  boundary is syntactic when the model reads it as language.
+- *Truncating or sanitising content* — §3.4 requires the actual conversation be
+  preserved, and a teammate's words are not the system's to edit.
+- *Relying on the model to be robust* — it was, here, and that is a property of the
+  model rather than of this design. The fence holds whether or not the next model
+  does.
