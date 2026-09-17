@@ -12,8 +12,8 @@ one place where the specification still poses a question that has been answered.
 Findings are ordered by consequence, not by section number.
 
 **Status, as of the last revision.** Eight of the original fourteen are resolved, two
-dissolved by a change of model rather than fixed, and four remain open. One further
-finding (B4) was raised afterwards and is resolved. Each carries its own
+dissolved by a change of model rather than fixed, and four remain open. Two further
+findings were raised afterwards: B4, resolved, and A5, open. Each carries its own
 status line; the open ones are collected at the end so they are not lost among the
 closed.
 
@@ -188,6 +188,46 @@ widening (D-005). Keep the investigative framing only for what is still unknown.
 ---
 
 ## B. Under-specification that will make peers diverge
+
+### A5 — D-028's policy on losing a room database is not implemented, and the loss is silent
+
+**OPEN. Found 2026-09-16 by deleting a room database and watching.**
+
+**High.** §8 says a peer that has lost a room's local state must stop using its
+identifier in that room, and D-028 says its membership ends. Nothing enforces
+either. Reproduced end to end:
+
+- **While the daemon runs, the loss is invisible.** It continued serving all six
+  events from its open file handle after the file was deleted. The failure stays
+  latent until a restart that may be hours later.
+- **On restart the daemon silently creates an empty room** and logs an ordinary
+  startup line. An emptied room is indistinguishable from a new one, because
+  nothing durable outside the room records that the peer was a member.
+- **The sequence counter restarts at 1**, which is precisely the condition D-027
+  detects on the *receiving* side. The peer that caused it is never told.
+
+The resulting experience is that nothing appears wrong. Teammate context stops
+arriving because the local room is empty; the peer's own events stop reaching
+anyone because they collide; each side sees the other fall quiet. The room reports
+one event where it held six.
+
+This is the same shape as A1 and B4: a failure with no error path, discovered only
+by testing the failure rather than the success.
+
+**Recommend.** The policy needs three things to become real, none of them large:
+
+- **Durable membership state outside any room database** — which rooms this peer
+  belongs to and the highest sequence it reached in each. Without it, lost state
+  cannot be told from a new room.
+- **A check on opening a room.** If the index claims membership and the database is
+  absent, or its highest sequence is below what the index recorded, state has been
+  lost.
+- **Refusal, and saying so.** Do not publish into that room. Tell the user the
+  membership has ended and why, rather than starting quietly at 1.
+
+Detection at startup does not cover the open-handle case, where the file is
+unlinked beneath a running daemon. That is the smaller half of the problem and can
+follow.
 
 ### B1 — §24 lists ordering fields but defines no comparator
 
@@ -429,10 +469,11 @@ Worth recording, because the useful output of a review is not only a defect list
 
 ## Still open
 
-Four findings and three notes, after the work of 2026-09-16:
+Five findings and three notes, after the work of 2026-09-16:
 
 | | finding | why it survives |
 |---|---|---|
+| A5 | room-loss policy unimplemented; loss is silent | spec says leave, code restarts at 1 |
 | B1 | §24 has no ordering comparator | peers can diverge silently |
 | B2 | injection order unspecified | late-arriving events injected out of sequence |
 | C1 | behavior dependence unacknowledged | `doctor` exists; the specification does not require it |
