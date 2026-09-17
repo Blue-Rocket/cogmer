@@ -1952,21 +1952,19 @@ Add:
 - database recovery;  
 - diagnostics.
 
+Database recovery includes the membership index, the check that reads it when a room is opened, and the report when it finds state missing. That sits here rather than earlier because it guards against a loss, and a guard has nothing to protect until there is something worth losing.
+
 Partially taken already, where doing so was cheaper than deferring: verification of relied-on host behaviour, quarantine of conflicting events, and separation of the local and peer network interfaces.
 
 ---
 
-## Phase 8 — Complete the local room
+## Phase 8 — The local UI
 
-Build what a room is, before building how rooms are joined:
+A room, read by a person, updating without them acting.
 
-- a room identifier and a generated room name;  
-- the membership index, the check that reads it, and the report when it finds state missing;  
-- the local UI, updating without the reader acting.
+Every experiment so far has measured whether *Claude* understands a teammate's conversation. Whether a *person* finds it useful to watch one has never been tested, and cannot be while the only way to read a room is a command-line dump. That is half of the question this prototype exists to answer, and it is the half with no evidence at all.
 
-All of it is local. None of it commits to a protocol, so none of it can entrench a format that later phases have to live with.
-
-The UI is the reason this comes first. Every experiment so far has measured whether *Claude* understands a teammate's conversation. Whether a *person* finds it useful to watch one has never been tested, and cannot be while the only way to read a room is a command-line dump. That is half of the question this prototype exists to answer.
+This phase carries nothing else. It depends on no identifier, no index, and no protocol, so it entrenches nothing and can be built immediately. Requirements are in the section on the shared conversation UI; the live-update path is the one place where pushing earns its cost.
 
 ## Phase 9 — Peer identity
 
@@ -1978,28 +1976,33 @@ Before pairing rather than after. A guest list admits whoever claims a name unti
 
 ## Phase 10 — Pairing
 
+- a room identifier and a generated room name;  
 - invitations;  
 - joining;  
 - known peers, and a room's guests;  
 - admission by proof of possession, or by a host approving a request.
 
-Nothing here should be built earlier. Its correctness rests entirely on Phase 9.
+Room identity belongs here rather than earlier: a generated name exists to be spoken in an invitation, and has no work to do until there is one.
+
+Nothing in this phase should be built before Phase 9. Its correctness rests entirely on identity being verifiable.
 
 ---
 
 ## Order of remaining work
 
 ```
-Phase 8    complete the local room
+Phase 8    the local UI
    ↓
 Phase 9    peer identity
    ↓
-Phase 10   pairing
+Phase 10   pairing, and room identity
    ↓
 Phase 5    offline and reconnection
    ↓
-Phase 7    hardening
+Phase 7    hardening, and recovery from local loss
 ```
+
+Each phase carries one purpose. Where an earlier draft bundled room identity and the membership index alongside the UI, they have been moved to the phases whose purpose they serve — neither blocks the UI, and putting them first would have delayed the only outstanding question this prototype was built to answer.
 
 Pairs are the target throughout. A third peer adds noise to a working session and is unlikely to invalidate anything, so Phase 6 waits for evidence that anyone wants it.
 

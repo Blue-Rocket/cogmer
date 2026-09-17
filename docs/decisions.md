@@ -1316,12 +1316,20 @@ Phase 8  complete the local room   →  Phase 9  peer identity
 Numbers are never reused or reassigned, so references in this log and in the code
 still resolve. Superseded phases are marked, not rewritten.
 
-**Why the local room comes first.** It is entirely local, so it entrenches no
-protocol that later phases must live with. And it contains the UI, which is the
-reason this ordering matters: every experiment so far measured whether *Claude*
+**Why the UI comes first.** Every experiment so far measured whether *Claude*
 understands a teammate's conversation, and none measured whether a *person* finds
 watching one useful. That is half of §30, it has never been tested, and it cannot be
 while the only way to read a room is a command-line dump.
+
+*Amended the same day.* The first draft of this bundled room identity and the
+membership index into the same phase, argued the UI was the reason that phase came
+first, and then listed the UI third. Neither of the others blocks it — the UI needs
+no room identifier and nothing from the index — so both were moved to the phases
+whose purpose they actually serve: room identity to pairing, where a generated name
+finally has an invitation to be spoken in, and the index to hardening, where
+database recovery already sits. Phase 8 is now the UI alone. Bundling work that
+shares a location rather than a purpose is how the thing a phase exists for ends up
+scheduled behind the things it does not need.
 
 **Why identity precedes pairing.** A guest list admits whoever claims a name until
 identity is verifiable, so an admission flow built before Phase 9 would be built

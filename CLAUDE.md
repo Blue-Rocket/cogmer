@@ -32,13 +32,13 @@ no archive. That is Phase 1 work; do not treat the current shape as the design.
 Follow §31's stated order, not numeric order:
 
 ```
-Phase 8 local room  →  Phase 9 identity  →  Phase 10 pairing
-     →  Phase 5 offline  →  Phase 7 hardening
+Phase 8 local UI  →  Phase 9 identity  →  Phase 10 pairing + room identity
+     →  Phase 5 offline  →  Phase 7 hardening + recovery from local loss
 ```
 
-Phase 8 is next, and the **local UI is the point of it**: every experiment so far
-measured whether Claude understands a teammate, never whether a person finds
-watching one useful. That is half of §30 and it is untested.
+Phase 8 is **the UI, alone**: every experiment so far measured whether Claude
+understands a teammate, never whether a person finds watching one useful. That is
+half of §30 and it is untested. It depends on nothing else, so nothing precedes it.
 
 ## Where things stand
 
