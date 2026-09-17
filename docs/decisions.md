@@ -496,3 +496,58 @@ outstanding invitations and make an archived room harder to recognize.
 **Revisit when** a name is needed outside the scope of a single peer, such as a
 directory of rooms across an organization. Per-peer uniqueness would no longer be
 sufficient.
+
+---
+
+## D-018 — Identity and reachability are separate; invitations carry an endpoint and a secret
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Context.** The invitation format from D-017 read
+`misty-canyon@davids-macbook:4783`, and the specification had used
+`alice-machine:4783` since §4. Neither said how a machine name resolves.
+
+Checked on the development machine: `os.Hostname()` returns `macbookpro.lan`,
+`scutil --get LocalHostName` returns `pushover`, and the resolvable name maps to
+`192.168.86.31` — a LAN address no remote teammate can reach. Tailscale is not
+installed, so MagicDNS does not exist there at all. Three names for one machine,
+none of them `davids-macbook`, and the one that resolves is unreachable from
+outside.
+
+**Decision.** Separate the two concerns the invitation had merged.
+
+- `machineId` is an **identity** label for attribution and display. Nothing routes
+  by it.
+- An **endpoint** is reachability, opaque to the collaboration protocol, supplied
+  by whichever transport is in use.
+
+A daemon must **discover** its endpoint rather than derive one from its hostname —
+under Tailscale by asking Tailscale for the MagicDNS name or tailnet address, both
+of which are Tailscale's properties and not the host's. A daemon that cannot
+determine a reachable address should say so instead of issuing an unusable
+invitation.
+
+**The endpoint is a bootstrap hint,** correct only once. Having joined, a peer
+learns the membership and how to reach it, so the inviting peer's address stops
+mattering — the same principle as an inviting peer not being authoritative. An
+invitation may carry several endpoints, since a teammate on the same network and
+one across the internet do not reach the same address, and endpoints go stale when
+machines move.
+
+**A room name is not a credential.** This follows directly from D-017: the name is
+drawn from a deliberately small, speakable space, which is ample for avoiding
+confusion and useless against guessing. Authorization is a separate single-use,
+expiring secret issued with the invitation. The invitation is consequently a
+bearer credential, and §25 now says so.
+
+**Rejected.**
+- *Resolving `machineId` as a hostname* — the original implied design. Disproven on
+  the first machine tested.
+- *Requiring Tailscale MagicDNS* — it can be disabled, leaving only the address,
+  and §4 already insists the protocol not depend on Tailscale specifically.
+- *Relying on the room name for authorization* — makes a 16,000-combination guess
+  sufficient to enter a conversation.
+
+**Revisit when** a transport without stable addressable endpoints is added, such as
+WebRTC through a signalling server, where the invitation carries a session
+descriptor rather than an address.

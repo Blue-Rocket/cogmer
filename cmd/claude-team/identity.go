@@ -11,6 +11,13 @@ import (
 )
 
 // Identity is the stable per-machine peer identity required by spec §6.
+//
+// MachineID is a display and attribution label only. It is NOT an address and
+// nothing may route by it: an OS hostname is frequently not a routable name, and
+// is usually not what the transport knows the machine by. On one macOS host this
+// returned "macbookpro.lan" while the same machine also answered to "pushover"
+// and would carry a third name on a tailnet. Reachability is a transport
+// property, discovered rather than derived (§4).
 type Identity struct {
 	PeerID          string `json:"peerId"`
 	UserID          string `json:"userId"`

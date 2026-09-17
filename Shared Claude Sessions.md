@@ -224,9 +224,19 @@ Treat Tailscale as transport/connectivity infrastructure.
 For example:
 
 ```
-https://alice-machine:4783
-https://david-machine:4783
+https://alice-machine.tail9c2f.ts.net:4783
+https://david-machine.tail9c2f.ts.net:4783
 ```
+
+## How an address is obtained
+
+A daemon must **discover** the address it is reachable at. It must never derive one from its own hostname.
+
+An operating system hostname is not a routable address. It may be a purely local name, it may carry a `.local` suffix that resolves only by mDNS, it may resolve to a private LAN address that no remote peer can reach, and it is frequently not the name the transport knows the machine by. A single machine commonly answers to several names, none of them authoritative.
+
+Under Tailscale, reachability comes from the tailnet: either the device's MagicDNS name or its tailnet address. Both are properties of Tailscale, not of the host, and both must be read from Tailscale rather than assumed. MagicDNS can also be disabled, in which case only the address is available.
+
+A daemon that cannot determine a reachable address should say so plainly rather than emit an invitation that cannot be used.
 
 could later be replaced by:
 
@@ -321,6 +331,8 @@ Example:
   "roomId": "0f7a4e6c-2b91-4d0a-9c3e-7f1d8a5b2c44"
 }
 ```
+
+`machineId` is an identity label, used for attribution and display. It is never an address, and nothing routes by it. Where a peer can be reached is a property of the transport and changes independently of who the peer is.
 
 A Claude response must always remain attributable to its originating developer/session.
 
@@ -546,12 +558,36 @@ Conceptually:
 
 ```
 David:   claude-team invite
-         → misty-canyon@davids-macbook:4783
+         → misty-canyon@davids-macbook.tail9c2f.ts.net:4783#k7qm-2xpr-9vlt
 
-Alice:   claude-team join misty-canyon@davids-macbook:4783
+Alice:   claude-team join misty-canyon@davids-macbook.tail9c2f.ts.net:4783#k7qm-2xpr-9vlt
 ```
 
-An invitation must carry enough to identify the room and to reach at least one current member. The joining peer resolves the name against the peer named in the invitation, receives that room's `roomId`, and uses the `roomId` from then on.
+An invitation carries three things:
+
+```
+room:     misty-canyon
+endpoint: davids-macbook.tail9c2f.ts.net:4783
+code:     k7qm-2xpr-9vlt
+```
+
+The joining peer resolves the room name against the peer at that endpoint, receives the room's `roomId`, and uses the `roomId` from then on.
+
+## The endpoint is a bootstrap hint
+
+The endpoint is opaque to the collaboration protocol. It is whatever the transport in use can reach — a MagicDNS name, a tailnet address, a LAN address, or something else entirely under a different transport. Synchronization semantics must not depend on its form.
+
+It need be correct only once. Having joined, a peer learns the room's membership and how to reach the other members, so the inviting peer's endpoint stops being special immediately. This is the same principle as an inviting peer not being authoritative.
+
+An invitation may therefore carry more than one endpoint, since which one works depends on where the joining peer is standing — a teammate on the same network and a teammate across the internet do not reach the same address. Endpoints also change when a machine moves between networks, so an invitation may be stale, and joining must fail clearly rather than hang.
+
+## The room name is not a credential
+
+A room name is drawn from a small, deliberately guessable space so that it can be spoken aloud. Tens of thousands of combinations is ample for avoiding confusion and useless for resisting a guess.
+
+Authorization to join is therefore a separate secret with real entropy, issued with the invitation and verified on joining. A peer must never admit a session to a room on the strength of a name.
+
+The code should be single-use, and should expire: an invitation is a request to pair now, not a standing permission.
 
 ## Room names
 
@@ -1126,6 +1162,8 @@ For the initial Tailscale-based prototype:
 - do not expose the daemon's peer API publicly;  
 - bind Claude hook/UI APIs to localhost.
 
+An invitation is a bearer credential. Anyone holding one can reach the daemon that issued it and join the room it names, so an invitation carries the same sensitivity as the conversation it admits someone to. Treat the channel it is sent over accordingly.
+
 Do not assume network membership alone is sufficient for a production security model.
 
 Design peer identity so cryptographic signing can be added later.
@@ -1228,9 +1266,9 @@ Eventually:
 
 ```
 claude-team invite
-→ misty-canyon@davids-macbook:4783
+→ misty-canyon@davids-macbook.tail9c2f.ts.net:4783#k7qm-2xpr-9vlt
 
-claude-team join misty-canyon@davids-macbook:4783
+claude-team join misty-canyon@davids-macbook.tail9c2f.ts.net:4783#k7qm-2xpr-9vlt
 claude
 ```
 
