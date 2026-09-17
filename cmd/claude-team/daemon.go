@@ -53,6 +53,7 @@ func (d *Daemon) Routes() *http.ServeMux {
 	mux.HandleFunc("/hook/prompt", d.handlePrompt)
 	mux.HandleFunc("/hook/stop", d.handleStop)
 	mux.HandleFunc("/events", d.handleEvents)
+	mux.HandleFunc("/sync", d.handleSync)
 	return mux
 }
 
@@ -208,9 +209,18 @@ func FormatTeamContext(evs []Event) string {
 		fmt.Fprintf(&b, "<note>CONTEXT_CATCHUP_REQUIRED: %d earlier room events were omitted.</note>\n", omitted)
 	}
 	for _, e := range evs {
-		speaker := e.UserDisplayName
+		// Attribution anchors on the DERIVED peer name, not the display name.
+		//
+		// A display name comes from the peer's own environment and is a claim, not
+		// a fact -- two peers asserted the same one during the first two-peer run,
+		// because both daemons happened to run under the same OS user. §20 also
+		// requires an unverified speaker be marked as such inside the injected text
+		// rather than only in an interface, since the model is the reader that
+		// reasons about who said a thing.
+		who := fmt.Sprintf("%s (%s, unverified)", e.UserDisplayName, PeerName(e.PeerID))
+		speaker := who
 		if e.EventType == EventAssistantMessage {
-			speaker = "Claude-" + e.UserDisplayName
+			speaker = "Claude-" + who
 		}
 		content := e.Content
 		if len(content) > maxInjectedChars {

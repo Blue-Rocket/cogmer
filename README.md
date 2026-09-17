@@ -13,6 +13,12 @@ The integration spike is done and **both required directions work**. See
 including two non-obvious defects in the Claude Code integration surface and how
 they are worked around.
 
+**The two-peer experiment has run and §30's question is answered affirmatively** —
+see [`docs/phase2-experiment.md`](docs/phase2-experiment.md). Two independent Claude
+sessions synchronizing turns produced an exchange where the second resolved a
+referent from the first, disagreed with it on the merits, and found a defect the
+first had missed.
+
 Phase 0a (compaction probe) is also done — see
 [`docs/phase0a-findings.md`](docs/phase0a-findings.md). The feared silent failure
 **did not reproduce**: injected teammate context survived compaction with

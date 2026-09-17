@@ -249,7 +249,11 @@ follow.
 
 ### B1 — §24 lists ordering fields but defines no comparator
 
-**OPEN.** Still no precedence or tie-break. Two correct implementations can order the same events differently.
+**RESOLVED — implemented and verified across two peers.** Ordering is
+`(timestamp, peer_id, peer_sequence)`, total without further tie-breaking because
+§8 makes the last two unique. Local insert order, which two peers necessarily
+disagree on, is no longer used for display or injection. The two-peer run produced
+identical event ordering on both daemons.
 
 **Medium.** §24 offers "timestamp, origin peer, peer sequence, event ID" as fields
 to order by, without a precedence or a tie-break rule. Two correct
@@ -279,7 +283,11 @@ must never order anything.
 
 ### B2 — Injection order is unspecified, and arrival order is not chronological
 
-**OPEN.** Unchanged. Session-scoped rooms (D-015) reduce the window in which events arrive badly out of order, but do not close it.
+**PARTLY ADDRESSED; UNVERIFIED.** Injection now uses the same deterministic order
+as display rather than arrival order, which is the fix. It could not be verified:
+with a single teammate the injected block contains only that peer's turns, already
+in sequence, so interleaving never arises. This needs three peers, or a peer
+reconnecting with a backlog alongside a live one.
 
 **Medium.** §19 says to inject unseen events; §24 governs *display* ordering.
 Nothing says which order injected context uses.
@@ -408,7 +416,10 @@ item. Do not leave it only in a findings appendix.
 
 ### C4 — "Real time" means two different things, and one of them is slow
 
-**OPEN.** §16 still does not distinguish daemon-to-daemon propagation from propagation into a teammate's Claude.
+**MEASURED; still unspecified.** The two-peer run separated them: 570 ms daemon to
+daemon at a 1 s poll, versus *not until the teammate's next prompt* for arrival into
+their Claude. The wall between them is the turn, not the network, and a long agentic
+turn runs for minutes. §16 still states one number as though it covered both.
 
 **Medium.** §16 targets sub-second peer propagation, and we measured 16.7 ms
 locally, so the daemon-to-daemon claim is realistic.
@@ -550,6 +561,13 @@ Neither exists. Reproduced by deleting a room database:
 
 The experience is that nothing appears wrong. Teammate context stops arriving, the
 peer's own events stop reaching anyone, each side sees the other fall quiet.
+
+**C-5. Injected attribution used a self-asserted display name — fixed.** Both peers
+in the two-peer run asserted `David`, derived from `$USER`, and every event in the
+room read as one person despite being two. Attribution now anchors on the derived
+peer name and marks the speaker unverified inside the injected text, per §20 and
+D-021. Recorded here because it was a live divergence found by running the system,
+not by reading it.
 
 **C-2. Rooms are selected by environment variable.** §12 and §28 describe rooms
 entered by invitation with a guest list. The implementation takes a room name from

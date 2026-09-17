@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -76,6 +77,8 @@ Environment:
   CLAUDE_TEAM_ROOM        override the active room
   CLAUDE_TEAM_ADDR        override the daemon address
   CLAUDE_TEAM_PREFLIGHT   set to "off" to skip behavior checks on new rooms
+  CLAUDE_TEAM_PEERS       comma-separated peer addresses to synchronize with
+  CLAUDE_TEAM_SYNC_MS     poll interval in milliseconds (default 1000)
 `)
 }
 
@@ -84,6 +87,15 @@ func addr() string {
 		return a
 	}
 	return defaultAddr
+}
+
+func syncInterval() time.Duration {
+	if v := os.Getenv("CLAUDE_TEAM_SYNC_MS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return time.Duration(n) * time.Millisecond
+		}
+	}
+	return time.Second
 }
 
 func openLocal() (*Store, *Identity, string) {
@@ -118,6 +130,7 @@ func runDaemon() {
 	}
 	log.Printf("claude-team daemon on http://%s  room=%s  peer=%s (%s)",
 		addr(), room, id.UserDisplayName, id.PeerName)
+	go d.RunSync(peerList(), syncInterval())
 	if err := http.Serve(ln, d.Routes()); err != nil {
 		log.Fatal(err)
 	}

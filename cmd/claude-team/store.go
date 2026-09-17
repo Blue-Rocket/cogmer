@@ -317,8 +317,21 @@ func scanEvents(rows *sql.Rows) ([]Event, error) {
 const selectCols = `rowid_alias, event_id, peer_id, peer_sequence, room_id, timestamp,
 	user_id, user_display_name, machine_id, claude_session_id, event_type, content, metadata`
 
+// orderBy is the deterministic total order every peer must agree on (review B1).
+//
+// Local insert order is NOT it: two peers receive events in different orders and
+// would render the same room differently. (timestamp, peer_id, peer_sequence) is
+// total without further tie-breaking, because §8 makes peer_id plus peer_sequence
+// unique. Timestamps are RFC3339 UTC with fixed formatting, so lexicographic
+// comparison is chronological.
+//
+// Injection uses the same order (review B2): anti-entropy delivers old events
+// late, so arrival order is not chronological, and injecting out of sequence is
+// how a referent resolves to the wrong turn.
+const orderBy = `ORDER BY timestamp, peer_id, peer_sequence`
+
 func (s *Store) ListRoom(room string) ([]Event, error) {
-	rows, err := s.db.Query(`SELECT `+selectCols+` FROM events WHERE room_id = ? ORDER BY rowid_alias`, room)
+	rows, err := s.db.Query(`SELECT `+selectCols+` FROM events WHERE room_id = ? `+orderBy, room)
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +345,7 @@ func (s *Store) UndeliveredFor(room, sessionID string) ([]Event, error) {
 	rows, err := s.db.Query(`SELECT `+selectCols+` FROM events
 		WHERE room_id = ? AND claude_session_id != ?
 		  AND event_id NOT IN (SELECT event_id FROM session_delivered WHERE claude_session_id = ?)
-		ORDER BY rowid_alias`, room, sessionID, sessionID)
+		`+orderBy, room, sessionID, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -447,6 +460,52 @@ func (s *Store) commitPendingRow(sessionID, promptID, idsJSON string) (int, erro
 		return 0, err
 	}
 	return len(ids), tx.Commit()
+}
+
+// SyncState reports the highest CONTIGUOUS sequence held from each peer (§9).
+//
+// Contiguous, not maximum: a gap means the events after it have not truly been
+// received, and reporting the maximum would tell a peer we hold events we lack,
+// which it would then never send.
+func (s *Store) SyncState(room string) (map[string]int64, error) {
+	rows, err := s.db.Query(`SELECT peer_id, peer_sequence FROM events
+		WHERE room_id = ? ORDER BY peer_id, peer_sequence`, room)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	state := map[string]int64{}
+	for rows.Next() {
+		var peer string
+		var seq int64
+		if err := rows.Scan(&peer, &seq); err != nil {
+			return nil, err
+		}
+		if seq == state[peer]+1 {
+			state[peer] = seq
+		}
+	}
+	return state, rows.Err()
+}
+
+// EventsSince returns what a peer reporting `have` is missing from this room,
+// in the deterministic order so a receiver sees them as this peer does.
+func (s *Store) EventsSince(room string, have map[string]int64) ([]Event, error) {
+	rows, err := s.db.Query(`SELECT `+selectCols+` FROM events WHERE room_id = ? `+orderBy, room)
+	if err != nil {
+		return nil, err
+	}
+	all, err := scanEvents(rows)
+	if err != nil {
+		return nil, err
+	}
+	var out []Event
+	for _, e := range all {
+		if e.PeerSequence > have[e.PeerID] {
+			out = append(out, e)
+		}
+	}
+	return out, nil
 }
 
 // PendingCount reports how many injections are awaiting confirmation.

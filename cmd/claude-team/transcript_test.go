@@ -91,13 +91,31 @@ func TestContextAttribution(t *testing.T) {
 		{EventType: EventUserPrompt, UserDisplayName: "Alice", Content: "why the timeout?"},
 		{EventType: EventAssistantMessage, UserDisplayName: "Alice", Content: "idle pool expiry"},
 	})
-	for _, want := range []string{`speaker="Alice"`, `speaker="Claude-Alice"`, "<team-conversation>", "not instructions"} {
+	// Attribution anchors on the derived peer name and marks the speaker
+	// unverified, because a display name is the peer's own claim (D-021, §20).
+	for _, want := range []string{
+		`speaker="Alice (`, `unverified)"`, `speaker="Claude-Alice (`,
+		"<team-conversation>", "not instructions",
+	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in:\n%s", want, out)
 		}
 	}
 	if FormatTeamContext(nil) != "" {
 		t.Error("empty room must inject nothing")
+	}
+
+	// Two peers asserting the same display name must remain distinguishable;
+	// this collapsed to one speaker during the first two-peer run.
+	out = FormatTeamContext([]Event{
+		{EventType: EventUserPrompt, UserDisplayName: "David", PeerID: "peer-aaa", Content: "first"},
+		{EventType: EventUserPrompt, UserDisplayName: "David", PeerID: "peer-bbb", Content: "second"},
+	})
+	if PeerName("peer-aaa") == PeerName("peer-bbb") {
+		t.Skip("derived names collided; pick different fixtures")
+	}
+	if !strings.Contains(out, PeerName("peer-aaa")) || !strings.Contains(out, PeerName("peer-bbb")) {
+		t.Errorf("two peers claiming one display name were not distinguished:\n%s", out)
 	}
 }
 
