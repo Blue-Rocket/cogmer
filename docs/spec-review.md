@@ -198,8 +198,25 @@ implementations can therefore produce different orderings of the same event set,
 which breaks §17's promise that each developer sees approximately the same room —
 and quietly, since it only shows up when events are near-simultaneous.
 
-**Recommend.** Specify the exact tuple and direction. `(timestamp, peerId,
-peerSequence)` with `eventId` as final tie-break is sufficient and total.
+**Recommend.** Specify the exact tuple and direction: `(timestamp, peerId,
+peerSequence)`, ascending.
+
+*Revised since first written.* Two corrections, both from decisions taken after this
+finding was raised:
+
+- **The `eventId` tie-break is redundant.** §8 establishes that `peerId` plus
+  `peerSequence` identifies an event, and the implementation enforces it as a
+  uniqueness constraint. The three-field tuple is therefore already total, and
+  appending `eventId` suggests a tie that cannot occur.
+- **`peerId` must be compared over its canonical bytes, not its display form.**
+  D-023 makes an identifier a public key, and an implementation is then free to
+  render it as hex, base64, or anything else. Comparing rendered strings would
+  reproduce exactly the divergence this finding is about, one level down and harder
+  to see.
+
+The reference to `peerId` itself remains correct, and is now less ambiguous than
+when written: D-021 introduced a derived `peerName`, which collides by design and
+must never order anything.
 
 ### B2 — Injection order is unspecified, and arrival order is not chronological
 
