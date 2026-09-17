@@ -551,3 +551,76 @@ bearer credential, and §25 now says so.
 **Revisit when** a transport without stable addressable endpoints is added, such as
 WebRTC through a signalling server, where the invitation carries a session
 descriptor rather than an address.
+
+---
+
+## D-019 — No network provider is required; local discovery is the zero-configuration path
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Context.** The specification was written for an internal experiment, where
+assuming Tailscale was free. For a public release it is not: "install this" and
+"install this, create a Tailscale account, put every developer in a configured
+tailnet" attract very different numbers of people, and Tailscale's free tier is
+framed for personal rather than commercial use, so an evaluating team may read a
+free tool as requiring a paid service.
+
+**Decision.** State as a requirement that no network provider is part of room
+identity, membership, or replication, and that the system must function with no
+VPN at all when peers can already reach one another. Two developers on the same
+network is the simplest case and must be the easiest: no account, no external
+service, no configuration.
+
+Transports are attempted in order — same network, then a private network provider,
+then internet peer-to-peer, then relay — and which one connected is an
+implementation detail that must not surface in room identity or event data.
+Implementation order is Local, then Tailscale, then WebRTC.
+
+The architectural seam already existed: §4 said the protocol must not depend on
+Tailscale and §33 already had `PeerSyncTransport`. What changed is the **priority**.
+Local discovery moved from "later possibility" to the first transport built, and
+the independence became a stated requirement rather than an aspiration.
+
+**Where this conflicted with earlier decisions, and how it was resolved.** The
+appealing version of zero-configuration joining is `claude-team join misty-canyon`
+— find the room by name on the network and enter it. That cannot be adopted as
+stated. D-017 made room names short, speakable, and therefore guessable, and D-018
+made authorization a separate secret precisely because of that.
+
+On a shared network — an office, a conference, a cafe — any listener could
+enumerate advertised room names, and could guess them without listening. A room
+holds source code, customer information, and whatever has been pasted into a
+prompt.
+
+So discovery locates a room; it never admits anyone to one. Local discovery
+replaces the *endpoint* in an invitation, which D-018 had already reduced to a
+bootstrap hint, while the secret remains:
+
+```
+claude-team join misty-canyon#k7qm-2xpr-9vlt
+```
+
+Still short enough to say across a desk. The secret also disambiguates, which
+local discovery needs anyway: names are unique only among the rooms one peer
+hosts, so a broadcast search may surface two unrelated rooms sharing a name.
+
+**Rejected.**
+- *Tailscale as the architectural foundation* — couples adoption to an account and
+  a second daemon for the simplest case.
+- *Joining by name alone on a trusted network* — "trusted network" is doing
+  unearned work; office and conference networks are neither small nor trusted.
+- *Treating a signalling service as a small future detail* — signalling is small
+  and never sees a conversation, but relays carry the traffic and cost money.
+  Recorded in §33 so it is chosen deliberately.
+
+**Note for implementation.** `tsnet` lets a Go program become a tailnet node
+directly, which would satisfy D-018's requirement to obtain an address from
+Tailscale rather than from the hostname without shelling out to its CLI. That
+makes it attractive *inside* `TailscaleTransport`, and unacceptable anywhere else.
+
+Tailscale is also not installed on the development machine, so local discovery is
+now the shorter path to a working two-peer test as well as the better public
+default.
+
+**Revisit when** a transport is added whose peers have no addressable endpoint,
+where `discover` cannot be expressed as returning candidates.

@@ -127,6 +127,18 @@ When no evidence is found, events stay pending and are re-offered. Committing on
 trust is gated on B20 being recorded as *failing* — absence of evidence is not
 evidence that the format changed.
 
+## No transport is required (D-019)
+
+No network provider belongs in room identity, membership, or replication. The
+system must work with **no VPN** when peers can already reach each other; local
+discovery is the zero-configuration path and the first transport to build.
+Tailscale is one provider among several, never a prerequisite.
+
+Discovery locates a room. It never admits anyone to one — the join secret does
+that. Do not add a "join by name on a trusted network" path: names are guessable
+by design (D-017), and office and conference networks are neither small nor
+trusted.
+
 ## Invariants
 
 - **Hooks must never break Claude Code** (§3.1). Every failure path exits 0 with

@@ -203,21 +203,34 @@ This bounds several problems that an indefinitely-lived room creates. Unseen con
 
 # 4\. Initial Networking Strategy
 
-For the first prototype, prefer:
+## No network provider is required
+
+No network provider is part of room identity, room membership, or the replication protocol. A room is a set of linked sessions and an event stream; how bytes reach another machine is beneath that and interchangeable.
+
+The system must function with no virtual private network of any kind when peers can already reach one another. Two developers on the same network are the simplest case and should be the easiest, requiring no account, no external service, and no configuration.
+
+Tailscale extends the same mechanism to peers that cannot reach each other directly. It is one connectivity provider among several, never a prerequisite.
+
+This is a requirement rather than an aspiration. Anything that makes a particular provider necessary — in identity, in discovery, in the invitation format, or in replication — is a defect.
+
+## Preference order
 
 ```
-local daemon
+same network, direct
       │
       ▼
-direct peer connection
+private network provider (for example Tailscale)
       │
       ▼
-Tailscale network
+internet peer-to-peer
+      │
+      ▼
+relay
 ```
 
-Tailscale should provide machine-to-machine reachability without requiring the prototype to solve NAT traversal.
+Attempt these in order and use the first that succeeds. Which one connected is an implementation detail, and should not appear in room identity, event data, or ordinary user-facing output.
 
-The collaboration protocol itself should not depend specifically on Tailscale.
+Tailscale provides machine-to-machine reachability without requiring the prototype to solve NAT traversal, which is why it is the first remote option rather than the first option.
 
 Treat Tailscale as transport/connectivity infrastructure.
 
@@ -581,11 +594,29 @@ It need be correct only once. Having joined, a peer learns the room's membership
 
 An invitation may therefore carry more than one endpoint, since which one works depends on where the joining peer is standing — a teammate on the same network and a teammate across the internet do not reach the same address. Endpoints also change when a machine moves between networks, so an invitation may be stale, and joining must fail clearly rather than hang.
 
+## Discovery on a shared network
+
+Where peers are on the same network, a room may be found by local service discovery rather than by being told an address. The daemon advertises its live rooms; a joining daemon looks for the name it was given.
+
+This removes the endpoint from the invitation, which D-018 already established is only a bootstrap hint:
+
+```
+claude-team join misty-canyon#k7qm-2xpr-9vlt
+```
+
+That is short enough to say across a desk, and it requires no account, no external service, and no configuration.
+
+Discovery locates a room. It never admits anyone to one.
+
 ## The room name is not a credential
 
 A room name is drawn from a small, deliberately guessable space so that it can be spoken aloud. Tens of thousands of combinations is ample for avoiding confusion and useless for resisting a guess.
 
 Authorization to join is therefore a separate secret with real entropy, issued with the invitation and verified on joining. A peer must never admit a session to a room on the strength of a name.
+
+This matters most precisely where joining is easiest. On a shared network — an office, a conference, a cafe — any listener can enumerate advertised room names, and those names are guessable even without listening. A room contains source code, customer information, and whatever a developer has pasted into a prompt. Convenient discovery and weak authorization are separately reasonable and jointly indefensible.
+
+The secret also disambiguates. Names are unique only among the rooms one peer hosts, so local discovery may surface two unrelated rooms with the same name. The secret belongs to exactly one of them.
 
 The code should be single-use, and should expire: an invitation is a request to pair now, not a standing permission.
 
@@ -1602,26 +1633,36 @@ These can be evaluated after the core experiment.
 
 Keep networking behind an abstraction.
 
-Initial:
+A transport is responsible for finding peers and moving bytes, and for nothing else:
+
+```
+PeerSyncTransport
+
+  discover(roomName)     → candidate rooms reachable by this transport
+  connect(peer)
+  send(peer, data)
+  onMessage(handler)
+  onPeerJoined(handler)
+  onPeerLeft(handler)
+```
+
+Replication sees only this. A transport never interprets an event, never decides membership, and never authorizes a join — `discover` returns candidates, and admission remains a matter of the room's own secret.
+
+Implement in this order:
 
 ```
 PeerSyncTransport
        │
-       ▼
-Tailscale HTTP/WebSocket
+       ├── Local          ← no dependencies; same network
+       ├── Tailscale      ← remote peers, no NAT traversal to solve
+       └── WebRTC         ← remote peers with nothing installed
 ```
 
-Possible future implementations:
+Local is first because it is the only one that requires nothing of the user. A project whose simplest case needs an account and a second daemon has narrowed its audience before anyone has tried it.
 
-```
-PeerSyncTransport
-       │
-       ├── Tailscale
-       ├── LAN
-       ├── WebRTC
-       ├── QUIC
-       └── libp2p
-```
+Later possibilities include QUIC and libp2p.
+
+Internet peer-to-peer carries a cost worth stating plainly before it is chosen. Peers must be introduced to each other by some signalling service, and peers behind unfriendly network address translation need a relay. Signalling is small and never sees a conversation. Relaying is neither: it carries the traffic, and somebody has to pay for it. That is a commitment to be made deliberately, not discovered.
 
 The event and synchronization models should not care which transport is being used.
 
