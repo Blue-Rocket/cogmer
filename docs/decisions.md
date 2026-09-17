@@ -2062,3 +2062,55 @@ rooms across different sessions, which §12a's constraint describes and a one-ro
 daemon could not express. A room outlives the session that created it. And nothing
 is created by starting a process — the bridge is gone, not because it was removed but
 because the situation it papered over no longer arises.
+
+---
+
+## D-047 — The fingerprint is the only manual link, and had the least careful encoding
+
+**Date:** 2026-09-17 · **Status:** open — encoding to be changed
+
+**Context.** Asked what a fingerprint is and what it accomplishes. Demonstrating it
+made the answer sharper than expected.
+
+**What it accomplishes, precisely.** Every cryptographic guarantee here binds a key
+to itself: the peer speaking today holds the same key as yesterday, nobody forged
+its events, nobody replayed its requests. None of it binds a key to a **person**,
+and no amount of cryptography can — that is not a mathematical question.
+
+Demonstrated: an attacker substituted her own identifier in transit, was recorded and
+invited under the name `alice`, read a private room, and replied into it. **Zero
+refusals.** Nothing was wrong, because nothing was wrong — the host invited exactly
+the key he was given.
+
+The fingerprint closes that by comparison over a **second channel**. The attacker who
+controlled the first would have to control the second too. What is protected is not a
+secret: the identifier is a public key and intercepting it is harmless. The risk was
+never that someone reads it — it is that someone **swaps** it. A fingerprint does not
+guard a secret; it detects a swap.
+
+**Why the whole key.** A truncated fingerprint lets an attacker grind keys until one
+matches the visible part. At 32 bytes there is nothing to grind.
+
+**The problem, which the shape of the output exposed.** This is the *only* manual
+step in the design. Everything else is automatic. The entire chain — admission,
+attribution, signatures, the unverified markers — rests on one person, once, reading
+a string aloud correctly.
+
+That step has the most error-prone encoding available. Base64url is case-sensitive
+and the alphabet contains `l`, `I` and `_`, which are indistinguishable from `1` and
+from each other when spoken: `ol5v` must be dictated as "lowercase-o, lowercase-L,
+five, lowercase-v". §25 asks for "a sequence of words or grouped digits"; grouped
+base64 is neither.
+
+A comparison that is tiresome to do accurately is one people do badly or skip — and
+skipping it reproduces the demonstration above exactly, where nothing looks wrong.
+
+**Decision.** Render the fingerprint as words. Digits would also work and are what
+Signal uses, but curated wordlists already exist here, and this is the one place
+where slow to read beats quick to mishear. The identifier itself stays base64url:
+that is for machines and for pasting, where the alphabet is fine.
+
+**The general point worth keeping.** The weakest link in this system is a human
+reading a string, and it was given the least design attention of anything in it.
+Where a design has exactly one manual step, that step deserves the most care rather
+than the least.
