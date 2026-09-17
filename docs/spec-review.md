@@ -15,25 +15,53 @@ Findings are ordered by consequence, not by section number.
 
 ## A. Defects
 
-### A1 — §19 never says *when* delivery state advances, and the obvious reading loses data
+### A1 — §19 never says *when* delivery state advances, nor what counts as delivered
 
 **High.** §19 lists five ordered steps, ending "update the session's
-incorporated-event state," but does not bind that update to the turn completing.
+incorporated-event state," but binds that update to nothing. It also never says
+what "incorporated" means: offered to the hook, or observably present in the
+session.
 
-The natural implementation — and the one now in `daemon.go:78` — advances the
-watermark at prompt submission, because that is when the hook runs. If the turn
-then fails, is interrupted with Ctrl-C, or hits an API error, **those teammate
-events are marked incorporated and are never injected again.** The context is
-lost permanently and silently, which is exactly the failure Phase 0a went looking
-for in compaction and did not find. It was in our own code the whole time.
+Both matter, and the second is the one with a real bug behind it.
 
-This is a live bug, not only a specification gap.
+**What is not the problem.** The intuitive worry — an interrupted or failed turn
+strands context that was marked delivered — does not hold. Injected content is
+recorded in the transcript as its own record:
 
-**Recommend.** State that delivery state must not advance until the turn in which
-the context was injected completes. Since `Stop` carries the same `prompt_id` as
-`UserPromptSubmit`, the natural design is provisional delivery at injection,
-committed at `Stop`. The specification should say which, because both are
-defensible and they differ under failure.
+```
+type: "attachment"
+attachment: { type: "hook_success", hookName: "UserPromptSubmit",
+              content: "<team-conversation>..." }
+```
+
+That record is part of session history, so the next prompt re-sends it. A turn
+dying does not lose the context.
+
+**What is the problem.** `daemon.go:78` commits delivery *before* the hook has
+received the response. The hook has a 3s timeout; if it expires, or the daemon
+dies mid-reply, the daemon has recorded delivery while the hook printed nothing
+and Claude saw nothing. At-most-once delivery on a channel that needs at-least-once.
+Narrower than a failed turn, but permanent and silent when it happens.
+
+**Three designs, in increasing strength.**
+
+- *Advance at injection* (current). Simplest; loses the race above.
+- *Provisional at injection, committed at `Stop`.* `Stop` carries the same
+  `prompt_id` as `UserPromptSubmit`, so correlation is already available and
+  already verified (B01, B03). Survives the lost response. Still records intent:
+  `Stop` proves a turn ended, not that context arrived.
+- *Derive delivery from transcript evidence.* The daemon already reads the
+  transcript at `Stop` for turn reassembly. The `hook_success` attachments in it
+  are proof of what Claude actually received. Advance the watermark to match.
+  This is the only option that verifies rather than assumes, and it is nearly
+  free.
+
+**Recommend.** Specify evidence-derived delivery, and require injected messages to
+carry their `eventId` so the evidence maps to specific events instead of relying
+on text matching — which also makes partial delivery recoverable. Note the cost
+honestly: it adds a dependency on the `hook_success` attachment format, which
+then needs a registry entry and check (C1). The provisional/commit design is the
+conservative fallback, depending only on behaviors already verified.
 
 ### A2 — Room resolution is undefined, and §5, §22, and §28 disagree
 
