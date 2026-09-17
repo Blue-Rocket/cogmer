@@ -733,6 +733,30 @@ substitute for reviewing additions.
   identity it represents. It is derived on load and marked `json:"-"`.
 - *A larger word list as the answer to spoofing* — raises grinding cost by minutes
   and leaves the property unchanged.
+- *Indexing the word lists by the first and last bytes of the identifier* rather
+  than by a hash of it. The appeal is auditability: a name visibly derived from
+  bytes you can read is one a person could check. Measured, it fails on the point
+  that matters — two identifiers differing only in a middle byte derive the **same**
+  sliced name and different hashed names, so slicing sees sixteen bits and is blind
+  to everything between the ends. Hashing covers the whole identity, so any
+  difference anywhere changes the name. Two lesser faults were fixable and the
+  third was not: the identifier is currently `"peer-" + hex`, making the first two
+  characters `pe` for every peer (one distinct value across 2,000 generated ids),
+  and 256 byte values into a 90-word list leaves some names roughly 50% more likely
+  than others.
+
+  The instinct is sound at a different scale. Auditable word rendering is how key
+  fingerprints are compared by people, and §25 now requires that such a comparison
+  render the *whole* key. Two words carry thirteen bits; offering that as a
+  fingerprint check would claim an assurance it cannot provide. When D-020's
+  cryptographic identity lands, a full-fingerprint word sequence belongs alongside
+  it — as a separate thing from the peer name, not as a redefinition of it.
+
+**On collisions.** 8,280 names is comfortable for a pairing and not for an
+organization: roughly 0.5% chance of a shared name among 10 peers, 3.6% among 25,
+and 45% among 100. Expanding both lists to 256 entries would give 65,536 and push
+that out by an order of magnitude. Held off because curating 512 words against the
+naming-people constraint is the work, not the arithmetic.
 
 **Revisit when** `peerId` becomes a key fingerprint. The derivation needs no
 change, but the verified/unverified display rule becomes enforceable rather than

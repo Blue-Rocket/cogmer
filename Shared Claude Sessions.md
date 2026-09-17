@@ -1255,7 +1255,9 @@ Once identity is cryptographic, admit known peers rather than holders of a secre
 
 A peer keeps a list of the peers it has met and the public keys it knows them by. A room admits members drawn from that list, and joining becomes a proof of possession rather than the presentation of a token. That is better in every respect that matters here: nothing is transmitted that an interceptor could reuse, nothing expires, and admission can be withdrawn.
 
-This does not remove the first exchange. Two peers that have never met must still establish each other's keys over some channel they trust, exactly as a join secret must be sent over one. What it removes is every exchange after the first: a key once verified is durable, whereas a secret is spent on use.
+This does not remove the first exchange. Two peers that have never met must still establish each other's keys over some channel they trust, exactly as a join secret must be sent over one.
+
+That comparison should be made on a rendering of the **whole** key, not a sample of it. A short mnemonic drawn from part of an identifier catches an accident and not an adversary, because the bits it does not cover are free to differ. Where a key is to be compared by people — read aloud, or checked side by side — render all of it, as a sequence of words or grouped digits. A peer name is not that, and must not be offered as though it were. What it removes is every exchange after the first: a key once verified is durable, whereas a secret is spent on use.
 
 The two mechanisms therefore compose rather than compete. A single-use secret admits a peer that is not yet known, and being admitted is what makes it known. Between peers that already know each other, no secret is required and none should be demanded.
 
