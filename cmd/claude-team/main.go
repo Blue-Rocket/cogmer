@@ -108,7 +108,7 @@ func runDaemon() {
 		EnsureVerified(room)
 	}
 
-	d := &Daemon{store: store, id: id, room: room}
+	d := &Daemon{store: store, id: id, room: room, claudeVersion: ClaudeVersion()}
 	ln, err := net.Listen("tcp", addr())
 	if err != nil {
 		log.Fatalf("listen: %v", err)

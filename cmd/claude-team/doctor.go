@@ -48,6 +48,22 @@ func saveVerification(v verification) {
 	_ = os.WriteFile(verifyPath(), b, 0o600)
 }
 
+// BehaviorKnownBroken reports whether a behavior is recorded as FAILING for this
+// Claude Code version.
+//
+// This gates the delivery fallback. "No evidence" must not be read as "the
+// format changed" -- it is equally consistent with the injection never having
+// arrived, which is the failure the evidence-derived design exists to catch.
+// Only a check that actually failed justifies committing on trust.
+func BehaviorKnownBroken(version, id string) bool {
+	v, ok := loadVerifications()[version]
+	if !ok {
+		return false
+	}
+	_, failed := v.Failures[id]
+	return failed
+}
+
 // Result is one behavior's outcome.
 type Result struct {
 	B   Behavior

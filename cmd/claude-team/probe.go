@@ -29,6 +29,12 @@ type Probe struct {
 	Final         string
 	Reassembled   *AssistantTurn
 
+	// InjectedText is what the probe hook wrote to stdout; ObservedBlocks is
+	// what the transcript recorded as having reached the model. Delivery
+	// confirmation depends on these matching.
+	InjectedText   string
+	ObservedBlocks []string
+
 	// compaction tier
 	PreCompactBytes      int64
 	PostCompactBytes     int64
@@ -170,6 +176,7 @@ func RunProbe(deep bool) (*Probe, error) {
 	if err := os.WriteFile(filepath.Join(dir, "inject.txt"), []byte(inject), 0o600); err != nil {
 		return nil, err
 	}
+	p.InjectedText = inject
 
 	hooks := map[string]any{}
 	for _, h := range []string{"UserPromptSubmit", "Stop", "PreToolUse", "PostToolUse", "PreCompact", "SessionStart"} {
@@ -252,6 +259,7 @@ func (p *Probe) freezeSessionEvidence() {
 	p.AtStop, _ = readTranscript(frozen)
 
 	if tp, _ := p.Turn1Stop["transcript_path"].(string); tp != "" {
+		p.ObservedBlocks, _ = InjectedBlocks(tp)
 		p.Transcript, p.rawTranscript = readTranscript(tp)
 		msg, _ := p.Turn1Stop["last_assistant_message"].(string)
 		if t, err := ReassembleLastTurn(tp, msg); err == nil {

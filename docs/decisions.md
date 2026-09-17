@@ -271,3 +271,48 @@ any ambient `claude-team` hook fails open (D-011) and records nothing.
 **Rejected.** *`--setting-sources ""` to load no ambient settings* — plausible, but
 untested, and a flag-parsing surprise would break the probe entirely. The env var
 reuses a guarantee already verified by B11.
+
+---
+
+## D-014 — Derive delivery state from transcript evidence, not from recorded intent
+
+**Date:** 2026-09-16 · **Status:** active · **Supersedes** the advance-at-injection
+behavior reviewed as A1 in `spec-review.md`
+
+**Context.** §19 says to "update the session's incorporated-event state" without
+saying when, or what counts as incorporated. Advancing it at injection commits
+delivery before the hook has the daemon's response: with a 3s hook timeout, an
+expired or lost reply meant the daemon recorded delivery while Claude saw
+nothing. At-most-once on a channel that needs at-least-once.
+
+**Decision.** Claude Code records a hook's stdout in the transcript as a
+`hook_success` attachment. The daemon already reads that transcript at `Stop` for
+turn reassembly, so delivery is confirmed by observing the injected block there —
+matched on a sha256 of the exact emitted text — rather than assumed because a
+hook ran. Delivery became a set rather than a watermark, since a lost injection
+leaves a hole a contiguous watermark cannot represent.
+
+Confirmation is self-healing: attachments accumulate across turns and survive
+compaction, so an injection missed at its own `Stop` is confirmed at a later one.
+
+**Rejected.**
+- *Advance at injection* — the bug above.
+- *Provisional at injection, committed at `Stop`* — fixes the lost response, but
+  still records intent: `Stop` proves a turn ended, not that context arrived.
+  Retained as the degraded path (see below) because it depends only on
+  `prompt_id` correlation, already verified by B01/B03.
+- *Embedding event IDs in the injected block* — would make evidence directly
+  addressable, but at ~34 characters per event it puts real noise in every
+  teammate's context window. Hashing the block gets the same mapping for free.
+
+**Consequence: absence of evidence is not evidence of breakage.** The first
+implementation fell back to committing on trust whenever no attachment was found
+— which is indistinguishable from the injection never arriving, so it silently
+lost context in exactly the case this decision exists to fix. Testing the failure
+path caught it. The fallback is now gated on B20 being recorded as *failing* for
+the installed version; otherwise events stay pending and are re-offered. That
+failure mode is noisy and self-announcing rather than silent and lossy, which is
+the right way round.
+
+**Revisit when** B20 fires, or if re-offering proves disruptive enough in practice
+that duplicate context costs more than the loss it prevents.

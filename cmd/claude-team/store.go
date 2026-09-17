@@ -1,11 +1,14 @@
 package main
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -54,11 +57,30 @@ CREATE TABLE IF NOT EXISTS events (
 );
 CREATE INDEX IF NOT EXISTS idx_events_room ON events(room_id, rowid_alias);
 
--- §19: which room events each local Claude session has already been shown.
-CREATE TABLE IF NOT EXISTS session_context (
-  claude_session_id TEXT PRIMARY KEY,
-  last_delivered    INTEGER NOT NULL
+-- §19 delivery state, derived from evidence rather than recorded as intent.
+--
+-- A set rather than a watermark: delivery is confirmed per injection by
+-- observing it in the transcript, so a lost injection leaves a hole that a
+-- contiguous watermark could not represent. Can be compacted to a watermark
+-- plus exceptions if the row count ever matters.
+CREATE TABLE IF NOT EXISTS session_delivered (
+  claude_session_id TEXT NOT NULL,
+  event_id          TEXT NOT NULL,
+  PRIMARY KEY (claude_session_id, event_id)
 );
+
+-- Injections offered to a session but not yet observed in its transcript.
+-- content_hash is the sha256 of the exact block written to the hook's stdout;
+-- Claude Code records that same text as a hook_success attachment, which is what
+-- makes confirmation possible.
+CREATE TABLE IF NOT EXISTS pending_injection (
+  prompt_id         TEXT PRIMARY KEY,
+  claude_session_id TEXT NOT NULL,
+  event_ids         TEXT NOT NULL,
+  content_hash      TEXT NOT NULL,
+  created_at        TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_pending_session ON pending_injection(claude_session_id);
 `
 
 // roomExists reports whether a room already has a local replica.
@@ -169,39 +191,144 @@ func (s *Store) ListRoom(room string) ([]Event, error) {
 	return scanEvents(rows)
 }
 
-// UndeliveredFor returns room events this Claude session has not yet been
-// shown, excluding events the session itself produced -- those are already in
-// its own context window (§19, step 2).
-func (s *Store) UndeliveredFor(room, sessionID string) ([]Event, int64, error) {
-	var watermark int64
-	err := s.db.QueryRow(`SELECT last_delivered FROM session_context WHERE claude_session_id = ?`, sessionID).Scan(&watermark)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, 0, err
-	}
+// UndeliveredFor returns room events this Claude session has not been confirmed
+// to have received, excluding events the session itself produced -- those are
+// already in its own context window (§19, step 2).
+func (s *Store) UndeliveredFor(room, sessionID string) ([]Event, error) {
 	rows, err := s.db.Query(`SELECT `+selectCols+` FROM events
-		WHERE room_id = ? AND rowid_alias > ? AND claude_session_id != ?
-		ORDER BY rowid_alias`, room, watermark, sessionID)
+		WHERE room_id = ? AND claude_session_id != ?
+		  AND event_id NOT IN (SELECT event_id FROM session_delivered WHERE claude_session_id = ?)
+		ORDER BY rowid_alias`, room, sessionID, sessionID)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
-	evs, err := scanEvents(rows)
-	if err != nil {
-		return nil, 0, err
-	}
-	var high int64
-	if err := s.db.QueryRow(`SELECT COALESCE(MAX(rowid_alias),0) FROM events WHERE room_id = ?`, room).Scan(&high); err != nil {
-		return nil, 0, err
-	}
-	return evs, high, nil
+	return scanEvents(rows)
 }
 
-// MarkDelivered advances the session's incorporated-event watermark so the same
-// teammate turns are never injected twice (§19, "Do not repeatedly inject the
-// entire room").
-func (s *Store) MarkDelivered(sessionID string, watermark int64) error {
+// HashBlock is the identity of an injected block: the sha256 of the exact text
+// handed to the hook's stdout, whitespace-trimmed because Claude Code trims it
+// before recording the attachment.
+func HashBlock(text string) string {
+	sum := sha256.Sum256([]byte(strings.TrimSpace(text)))
+	return hex.EncodeToString(sum[:])
+}
+
+// RecordPending notes that a block was offered to a session. Nothing is
+// considered delivered until it is observed in that session's transcript.
+func (s *Store) RecordPending(promptID, sessionID string, events []Event, text string) error {
+	if len(events) == 0 || promptID == "" {
+		return nil
+	}
+	ids := make([]string, len(events))
+	for i, e := range events {
+		ids[i] = e.EventID
+	}
+	blob, _ := json.Marshal(ids)
 	_, err := s.db.Exec(`
-		INSERT INTO session_context (claude_session_id, last_delivered) VALUES (?, ?)
-		ON CONFLICT(claude_session_id) DO UPDATE SET last_delivered = excluded.last_delivered`,
-		sessionID, watermark)
+		INSERT INTO pending_injection (prompt_id, claude_session_id, event_ids, content_hash, created_at)
+		VALUES (?,?,?,?,?)
+		ON CONFLICT(prompt_id) DO UPDATE SET
+		  event_ids = excluded.event_ids, content_hash = excluded.content_hash`,
+		promptID, sessionID, string(blob), HashBlock(text), time.Now().UTC().Format(time.RFC3339Nano))
+	return err
+}
+
+// ConfirmDelivered marks as delivered every pending injection for this session
+// whose block is present among the observed hashes. Transcript attachments
+// accumulate across turns, so this is idempotent and self-healing: an injection
+// missed at its own Stop is confirmed at a later one.
+func (s *Store) ConfirmDelivered(sessionID string, observed []string) (int, error) {
+	if len(observed) == 0 {
+		return 0, nil
+	}
+	seen := make(map[string]bool, len(observed))
+	for _, h := range observed {
+		seen[h] = true
+	}
+	rows, err := s.db.Query(`SELECT prompt_id, event_ids, content_hash FROM pending_injection WHERE claude_session_id = ?`, sessionID)
+	if err != nil {
+		return 0, err
+	}
+	type pend struct{ promptID, ids string }
+	var matched []pend
+	for rows.Next() {
+		var p pend
+		var hash string
+		if err := rows.Scan(&p.promptID, &p.ids, &hash); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		if seen[hash] {
+			matched = append(matched, p)
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, p := range matched {
+		c, err := s.commitPendingRow(sessionID, p.promptID, p.ids)
+		if err != nil {
+			return n, err
+		}
+		n += c
+	}
+	return n, nil
+}
+
+// CommitPending is the degraded path for when a transcript carries no
+// hook_success attachments at all -- the delivery evidence this design depends
+// on is unavailable, so fall back to trusting that the turn carried the block.
+func (s *Store) CommitPending(sessionID, promptID string) (int, error) {
+	var ids string
+	err := s.db.QueryRow(`SELECT event_ids FROM pending_injection WHERE prompt_id = ? AND claude_session_id = ?`,
+		promptID, sessionID).Scan(&ids)
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	return s.commitPendingRow(sessionID, promptID, ids)
+}
+
+func (s *Store) commitPendingRow(sessionID, promptID, idsJSON string) (int, error) {
+	var ids []string
+	if err := json.Unmarshal([]byte(idsJSON), &ids); err != nil {
+		return 0, err
+	}
+	tx, err := s.db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	for _, id := range ids {
+		if _, err := tx.Exec(`INSERT OR IGNORE INTO session_delivered (claude_session_id, event_id) VALUES (?,?)`,
+			sessionID, id); err != nil {
+			return 0, err
+		}
+	}
+	if _, err := tx.Exec(`DELETE FROM pending_injection WHERE prompt_id = ?`, promptID); err != nil {
+		return 0, err
+	}
+	return len(ids), tx.Commit()
+}
+
+// PendingCount reports how many injections are awaiting confirmation.
+func (s *Store) PendingCount(sessionID string) (int, error) {
+	var n int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM pending_injection WHERE claude_session_id = ?`, sessionID).Scan(&n)
+	return n, err
+}
+
+// PrunePending bounds unmatched pending rows, which accumulate only when
+// injections genuinely never arrive.
+func (s *Store) PrunePending(sessionID string, keep int) error {
+	_, err := s.db.Exec(`
+		DELETE FROM pending_injection
+		WHERE claude_session_id = ? AND prompt_id NOT IN (
+		  SELECT prompt_id FROM pending_injection WHERE claude_session_id = ?
+		  ORDER BY created_at DESC LIMIT ?)`, sessionID, sessionID, keep)
 	return err
 }

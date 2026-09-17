@@ -218,6 +218,25 @@ var Behaviors = []Behavior{
 		},
 	},
 
+	{
+		ID:       "B20",
+		Title:    "Injected hook output is recorded as a hook_success attachment",
+		Reliance: "Delivery confirmation (D-014). The daemon marks teammate events delivered only once it observes the injected block in the transcript. If this record disappears or changes shape, delivery falls back to trusting that the turn carried it -- degraded, not broken, but the guarantee weakens silently.",
+		Tier:     TierSession,
+		Check: func(p *Probe) error {
+			if len(p.ObservedBlocks) == 0 {
+				return fmt.Errorf("no hook_success attachment recorded for UserPromptSubmit; delivery confirmation has no evidence to work from and falls back to trust")
+			}
+			want := HashBlock(p.InjectedText)
+			for _, b := range p.ObservedBlocks {
+				if HashBlock(b) == want {
+					return nil
+				}
+			}
+			return fmt.Errorf("recorded attachment does not match the injected block byte-for-byte; hash matching in ConfirmDelivered will never succeed (got %d block(s))", len(p.ObservedBlocks))
+		},
+	},
+
 	// ---- compaction tier ----
 	{
 		ID:       "B13",

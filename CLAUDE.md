@@ -97,6 +97,17 @@ Verified in Phase 0a, and load-bearing:
 Residual risk: context survival is summarizer judgment, not a format guarantee.
 Re-run Test B from the findings when the model or Claude Code version changes.
 
+## Delivery is confirmed, never assumed
+
+Teammate events are marked delivered only when the injected block is **observed**
+in the session transcript as a `hook_success` attachment (D-014). Do not
+reintroduce marking at injection time: the daemon's reply can be lost, and
+committing then discards the context permanently and silently.
+
+When no evidence is found, events stay pending and are re-offered. Committing on
+trust is gated on B20 being recorded as *failing* — absence of evidence is not
+evidence that the format changed.
+
 ## Invariants
 
 - **Hooks must never break Claude Code** (§3.1). Every failure path exits 0 with

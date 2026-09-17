@@ -14,12 +14,17 @@ import (
 const (
 	maxInjectedEvents = 40
 	maxInjectedChars  = 12000
+
+	// Unmatched pending rows accumulate only when injections genuinely never
+	// arrive, so a small cap is enough to bound them.
+	maxPendingPerSession = 20
 )
 
 type Daemon struct {
-	store *Store
-	id    *Identity
-	room  string
+	store         *Store
+	id            *Identity
+	room          string
+	claudeVersion string
 	mu    sync.Mutex // serializes sequence allocation + append
 }
 
@@ -34,6 +39,7 @@ type stopReq struct {
 	SessionID      string `json:"session_id"`
 	TranscriptPath string `json:"transcript_path"`
 	CWD            string `json:"cwd"`
+	PromptID       string `json:"prompt_id"`
 	// LastAssistantMessage supplies the turn's final text block, which is not
 	// yet on disk when Stop fires. See ReassembleLastTurn.
 	LastAssistantMessage string `json:"last_assistant_message"`
@@ -64,7 +70,7 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 
 	// Read the unseen set BEFORE appending, so the local user's own prompt is
 	// never echoed back into their own context.
-	pending, watermark, err := d.store.UndeliveredFor(d.room, req.SessionID)
+	pending, err := d.store.UndeliveredFor(d.room, req.SessionID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -75,13 +81,20 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err := d.store.MarkDelivered(req.SessionID, watermark); err != nil {
+
+	// Offered, not delivered. Nothing is marked delivered here: this response
+	// may never reach the hook (3s timeout, daemon restart), and committing now
+	// would lose the context permanently and silently. Confirmation happens at
+	// Stop, from evidence in the transcript.
+	text := FormatTeamContext(pending)
+	if err := d.store.RecordPending(req.PromptID, req.SessionID, pending, text); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	_ = d.store.PrunePending(req.SessionID, maxPendingPerSession)
 
-	log.Printf("USER_PROMPT session=%.8s injected=%d events", req.SessionID, len(pending))
-	writeJSON(w, map[string]any{"context": FormatTeamContext(pending)})
+	log.Printf("USER_PROMPT session=%.8s offered=%d events", req.SessionID, len(pending))
+	writeJSON(w, map[string]any{"context": text})
 }
 
 // handleStop reassembles and stores the completed assistant response (§15).
@@ -96,6 +109,7 @@ func (d *Daemon) handleStop(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	d.confirmDelivery(req)
 	if strings.TrimSpace(turn.Text) == "" {
 		writeJSON(w, map[string]any{"stored": false})
 		return
@@ -110,6 +124,58 @@ func (d *Daemon) handleStop(w http.ResponseWriter, r *http.Request) {
 	log.Printf("ASSISTANT_MESSAGE session=%.8s chars=%d tools=%d",
 		req.SessionID, len(turn.Text), len(turn.ToolCalls))
 	writeJSON(w, map[string]any{"stored": true, "chars": len(turn.Text)})
+}
+
+// confirmDelivery derives §19 delivery state from what the transcript shows
+// Claude actually received, rather than from the fact that a hook was called.
+func (d *Daemon) confirmDelivery(req stopReq) {
+	blocks, err := InjectedBlocks(req.TranscriptPath)
+	if err != nil {
+		log.Printf("delivery: transcript unreadable (%v); nothing confirmed", err)
+		return
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	if len(blocks) == 0 {
+		// No evidence. This is ambiguous: either the attachment format changed
+		// (B20), or the injection never reached Claude -- which is exactly the
+		// loss this design exists to catch. Committing on trust here would
+		// silently discard the context in the second case.
+		//
+		// So only trust the turn when a check has actually FAILED. Otherwise
+		// leave the events pending: they will be re-offered next prompt, which
+		// is noisy and self-announcing rather than silent and lossy.
+		if !BehaviorKnownBroken(d.claudeVersion, "B20") {
+			if n, _ := d.store.PendingCount(req.SessionID); n > 0 {
+				log.Printf("delivery: no injection evidence in session %.8s (%d pending); re-offering. If this repeats, run `claude-team doctor` (B20)",
+					req.SessionID, n)
+			}
+			return
+		}
+		n, err := d.store.CommitPending(req.SessionID, req.PromptID)
+		if err != nil {
+			log.Printf("delivery: fallback commit failed: %v", err)
+			return
+		}
+		if n > 0 {
+			log.Printf("delivery: B20 is known broken on %s; committed %d event(s) on trust", d.claudeVersion, n)
+		}
+		return
+	}
+
+	hashes := make([]string, len(blocks))
+	for i, b := range blocks {
+		hashes[i] = HashBlock(b)
+	}
+	n, err := d.store.ConfirmDelivered(req.SessionID, hashes)
+	if err != nil {
+		log.Printf("delivery: confirmation failed: %v", err)
+		return
+	}
+	if n > 0 {
+		log.Printf("delivery: confirmed %d event(s) present in session %.8s", n, req.SessionID)
+	}
 }
 
 func (d *Daemon) handleEvents(w http.ResponseWriter, r *http.Request) {

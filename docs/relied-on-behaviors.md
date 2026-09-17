@@ -58,6 +58,10 @@ re-verifies them against the installed version.
 
 **Relied on for:** End-to-end proof that B03/B04/B05 still compose. This is the check that matters if the individual ones drift.
 
+### B20 — Injected hook output is recorded as a hook_success attachment
+
+**Relied on for:** Delivery confirmation (D-014). The daemon marks teammate events delivered only once it observes the injected block in the transcript. If this record disappears or changes shape, delivery falls back to trusting that the turn carried it -- degraded, not broken, but the guarantee weakens silently.
+
 ## Tier: compaction
 
 ### B13 — PreCompact fires and reports its trigger

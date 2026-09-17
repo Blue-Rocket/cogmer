@@ -144,3 +144,57 @@ func mergeTail(joined, lastMessage string) string {
 		return joined + "\n\n" + tail
 	}
 }
+
+// attachmentRecord is how Claude Code records a hook's stdout once it has been
+// added to the conversation. Its presence is proof the injected block reached
+// the model -- the evidence this project's delivery tracking is derived from,
+// rather than assuming delivery succeeded because the hook was called.
+//
+// Verified against 2.1.273; checked by behavior B20.
+type attachmentRecord struct {
+	Type       string `json:"type"`
+	Attachment struct {
+		Type      string `json:"type"`
+		HookName  string `json:"hookName"`
+		HookEvent string `json:"hookEvent"`
+		Content   string `json:"content"`
+	} `json:"attachment"`
+}
+
+// InjectedBlocks returns every UserPromptSubmit hook output recorded in a
+// transcript, in file order.
+//
+// Attachments accumulate across turns and survive compaction, so a block missed
+// at its own Stop is still observable later. That is what makes confirmation
+// self-healing rather than single-shot.
+func InjectedBlocks(path string) ([]string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var out []string
+	sc := bufio.NewScanner(f)
+	sc.Buffer(make([]byte, 0, 1024*1024), 64*1024*1024)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if line == "" || !strings.Contains(line, "hook_success") {
+			continue
+		}
+		var r attachmentRecord
+		if err := json.Unmarshal([]byte(line), &r); err != nil {
+			continue
+		}
+		if r.Type != "attachment" || r.Attachment.Type != "hook_success" {
+			continue
+		}
+		if r.Attachment.HookName != "UserPromptSubmit" && r.Attachment.HookEvent != "UserPromptSubmit" {
+			continue
+		}
+		if c := strings.TrimSpace(r.Attachment.Content); c != "" {
+			out = append(out, c)
+		}
+	}
+	return out, sc.Err()
+}
