@@ -191,7 +191,16 @@ widening (D-005). Keep the investigative framing only for what is still unknown.
 
 ### A5 — D-028's policy on losing a room database is not implemented, and the loss is silent
 
-**OPEN. Found 2026-09-16 by deleting a room database and watching.**
+**OPEN — specified, not implemented.** §22 now defines `membership.db`: one record
+per joined room, holding the room's identifiers, its state, and the highest sequence
+this peer has issued in it, stored outside every room database so it shares the
+identity's fate rather than the room's. §22 previously placed membership *inside*
+the room database, which contradicted the requirement; that is corrected.
+
+The implementation still creates an empty room silently and restarts at 1. The
+reproduction below stands.
+
+**Found 2026-09-16 by deleting a room database and watching.**
 
 **High.** §8 says a peer that has lost a room's local state must stop using its
 identifier in that room, and D-028 says its membership ends. Nothing enforces

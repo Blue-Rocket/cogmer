@@ -1317,6 +1317,7 @@ Conceptually:
 ```
 ~/.claude-team/
     identity.json
+    membership.db
     rooms/
         0f7a4e6c-2b91-4d0a-9c3e-7f1d8a5b2c44.db
     archive/
@@ -1330,12 +1331,33 @@ A room's database moves to the archive when the room closes. An archived room is
 
 Retaining the archive is what allows membership to be ephemeral without discarding the conversation. Preserving the actual conversation remains a requirement; resuming membership in it does not.
 
-The database should contain:
+## The membership index
+
+`membership.db` holds one record per room this peer has joined, outside every room database:
+
+```
+roomId
+roomName
+state          joined / left / archived
+issuedSequence the highest sequence this peer has issued in that room
+```
+
+It exists because a room's database can be lost while the peer survives. Without it, an emptied room is indistinguishable from one never joined, and a peer would silently resume its sequence from the beginning — the condition that makes another peer's copy of the conversation diverge with nothing to signal it.
+
+The index must share the fate of the peer's identity, not the fate of the rooms. A value stored only inside the thing whose loss it guards against is no guard at all.
+
+`issuedSequence` is advanced before the event using it is published, never after, for the reason given under event identity.
+
+A room's record is written when the room is created or joined, and retained once the room is archived, so a peer can still distinguish a room it once belonged to from one it has never seen.
+
+## What a room's database holds
 
 - events;  
 - peer synchronization state;  
 - Claude session context state;  
-- room membership/configuration.
+- the room's guest list and configuration.
+
+It must **not** hold this peer's own sequence position for the room. That belongs to the membership index, for the reason above.
 
 ---
 
