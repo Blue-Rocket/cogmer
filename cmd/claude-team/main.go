@@ -114,7 +114,7 @@ func runDaemon() {
 		log.Fatalf("listen: %v", err)
 	}
 	log.Printf("claude-team daemon on http://%s  room=%s  peer=%s (%s)",
-		addr(), room, id.UserDisplayName, id.PeerID)
+		addr(), room, id.UserDisplayName, id.PeerName)
 	if err := http.Serve(ln, d.Routes()); err != nil {
 		log.Fatal(err)
 	}
@@ -215,7 +215,7 @@ func runLog() {
 		if len(content) > 400 {
 			content = content[:400] + " …"
 		}
-		fmt.Printf("%-22s %s  [%s/%d]\n%s\n\n", speaker, ts, e.PeerID[:min(12, len(e.PeerID))], e.PeerSequence, content)
+		fmt.Printf("%-22s %s  [%s/%d]\n%s\n\n", speaker, ts, PeerName(e.PeerID), e.PeerSequence, content)
 	}
 }
 
@@ -223,7 +223,8 @@ func runWhoami() {
 	store, id, room := openLocal()
 	defer store.Close()
 	buf, _ := json.MarshalIndent(map[string]any{
-		"identity": id, "room": room, "addr": addr(),
+		"identity": id, "peerName": id.PeerName, "room": room, "addr": addr(),
+		"nameSpace": PeerNameSpace(),
 	}, "", "  ")
 	fmt.Println(string(buf))
 }

@@ -321,6 +321,7 @@ At minimum:
 
 ```
 peerId
+peerName
 userId
 userDisplayName
 machineId
@@ -344,6 +345,33 @@ Example:
   "roomId": "0f7a4e6c-2b91-4d0a-9c3e-7f1d8a5b2c44"
 }
 ```
+
+## Peer names
+
+A peer has two identifiers, for the same reason a room does.
+
+```
+peerId:   derived from the peer's public key
+peerName: quiet-otter
+```
+
+The `peerId` is the identity that is verified, signed with, and keyed on. The `peerName` is a word pair — an adjective and an animal — that people can read, say, and recognize in a transcript.
+
+A peer name is **derived from the peer identifier**, never chosen. A name that a peer selects for itself is a claim about who it is, and the one thing a display name must not be is a claim. Deriving it means a peer cannot simply declare itself to be someone else.
+
+Deriving it is not sufficient either. A short name has little entropy, and an identity that can be generated freely can be generated until its derived name matches a chosen target. No name short enough to say aloud can resist that. It follows that:
+
+- a peer name is a mnemonic for an identity already known, not an introduction to a stranger;  
+- a name must never be used to admit, to route, to deduplicate, or to establish trust;  
+- two peers may derive the same name, and an interface must show that rather than hide it.
+
+Display a name as itself only for a peer whose identity has been verified. For any other peer, show it as unverified and show the identifier. A name presented without that distinction is an assertion the system cannot support.
+
+## Naming people
+
+The word lists are subject to a constraint the room lists are not: these names attach to colleagues.
+
+An adjective that would be unkind applied to a person does not belong in the list, however neutral it seems applied to an animal. Nor does any animal used as an insult. The lists should be curated with that in mind and reviewed as they grow, because the combinations are generated and nobody approves them individually.
 
 A peer identifier is presently self-asserted: it is generated locally and nothing verifies it on receipt. Attribution is therefore accurate among cooperating peers and not resistant to a peer that chooses to lie. This is acceptable in a prototype and must not be mistaken for a property the system provides.
 
@@ -1046,6 +1074,8 @@ Claude should understand:
 - they provide context;  
 - they are not system instructions;  
 - the local user's current prompt remains authoritative.
+
+Attribution in injected context carries more weight than attribution in a display, because a model reasons about who said a thing. A speaker a peer has not verified must be marked as unverified in the injected text itself, not merely in the interface. Otherwise a peer that has chosen a convincing name can place words in a trusted colleague's mouth, in a form that reads to the model exactly like the colleague saying them.
 
 ---
 

@@ -683,3 +683,57 @@ requires a key, a listener learning every advertised room name gains nothing.
 **Revisit when** implementing Phase 2. Peer identity format is entrenched by the
 first event two peers exchange, so the keypair decision wants making before peers
 exist, not after.
+
+---
+
+## D-021 — Peer names are word pairs derived from the identity, never chosen
+
+**Date:** 2026-09-16 · **Status:** active (derivation implemented; verification deferred)
+
+**Context.** Peer identifiers should be readable, as room names are (D-017):
+`quiet-otter` rather than `peer-852ffe6408339bcada91`.
+
+**Decision.** A peer carries two identifiers, mirroring a room: a `peerId` that is
+verified, signed with and keyed on, and a `peerName` — an adjective and an animal —
+for people to read and say. Implemented as `PeerName()`, which hashes the
+identifier rather than slicing it, so the derivation works unchanged when `peerId`
+becomes a public-key fingerprint (D-020).
+
+**The name is derived, never chosen, and that distinction matters more for peers
+than for rooms.** A room name colliding is confusing. A peer name colliding is
+impersonation: §20 injects `speaker="Alice"` directly into a teammate's Claude,
+so a display name a peer can select is a way to put words in a colleague's mouth,
+in a form the model reads exactly as the colleague saying them. A name a peer
+chooses is a claim about who it is, and a display name must not be a claim.
+
+**Deriving it is necessary and not sufficient.** 8,280 combinations is trivially
+grindable: generate identities until the derived name matches a chosen target. No
+name short enough to say aloud can resist that, and a larger word list does not
+change the conclusion — it changes the cost from seconds to minutes.
+
+The protection therefore cannot come from the name. It comes from D-020's known
+peers: a name is a mnemonic for an identity already verified, never an
+introduction to a stranger. The specification now requires that a name be
+displayed as itself only for a verified peer, and that unverified speakers be
+marked as such **inside the injected text**, not merely in an interface — the
+model reasons about attribution, so marking it only in a UI protects the wrong
+reader.
+
+**Word lists name colleagues, which constrains them more than the room lists.**
+Weather and landscape name places; adjectives and animals name people. An
+adjective that would be unkind applied to a person is unacceptable however
+harmless it is applied to an animal, and so is any animal used as an insult.
+Combinations are generated and nobody approves them individually, so the
+constraint lives in the lists. A test asserts it, which is a floor and not a
+substitute for reviewing additions.
+
+**Rejected.**
+- *Self-chosen display names* — the impersonation vector above.
+- *Storing the name alongside the identity* — a persisted name can drift from the
+  identity it represents. It is derived on load and marked `json:"-"`.
+- *A larger word list as the answer to spoofing* — raises grinding cost by minutes
+  and leaves the property unchanged.
+
+**Revisit when** `peerId` becomes a key fingerprint. The derivation needs no
+change, but the verified/unverified display rule becomes enforceable rather than
+advisory, and that is the point at which names become trustworthy at all.

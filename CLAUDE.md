@@ -146,6 +146,13 @@ attribution is accurate among cooperating peers and not resistant to one that
 lies, a guest list cannot replace the join secret, and §13's rule that a relayer
 must not rewrite event origin has no enforcement.
 
+Peer names (`quiet-otter`) are **derived** from `peerId`, never chosen or stored —
+`PeerName()` hashes it, so it keeps working when the id becomes a key fingerprint.
+A derived name is not unforgeable: 8,280 combinations are grindable, so a name is a
+mnemonic for an identity already verified, never an introduction to a stranger.
+Unverified speakers must be marked **inside injected text**, not just in a UI — the
+model reasons about attribution.
+
 **Build nothing that assumes otherwise.** Once identity is cryptographic, prefer
 admitting known peers over holders of a secret — the secret is a first-contact
 mechanism, not a standing requirement.

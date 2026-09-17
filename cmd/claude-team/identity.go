@@ -20,6 +20,9 @@ import (
 // property, discovered rather than derived (§4).
 type Identity struct {
 	PeerID          string `json:"peerId"`
+	// PeerName is derived from PeerID, never stored as an independent value --
+	// a persisted name could drift from the identity it claims to represent.
+	PeerName        string `json:"-"`
 	UserID          string `json:"userId"`
 	UserDisplayName string `json:"userDisplayName"`
 	MachineID       string `json:"machineId"`
@@ -53,6 +56,7 @@ func LoadIdentity() (*Identity, error) {
 		if err := json.Unmarshal(data, &id); err != nil {
 			return nil, fmt.Errorf("parse %s: %w", path, err)
 		}
+		id.PeerName = PeerName(id.PeerID)
 		return &id, nil
 	}
 	if !os.IsNotExist(err) {
@@ -83,6 +87,7 @@ func LoadIdentity() (*Identity, error) {
 	if err := os.WriteFile(path, buf, 0o600); err != nil {
 		return nil, err
 	}
+	id.PeerName = PeerName(id.PeerID)
 	return id, nil
 }
 
