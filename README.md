@@ -65,6 +65,13 @@ CLAUDE_TEAM_ROOM=demo ./bin/claude-team log
 `CLAUDE_TEAM_ROOM` overrides the room; `CLAUDE_TEAM_ADDR` the daemon address;
 `CLAUDE_TEAM_PREFLIGHT=off` skips behavior checks on new rooms.
 
+## Specification review
+
+[`docs/spec-review.md`](docs/spec-review.md) — the spec evaluated against what
+Phases 0 and 0a actually established. Four defects, three ambiguities that would
+make peers diverge, seven gaps, and what held up. One finding (A1) is a live bug
+in the current code.
+
 ## Why things are the way they are
 
 [`docs/decisions.md`](docs/decisions.md) — 13 decisions with the alternatives
