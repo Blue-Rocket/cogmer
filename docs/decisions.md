@@ -1972,3 +1972,46 @@ no barrier.
 **So what Phase 9 delivers is the ability to make an admission decision, not the
 decision.** The guest list is Phase 10, and until it exists the startup warning says
 exactly this rather than implying the room is protected.
+
+---
+
+## D-045 — Rooms are records with a guest list; admission is enforced
+
+**Date:** 2026-09-17 · **Status:** active (implemented)
+
+**Context.** Phase 10. D-044 left the confidentiality gap open and said so: a
+stranger generated a key, authenticated correctly, and read a private room, because
+nothing decided *which* peers could ask.
+
+**Decision.** Rooms become records rather than arbitrary strings — a UUID, a
+generated `weather-landscape` name, and a guest list — stored in `membership.db`
+beside the identity rather than inside any room. A sync request is refused unless
+its authenticated peer is a guest.
+
+**Verified by repeating the test that failed.** The same uninvited stranger now
+reads nothing, and the host records why: *"clever-crane … is authenticated but is
+not a guest of this room."* An invited peer reads the room with no refusals. That
+pair of results is the whole of Phase 10's value.
+
+**Two scopes, as §12 requires.** `known_peers` is machine-wide and durable; a room's
+guests are per-room. Knowing six colleagues and admitting two to a room about
+customer data has to be expressible, and one list cannot express it. `forget`
+discards an identity so a later meeting is a first meeting; `revoke` withdraws
+admission to one room and leaves the identity known. They read similarly and are not
+the same act.
+
+**Only keys can be admitted.** `allow` and `invite` refuse an identifier that names
+no key. Recording `alice` or an old `peer-8f3a…` would be recording a hope: nothing
+could ever prove possession of it, so the entry could never do its job.
+
+**The out-of-band step is a public key, and the tooling says so.** `allow` prints
+the full fingerprint and tells the operator to verify it over a channel the
+identifier did not travel on. That is the only moment trust is taken on faith, and
+it should be the one moment a person is asked to pay attention.
+
+**A bridge, noted as such.** A daemon pointed at a room nobody created makes one and
+admits its creator, so existing setups keep working. §12 has invitation as the
+deliberate act and D-022 has a room beginning when someone is invited; a daemon
+creating a room on startup is neither. It stands until a session joins a room rather
+than a daemon serving one, which is the multi-room refactor §5 describes and this
+phase did not attempt.

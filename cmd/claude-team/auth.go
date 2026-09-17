@@ -122,5 +122,13 @@ func (d *Daemon) verifyRequest(req syncRequest) error {
 	if !d.replay.admit(req.Nonce, now) {
 		return errors.New("nonce already used; this is a replayed request")
 	}
+
+	// Who is established. Whether they may is a separate question, and answering
+	// only the first is what let a stranger with a freshly generated key read a
+	// private room (D-044).
+	if d.members != nil && d.roomID != "" && !d.members.IsGuest(d.roomID, req.PeerID) {
+		return fmt.Errorf("%s (%s) is authenticated but is not a guest of this room",
+			PeerName(req.PeerID), req.PeerID[:24])
+	}
 	return nil
 }

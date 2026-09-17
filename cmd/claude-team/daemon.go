@@ -25,6 +25,8 @@ type Daemon struct {
 	store         *Store
 	id            *Identity
 	room          string
+	roomID        string
+	members       *Membership
 	claudeVersion string
 
 	subs    map[chan struct{}]bool

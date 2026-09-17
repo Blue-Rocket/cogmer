@@ -247,10 +247,14 @@ The private key is in `~/.claude-team/identity.key` (0600) and **never** in
 Sync requests are signed too (D-044): identifier, timestamp, nonce, signature, with
 replay and staleness rejected.
 
-**Authentication is not admission.** A stranger can generate a key, authenticate
-correctly, and read a room — verified. Nothing yet decides *which* peers may ask, so
-confidentiality begins at the guest list, not at the signature. Do not describe the
-peer API as protected until Phase 10 lands.
+**Admission is enforced** (D-045): a sync request is refused unless its
+authenticated peer is a guest of that room. Authentication says *who*; the guest list
+says *whether*. Verified both ways — an uninvited stranger reads nothing, an invited
+peer reads the room.
+
+`membership.db` holds known peers (machine-wide) and per-room guests. `forget`
+discards an identity; `revoke` withdraws admission to one room. Only identifiers that
+name a key can be recorded or admitted.
 
 Identities are created once per machine on first use and exchanged when a peer
 joins — never obtained in advance. So

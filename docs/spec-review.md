@@ -597,22 +597,24 @@ Peer sync defaults to loopback and warns, when bound elsewhere, that it is reach
 and unauthenticated — which it is, until D-023 lands. Tests assert that neither
 listener serves the other's routes.
 
-**C-2. Rooms are selected by environment variable.** §12 and §28 describe rooms
-entered by invitation with a guest list. The implementation takes a room name from
-`CLAUDE_TEAM_ROOM` and has no invitation, membership, or guest list. Expected —
-this is Phase 1 work — but it means no part of the admission design is exercised.
+**C-2. Rooms are records with guests — mostly resolved.** `membership.db` holds
+known peers, rooms, and per-room guest lists; `create`, `rooms`, `peers`, `allow`,
+`forget`, `guests`, `invite` and `revoke` exist; admission is enforced on every sync
+request.
+
+What remains: a daemon still *serves* one room chosen by `CLAUDE_TEAM_ROOM`, and
+creates it if absent. §5 describes a daemon serving several rooms concurrently, with
+a session joining rather than a daemon serving. That refactor is outstanding.
 
 **C-3. Peer identity is cryptographic — resolved.** Identifiers are Ed25519 public
 keys (`ed25519:…`), the private key lives in its own `0600` file and never reaches
 `whoami`, events are signed at origin, and receipt rejects what does not verify.
 Attribution and the relay rule are now controls rather than conventions.
 
-Possession is now proved on connection too: sync requests are signed, with replay
-and staleness rejected. **Admission remains a convention.** Verified by test — a
-stranger generated a key, authenticated correctly, and read a private room, because
-nothing yet decides *which* peers may ask. Authenticating every caller and admitting
-every authenticated caller is not confidentiality. That is Phase 10.
+Possession is proved on connection, and **admission is now enforced** (D-045): a
+request is refused unless its authenticated peer is a guest of the room. Verified by
+repeating the test that failed — the same uninvited stranger now reads nothing,
+while an invited peer reads the room. C-3 is closed.
 
-**C-4. Room identifiers and names are not generated.** §3.2 requires a `roomId` UUID
-and a generated `roomName`; the implementation uses a bare string. `PeerName` is
-implemented; its room equivalent is not.
+**C-4. Room identifiers and names are generated — resolved.** A room has a UUID and
+a generated `weather-landscape` name from 7,656 combinations, resolvable by either.
