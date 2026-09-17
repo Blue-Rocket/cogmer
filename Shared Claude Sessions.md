@@ -1203,7 +1203,21 @@ Report the two separately wherever propagation is described. A system that quote
 
 # 17\. Shared Conversation UI
 
-## The room cannot be shown inside Claude Code
+## The room belongs outside the session
+
+A developer's session is their conversation with their own Claude: their prompts, its replies, the work in progress. The room is something else — a record of what colleagues are doing, consulted rather than participated in.
+
+Keeping them apart is right on the merits, independently of what is achievable.
+
+A session is read closely and a room is glanced at. Interleaving them means the glanceable thing is buried inside the thing being read closely, and the thing being read closely is interrupted by arrivals that were not addressed to it. Neither is served. A developer loses the thread of their own work in order to be told something they could have looked at when they chose.
+
+The two also scale differently. With one colleague, interleaving might be tolerable. With three, a session becomes unreadable — and the cost lands on the developer's own working view, which is the last place it should land. Kept separate, additional participants cost nothing at all in the session.
+
+There is a neater way to say it. The model and the person want the same conversation in different forms. The model wants a teammate's turns **in its context**, arriving at a turn boundary, phrased for a reader that does not skim. A person wants them **available to glance at**, without their own thread stopping to carry them. One channel cannot serve both without compromising each.
+
+So the model is served by injection, and the person by a view. That the second cannot be placed inside a Claude Code session is a constraint that happens to agree with the design rather than one the design is working around.
+
+## What is achievable inside a session
 
 Established by testing rather than assumed. A hook's output reaches the model and never reaches the person: standard output becomes context, and neither standard error nor a direct write to the controlling terminal is surfaced. Claude Code owns its display, and nothing a hook does appears in it.
 

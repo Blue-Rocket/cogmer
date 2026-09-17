@@ -1643,3 +1643,44 @@ extension surface can actually support.
 If a display primitive is ever wanted from Anthropic, the request is small and
 already well-specified here: append a display-only message to the current session,
 without scheduling inference — §3.7 states that second half precisely.
+
+---
+
+## D-038 — Separating the room from the session is correct on its merits
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Context.** D-033 concluded that the room cannot be displayed inside a Claude Code
+session, and everything since has treated an external view as what remains after
+that constraint. That framing was backwards.
+
+**Decision.** Record the separation as a design position rather than a consequence.
+A view outside the session is what should be built even if an in-session display
+became available.
+
+**The argument.** A session is a developer's conversation with their own Claude,
+read closely. A room is a record of what colleagues are doing, glanced at.
+Interleaving them buries the glanceable thing inside the closely-read thing, and
+interrupts the closely-read thing with arrivals not addressed to it. A developer
+loses the thread of their own work in order to be told something they could have
+looked at when they chose.
+
+They also scale differently. One colleague interleaved might be tolerable; three is
+unreadable — and the cost lands on the developer's own working view, which is the
+last place it should land. Separated, additional participants cost nothing there.
+This answers the earlier observation that a three-peer session "feels a little
+noisy": the noise is only unavoidable while the room shares space with the
+conversation.
+
+**The form it takes.** The model and the person want the same conversation
+differently. The model wants teammate turns *in its context*, at a turn boundary,
+phrased for a reader that does not skim — which §20 already specifies. A person wants
+them *available to glance at*, without their own thread stopping to carry them. One
+channel cannot serve both without compromising each, so injection serves the model
+and a view serves the person.
+
+**Consequence for how the constraint is described.** §17 no longer opens by saying
+the room cannot be shown inside a session. It opens with why the room belongs
+outside one, and treats the constraint as agreeing with the design rather than
+causing it. The distinction matters for anyone reading later: a reader who believes
+this is a workaround will try to undo it the moment an in-session display appears.

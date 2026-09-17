@@ -27,6 +27,12 @@ anything requiring an install Claude Code does not already load, anything requir
 knowledge of how it renders. That rules out the PTY wrapper (D-034) on principle
 rather than on a cost tally.
 
+**The separation is correct on its merits (D-038)**, not a workaround. A session is
+read closely; a room is glanced at. Interleaving buries one in the other and
+interrupts the other with arrivals not addressed to it — and the cost lands on the
+developer's own working view. Injection serves the model, a view serves the person.
+Do not undo this if an in-session display ever becomes available.
+
 **Accept the consequence.** Every extension point delivers to the *model*; a person
 sees only what the model then says (D-033, D-036). So semantics work everywhere and
 presentation is best effort. A view *outside* the session is fine — it is a separate
