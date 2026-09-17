@@ -173,22 +173,25 @@ Do not attempt to share Claude Code session internals between machines.
 
 A room exists for as long as the sessions that joined it.
 
-Membership is held by a Claude Code session, identified by its session ID. A room is created by one peer, joined by others through an explicit invitation, and closed when its last member session ends.
+Membership is held by a Claude Code session, identified by its session ID. A room is created by one peer, joined by others through an explicit invitation, and closed when its members have left it.
+
+A Claude Code session becoming inactive is not a departure. Sessions are resumable, so a process exiting makes a member absent rather than gone.
 
 There is no standing room that developers drift into and out of over weeks.
 
 Consequences:
 
-- a room's history is bounded by the work that produced it;  
+- a room's history is bounded by the work that produced it, not by the age of a project;  
 - a developer beginning a new Claude Code session creates a new room or is invited to one, rather than resuming an old room;  
 - nothing about a room is inferred from a repository, directory, or project;  
+- a session belongs to at most one room at a time;  
 - joining is always a deliberate act by every participant.
 
-A resumed Claude Code session rejoins the room it belonged to, because the Claude session ID survives resumption.
+A resumed Claude Code session returns to the room it belongs to, because the Claude session ID survives resumption. It is not rejoining; its membership never lapsed.
 
 Membership is what ends. The record is not discarded; a closed room is retained as an archive that may be read but never rejoined.
 
-This bounds several problems that an indefinitely-lived room creates. Unseen conversation cannot accumulate beyond the pairing that produced it. A session joining late can be given the room from its beginning rather than a truncated tail. And because a room is never derived from a directory, a developer cannot inadvertently publish one project's conversation into a room opened for another.
+This bounds several problems that an indefinitely-lived room creates. Unseen conversation cannot accumulate beyond the pairing that produced it. A session joining late can be given the room from its beginning rather than a truncated tail, subject to the injection limits. And because a room is never derived from a directory, a developer cannot inadvertently publish one project's conversation into a room opened for another.
 
 ---
 
@@ -274,7 +277,8 @@ The daemon is responsible for:
 - providing unseen team context to Claude hooks;  
 - creating, joining, and closing rooms;  
 - tracking which sessions are members of which room;  
-- archiving a room once its last member session ends.
+- distinguishing a member that is absent from one that has left;  
+- archiving a room once it has closed.
 
 A single daemon serves several rooms concurrently. Every request identifies the room it concerns; the daemon never infers one.
 
@@ -556,6 +560,78 @@ Later possibilities include:
 - invitation links;  
 - membership exchange between joined peers;  
 - libp2p discovery.
+
+---
+
+# 12a\. Room Membership
+
+A Claude Code session holds membership in at most one room at any time.
+
+This is a constraint of the event model, not a policy preference. Every captured event belongs to exactly one room, and a session in two rooms provides no basis for choosing which. Injected context is subject to the same problem from the other direction: a session receiving turns from two unrelated conversations has no way to separate them, and neither does the developer reading the result.
+
+## Joining
+
+A session joins a room by presenting an invitation.
+
+A session joining a room already in progress receives that room from its beginning.
+
+## Leaving
+
+A session may leave a room. Leaving is always explicit. It is never inferred from a Claude Code session becoming inactive.
+
+On leaving:
+
+- the session stops publishing to the room;  
+- the session stops receiving injected context from it;  
+- a SESSION_LEFT event is published, so remaining members can see the departure;  
+- events the session already published remain in the room.
+
+Published events are immutable and are never withdrawn by a departure. A developer who leaves does not un-say what they said.
+
+## Rejoining
+
+A session may rejoin a room it left, for as long as that room is still live.
+
+It receives what it missed, and only what it missed. Delivery is recorded per event rather than as a position in a stream, so a rejoining session is not re-sent conversation it already had.
+
+A closed room is never rejoined, by a former member or by anyone else.
+
+## Joining a different room
+
+A session that has received injected teammate context may not join a different room.
+
+It may leave. It may rejoin the room it left. Its membership is not transferable.
+
+The reason is that injected context cannot be withdrawn. Once another developer's conversation has entered a session's context window it remains there for the life of that session, and anything the session subsequently produces may be shaped by it. Admitting that session to a second room would publish the first room's conversation into the second by way of the model's own output — invisibly, irreversibly, and without either room's other members being aware of it.
+
+The system cannot prevent that leak once it has occurred. It can only decline to create the conditions for it.
+
+A session that has **not** received injected teammate context may join a different room. That covers the ordinary mistake of joining the wrong room and correcting it before any teammate conversation has arrived. A session's own prompts and responses do not restrict it: that content originated with the developer, and carrying it forward is their own disclosure rather than a leak of someone else's.
+
+To work in a second room, start a second Claude Code session.
+
+## Presence is not membership
+
+A Claude Code session does not end in any durable sense. Its process exits, but the session persists and may be resumed later under the same session ID.
+
+Membership and presence must therefore be modelled separately.
+
+- **Membership** is durable. It is held by the session ID, begins at joining, and ends only when the session explicitly leaves or the room closes.  
+- **Presence** is transient. It reflects whether a member is currently reachable, and it lapses whenever a process exits, a machine sleeps, or a network drops.
+
+A member whose Claude Code process exits becomes **absent**. It has not left. Its membership stands, its delivery state is preserved, and events published while it was absent remain owed to it.
+
+Resuming that session restores presence. It is not a rejoining, because membership never lapsed. The session receives what accumulated during its absence, subject to the injection limits.
+
+A session-end signal is therefore a presence signal. It must never be treated as departure, and the system must not depend on receiving one: a process that is killed, or a machine that loses power, sends nothing at all.
+
+## Closing
+
+A room closes when every member has explicitly left, or when the room has lain dormant — no member present — long enough that resumption is no longer plausible.
+
+Set that threshold generously. Overnight gaps, weekends, and illness are ordinary; a room that dissolves because everyone went home has made resumption useless. Closing early is the more damaging error, because a closed room can never be rejoined and a session that has received injected context can join no other.
+
+Closing is the end of the room, not of the conversation. The event log is archived.
 
 ---
 
@@ -920,7 +996,7 @@ Conceptually:
         r-4a9f01d3.db
 ```
 
-A room's database moves to the archive when its last member session ends. An archived room is readable and searchable. It is never rejoined, never synchronized, and never injected.
+A room's database moves to the archive when the room closes. An archived room is readable and searchable. It is never rejoined, never synchronized, and never injected.
 
 Retaining the archive is what allows membership to be ephemeral without discarding the conversation. Preserving the actual conversation remains a requirement; resuming membership in it does not.
 

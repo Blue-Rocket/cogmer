@@ -370,10 +370,74 @@ archives rather than live rooms. Both sections were amended rather than deleted,
 because the machinery is still correct — it simply has far less to do, which
 argues for simplifying Phase 2.
 
-**Open, and deliberately not decided here.** Whether one session may hold
-membership in two rooms at once. If it may, injected context needs per-room
-attribution inside a single context window. The specification currently implies
-one room per session without saying so.
+**Settled by D-016:** a session holds membership in at most one room at a time.
 
 **Revisit when** the experiment in §30 suggests asynchronous catch-up is more
 valuable than bounded context — that is the trade this decision makes.
+
+---
+
+## D-016 — One room per session, and presence is not membership
+
+**Date:** 2026-09-16 · **Status:** active · **Closes** the open question in D-015
+
+**Context.** D-015 left open whether a session could hold membership in two rooms
+at once, and stating the constraint immediately raised the lifecycle questions
+behind it: can a session leave, rejoin, or move to a different room?
+
+**Decision — one room at a time.** This follows from the event model rather than
+being a policy preference. Every captured event belongs to exactly one room, and
+a session in two rooms gives no basis for choosing which. Injection fails the same
+way in reverse: a session receiving turns from two unrelated conversations cannot
+separate them, and neither can the developer reading the result.
+
+**Leaving** is always explicit. **Rejoining** the same room is allowed while it
+remains live, and the per-event delivery set from D-014 makes it correct for free
+— a returning session receives what it missed and nothing else.
+
+**Moving to a different room is refused once teammate context has been injected.**
+This is the sharp edge. Injected context cannot be withdrawn: another developer's
+conversation is in that session's context window for the rest of its life, and
+anything the session subsequently produces may be shaped by it. Admitting the
+session to a second room would publish the first room's conversation into the
+second through the model's own output — invisibly, irreversibly, and without
+either room's members knowing. The system cannot detect that leak once it has
+happened; it can only decline to create the conditions.
+
+A session that has received *no* injected context may move freely, which covers
+joining the wrong room and correcting it. A session's own prompts and responses
+impose no restriction: that content originated with the developer, so carrying it
+forward is their own disclosure, not a leak of someone else's.
+
+**Presence is not membership.** The first draft of this said membership ends when
+the Claude Code session ends — which is wrong, because sessions do not end. The
+process exits, but the session persists and resumes under the same ID (verified in
+Phase 0a, checked by B14). Under that draft, two developers closing their
+terminals for lunch would have archived the room, and neither could rejoin it nor
+join another.
+
+So membership is durable and ends only by explicit departure or room closure,
+while presence is transient and lapses whenever a process exits. An exiting
+session is **absent**, not gone; resuming restores presence without rejoining.
+A session-end signal is a presence signal, and the system must not depend on
+receiving one at all — a killed process sends nothing. §35's existing presence
+display (`offline — last seen 14 min ago`) already assumed this distinction; the
+specification simply had not stated it.
+
+**Consequence for closing.** A room closes on explicit departure by all members, or
+on prolonged dormancy with a deliberately generous threshold. Closing early is the
+more damaging error: a closed room can never be rejoined, and a member that
+received injected context can join no other. The asymmetry should be resolved in
+favour of keeping rooms open.
+
+**Rejected.**
+- *Allowing a session into a second room with a warning* — the leak is silent and
+  affects people who did not see the warning.
+- *Binding a session to one room for its entire life, with no exception* — simpler,
+  but forces a full session restart for a mistyped invitation.
+- *Treating process exit as departure* — the draft above; breaks resumption, which
+  is ordinary rather than exceptional.
+
+**Revisit when** a mechanism exists to scope or evict injected context within a
+live session. The refusal to move rooms is a consequence of that being impossible,
+not a value judgement about developers.
