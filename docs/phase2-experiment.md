@@ -110,10 +110,70 @@ reading."
 This is D-021's argument arriving empirically rather than by reasoning: a display
 name is a claim, and the system had been repeating it as though it were a fact.
 
+## Second run: two machines, two Claude Code versions
+
+Repeated across a real network, with a DigitalOcean droplet as the second peer. Both
+peer APIs stayed on loopback; an SSH tunnel carried the traffic, so nothing was
+exposed — the peer API is unauthenticated and a public bind would have been
+indefensible.
+
+| | mac | droplet |
+|---|---|---|
+| platform | darwin/arm64 | linux/amd64 |
+| Claude Code | 2.1.273 | **2.1.274** |
+| peer | `graceful-yellowhammer` | `mellow-ptarmigan` |
+
+**The behavior registry earned its keep.** All 13 session checks passed on 2.1.274,
+on Linux, on a machine the project was never developed on. That is the first
+evidence that the twenty relied-on behaviors survive a version change and a platform
+change — previously an assumption.
+
+**The Linux binary ran.** D-001 chose Go for cross-compilation and this is the first
+time a cross-compiled artifact was executed rather than merely produced.
+
+### Measurements
+
+| | |
+|---|---|
+| Sync over the open internet | **0.44 s** |
+| Clock skew, RTT-compensated | **+408 ms** (both NTP-synced) |
+| Event ordering | identical on both machines |
+
+The skew matters because the ordering comparator leads with `timestamp` drawn from
+two different clocks. At 408 ms it cannot reorder turns that are seconds apart, so
+the risk is real but narrow wherever NTP runs — which is the ordinary case rather
+than the fortunate one. It would still misorder genuinely simultaneous turns, and
+nothing detects it.
+
+### The exchange
+
+The droplet's session read the file and committed to the connection pool. The mac's
+session, which had never seen the file, was asked what they picked, what they ruled
+out, and where their fix could backfire. It:
+
+- resolved the referent across machines, naming the conclusion and its reasoning;
+- **stated its own epistemic position without being asked** — "I can't verify this
+  against the code — my working directory is empty; that session read the file on a
+  different machine";
+- observed that the other session had committed on a single discriminator;
+- identified two scenarios where the proposed fix makes things worse;
+- and found a gap in the other session's theory: OkHttp's idle-eviction runs on a
+  background thread which Lambda also freezes, so a shorter keep-alive does not
+  reliably prevent the first post-thaw call from hitting a dead socket. *"The
+  diagnosis may be right and the fix still not land it."*
+
+The second point is the one worth keeping. It distinguished a teammate's reading
+from its own verified knowledge, unprompted, which is precisely what §20 asks of
+injected context and more than the one-machine run demonstrated.
+
+The last point is the same pattern as the first experiment, at higher quality: two
+independent sessions produced a result neither reached alone.
+
 ## Limitations
 
-1. **One machine, one OS user.** No network, no NAT, no clock skew. Propagation
-   measured here is a lower bound on nothing in particular.
+1. ~~One machine, one OS user.~~ **Addressed by the second run** — two machines, two
+   platforms, two Claude Code versions, real network. NAT traversal is still
+   untested: the peers met through an SSH tunnel.
 2. **Two peers.** Transitive relay (§13) and three-peer ordering (Phase 6) are
    untouched. Review finding B2 — injection order under interleaved streams — does
    not arise with a single teammate and remains unverified.
@@ -121,7 +181,8 @@ name is a claim, and the system had been repeating it as though it were a fact.
    is not the same as meeting it.
 4. **No admission, no identity.** Peers were named by environment variable. A peer
    is trusted to report its own identity, so nothing here exercises §12, §25, or
-   D-025.
+   D-025. This is why the second run used a tunnel rather than a public bind: the
+   peer API would have been open to anyone who found the port.
 5. **One exchange.** A single successful pairing is evidence, not a result. Nothing
    is known about a long session, a busy room, or whether the effect survives
    compaction.
