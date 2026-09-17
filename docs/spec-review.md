@@ -202,13 +202,17 @@ widening (D-005). Keep the investigative framing only for what is still unknown.
 
 ### A5 — Nothing in the specification requires a peer to notice that a room's state is gone
 
-**OPEN.** §22 defines `membership.db` and §8 says a recovering peer resumes above
-its recorded sequence. Between them sits an unspecified step: nothing says a peer
-must **check** the index when opening a room, nor what it owes the user on finding a
-discrepancy.
+**RESOLVED.** §8 now requires the index be consulted on every room open, defines
+the two conditions that mean state was lost, and requires the peer report it in
+terms the user can act on — including that history is being refetched and may repeat
+teammate context. §22 notes that an index nothing reads guards nothing.
 
-That gap is what allows an implementation to be entirely conformant and still fail
-silently — which is not hypothetical; see *Implementation conformance*.
+The reasoning is recorded with the requirement: a peer recovering while no other
+member is reachable holds a correct sequence position and an empty history, so it
+publishes safely and behaves normally while the conversation it believes itself part
+of is absent. Nothing about that is apparent from using it.
+
+The implementation still does none of this — see *Implementation conformance*, C-1.
 
 **Found 2026-09-16 by deleting a room database and watching what happened.**
 
@@ -501,12 +505,11 @@ Worth recording, because the useful output of a review is not only a defect list
 
 ## Still open
 
-Six findings and three notes, after the work of 2026-09-16:
+Five findings and three notes, after the work of 2026-09-16:
 
 | | finding | why it survives |
 |---|---|---|
 | A1 | §19 still does not say when delivery advances | reopened; was closed on implementation work |
-| A5 | detecting lost room state is unspecified | §22 defines the data, nothing requires checking it |
 | B1 | §24 has no ordering comparator | peers can diverge silently |
 | B2 | injection order unspecified | late-arriving events injected out of sequence |
 | C1 | behavior dependence unacknowledged | `doctor` exists; the specification does not require it |

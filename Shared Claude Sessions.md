@@ -525,6 +525,29 @@ There is then no loss that both keeps an identifier and forgets what that identi
 
 A sequence must be reserved **before** the event using it is published, never after. A peer that fails between the two has recorded a number it did not use, which is harmless. The reverse publishes a number it has no record of, which is the entire problem.
 
+## Noticing that state is gone
+
+A peer must consult the membership index whenever it opens a room. State has been lost if either holds:
+
+- the index records membership in a room whose database is absent;  
+- the database's highest sequence for this peer is below the value the index recorded.
+
+Without that check an emptied room is indistinguishable from one never joined, so a peer resumes from the beginning — which is precisely the condition that makes another peer's copy of the conversation diverge with nothing to signal it. Defining the index without requiring that anything read it would leave the failure exactly as silent as before.
+
+The check is cheap and belongs on every open, not only on a suspected fault. A peer does not know it has lost state; that is the nature of the loss.
+
+## Saying so
+
+A peer that has lost state must report it, to the person using it, in terms they can act on.
+
+A room refetching its history — and possibly repeating teammate turns already seen — is in a different condition from one working normally. That difference must be visible, rather than inferred later from a conversation being shorter than someone remembers.
+
+This is not tidiness. A peer recovering while no other member is reachable holds a correct sequence position and an empty history. It will publish safely and behave normally, while the conversation it believes itself part of is simply absent. Nothing about that is apparent from using it.
+
+Report at least: that local state for the room was lost, that membership and sequence position are intact, that history is being refetched from other members and depends on one being reachable, and that some teammate context may be injected a second time.
+
+Silence is the failure mode this specification most often has to guard against, and recovery is no exception: a recovery nobody is told about is indistinguishable from nothing having gone wrong.
+
 ## What recovery costs
 
 The costs are modest, and should be expected rather than discovered.
@@ -1360,6 +1383,8 @@ issuedSequence the highest sequence this peer has issued in that room
 It exists because a room's database can be lost while the peer survives. Without it, an emptied room is indistinguishable from one never joined, and a peer would silently resume its sequence from the beginning — the condition that makes another peer's copy of the conversation diverge with nothing to signal it.
 
 The index must share the fate of the peer's identity, not the fate of the rooms. A value stored only inside the thing whose loss it guards against is no guard at all.
+
+An index nothing reads guards nothing either. A peer is required to consult it whenever it opens a room, and to report what it finds; see the treatment of lost state under event identity.
 
 `issuedSequence` is advanced before the event using it is published, never after, for the reason given under event identity.
 
