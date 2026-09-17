@@ -11,8 +11,8 @@ one place where the specification still poses a question that has been answered.
 
 Findings are ordered by consequence, not by section number.
 
-**Status, as of the last revision.** Seven of the fourteen are resolved, two dissolved
-by a change of model rather than fixed, and five remain open. Each carries its own
+**Status, as of the last revision.** Eight of the fourteen are resolved, two dissolved
+by a change of model rather than fixed, and four remain open. Each carries its own
 status line; the open ones are collected at the end so they are not lost among the
 closed.
 
@@ -154,10 +154,18 @@ as a flag, which suggests this was anticipated but never argued.
 
 ### A4 — §15 still poses a question that has been answered, and the answer is counter-intuitive
 
-**OPEN.** §15 still reads "implement the least invasive reliable mechanism." The
-answer is known, implemented, and documented in `phase0-findings.md`, but a reader
-of the specification alone would still reach for `last_assistant_message` and
-silently truncate most turns.
+**RESOLVED.** §15 no longer poses this as an investigation. It now states that
+neither available source is complete, that they fail in opposite directions, and
+that their union is the turn — with the additional requirement that the union
+tolerate the turn-completion hook being *widened* upstream, since blind appending
+would then duplicate every block the transcript supplied. Positional segmentation
+and the exclusions (internal reasoning, subagent records) are stated as rules
+rather than left to be rediscovered.
+
+The investigative framing was kept only for what is genuinely unknown: a closing
+section records that the behavior is observed rather than published, that it can
+change without notice, and that one part of it would change under an upstream
+*bugfix* rather than a regression.
 
 **High.** §15 says "If Claude Code hooks do not directly expose the completed
 assistant response, investigate session/transcript capabilities and implement the
@@ -353,11 +361,10 @@ Worth recording, because the useful output of a review is not only a defect list
 
 ## Still open
 
-Five findings and three notes, after the work of 2026-09-16:
+Four findings and three notes, after the work of 2026-09-16:
 
 | | finding | why it survives |
 |---|---|---|
-| A4 | §15 poses a settled question | needs the union requirement written into the section |
 | B1 | §24 has no ordering comparator | peers can diverge silently |
 | B2 | injection order unspecified | late-arriving events injected out of sequence |
 | C1 | behavior dependence unacknowledged | `doctor` exists; the specification does not require it |

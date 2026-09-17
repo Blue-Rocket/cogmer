@@ -978,9 +978,48 @@ I traced the timeout to the OkHttp connection pool...
 
 Do not summarize the response before publishing it.
 
-If Claude Code hooks do not directly expose the completed assistant response, investigate session/transcript capabilities and implement the least invasive reliable mechanism.
+## Neither available source is complete
 
-Document limitations discovered.
+A completed turn must be reassembled from two sources, because each is missing a different part of it.
+
+The turn-completion hook reports only the **final** text block of a turn. Anything said before a tool was called is absent. Since narrating before acting is the ordinary shape of a turn rather than an unusual one, publishing this value alone loses part of most substantive responses.
+
+The transcript on disk, read at the moment that hook fires, is missing **exactly that final block**. The hook runs before the closing record is flushed. Reading the transcript alone has yielded a preamble of a hundred characters in place of an answer of several thousand.
+
+The two omissions are complementary, and their union is the whole turn:
+
+```
+transcript, read at completion   →  every block except the last
+turn-completion hook             →  the last block
+union                            →  the complete turn
+```
+
+Neither source alone satisfies the requirement above to send the complete response.
+
+## The union must tolerate the hook being fixed
+
+Do not simply append the hook's value to what the transcript yielded.
+
+Were a later version to widen that value to carry the whole turn, appending would duplicate every block the transcript had already supplied. An upstream improvement would silently corrupt the conversation, which is a worse failure than the one it repaired.
+
+Detect the case instead. Where the hook's value already contains what the transcript yielded, prefer it and discard the rest. Where the transcript already ends with that value, the race was won and nothing needs appending.
+
+## Segmenting a turn
+
+Attribute assistant records to a turn by position: take every assistant record following the most recent record that carries a human prompt marker.
+
+Do not attempt to correlate by identifier. Assistant records carry no prompt identifier, and the parent-pointer chain contains gaps — a record has been observed whose parent matched no preceding record in the same file.
+
+Exclude from what is published:
+
+- internal reasoning blocks, which are not part of a shared conversation;  
+- records marked as belonging to a subagent, which belong to a nested session rather than to the room.
+
+## What remains uncertain
+
+The behavior described above is observed, not published. It can change without notice, and one part of it would change under an upstream *bugfix* rather than a regression.
+
+Treat it as an assumption to be checked against the installed version rather than a property to rely on, and record what is found.
 
 ---
 
