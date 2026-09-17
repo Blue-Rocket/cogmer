@@ -4,6 +4,18 @@ Prototype from `Shared Claude Sessions.md` — a local-first P2P daemon replicat
 Claude Code conversations between developers. Read that spec before changing
 architecture; section numbers (§7, §19, …) are referenced throughout the code.
 
+## MCP does not display anything (D-036)
+
+Tested: a server declaring `logging` and emitting `notifications/message` — idle and
+mid-`tools/call` — surfaces nowhere. Not in `stream-json`, `--debug`, `--debug-file`
+(34 KB, zero hits), or `~/.claude/debug`. Claude Code's capability record tracks
+tools/prompts/resources and **not logging**, though the server declared it.
+
+MCP carries capability *to the model*, never anything *to the person*. Do not
+re-attempt it as a display channel. If an MCP server is ever shipped here for another
+reason, it must not expose *sampling* — that would let a peer cause inference in an
+interactive session, violating §3.7.
+
 ## A view sits beside a session, never around it (D-034)
 
 Claude Code shows nothing a hook writes (D-033), so ambient display needs an outside

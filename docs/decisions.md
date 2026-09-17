@@ -1528,3 +1528,55 @@ The structural test enforces something stricter than the principle requires: tha
 peer-handling code cannot start a process at all. That is deliberate. Nothing needs
 the looser rule yet, and the questions above have no answers yet, so the guard stands
 until they do.
+
+---
+
+## D-036 — MCP logging notifications are not a display channel
+
+**Date:** 2026-09-17 · **Status:** active (tested, negative)
+
+**Context.** After a terminal wrapper was ruled out (D-034), an MCP server looked
+like the ideal carrier for ambient display: it is exactly "something Claude Code
+already loads", it needs no change to how anyone starts Claude, it is
+cross-platform, and it would plausibly reach the desktop application and the editor
+extensions, which a pseudo-terminal never could.
+
+**Tested, and it does not work.** A minimal stdio server was built that declares the
+`logging` capability and emits `notifications/message`. Claude Code starts it, marks
+it connected, and calls its tools normally. The notifications go nowhere.
+
+Checked in every place they might surface:
+
+- not in `--output-format stream-json`;
+- not in `--debug` output;
+- not in `--debug-file`, which produced 34 KB including thirteen lines about this
+  server and zero containing the payload;
+- not in `~/.claude/debug`.
+
+**Tested twice, because the first test was wrong.** The first emitted only while the
+server was idle, which a client may legitimately ignore — notifications are often
+pumped only while a request to that server is in flight. So the server was rebuilt
+to emit during a `tools/call`, before responding. Same result: the tool returned its
+value, the notifications vanished.
+
+**The conclusive evidence is the capability record**, not the absence of output.
+Claude Code logs what it negotiated with each server:
+
+```
+{"hasTools":true,"hasPrompts":false,"hasResources":false,"hasResourceSubscribe":false, ...}
+```
+
+Tools, prompts, resources, resource-subscribe. Logging is not in that model at all,
+though the server declared it. A client that rendered log notifications would track
+the capability.
+
+**Consequence.** MCP carries capability *to the model* — tools it can call, resources
+it can read. It does not carry anything *to the person*. Display and inference reach
+Claude Code by different routes, and MCP is only the second.
+
+**Related, and worth stating before anyone builds an MCP server here for another
+reason.** MCP also defines *sampling*, by which a server asks the client to run
+inference. If Claude Code supports it, that is a direct route to violating §3.7 — a
+peer's daemon could cause inference in an interactive session by way of a server.
+Whether Claude Code implements sampling was not tested. Any MCP server this project
+ships must not expose one.
