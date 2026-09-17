@@ -11,8 +11,9 @@ one place where the specification still poses a question that has been answered.
 
 Findings are ordered by consequence, not by section number.
 
-**Status, as of the last revision.** Eight of the fourteen are resolved, two dissolved
-by a change of model rather than fixed, and four remain open. Each carries its own
+**Status, as of the last revision.** Eight of the original fourteen are resolved, two
+dissolved by a change of model rather than fixed, and four remain open. One further
+finding (B4) was raised afterwards and is open. Each carries its own
 status line; the open ones are collected at the end so they are not lost among the
 closed.
 
@@ -250,6 +251,45 @@ same room. Excluding by *peer* would blind each session to the other; excluding 
 
 ## C. Gaps the discoveries opened
 
+### B4 — A restarted sequence counter is silently absorbed as a duplicate
+
+**OPEN. Found 2026-09-16 while documenting `peerSequence`'s lifecycle.**
+
+**Medium, latent.** §8 makes `peerId` + `peerSequence` the pair that identifies an
+event, and §9 builds anti-entropy on "the highest contiguous sequence received from
+each peer." Both assume a peer's counter only ever moves forward. Nothing says what
+happens if it does not.
+
+It can. A peer that loses its room database — disk failure, a restored backup, a
+deleted directory — restarts the counter at 1 while other peers still hold events
+at higher numbers under the same identifier. Every event it then publishes carries a
+`peerSequence` a receiving peer already has.
+
+The receiving peer cannot tell this from an ordinary duplicate. In the current
+implementation `INSERT OR IGNORE` with `UNIQUE(peer_id, peer_sequence)` drops it,
+which is correct for a genuine redelivery and silently wrong here. The publishing
+peer believes it has shared; the receiving peer never sees it; neither is told.
+Anti-entropy cannot repair it either, since the sender's highest sequence is now
+*below* what the receiver reports holding.
+
+Session-scoped rooms (D-015) bound the damage to one pairing rather than months of
+history, but do not prevent it.
+
+**Recommend.** Two parts, one specification and one implementation.
+
+- State that a peer's sequence is scoped to a room, monotonic within it, and never
+  reset or reused — and that a peer which cannot continue its sequence must not
+  reuse its identifier in that room.
+- Distinguish redelivery from conflict on receipt. The same `peerId` and
+  `peerSequence` arriving with a *different* `eventId` is not a duplicate; it is
+  evidence of lost state or forgery, and must be surfaced rather than absorbed. This
+  is one of the concrete things event signing (D-020) would let a receiver
+  adjudicate rather than merely detect.
+
+**Not yet reachable.** Nothing relays events between peers, so no conflict can
+occur today. `Insert` is the method peer synchronization will call, which is why it
+is worth fixing before Phase 2 rather than after.
+
 ### C1 — Nothing in the specification acknowledges that it depends on undocumented behavior
 
 **OPEN in the specification; built.** `claude-team doctor` verifies twenty behaviors against the installed version, keyed on `claude --version`, with negative tests. The specification still does not require any of it, so a second implementation would not know to.
@@ -378,12 +418,13 @@ Worth recording, because the useful output of a review is not only a defect list
 
 ## Still open
 
-Four findings and three notes, after the work of 2026-09-16:
+Five findings and three notes, after the work of 2026-09-16:
 
 | | finding | why it survives |
 |---|---|---|
 | B1 | §24 has no ordering comparator | peers can diverge silently |
 | B2 | injection order unspecified | late-arriving events injected out of sequence |
+| B4 | restarted sequence absorbed as duplicate | silent divergence; unreachable until Phase 2 |
 | C1 | behavior dependence unacknowledged | `doctor` exists; the specification does not require it |
 | C2 | compaction has no standing section | findings live only in a findings document |
 | C3 | automatic compaction unowned | will first appear under Phase 4 pressure |
