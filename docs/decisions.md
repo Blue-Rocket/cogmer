@@ -2088,8 +2088,27 @@ secret: the identifier is a public key and intercepting it is harmless. The risk
 never that someone reads it — it is that someone **swaps** it. A fingerprint does not
 guard a secret; it detects a swap.
 
-**Why the whole key.** A truncated fingerprint lets an attacker grind keys until one
-matches the visible part. At 32 bytes there is nothing to grind.
+**Why the whole key — stated too loosely at first, and corrected.** Truncation is
+not itself the fault; the cost of grinding a matching key is exactly the entropy
+shown, and an attacker must know the target first, which interception provides.
+Measured: three characters fell in 339,297 tries and under a second; four take about
+thirty seconds; eight are 2^48 and within reach of a resourced attacker; sixteen are
+2^96 and are not. Showing the whole key is therefore not strictly necessary — sixteen
+characters would do — it is the rule that avoids reasoning about thresholds, and it
+costs nothing at 43 characters.
+
+**The number that actually binds is not how much is displayed but how much a person
+compares.** Show someone forty-three characters of base64 to check over a telephone
+and they will read the first group, the last group, and skim the middle. That is
+ordinary behaviour, and it quietly reduces the verified entropy to whatever was
+genuinely checked — plausibly the three-to-four character range that falls in under a
+second.
+
+This makes the encoding argument and the grinding argument the same argument. Words
+are not preferable because they are prettier: a word is compared as a unit. Somebody
+either says "badger" or does not, where an eye slides over `ol5v` without stopping.
+Security here is bounded by what a person will actually do rather than by what the
+system displays.
 
 **The problem, which the shape of the output exposed.** This is the *only* manual
 step in the design. Everything else is automatic. The entire chain — admission,
