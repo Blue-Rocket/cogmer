@@ -152,7 +152,7 @@ func TestPrunePendingBoundsGrowth(t *testing.T) {
 		t.Fatal(err)
 	}
 	var n int
-	if err := s.db.QueryRow(`SELECT COUNT(*) FROM pending_injection WHERE claude_session_id='mine'`).Scan(&n); err != nil {
+	if err := s.db.QueryRow(`SELECT COUNT(*) FROM pending_injection WHERE origin_session_id='mine'`).Scan(&n); err != nil {
 		t.Fatal(err)
 	}
 	if n > 5 {

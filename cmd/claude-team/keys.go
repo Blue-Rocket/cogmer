@@ -89,14 +89,16 @@ func loadOrCreateKey() (ed25519.PrivateKey, error) {
 // undetected.
 //
 // The leading tag binds a signature to this purpose and version: a signature made
-// here can never be replayed as one made over something else.
+// here can never be replayed as one made over something else. The version moved to
+// v2 when the session field was renamed -- a signature covers field values, so
+// changing what a field means changes what was signed.
 func (e *Event) signingBytes() []byte {
 	var b bytes.Buffer
 	put := func(s string) {
 		_ = binary.Write(&b, binary.BigEndian, uint32(len(s)))
 		b.WriteString(s)
 	}
-	put("claude-team/event/v1")
+	put("claude-team/event/v2")
 	put(e.EventID)
 	put(e.PeerID)
 	_ = binary.Write(&b, binary.BigEndian, uint64(e.PeerSequence))
@@ -105,7 +107,7 @@ func (e *Event) signingBytes() []byte {
 	put(e.UserID)
 	put(e.UserDisplayName)
 	put(e.MachineID)
-	put(e.ClaudeSessionID)
+	put(e.OriginSessionID)
 	put(e.EventType)
 	put(e.Content)
 	put(string(e.Metadata))

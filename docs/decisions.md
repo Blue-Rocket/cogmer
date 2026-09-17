@@ -1876,3 +1876,55 @@ warning now says exactly this rather than claiming identity is not cryptographic
 **Migration.** An `identity.json` whose identifier is not the local key is rewritten
 to match it. The old identifier named an identity nothing could verify; preserving
 it would preserve a claim.
+
+---
+
+## D-043 — The wire format is defined separately from the stored row
+
+**Date:** 2026-09-17 · **Status:** active (implemented)
+
+**Context.** A suggestion that the daemon's database schema should not become the
+protocol. We were half-violating it: `Event` was simultaneously the SQLite row and
+the type marshalled into `/sync`. One field, `claudeSessionId`, also encoded an
+assumption about which agent produced a turn.
+
+**Decision.** Define the wire format in its own file, as its own type, with explicit
+conversion in both directions. Rename the session field to `originSessionId`, which
+says what it is — where a turn came from — without naming the agent that produced
+it. Carry a protocol version in every sync exchange and refuse a peer that speaks a
+different one.
+
+**Why a separate type when the fields are currently identical.** A database row and
+a protocol message answer to different pressures. A column can be added for local
+bookkeeping without telling any peer; a wire field cannot change without every peer
+agreeing. Sharing one struct means the next convenient column silently becomes
+protocol, and nobody has to decide anything for that to happen.
+
+**Why the version moved to v2.** A signature covers field values, so changing what a
+field means changes what was signed. The signing tag is the protocol's real version
+marker, and it was already versioned — which is why this was cheap.
+
+**Why now.** No room existed that anyone would mind losing, and the signing format
+had been fixed for exactly one day. The same change after two colleagues have a room
+they care about means a migration, a compatibility window, and a reason not to
+bother.
+
+**What was deliberately not done.** No `source: claude-code | codex` field, no
+adapter architecture, no design for a second host. The argument for those was that
+cross-agent collaboration becomes nearly free once events are normalised, and the
+evidence says otherwise: capture was solved in Phase 0 and every hard problem since
+has been host-specific injection — hooks display nothing, MCP never renders, a remote
+event must not trigger inference, the injected block needs an unforgeable fence,
+delivery must be confirmed by evidence. None of that transfers. A second adapter
+would inherit the schema and none of the difficulty.
+
+Generalising from one adapter, zero users, and a question answered the day before is
+where that goes wrong. The rename buys the optionality; the architecture can wait for
+a second host to actually exist.
+
+**A bug this surfaced.** `CREATE TABLE IF NOT EXISTS` creates a table and then
+ignores it forever, so every room keeps the shape it was born with and every column
+added since is missing from every room that predates it — surfacing not at open but
+at the first query that names it. An existing room failed with *no such column:
+signature* only when a peer asked it to sync. Rooms are now migrated on open, and
+adding a column to that list is the whole of what a future migration needs.

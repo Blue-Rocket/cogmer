@@ -310,6 +310,22 @@ stripped from content, and the framing is restated *after* the turns. Frame by
 request made of you" — not by asserting authority, which just invites weighing two
 instructions. Do not simplify this back to a static delimiter.
 
+## The wire format is not the database row (D-043)
+
+`protocol.go` defines what goes between peers; `store.go` defines what is stored.
+They currently carry the same fields and are still separate types with explicit
+conversion — a column added for local bookkeeping must not silently become protocol.
+Sync carries a version and refuses a peer speaking a different one.
+
+The session field is `originSessionId`, not `claudeSessionId`: it says where a turn
+came from without naming the agent. **Do not add `source`/adapter machinery** for a
+second host that does not exist — capture generalises, injection does not, and every
+hard problem so far has been host-specific.
+
+**Migrate, do not orphan.** `CREATE TABLE IF NOT EXISTS` ignores an existing table,
+so a column added later is missing from every older room and fails at first query,
+not at open. `migrate()` runs on open; adding a column there is the whole job.
+
 ## Invariants
 
 - **Hooks must never break Claude Code** (§3.1). Every failure path exits 0 with

@@ -25,7 +25,10 @@ type Event struct {
 	UserID          string          `json:"userId"`
 	UserDisplayName string          `json:"userDisplayName"`
 	MachineID       string          `json:"machineId"`
-	ClaudeSessionID string          `json:"claudeSessionId"`
+	// OriginSessionID names the agent session a turn came from. It is opaque:
+	// that it is presently a Claude Code session id is a fact about the adapter
+	// that captured it, not about this record.
+	OriginSessionID string `json:"originSessionId"`
 	EventType       string          `json:"eventType"`
 	Content         string          `json:"content"`
 	Metadata        json.RawMessage `json:"metadata,omitempty"`
@@ -52,7 +55,7 @@ CREATE TABLE IF NOT EXISTS events (
   user_id           TEXT,
   user_display_name TEXT,
   machine_id        TEXT,
-  claude_session_id TEXT,
+  origin_session_id TEXT,
   event_type        TEXT NOT NULL,
   content           TEXT,
   metadata          TEXT,
@@ -82,9 +85,9 @@ CREATE TABLE IF NOT EXISTS event_conflicts (
 -- contiguous watermark could not represent. Can be compacted to a watermark
 -- plus exceptions if the row count ever matters.
 CREATE TABLE IF NOT EXISTS session_delivered (
-  claude_session_id TEXT NOT NULL,
+  origin_session_id TEXT NOT NULL,
   event_id          TEXT NOT NULL,
-  PRIMARY KEY (claude_session_id, event_id)
+  PRIMARY KEY (origin_session_id, event_id)
 );
 
 -- Injections offered to a session but not yet observed in its transcript.
@@ -93,12 +96,12 @@ CREATE TABLE IF NOT EXISTS session_delivered (
 -- makes confirmation possible.
 CREATE TABLE IF NOT EXISTS pending_injection (
   prompt_id         TEXT PRIMARY KEY,
-  claude_session_id TEXT NOT NULL,
+  origin_session_id TEXT NOT NULL,
   event_ids         TEXT NOT NULL,
   content_hash      TEXT NOT NULL,
   created_at        TEXT NOT NULL
 );
-CREATE INDEX IF NOT EXISTS idx_pending_session ON pending_injection(claude_session_id);
+CREATE INDEX IF NOT EXISTS idx_pending_session ON pending_injection(origin_session_id);
 `
 
 // roomExists reports whether a room already has a local replica.
@@ -121,10 +124,64 @@ func OpenStore(room string) (*Store, error) {
 	if _, err := db.Exec(schema); err != nil {
 		return nil, fmt.Errorf("init schema: %w", err)
 	}
+	if err := migrate(db); err != nil {
+		return nil, err
+	}
 	return &Store{db: db}, nil
 }
 
 func (s *Store) Close() error { return s.db.Close() }
+
+// migrate brings an existing room's schema up to date.
+//
+// `CREATE TABLE IF NOT EXISTS` creates a table and then ignores it forever, so a
+// room opened by a newer binary keeps whatever shape it was born with. Every
+// column added since is therefore missing from every room that predates it --
+// which surfaces not at open but at the first query that names it.
+//
+// Rooms are migrated rather than orphaned: a developer who has been working in one
+// should not lose it to a change that mattered only to us.
+func migrate(db *sql.DB) error {
+	have := map[string]bool{}
+	rows, err := db.Query(`SELECT name FROM pragma_table_info('events')`)
+	if err != nil {
+		return fmt.Errorf("read schema: %w", err)
+	}
+	for rows.Next() {
+		var n string
+		if err := rows.Scan(&n); err != nil {
+			rows.Close()
+			return err
+		}
+		have[n] = true
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if len(have) == 0 {
+		return nil // freshly created by the schema above
+	}
+
+	if have["claude_session_id"] && !have["origin_session_id"] {
+		if _, err := db.Exec(`ALTER TABLE events RENAME COLUMN claude_session_id TO origin_session_id`); err != nil {
+			return fmt.Errorf("migrate origin_session_id: %w", err)
+		}
+		have["origin_session_id"] = true
+	}
+	// Added columns, in the order they were introduced. Adding one here is the
+	// whole of what a future migration needs.
+	for _, add := range []struct{ name, ddl string }{
+		{"signature", `ALTER TABLE events ADD COLUMN signature TEXT`},
+	} {
+		if !have[add.name] {
+			if _, err := db.Exec(add.ddl); err != nil {
+				return fmt.Errorf("migrate %s: %w", add.name, err)
+			}
+		}
+	}
+	return nil
+}
 
 // nextSequence returns this peer's next monotonic sequence number (§8).
 func (s *Store) nextSequence(peerID string) (int64, error) {
@@ -158,7 +215,7 @@ func (s *Store) Append(id *Identity, room, sessionID, eventType, content string,
 		UserID:          id.UserID,
 		UserDisplayName: id.UserDisplayName,
 		MachineID:       id.MachineID,
-		ClaudeSessionID: sessionID,
+		OriginSessionID: sessionID,
 		EventType:       eventType,
 		Content:         content,
 		Metadata:        rawMeta,
@@ -264,10 +321,10 @@ func (s *Store) Insert(ev *Event) (InsertResult, error) {
 	if _, err := tx.Exec(`
 		INSERT INTO events
 		  (event_id, peer_id, peer_sequence, room_id, timestamp, user_id,
-		   user_display_name, machine_id, claude_session_id, event_type, content, metadata, signature)
+		   user_display_name, machine_id, origin_session_id, event_type, content, metadata, signature)
 		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		ev.EventID, ev.PeerID, ev.PeerSequence, ev.RoomID, ev.Timestamp, ev.UserID,
-		ev.UserDisplayName, ev.MachineID, ev.ClaudeSessionID, ev.EventType, ev.Content,
+		ev.UserDisplayName, ev.MachineID, ev.OriginSessionID, ev.EventType, ev.Content,
 		string(ev.Metadata), ev.Signature); err != nil {
 		return InsertStored, err
 	}
@@ -311,7 +368,7 @@ func scanEvents(rows *sql.Rows) ([]Event, error) {
 		var meta, sig sql.NullString
 		var rowid int64
 		if err := rows.Scan(&rowid, &e.EventID, &e.PeerID, &e.PeerSequence, &e.RoomID, &e.Timestamp,
-			&e.UserID, &e.UserDisplayName, &e.MachineID, &e.ClaudeSessionID, &e.EventType, &e.Content, &meta, &sig); err != nil {
+			&e.UserID, &e.UserDisplayName, &e.MachineID, &e.OriginSessionID, &e.EventType, &e.Content, &meta, &sig); err != nil {
 			return nil, err
 		}
 		e.Signature = sig.String
@@ -324,7 +381,7 @@ func scanEvents(rows *sql.Rows) ([]Event, error) {
 }
 
 const selectCols = `rowid_alias, event_id, peer_id, peer_sequence, room_id, timestamp,
-	user_id, user_display_name, machine_id, claude_session_id, event_type, content, metadata, signature`
+	user_id, user_display_name, machine_id, origin_session_id, event_type, content, metadata, signature`
 
 // orderBy is the deterministic total order every peer must agree on (review B1).
 //
@@ -352,8 +409,8 @@ func (s *Store) ListRoom(room string) ([]Event, error) {
 // already in its own context window (§19, step 2).
 func (s *Store) UndeliveredFor(room, sessionID string) ([]Event, error) {
 	rows, err := s.db.Query(`SELECT `+selectCols+` FROM events
-		WHERE room_id = ? AND claude_session_id != ?
-		  AND event_id NOT IN (SELECT event_id FROM session_delivered WHERE claude_session_id = ?)
+		WHERE room_id = ? AND origin_session_id != ?
+		  AND event_id NOT IN (SELECT event_id FROM session_delivered WHERE origin_session_id = ?)
 		`+orderBy, room, sessionID, sessionID)
 	if err != nil {
 		return nil, err
@@ -381,7 +438,7 @@ func (s *Store) RecordPending(promptID, sessionID string, events []Event, text s
 	}
 	blob, _ := json.Marshal(ids)
 	_, err := s.db.Exec(`
-		INSERT INTO pending_injection (prompt_id, claude_session_id, event_ids, content_hash, created_at)
+		INSERT INTO pending_injection (prompt_id, origin_session_id, event_ids, content_hash, created_at)
 		VALUES (?,?,?,?,?)
 		ON CONFLICT(prompt_id) DO UPDATE SET
 		  event_ids = excluded.event_ids, content_hash = excluded.content_hash`,
@@ -401,7 +458,7 @@ func (s *Store) ConfirmDelivered(sessionID string, observed []string) (int, erro
 	for _, h := range observed {
 		seen[h] = true
 	}
-	rows, err := s.db.Query(`SELECT prompt_id, event_ids, content_hash FROM pending_injection WHERE claude_session_id = ?`, sessionID)
+	rows, err := s.db.Query(`SELECT prompt_id, event_ids, content_hash FROM pending_injection WHERE origin_session_id = ?`, sessionID)
 	if err != nil {
 		return 0, err
 	}
@@ -438,7 +495,7 @@ func (s *Store) ConfirmDelivered(sessionID string, observed []string) (int, erro
 // on is unavailable, so fall back to trusting that the turn carried the block.
 func (s *Store) CommitPending(sessionID, promptID string) (int, error) {
 	var ids string
-	err := s.db.QueryRow(`SELECT event_ids FROM pending_injection WHERE prompt_id = ? AND claude_session_id = ?`,
+	err := s.db.QueryRow(`SELECT event_ids FROM pending_injection WHERE prompt_id = ? AND origin_session_id = ?`,
 		promptID, sessionID).Scan(&ids)
 	if err == sql.ErrNoRows {
 		return 0, nil
@@ -460,7 +517,7 @@ func (s *Store) commitPendingRow(sessionID, promptID, idsJSON string) (int, erro
 	}
 	defer tx.Rollback()
 	for _, id := range ids {
-		if _, err := tx.Exec(`INSERT OR IGNORE INTO session_delivered (claude_session_id, event_id) VALUES (?,?)`,
+		if _, err := tx.Exec(`INSERT OR IGNORE INTO session_delivered (origin_session_id, event_id) VALUES (?,?)`,
 			sessionID, id); err != nil {
 			return 0, err
 		}
@@ -520,7 +577,7 @@ func (s *Store) EventsSince(room string, have map[string]int64) ([]Event, error)
 // PendingCount reports how many injections are awaiting confirmation.
 func (s *Store) PendingCount(sessionID string) (int, error) {
 	var n int
-	err := s.db.QueryRow(`SELECT COUNT(*) FROM pending_injection WHERE claude_session_id = ?`, sessionID).Scan(&n)
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM pending_injection WHERE origin_session_id = ?`, sessionID).Scan(&n)
 	return n, err
 }
 
@@ -529,8 +586,8 @@ func (s *Store) PendingCount(sessionID string) (int, error) {
 func (s *Store) PrunePending(sessionID string, keep int) error {
 	_, err := s.db.Exec(`
 		DELETE FROM pending_injection
-		WHERE claude_session_id = ? AND prompt_id NOT IN (
-		  SELECT prompt_id FROM pending_injection WHERE claude_session_id = ?
+		WHERE origin_session_id = ? AND prompt_id NOT IN (
+		  SELECT prompt_id FROM pending_injection WHERE origin_session_id = ?
 		  ORDER BY created_at DESC LIMIT ?)`, sessionID, sessionID, keep)
 	return err
 }

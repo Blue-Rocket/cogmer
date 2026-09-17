@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -24,13 +25,15 @@ import (
 // an absent peer recovers by asking, so nobody tracks what it missed.
 
 type syncRequest struct {
-	Room string           `json:"room"`
-	Have map[string]int64 `json:"have"`
+	Protocol int              `json:"protocol"`
+	Room     string           `json:"room"`
+	Have     map[string]int64 `json:"have"`
 }
 
 type syncResponse struct {
-	Room   string  `json:"room"`
-	Events []Event `json:"events"`
+	Protocol int         `json:"protocol"`
+	Room     string      `json:"room"`
+	Events   []wireEvent `json:"events"`
 }
 
 // handleSync answers with what the caller is missing. It is a pull: a peer asks,
@@ -51,7 +54,11 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, syncResponse{Room: d.room, Events: evs})
+	out := make([]wireEvent, 0, len(evs))
+	for _, e := range evs {
+		out = append(out, toWire(e))
+	}
+	writeJSON(w, syncResponse{Protocol: wireVersion, Room: d.room, Events: out})
 }
 
 func peerList() []string {
@@ -96,7 +103,7 @@ func (d *Daemon) pullFrom(client *http.Client, addr string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	body, _ := json.Marshal(syncRequest{Room: d.room, Have: have})
+	body, _ := json.Marshal(syncRequest{Protocol: wireVersion, Room: d.room, Have: have})
 	resp, err := client.Post("http://"+addr+"/sync", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return 0, err
@@ -107,6 +114,12 @@ func (d *Daemon) pullFrom(client *http.Client, addr string) (int, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return 0, err
 	}
+	// A peer speaking a protocol we do not is a condition to report, not to
+	// guess at. Silently accepting unknown-shaped events is how a field means
+	// two things.
+	if out.Protocol != 0 && out.Protocol != wireVersion {
+		return 0, fmt.Errorf("peer speaks protocol v%d, this daemon speaks v%d", out.Protocol, wireVersion)
+	}
 
 	d.markPeerSeen(addr)
 
@@ -114,7 +127,7 @@ func (d *Daemon) pullFrom(client *http.Client, addr string) (int, error) {
 	defer d.mu.Unlock()
 	stored, rejected := 0, 0
 	for i := range out.Events {
-		ev := out.Events[i]
+		ev := fromWire(out.Events[i])
 
 		// §13 says events keep their origin through a relay, and until now that
 		// was a rule with nothing enforcing it: an event arriving from one peer

@@ -59,7 +59,7 @@ func TestRelayerCannotAlterAnEvent(t *testing.T) {
 		"timestamp":      func(e *Event) { e.Timestamp = "2030-01-01T00:00:00Z" },
 		"display name":   func(e *Event) { e.UserDisplayName = "David" },
 		"event type":     func(e *Event) { e.EventType = EventAssistantMessage },
-		"claude session": func(e *Event) { e.ClaudeSessionID = "someone-elses-session" },
+		"claude session": func(e *Event) { e.OriginSessionID = "someone-elses-session" },
 		"metadata":       func(e *Event) { e.Metadata = json.RawMessage(`{"toolCalls":99}`) },
 	} {
 		e := signed(t, id, "the original turn")
