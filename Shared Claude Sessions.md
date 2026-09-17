@@ -201,23 +201,29 @@ This bounds several problems that an indefinitely-lived room creates. Unseen con
 
 ---
 
-## 3.7 A remote peer never initiates local execution
+## 3.7 A remote event never causes inference in an interactive session
 
-A remote event must never cause Claude to run in a receiving session.
+A session a developer is working in takes a turn when that developer asks it to, and at no other time.
 
-Remote events are stored, displayed, and queued. They become model context at the receiving session's next **locally initiated** turn, and at no other moment. A peer may place something in front of a developer's Claude; only that developer may cause it to be read.
+Remote events are stored, displayed, and queued. They enter such a session's context at its next **locally initiated** turn, and never before. A peer may place something in front of a developer's Claude; only that developer may cause it to be read.
 
-This is a security boundary before it is an ergonomic one. Claude Code edits files and runs commands. An event that could initiate a turn on a receiving machine is arbitrary execution on that machine, authorised by whoever sent the event — and peer identity is not verified, so that is whoever can reach the port. Nothing else in this design would matter after that.
+The reason is that an interactive session is a working state, not just a process. A turn arriving unbidden consumes the context window the developer is relying on, may act on their working tree in the middle of their thought, and interleaves with what they are doing. It also removes their ability to reason about what their own session has seen and when — which is the thing that makes a session usable as a place to think.
 
-It is also the developer's own resources. A turn spends their subscription, their context window, and their attention, on their repository. None of that is a teammate's to spend.
+This is a rule, not an observation. The host offers ways to start Claude, so a daemon *could* drive a session. It must not:
 
-The distinction worth holding is between *possible* and *permitted*. A daemon can start a Claude run; the host offers ways to do so. This invariant is therefore a rule rather than an observation, and it constrains work that has not been written yet:
+- a remote event must not prompt, resume, or otherwise drive an interactive session;  
+- a remote event must not cause an interactive session to consume queued context ahead of a locally initiated turn;  
+- any scheduled or triggered work affecting such a session must originate locally.
 
-- a peer event must not start a session, background or otherwise;  
-- a peer event must not resume, prompt, or otherwise drive an existing session;  
-- a scheduled or triggered run must originate locally, never from received data.
+The local-first principle says a developer's session must survive every peer disappearing. This is its converse: a developer's session must be undisturbed by every peer arriving.
 
-The local-first principle says a developer's session must survive every peer disappearing. This is its converse: a developer's session must be unaffected by every peer arriving.
+### What this does not decide
+
+Whether a peer event may cause a **separate** Claude run — one that is not the session a developer is working in — is a different question, and this principle does not settle it.
+
+Something of that kind is contemplated later in this document, where one developer addresses another's Claude directly. It raises its own questions, about whose subscription is spent, what tool access such a run has, and what the person whose machine it runs on agreed to. Those deserve an answer of their own rather than being decided here by implication.
+
+What must hold either way is that no such run becomes the interactive session's problem: it does not borrow that session's context, and it does not interrupt it.
 
 ---
 
@@ -1154,7 +1160,9 @@ This is the one path where pushing earns its cost: a person watching a conversat
 
 There is no such path, and there must not be one.
 
-No mechanism exists to place context into a session already underway. That is a property of the host. That a peer event must never *create* a turn — by starting a session, resuming one, or scheduling a run — is a rule of this system, stated under the architecture principles.
+No mechanism exists to place context into a session already underway. That is a property of the host.
+
+That a peer event must never *cause* such a session to take a turn is a rule of this system rather than a property of the host, and is stated under the architecture principles.
 
 Context reaches a Claude Code session when a prompt is submitted, and at no other moment. A session part-way through a turn cannot be told anything. A turn that runs for minutes will not learn of a teammate's message until it ends and the next prompt begins.
 

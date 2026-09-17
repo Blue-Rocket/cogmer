@@ -1504,8 +1504,27 @@ probe. Checking imports rather than call graphs is crude, and deliberately so: i
 fails the moment the capability is added to the wrong file, which is when someone
 should be asked to justify it.
 
-**Note on what this forecloses.** Earlier discussion observed that background
-sessions could let a peer's turn trigger a Claude run — "your Claude participates
-while you are at lunch". This invariant rules that out in its automatic form. If it
-is ever wanted, it must be something the local developer starts, not something a
-remote event causes.
+**Scope, corrected the same day.** The first draft forbade a remote event starting
+*any* Claude run, including a separate background one. That was broader than
+intended and broader than is right: it collapsed two different concerns — "do not
+disturb my session" and "do not spend my resources" — which have different remedies.
+It also foreclosed something this specification contemplates elsewhere, where one
+developer addresses another's Claude directly.
+
+The principle is now scoped to interactive sessions: a session a developer is
+working in takes a turn when that developer asks it to, and at no other time. An
+interactive session is a working state rather than merely a process, and a turn
+arriving unbidden consumes the context window being relied on, may act on the
+working tree mid-thought, and destroys the developer's ability to reason about what
+their own session has seen.
+
+Whether a peer event may cause a **separate** run is explicitly left open. It raises
+its own questions — whose subscription is spent, what tool access such a run has,
+what the person whose machine it runs on agreed to — and those deserve an answer
+rather than being settled here by implication. What must hold either way is that no
+such run borrows the interactive session's context or interrupts it.
+
+The structural test enforces something stricter than the principle requires: that
+peer-handling code cannot start a process at all. That is deliberate. Nothing needs
+the looser rule yet, and the questions above have no answers yet, so the guard stands
+until they do.

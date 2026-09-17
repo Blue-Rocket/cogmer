@@ -218,15 +218,19 @@ identifier and forgets what it issued — which was the precondition for B4.
 Reserve a sequence **before** publishing the event that uses it. The reverse
 publishes a number with no record of it.
 
-## A remote peer never initiates local execution (§3.7)
+## A remote event never causes inference in an interactive session (§3.7)
 
-A received event must **never** cause Claude to run here — no starting a session, no
-resuming one, no scheduling a run. Remote events are stored, displayed, and queued;
-they become context at the next **locally initiated** turn and at no other moment.
+A session someone is working in takes a turn when **they** ask it to, and at no other
+time. Remote events are stored, displayed, and queued; they enter that session's
+context at its next **locally initiated** turn and never before.
 
-This is a security boundary. Claude Code edits files and runs commands, and peer
-identity is not verified, so a path from received data to execution is arbitrary
-execution authorised by whoever can reach the port.
+An interactive session is a working state, not just a process: an unbidden turn
+consumes the context window being relied on, may act on the working tree mid-thought,
+and destroys any ability to reason about what the session has seen.
+
+**Deliberately not decided:** whether a peer event may cause a *separate* run.
+Addressing another developer's Claude would need it. It raises its own questions —
+whose subscription, what tool access, what was agreed to — and none are answered.
 
 Guarded structurally: `sync.go`, `daemon.go`, `store.go` and `transcript.go` must not
 import `os/exec` or `syscall`, and must not call `RunProbe`/`EnsureVerified`/
