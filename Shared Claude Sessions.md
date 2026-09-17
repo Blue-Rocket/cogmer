@@ -695,19 +695,15 @@ The refused peer is told it was refused and shown its own identifier, so its use
 
 A request is not a queue. If the host is absent the request fails. It does not wait, and it does not grant entry later without the host's attention.
 
-## First contact with no prior exchange
+## There is no join token
 
-Two people who have never exchanged identifiers, and who want to pair now rather than after a round trip, may use a single-use code:
+Admission is a guest list entry or a host's approval. There is no code, no invitation secret, and nothing a person can hold that would let them into a room.
 
-```
-claude-team join misty-canyon#k7qm-2xpr-9vlt
-```
+This is not an omission awaiting a later release. A token that admits its holder must be kept secret while being sent to someone, cannot be checked after the fact, and enrols whoever intercepts it under a name the room's members will thereafter treat as familiar. Every one of those properties is avoidable here, so none should be accepted.
 
-This is the weaker path and should be presented as one. A code is a bearer credential: whoever holds it may enter, so it must stay secret in transit, it cannot be verified after the fact, and an interception enrolls the wrong peer under a name that members will thereafter treat as familiar.
+Nor is a token required for inviting someone in advance, which is the case it appears to cover. A host may admit a peer it knows and then leave; the guest joins whenever it likes. A token would be needed only by a host that is absent **and** has never recorded the guest — and such a host must act before that guest can enter under any scheme, so the token buys nothing that acting once would not.
 
-It exists for the case the two paths above do not cover: inviting someone **in advance**, when the host will not be present to approve a request. Where a host is present, approving a request is better in every respect, because a person decides rather than a token.
-
-A code should expire, admit one peer once, and be unnecessary afterwards — the peer it admitted is now known, and a known peer needs no code.
+What remains is a single constraint, stated rather than engineered around: **pairing with someone entirely unknown requires a host present to approve it.** That is precisely the moment at which a person should be deciding.
 
 ## The endpoint is a bootstrap hint
 
@@ -735,15 +731,11 @@ Discovery locates a room. It never admits anyone to one.
 
 A room name is drawn from a small, deliberately guessable space so that it can be spoken aloud. Tens of thousands of combinations is ample for avoiding confusion and useless for resisting a guess.
 
-Authorization is therefore never the name. It is an entry on a guest list, proved by possession of a key — or, for a first meeting with no prior exchange, a single-use code. A peer must never admit a session to a room on the strength of a name.
+Authorization is therefore never the name. It is an entry on a guest list, proved by possession of a key, or a host's explicit approval of a request. A peer must never admit a session to a room on the strength of a name.
 
 This matters most precisely where joining is easiest. On a shared network — an office, a conference, a cafe — any listener can enumerate advertised room names, and those names are guessable even without listening. A room contains source code, customer information, and whatever a developer has pasted into a prompt. Convenient discovery and weak authorization are separately reasonable and jointly indefensible.
 
-The secret also disambiguates. Names are unique only among the rooms one peer hosts, so local discovery may surface two unrelated rooms with the same name. The secret belongs to exactly one of them.
-
-The code should be single-use, and should expire: an invitation is a request to pair now, not a standing permission.
-
-A secret is a mechanism for first contact. Once peers know each other by verified key, admission should rest on that instead, and no secret should be required between them.
+The guest list also disambiguates. Names are unique only among the rooms one peer hosts, so local discovery may surface two unrelated rooms sharing a name. A joining peer is a guest of at most one of them, and that is what settles which was meant.
 
 ## Room names
 
@@ -1340,9 +1332,7 @@ For the initial Tailscale-based prototype:
 - do not expose the daemon's peer API publicly;  
 - bind Claude hook/UI APIs to localhost.
 
-An invitation that carries a code is a bearer credential. Anyone holding it can reach the daemon that issued it and join the room it names, so it carries the sensitivity of the conversation it admits someone to, and the channel it travels on should be chosen accordingly.
-
-An invitation to a peer already on the guest list carries no such weight. It names a guest rather than granting entry, so an interceptor learns only that a room exists. Preferring the guest list is therefore a security decision and not only a convenience.
+Nothing here is admitted by holding a value. An invitation names a guest; it does not grant entry, and an interceptor learns only that a room exists. There is deliberately no credential that can be forwarded, stolen, or replayed — given that peers can be known in advance, every property of such a credential is avoidable, and so none is accepted.
 
 Do not assume network membership alone is sufficient for a production security model.
 

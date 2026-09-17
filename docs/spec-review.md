@@ -11,11 +11,35 @@ one place where the specification still poses a question that has been answered.
 
 Findings are ordered by consequence, not by section number.
 
+**Status, as of the last revision.** Seven of the fourteen are resolved, two dissolved
+by a change of model rather than fixed, and five remain open. Each carries its own
+status line; the open ones are collected at the end so they are not lost among the
+closed.
+
+Resolution came from three directions worth distinguishing. Some findings were
+defects and were fixed (A1). Some were questions the specification had not answered,
+and answering them removed the finding (A2, C7). And some were answered by deciding
+the design differently, which is not the same as the finding having been wrong —
+A2's proposed fix was sound for the model it assumed, and that model was replaced.
+
 ---
 
 ## A. Defects
 
 ### A1 — §19 never says *when* delivery state advances, nor what counts as delivered
+
+**RESOLVED — D-014, implemented and verified.** Delivery is now derived from
+evidence: the daemon confirms teammate events only once it observes the injected
+block in the session transcript as a `hook_success` attachment, matched on a hash
+of the exact text emitted. Delivery became a set rather than a watermark, since a
+lost injection leaves a hole a contiguous watermark cannot represent. Verified
+against live sessions — a normal turn confirms and stops re-offering, a simulated
+lost response re-offers rather than losing. Guarded by behavior check B20.
+
+Testing the fix caught a second instance of the same bug: the first version
+committed on trust whenever no attachment was found, which is indistinguishable
+from the injection never arriving. The fallback is now gated on B20 being recorded
+as *failing*.
 
 **High.** §19 lists five ordered steps, ending "update the session's
 incorporated-event state," but binds that update to nothing. It also never says
@@ -94,11 +118,18 @@ configured room (most likely: do nothing, silently, per §3.1).
 
 ### A3 — §25 does not address what injection does with other people's data
 
-**Partially addressed.** §28 now states that injection carries a teammate's
-conversation into another developer's session, and therefore to that developer's
-model provider under their own account, and gives `injectSharedContext` a stated
-purpose. D-015 also makes consent per-pairing and explicit rather than a committed
-repository setting. §25 itself is still silent, so the finding stands.
+**LARGELY ADDRESSED — D-015, D-019, D-022, D-024, D-025.** The disclosure surface
+shrank from several directions rather than one. §28 states that injection carries a
+teammate's conversation to another developer's model provider under their own
+account, and gives `injectSharedContext` a stated purpose. Rooms are no longer
+derived from a repository, so consent is per-pairing (D-015). A room begins when
+someone is invited, so prior solo work is never handed over retroactively (D-022).
+Admission is a guest list rather than a forwardable token, so there is nothing to
+intercept (D-024, D-025).
+
+What remains: §25 still does not enumerate the data-flow consequences in one place,
+and no mechanism scopes what *may* be shared once a peer is admitted — admission is
+all-or-nothing per room.
 
 **High.** §25 correctly identifies that conversation history may contain
 proprietary source, customer information, and pasted credentials, and requires
@@ -123,6 +154,11 @@ as a flag, which suggests this was anticipated but never argued.
 
 ### A4 — §15 still poses a question that has been answered, and the answer is counter-intuitive
 
+**OPEN.** §15 still reads "implement the least invasive reliable mechanism." The
+answer is known, implemented, and documented in `phase0-findings.md`, but a reader
+of the specification alone would still reach for `last_assistant_message` and
+silently truncate most turns.
+
 **High.** §15 says "If Claude Code hooks do not directly expose the completed
 assistant response, investigate session/transcript capabilities and implement the
 least invasive reliable mechanism."
@@ -146,6 +182,8 @@ widening (D-005). Keep the investigative framing only for what is still unknown.
 
 ### B1 — §24 lists ordering fields but defines no comparator
 
+**OPEN.** Still no precedence or tie-break. Two correct implementations can order the same events differently.
+
 **Medium.** §24 offers "timestamp, origin peer, peer sequence, event ID" as fields
 to order by, without a precedence or a tie-break rule. Two correct
 implementations can therefore produce different orderings of the same event set,
@@ -156,6 +194,8 @@ and quietly, since it only shows up when events are near-simultaneous.
 peerSequence)` with `eventId` as final tie-break is sufficient and total.
 
 ### B2 — Injection order is unspecified, and arrival order is not chronological
+
+**OPEN.** Unchanged. Session-scoped rooms (D-015) reduce the window in which events arrive badly out of order, but do not close it.
 
 **Medium.** §19 says to inject unseen events; §24 governs *display* ordering.
 Nothing says which order injected context uses.
@@ -172,6 +212,8 @@ ordering, even though the delivery watermark tracks arrival.
 
 ### B3 — §19's exclusion rule is ambiguous between session and peer
 
+**OPEN in the specification; settled in the implementation.** The code excludes by `claudeSessionId`, which is correct, and a test asserts a second local session still sees a peer's events. §19's wording is unchanged.
+
 **Low.** "Exclude Alice's own Claude conversation where it would duplicate
 existing context." A developer may run two Claude sessions on one machine, in the
 same room. Excluding by *peer* would blind each session to the other; excluding by
@@ -184,6 +226,8 @@ same room. Excluding by *peer* would blind each session to the other; excluding 
 ## C. Gaps the discoveries opened
 
 ### C1 — Nothing in the specification acknowledges that it depends on undocumented behavior
+
+**OPEN in the specification; built.** `claude-team doctor` verifies twenty behaviors against the installed version, keyed on `claude --version`, with negative tests. The specification still does not require any of it, so a second implementation would not know to.
 
 **Medium.** The system rests on roughly nineteen behaviors of a third-party binary
 — hook payload shapes, transcript record structure, what compaction preserves.
@@ -202,6 +246,8 @@ should require it rather than have it exist only as an accident of how we worked
 
 ### C2 — Compaction has a phase but no standing requirement
 
+**OPEN.** Phase 0a's findings still live only in `phase0a-findings.md`. §21 was rewritten for session-scoped rooms but still does not mention that Claude Code compacts sessions on its own.
+
 **Medium.** Phase 0a (which I added) is an investigation. §21 "Context Window
 Management" governs injection limits and never mentions that Claude Code compacts
 sessions on its own. So the *findings* — session ID survives, the transcript is
@@ -214,6 +260,8 @@ historical investigation.
 
 ### C3 — Automatic compaction is unresolved and unowned
 
+**OPEN.** Still untriggerable in print mode, still owned by no phase.
+
 **Low–medium.** Phase 0a could not trigger it: the threshold floor is 100k, and a
 378k-token session with a 100k threshold did not compact at a turn boundary. Every
 compaction finding therefore describes *manual* compaction only.
@@ -225,6 +273,8 @@ Phase 4, by which time cross-Claude context is the thing being debugged.
 item. Do not leave it only in a findings appendix.
 
 ### C4 — "Real time" means two different things, and one of them is slow
+
+**OPEN.** §16 still does not distinguish daemon-to-daemon propagation from propagation into a teammate's Claude.
 
 **Medium.** §16 targets sub-second peer propagation, and we measured 16.7 ms
 locally, so the daemon-to-daemon claim is realistic.
@@ -242,6 +292,8 @@ surprise.
 
 ### C5 — §3.4 and §21 forbid summarization that compaction performs anyway
 
+**OPEN.** The prohibition still reads as absolute.
+
 **Low.** §3.4 says do not replace conversations with summaries; §21 says do not
 introduce AI summarization. Claude Code's compaction summarizes injected teammate
 context inside the session regardless.
@@ -254,6 +306,8 @@ an absolute guarantee that the system cannot make.
 that what a given Claude retains post-compaction is outside the system's control.
 
 ### C6 — `COMPACTION` is a "later" event type that is already needed
+
+**OPEN.** Still listed under types to design for, while D-007 commits to recording it in Phase 1.
 
 **Low.** §7 lists `COMPACTION` under types to design for. D-007 commits to
 recording it in Phase 1, as the observability backstop for D-006's decision not
@@ -293,3 +347,48 @@ Worth recording, because the useful output of a review is not only a defect list
 - **Phase 0's instruction to inspect the installed version rather than trust the
   specification** was the single most valuable line in the document. Both defects
   in §15 came from following it.
+
+
+---
+
+## Still open
+
+Five findings and three notes, after the work of 2026-09-16:
+
+| | finding | why it survives |
+|---|---|---|
+| A4 | §15 poses a settled question | needs the union requirement written into the section |
+| B1 | §24 has no ordering comparator | peers can diverge silently |
+| B2 | injection order unspecified | late-arriving events injected out of sequence |
+| C1 | behavior dependence unacknowledged | `doctor` exists; the specification does not require it |
+| C2 | compaction has no standing section | findings live only in a findings document |
+| C3 | automatic compaction unowned | will first appear under Phase 4 pressure |
+| C4 | two latencies conflated | §16 promises one and delivers the other |
+| C5 | summarization prohibition is absolute | compaction summarizes regardless |
+| C6 | `COMPACTION` reserved but needed | D-007 commits to it in Phase 1 |
+
+B3 and A3 are partly closed; the residue of each is noted in place.
+
+A pattern across the open items is worth naming: every one of them is a case where
+the implementation or the findings know something the specification does not. That
+is survivable while one team holds both, and is exactly what stops being true if
+this is released publicly.
+
+## Findings that arose after this review
+
+Recorded here so the review remains the single place to look:
+
+- **The delivery fallback re-created the bug it fixed** (D-014). Committing on trust
+  when no evidence is found is indistinguishable from the injection never arriving.
+  Found by testing the failure path, not the success path.
+- **`machineId` was never an address** (D-018). `os.Hostname()` returned
+  `macbookpro.lan`, `scutil` returned `pushover`, and the resolvable name mapped to a
+  LAN address no teammate could reach. The specification had used `alice-machine:4783`
+  throughout without saying how it resolves.
+- **A peer identifier was a broadcast secret** (D-023). Knowing one was sufficient to
+  claim it, and the system puts it in every event. Fixed in the specification by
+  making the identifier a public key; not yet enforceable, because it becomes safe to
+  know when signatures are *checked*, not when keys are introduced.
+- **The bearer token was never necessary** (D-024, D-025). A guest list admits a known
+  peer with nothing typed, and a host present can approve a stranger's request.
+  Tokens are now absent from the design entirely rather than deprecated within it.

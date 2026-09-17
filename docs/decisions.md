@@ -986,7 +986,8 @@ request fails rather than waiting, and never grants entry later without attentio
 
 **Codes now cover one case only:** inviting in advance, when the host will not be
 present to approve. Where a host is present, approval is better in every respect,
-because a person decides rather than a token.
+because a person decides rather than a token. *(Superseded by D-026: that one case
+does not survive examination either.)*
 
 **Rejected.**
 - *One combined list* — cannot express knowing someone without admitting them
@@ -997,3 +998,40 @@ because a person decides rather than a token.
   attention is the token model wearing a different name.
 - *Approving by displayed name* — the name is the stranger\'s claim; the identifier
   is the fact.
+
+---
+
+## D-026 — There is no join token at all
+
+**Date:** 2026-09-16 · **Status:** active · **Supersedes** the residual code path in D-024 and D-025
+
+**Context.** D-025 had narrowed join codes to a single case: inviting in advance,
+when the host would not be present to approve a request. That case does not survive
+examination.
+
+**Decision.** Remove join tokens from the design. Admission is a guest list entry
+proved by possession of a key, or a host's explicit approval of a request. There is
+no code, no invitation secret, and nothing a person can hold that would admit them.
+
+**Why the last case collapses.** A host who knows a guest can admit them and then
+leave — the guest joins whenever it likes, with no host present and no token
+involved. So a token would be needed only by a host that is absent **and** has never
+recorded the guest. But such a host must act before that guest can enter under any
+scheme, including the token scheme, since somebody has to issue the token. The token
+therefore buys nothing that acting once through the guest list would not, while
+carrying every property of a bearer credential: secret in transit, uncheckable
+afterwards, and enrolling whoever intercepts it under a name members will treat as
+familiar.
+
+**What is given up, stated rather than engineered around.** Pairing with someone
+entirely unknown requires a host present to approve it. That is the moment a person
+should be deciding, so the constraint reads as correct rather than merely tolerable.
+
+**Consequence.** The system now has no credential that can be forwarded, stolen, or
+replayed — not as a deprecated path, but absent. §25 says so directly rather than
+describing how to handle one safely.
+
+**Rejected.**
+- *Keeping codes for the absent-host-unknown-guest case* — the host must act anyway.
+- *Keeping codes as an optional convenience* — an avoidable credential that exists is
+  a credential that will be used, and its weaknesses do not become optional with it.

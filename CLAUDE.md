@@ -144,8 +144,9 @@ that (D-024): a host records a peer it already knows, the guest types only
 host already holds. Two scopes: **known peers** (per machine, durable) and **a room's guests** (per
 room). Admission is a fresh signed challenge — never replayable. A peer not on the
 list is refused *and the host is told*, so approval in the moment is the normal way
-strangers pair (D-025). Join codes now cover one case only: inviting in advance
-when the host will not be present. Do not add a "join by name on a trusted network" path: names are guessable
+strangers pair (D-025). **There are no join tokens** (D-026) — nothing a person can hold admits them. A host
+who knows a guest can admit them and leave; pairing with a stranger requires a host
+present to approve. Do not add a "join by name on a trusted network" path: names are guessable
 by design (D-017), and office and conference networks are neither small nor
 trusted.
 
