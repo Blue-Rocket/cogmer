@@ -1070,11 +1070,12 @@ Treat it as an assumption to be checked against the installed version rather tha
 
 ---
 
-# 16\. Real-Time Synchronization
+# 16\. Propagation
 
-Normal peer-to-peer propagation should happen immediately rather than waiting for periodic anti-entropy synchronization.
+Three paths carry an event, with different requirements and different limits.
+Conflating them is how a system comes to promise real-time collaboration and deliver something else.
 
-Conceptually:
+## Peer to peer
 
 ```
 David generates event E
@@ -1084,23 +1085,37 @@ David generates event E
         └────────► Carlos
 ```
 
+Two requirements. Peers must converge promptly, and a peer must be able to recover what it missed **without any other peer having tracked what it was owed**.
+
+Polling satisfies both and is the default. A peer asks for what it lacks; a peer that was absent recovers by asking again. Pushing would require a sender to know who is connected and what each holds — state that can be wrong — in exchange for improving a half-second that nobody is waiting on.
+
+Target: under a second, typically, on a healthy network. A one-second poll meets this.
+
 Receiving peers:
 
-1. validate the event;  
-2. deduplicate by event ID;  
-3. persist it;  
-4. notify their local UI;  
-5. potentially relay it to other peers.
+- validate the event;  
+- deduplicate by event id, distinguishing redelivery from conflict;  
+- persist it;  
+- notify the local UI;  
+- relay it onward when asked.
 
-Anti-entropy synchronization remains necessary to recover missed events.
+Anti-entropy is not a fallback here; it is the mechanism.
 
-Target:
+## Daemon to local UI
 
-```
-< 1 second typical peer propagation
-```
+The UI must update without the reader doing anything.
 
-on a healthy network.
+This is the one path where pushing earns its cost: a person watching a conversation notices a delay a machine does not. It is local, over loopback, and needs no transport work.
+
+## Daemon to a Claude session
+
+There is no such path.
+
+Context reaches a Claude Code session when a prompt is submitted, and at no other moment. A session part-way through a turn cannot be told anything. A turn that runs for minutes will not learn of a teammate's message until it ends and the next prompt begins.
+
+This is a property of the host rather than a choice, and it bounds everything above it. Taking peer propagation from five hundred milliseconds to fifty changes nothing a person experiences, because what they are waiting on is the turn.
+
+Report the two separately wherever propagation is described. A system that quotes only the first number is describing the half that is fast.
 
 ---
 

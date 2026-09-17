@@ -416,10 +416,13 @@ item. Do not leave it only in a findings appendix.
 
 ### C4 — "Real time" means two different things, and one of them is slow
 
-**MEASURED; still unspecified.** The two-peer run separated them: 570 ms daemon to
-daemon at a 1 s poll, versus *not until the teammate's next prompt* for arrival into
-their Claude. The wall between them is the turn, not the network, and a long agentic
-turn runs for minutes. §16 still states one number as though it covered both.
+**RESOLVED.** §16 is rewritten around three paths rather than one. Peer to peer
+states its two real requirements — prompt convergence, and recovery without any
+peer tracking what another is owed — and records that polling satisfies both.
+Daemon to UI is named as the one path where pushing earns its cost. Daemon to a
+Claude session is stated as *not existing*: context arrives at prompt submission and
+at no other moment, which is a property of the host and what bounds everything above
+it. The section now requires both numbers be reported separately.
 
 **Medium.** §16 targets sub-second peer propagation, and we measured 16.7 ms
 locally, so the daemon-to-daemon claim is realistic.
