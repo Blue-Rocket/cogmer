@@ -100,3 +100,16 @@ func TestContextAttribution(t *testing.T) {
 		t.Error("empty room must inject nothing")
 	}
 }
+
+// If Claude Code ever widens last_assistant_message to cover the whole turn,
+// appending it blindly would duplicate the transcript-derived text. Behavior
+// check B04 detects the change; this asserts we degrade correctly regardless.
+func TestTailSupersetDoesNotDuplicate(t *testing.T) {
+	turn, err := ReassembleLastTurn(write(t, raceTranscript), "ALPHA\n\nOMEGA")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if turn.Text != "ALPHA\n\nOMEGA" {
+		t.Errorf("duplication on widened last_assistant_message: %q", turn.Text)
+	}
+}

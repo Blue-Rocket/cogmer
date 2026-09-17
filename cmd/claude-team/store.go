@@ -61,6 +61,12 @@ CREATE TABLE IF NOT EXISTS session_context (
 );
 `
 
+// roomExists reports whether a room already has a local replica.
+func roomExists(room string) bool {
+	_, err := os.Stat(filepath.Join(homeDir(), "rooms", room+".db"))
+	return err == nil
+}
+
 func OpenStore(room string) (*Store, error) {
 	dir := filepath.Join(homeDir(), "rooms")
 	if err := os.MkdirAll(dir, 0o755); err != nil {

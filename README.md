@@ -59,8 +59,34 @@ CLAUDE_TEAM_ROOM=demo ./bin/claude-team log
 | `seed` | Insert a simulated teammate conversation |
 | `log` | Print the room transcript |
 | `whoami` | Show peer identity and active room |
+| `doctor [--deep]` | Verify relied-on Claude Code behaviors against the installed version |
+| `behaviors` | List those behaviors (`--markdown` regenerates the doc) |
 
-`CLAUDE_TEAM_ROOM` overrides the room; `CLAUDE_TEAM_ADDR` the daemon address.
+`CLAUDE_TEAM_ROOM` overrides the room; `CLAUDE_TEAM_ADDR` the daemon address;
+`CLAUDE_TEAM_PREFLIGHT=off` skips behavior checks on new rooms.
+
+## Behavior checks
+
+This project depends on ~19 **undocumented** Claude Code behaviors — how hooks
+report a turn, what the transcript contains, what compaction preserves. None are
+contractual, and several fail silently: the room keeps accepting events while
+recording the wrong thing.
+
+[`docs/relied-on-behaviors.md`](docs/relied-on-behaviors.md) lists them, generated
+from the registry in `cmd/claude-team/behaviors.go` so it cannot drift from what
+is actually checked.
+
+```sh
+claude-team doctor          # 12 checks, one Claude turn, ~5s
+claude-team doctor --deep   # 19 checks, drives a real compaction, ~40s
+```
+
+The session tier runs automatically the first time a room is formed on a Claude
+Code version that has not been verified, cached in `~/.claude-team/verified.json`.
+Keyed on version rather than room, so forming a tenth room costs nothing.
+
+A failure never blocks the room — it reports which assumption changed, and
+`Reliance` on each behavior says what breaks as a result.
 
 ## Cross-platform
 

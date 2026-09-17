@@ -35,6 +35,22 @@ func main() {
 		runLog()
 	case "whoami":
 		runWhoami()
+	case "doctor":
+		deep := len(os.Args) > 2 && os.Args[2] == "--deep"
+		runDoctor(deep)
+	case "behaviors":
+		if len(os.Args) > 2 && os.Args[2] == "--markdown" {
+			fmt.Print(MarkdownReport())
+			return
+		}
+		for _, b := range Behaviors {
+			fmt.Printf("  %s  [%s]  %s\n", b.ID, b.Tier, b.Title)
+		}
+	case "probe-hook":
+		if len(os.Args) < 4 {
+			os.Exit(0)
+		}
+		runProbeHook(os.Args[2], os.Args[3])
 	default:
 		usage()
 		os.Exit(2)
@@ -50,10 +66,13 @@ func usage() {
   claude-team seed            Insert a simulated teammate conversation
   claude-team log             Print the room transcript
   claude-team whoami          Show this peer's identity and room
+  claude-team doctor [--deep] Verify relied-on Claude Code behaviors
+  claude-team behaviors       List those behaviors (--markdown to render docs)
 
 Environment:
-  CLAUDE_TEAM_ROOM   override the active room
-  CLAUDE_TEAM_ADDR   override the daemon address
+  CLAUDE_TEAM_ROOM        override the active room
+  CLAUDE_TEAM_ADDR        override the daemon address
+  CLAUDE_TEAM_PREFLIGHT   set to "off" to skip behavior checks on new rooms
 `)
 }
 
@@ -78,8 +97,16 @@ func openLocal() (*Store, *Identity, string) {
 }
 
 func runDaemon() {
+	// Detect room formation before opening, so the first daemon for a room can
+	// verify the behaviors that room's correctness depends on.
+	newRoom := !roomExists(LoadConfig().Room)
+
 	store, id, room := openLocal()
 	defer store.Close()
+
+	if newRoom {
+		EnsureVerified(room)
+	}
 
 	d := &Daemon{store: store, id: id, room: room}
 	ln, err := net.Listen("tcp", addr())

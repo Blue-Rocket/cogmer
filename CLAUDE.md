@@ -17,18 +17,52 @@ rejected as duplicate injection for no benefit.
 
 Phase 1 is unblocked but not started.
 
+## The behavior registry — read this before changing assumptions
+
+`cmd/claude-team/behaviors.go` records every Claude Code behavior this project
+relies on, with a check that verifies it against the installed version.
+`docs/relied-on-behaviors.md` is **generated** from it
+(`claude-team behaviors --markdown`) — edit the registry, not the doc.
+
+**If you discover a new reliance, add a behavior.** That is the whole point: these
+are undocumented behaviors of someone else's binary, and several fail silently —
+the room keeps accepting events while recording the wrong thing.
+
+- `claude-team doctor` — session tier, one Claude turn, ~5s
+- `claude-team doctor --deep` — adds compaction, ~40s
+- Auto-runs on **new room formation**, cached by `claude --version`
+  (`~/.claude-team/verified.json`). Set `CLAUDE_TEAM_PREFLIGHT=off` for CI.
+
+Two rules when adding one:
+
+1. **Write a negative test.** `behaviors_test.go` asserts each check fails on the
+   regression it claims to catch. A check that cannot fail is worse than none —
+   it reads as protection.
+2. **Write the `Reliance` field for someone debugging at 2am.** Say what breaks,
+   not what the behavior is. The test enforces a minimum length; that is a floor,
+   not a target.
+
+Note B09 and B05 report *improvements* (assistant records gaining `promptId`, the
+flush race disappearing), not just breakage. Those would let us simplify, and we
+would otherwise never notice.
+
 ## Two findings the code depends on
 
 These were established empirically against Claude Code 2.1.273 and are easy to
 regress if the reassembly logic is "simplified":
 
 1. **`Stop.last_assistant_message` holds only the turn's FINAL text block** — text
-   emitted before a tool call is dropped.
+   emitted before a tool call is dropped. (Checked by B04.)
 2. **The transcript at Stop time is missing exactly that final block** — Stop fires
-   before it is flushed.
+   before it is flushed. (Checked by B05.)
 
-`ReassembleLastTurn` unions both. Neither source alone is correct. Verified by
-exact string match against a real 2,582-char response.
+`ReassembleLastTurn` unions both via `mergeTail`. Neither source alone is correct.
+Verified by exact string match against a real 2,582-char response.
+
+`mergeTail` deliberately tolerates #1 being *fixed* upstream: if
+`last_assistant_message` ever widens to the whole turn, blind appending would
+duplicate every pre-tool block and silently corrupt the room. It detects the
+superset case instead of assuming. Do not "simplify" it back to an append.
 
 Also: assistant records carry no `promptId` and the `parentUuid` chain has gaps,
 so turn segmentation is **positional** — assistant records following the last

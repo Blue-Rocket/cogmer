@@ -117,13 +117,30 @@ func ReassembleLastTurn(path, lastMessage string) (*AssistantTurn, error) {
 			// "thinking" blocks are deliberately never published.
 		}
 	}
-	// Close the race window described above.
-	if tail := strings.TrimSpace(lastMessage); tail != "" {
-		if len(parts) == 0 || parts[len(parts)-1] != tail {
-			parts = append(parts, tail)
-		}
-	}
-
-	turn.Text = strings.Join(parts, "\n\n")
+	turn.Text = mergeTail(strings.Join(parts, "\n\n"), lastMessage)
 	return turn, nil
+}
+
+// mergeTail closes the race window without assuming how much of the turn
+// lastMessage contains.
+//
+// Today lastMessage is only the final text block, so it must be appended. But if
+// Claude Code ever widens it to the whole turn, blind appending would duplicate
+// everything already read from the transcript -- an upstream bugfix would
+// silently corrupt the room. Behavior check B04 detects that change; this
+// function survives it either way.
+func mergeTail(joined, lastMessage string) string {
+	tail := strings.TrimSpace(lastMessage)
+	switch {
+	case tail == "":
+		return joined
+	case joined == "":
+		return tail
+	case strings.Contains(tail, joined):
+		return tail // lastMessage is a superset: it already holds the whole turn
+	case strings.HasSuffix(joined, tail):
+		return joined // transcript won the race and already flushed the final block
+	default:
+		return joined + "\n\n" + tail
+	}
 }
