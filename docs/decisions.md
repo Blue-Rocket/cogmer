@@ -1082,3 +1082,60 @@ of B4; detecting it into a table nobody reads would reproduce that.
 **Note.** Locally generated events take their sequence from `MAX()+1`, so a conflict
 on a local `Append` means the local store is inconsistent rather than that a peer
 misbehaved. It is reported as such.
+
+---
+
+## D-028 — Losing a room database ends that peer's membership; recovery is not attempted
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Context.** D-027 made a restarted sequence counter detectable. It did not say what
+a peer should do when it is the one that lost its state.
+
+**Decision.** Treat it as the end of that peer's membership in that room. The peer
+leaves, does not rejoin, and does not resume publishing.
+
+**The blast radius is smaller than the word suggests,** and three things get
+conflated here. Membership in that room is lost. The conversation is not — every
+other member holds a full replica. The peer's identity is not — it lives in
+`identity.json`, outside any room's storage. So the cost is one room, in a system
+where a room is bounded by the work that created it (D-015). Under the
+project-scoped model this decision replaced, the same event would have cost months.
+
+**An inversion worth knowing.** Losing *identity* is the safe failure: the peer
+becomes a new peer with a new sequence space and can collide with nothing. Losing a
+*room* while keeping identity is the dangerous one, because that is the peer that
+can republish sequence numbers others already hold. Anyone reasoning about backups
+will assume the opposite.
+
+**Why recovery was considered and declined.** It is not out of reach. Events are
+immutable and replicated, so a peer could refetch the room from any member —
+including its own past events — and resume above its highest sequence, using the
+anti-entropy exchange that already exists.
+
+Establishing "its highest sequence" is the problem. It must be the highest held by
+*any* member, and an offline member may hold a higher one than anything reachable.
+Resume below it and the conflict recurs. Resume far above it and the gap is
+permanent, because the highest-contiguous rule can never close it — every peer would
+believe indefinitely that it was missing events.
+
+A sequence epoch solves this properly: an incarnation number raised on recovery, so
+a restarted counter occupies a different space rather than colliding. That is the
+standard answer, and it changes both the event model and the synchronization state
+exchange. §11 declines a CRDT until testing proves one necessary; the same judgement
+applies here, and the case for it is weaker because short-lived replicated rooms have
+already made the loss cheap.
+
+**Rejected.**
+- *Refetch and resume* — sound until an unreachable member holds a higher sequence.
+- *Resume with a safety gap* — trades a detectable conflict for a permanent
+  synchronization stall, which is worse because nothing reports it.
+- *A sequence epoch now* — correct, and disproportionate until a loss has cost
+  something.
+- *Rejoining under a fresh identity* — technically safe, but it splits one person
+  across two peers in the room's history and in every guest list, to preserve a
+  membership that D-015 made cheap to recreate.
+
+**Revisit when** a room is long-lived enough that losing membership in one is
+expensive — which would most likely mean the session-scoped model itself was being
+reconsidered.

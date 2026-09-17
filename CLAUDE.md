@@ -176,6 +176,16 @@ model reasons about attribution.
 admitting known peers over holders of a secret — the secret is a first-contact
 mechanism, not a standing requirement.
 
+## Losing a room database (D-028)
+
+Ends that peer's membership in that room. It leaves; it does not resume publishing.
+The conversation survives on other members and the identity survives in
+`identity.json`, so the cost is one room.
+
+Counter-intuitive: losing `identity.json` is the **safe** failure (new peer, new
+sequence space, no collision). Losing `rooms/<id>.db` while keeping identity is the
+dangerous one. Do not design backups on the opposite assumption.
+
 ## Invariants
 
 - **Hooks must never break Claude Code** (§3.1). Every failure path exits 0 with

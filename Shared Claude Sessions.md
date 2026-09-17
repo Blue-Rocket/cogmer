@@ -506,6 +506,32 @@ Within a room, a sequence begins at a peer's first event, advances by one for ea
 
 A peer that cannot continue its sequence — because it has lost the room's local state — must not go on using its identifier in that room. Resuming at a lower number republishes sequence numbers that other peers already hold against different events.
 
+## Losing a room's local state
+
+Treat it as the end of that peer's membership in that room. The peer leaves; it does not rejoin, and it does not resume publishing.
+
+This is narrower than it sounds, and deliberately so. Three things are commonly conflated here, and only the first is actually lost:
+
+- **the peer's membership in that room** — lost;  
+- **the conversation** — not lost, because every other member holds a full replica;  
+- **the peer's identity** — not lost, because it does not live in a room's storage.
+
+So the cost is one room, in a system where a room is bounded by the work that created it. The developer starts or joins another and carries on.
+
+Note the inversion, which is worth understanding before designing around it. A peer that loses its *identity* is safe: it becomes a new peer, with a new sequence space, and can collide with nothing. A peer that loses a *room* while keeping its identity is the dangerous case, because it is the one that can republish sequence numbers others already hold.
+
+## Why recovery is not specified
+
+Recovery is not obviously out of reach, which is why the reasoning belongs here rather than being left as an omission.
+
+Because events are immutable and replicated, a peer could refetch a room from any member — including its own past events — and resume above its highest sequence. Anti-entropy already performs that exchange.
+
+The difficulty is establishing what "its highest sequence" is. It must be the highest held by *any* member, and a member that is offline may hold a higher one than any that can be reached. Resuming below that reproduces the conflict. Resuming far above it leaves a permanent gap, which the highest-contiguous rule can never close, so every peer would believe indefinitely that it was missing events.
+
+A sequence epoch resolves this — an incarnation number alongside the sequence, raised on recovery, so a restarted counter occupies a different space instead of colliding. It is the standard answer to this problem. It also changes the event model and the synchronization state exchange, for a case that a bounded, replicated, short-lived room has already made cheap.
+
+Do not add it until a loss has actually cost something worth the complexity.
+
 ## Redelivery and conflict are not the same thing
 
 A receiving peer must distinguish them, because they are indistinguishable to the obvious implementation and only one of them is harmless.
