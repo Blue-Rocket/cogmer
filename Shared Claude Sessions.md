@@ -373,7 +373,25 @@ The word lists are subject to a constraint the room lists are not: these names a
 
 An adjective that would be unkind applied to a person does not belong in the list, however neutral it seems applied to an animal. Nor does any animal used as an insult. The lists should be curated with that in mind and reviewed as they grow, because the combinations are generated and nobody approves them individually.
 
-A peer identifier is presently self-asserted: it is generated locally and nothing verifies it on receipt. Attribution is therefore accurate among cooperating peers and not resistant to a peer that chooses to lie. This is acceptable in a prototype and must not be mistaken for a property the system provides.
+## When an identity is created
+
+A peer identity is created once, on a machine's first use of the system, and persists from then on. It is not created per room, per session, or per invitation, and it outlives all of them.
+
+This is the opposite of a room, which is created at a known moment for a known purpose and archived when that purpose ends. An identity exists before there is anything to join and remains afterwards. That is what allows a peer to be recognized on a later occasion rather than met afresh each time.
+
+An identity belongs to a machine rather than to a person. A developer working from a laptop and a desktop is two peers, and appears as two entries wherever peers are listed or admitted. That is deliberate — a key that never leaves the machine which generated it cannot be lost from one machine by losing another — but the consequence should be visible rather than surprising.
+
+## An identifier must be safe to know
+
+A peer identifier should **be** the peer's public key, or a fingerprint of it. Knowing it should grant nothing.
+
+This is not a detail of encoding. An identifier appears in every event its peer originates, is displayed in every interface, and must be exchangeable for peers to recognize one another at all. An identifier that confers a capability on whoever learns it therefore cannot be protected, because the system is built to spread it.
+
+The present identifier fails this. It is a random value, generated locally, that nothing verifies on receipt — so knowing one is sufficient to claim it, and to publish events attributed to its owner. It is a shared secret wearing the costume of an identifier, and it is broadcast by design.
+
+The remedy is not to keep identifiers private, which is impossible here. It is to make them worthless to hold: a public key can be printed, listed, logged, and read aloud, because possession of it proves nothing. Only the private key, which never leaves the machine that made it, can produce a signature.
+
+Note the order in which this becomes true. Changing the identifier's format does not by itself help: while nothing verifies signatures, a peer can still simply assert someone else's identifier and be believed. **The identifier becomes safe to know at the moment signatures are checked, not at the moment keys are introduced.** Until then, attribution is accurate among cooperating peers and not resistant to a peer that chooses to lie. This is acceptable in a prototype and must not be mistaken for a property the system provides.
 
 `machineId` is an identity label, used for attribution and display. It is never an address, and nothing routes by it. Where a peer can be reached is a property of the transport and changes independently of who the peer is.
 
@@ -1273,9 +1291,23 @@ A peer keeps a list of the peers it has met and the public keys it knows them by
 
 This does not remove the first exchange. Two peers that have never met must still establish each other's keys over some channel they trust, exactly as a join secret must be sent over one.
 
-That comparison should be made on a rendering of the **whole** key, not a sample of it. A short mnemonic drawn from part of an identifier catches an accident and not an adversary, because the bits it does not cover are free to differ. Where a key is to be compared by people — read aloud, or checked side by side — render all of it, as a sequence of words or grouped digits. A peer name is not that, and must not be offered as though it were. What it removes is every exchange after the first: a key once verified is durable, whereas a secret is spent on use.
+What it removes is every exchange after the first: a key once verified is durable, whereas a secret is spent on use.
+
+That verification should be made against a rendering of the **whole** key, not a sample of it. A short mnemonic drawn from part of an identifier catches an accident and not an adversary, because the bits it does not cover are free to differ. Where a key is compared by people — read aloud, or checked side by side — render all of it, as a sequence of words or grouped digits. A peer name is not that, and must not be offered as though it were.
 
 The two mechanisms therefore compose rather than compete. A single-use secret admits a peer that is not yet known, and being admitted is what makes it known. Between peers that already know each other, no secret is required and none should be demanded.
+
+## Learning a peer's identity
+
+A peer's identity is not obtained in advance. There is no directory to consult, and requiring one before two people could work together would defeat the purpose of an invitation.
+
+Identities are exchanged on joining. The invitation admits a peer that is not yet known, and joining is where each side learns the other's identifier and records it. Because an identifier is a public key, learning one requires no confidentiality and creates no exposure: it is the one part of this exchange that can safely happen in the open.
+
+A self-certifying identifier proves possession of a key. It does not prove which person holds it. Those are different claims, and only the first is established by joining.
+
+The second rests on trust taken at first contact, and its weakness should be stated plainly: whoever presents a valid invitation becomes the peer that is recorded. An invitation that reached the wrong person enrolls the wrong person, durably, under a name every member will thereafter treat as familiar.
+
+Verification is therefore worth doing once, shortly after a first meeting, by comparing rendered identifiers over a channel the invitation did not travel on. Two colleagues already on a call can do it in seconds. The value of doing it once is that it never needs doing again.
 
 Admission is not retraction. Removing a peer from a list prevents it rejoining and prevents future presence. It does not withdraw what that peer has already seen.
 

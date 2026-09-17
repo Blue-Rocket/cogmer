@@ -809,3 +809,69 @@ is consent.
 
 **Revisit when** selective contribution of earlier turns is designed, since that is
 the feature this decision defers rather than forecloses.
+
+---
+
+## D-023 — A peer identifier must be safe to know; identities are created once and exchanged on joining
+
+**Date:** 2026-09-16 · **Status:** active (specified; not implemented)
+
+**Context.** Two questions: when does a peer identity come into being, and how does
+a host learn a guest's identifier before inviting them? Answering the second
+surfaced that the current identifier is hazardous to share.
+
+**When.** An identity is created once, on a machine's first use, and persists. Not
+per room, per session, or per invitation — it outlives all of them. This is the
+inverse of a room (D-022), which begins at a known moment for a known purpose and
+is archived when that purpose ends. An identity exists before there is anything to
+join, which is what lets a peer be recognized later rather than met afresh.
+
+An identity belongs to a **machine**, not a person: a developer with a laptop and a
+desktop is two peers and appears twice wherever peers are listed. Deliberate — a
+key that never leaves the machine that made it cannot be lost from one machine by
+losing another — but it should be visible rather than surprising.
+
+**How a guest's identifier is obtained: it is not, in advance.** There is no
+directory, and requiring one before two people could work together would defeat the
+point of an invitation. Identities are exchanged on joining. The invitation admits
+a peer that is not yet known; joining is where each side learns and records the
+other.
+
+**The identifier must be safe to know.** Asking how to obtain a guest's identifier
+exposed that knowing one is currently a capability: it is a random value that
+nothing verifies, so knowing it is sufficient to claim it and publish events
+attributed to its owner. It is a shared secret in the costume of an identifier —
+and it is broadcast by design, appearing in every event, every interface, and every
+exchange between peers.
+
+The remedy is not to keep identifiers private, which is impossible for something
+the system exists to spread. It is to make holding one worthless: **the identifier
+should be the public key, or a fingerprint of it.** A public key can be printed,
+logged, listed, and read aloud, because possession proves nothing; only the private
+key produces a signature.
+
+**The order matters, and is easy to get wrong.** Changing the identifier's format
+does not by itself help. While nothing verifies signatures, a peer can still assert
+someone else's identifier and be believed. The identifier becomes safe to know at
+the moment signatures are *checked*, not at the moment keys are introduced. So
+generating keypairs now, without verification, would produce something that looks
+like the fix and delivers none of it — which is why nothing was implemented here.
+
+**Self-certifying is not self-authenticating.** An identifier that is a public key
+proves possession of that key. It does not prove which person holds it. Joining
+establishes the first claim only; the second rests on trust taken at first contact,
+whose weakness is that whoever presents a valid invitation becomes the peer that is
+recorded — durably, under a name members will thereafter treat as familiar.
+Verifying once, over a channel the invitation did not travel on, closes that, and
+once is enough.
+
+**Rejected.**
+- *A directory of peer identifiers* — an arrangement required before collaboration
+  defeats the invitation.
+- *Treating the current identifier as sensitive* — it appears in every event; a
+  secret that must be broadcast is not a secret.
+- *Generating keypairs now as a first step* — see the ordering note. Half of this
+  change provides none of its value while appearing to.
+
+**Revisit when** Phase 2 begins. This and D-020 are the same body of work, and it
+must land before peers exchange their first event.

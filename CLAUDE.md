@@ -145,7 +145,15 @@ trusted.
 
 ## Peer identity is self-asserted (D-020)
 
-A `peerId` is ten random bytes generated locally and verified by nothing. So
+A `peerId` is ten random bytes generated locally and verified by nothing — so
+**knowing one is enough to claim it.** It is a shared secret that the system
+broadcasts in every event. The fix is to make the identifier the public key itself
+(D-023), but note the ordering: it becomes safe to know when signatures are
+*checked*, not when keys are introduced. Generating keypairs without verification
+looks like the fix and delivers none of it.
+
+Identities are created once per machine on first use and exchanged when a peer
+joins — never obtained in advance. So
 attribution is accurate among cooperating peers and not resistant to one that
 lies, a guest list cannot replace the join secret, and §13's rule that a relayer
 must not rewrite event origin has no enforcement.
