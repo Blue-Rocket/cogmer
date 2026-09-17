@@ -10,12 +10,12 @@ Phase 0 (integration spike) is complete — see `docs/phase0-findings.md`.
 **Peer networking does not exist yet.** Per §36.10 the spike stopped deliberately;
 do not start Phase 1+ without saying so explicitly.
 
-**Phase 0a (compaction probe) is the next step and is not done.** Compaction was
-never exercised in Phase 0 — `PreCompact` did not fire. It can invalidate both
-proven directions silently: if compaction discards injected teammate turns, the
-`session_context` watermark still claims delivery, so the turns are never
-re-injected and Claude loses a referent with no error anywhere. Treat any
-watermark change as touching this.
+Phase 0a (compaction probe) is complete — see `docs/phase0a-findings.md`.
+Injected context survives compaction, so **the watermark is correct as written**.
+Do not add a compaction rewind or a re-injection floor: both were evaluated and
+rejected as duplicate injection for no benefit.
+
+Phase 1 is unblocked but not started.
 
 ## Two findings the code depends on
 
@@ -33,6 +33,25 @@ exact string match against a real 2,582-char response.
 Also: assistant records carry no `promptId` and the `parentUuid` chain has gaps,
 so turn segmentation is **positional** — assistant records following the last
 `promptSource`-bearing user record.
+
+## Compaction behavior these rely on
+
+Verified in Phase 0a, and load-bearing:
+
+- `claudeSessionId` and `transcript_path` **survive compaction**; the transcript
+  is append-only and is never rewritten. The watermark is keyed on session ID, so
+  a changed ID would silently re-inject the entire room.
+- The compaction summary is a user record with **no `promptSource`**, so the
+  reassembly anchor correctly skips it.
+- Compaction runs as a **subagent**; the `isSidechain` filter is what keeps the
+  summarizer's output out of the room.
+- Slash commands do **not** reach `UserPromptSubmit`, so `/compact` never becomes
+  a room event.
+- Compaction never fires mid-turn (verified to 378k tokens against a 100k
+  threshold), so reassembly cannot be split across a boundary.
+
+Residual risk: context survival is summarizer judgment, not a format guarantee.
+Re-run Test B from the findings when the model or Claude Code version changes.
 
 ## Invariants
 

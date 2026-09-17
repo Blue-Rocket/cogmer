@@ -13,13 +13,14 @@ The integration spike is done and **both required directions work**. See
 including two non-obvious defects in the Claude Code integration surface and how
 they are worked around.
 
-**Next: Phase 0a — Compaction Probe.** Compaction is the one mechanism that can
-silently invalidate both proven directions: it may discard injected teammate
-context while the delivery watermark still records it as incorporated, so Claude
-quietly loses a referent it previously understood with nothing reporting a
-failure. The spec's Phase 0a defines the probe and the remediation candidates.
+Phase 0a (compaction probe) is also done — see
+[`docs/phase0a-findings.md`](docs/phase0a-findings.md). The feared silent failure
+**did not reproduce**: injected teammate context survived compaction with
+attribution intact, even when incidental to the conversation. No remediation is
+needed and the delivery watermark is unchanged. Compaction also never interrupts
+a turn, and `/compact` never reaches the room.
 
-Not yet built: the compaction probe, and peer networking (Phases 1–7).
+Not yet built: peer networking (Phases 1–7).
 
 ## Try it
 
