@@ -1717,6 +1717,16 @@ browser is fine and nothing more is needed; that it is right but wants announcin
 making the notification next; or that a second window is not consulted at all, making
 the terminal pane next. Those lead to different work, which is the reason to wait.
 
+**Outcome, 2026-09-17.** Used, and judged the right avenue. That settles the question
+this decision was waiting on: a separate window is consulted rather than forgotten,
+so the terminal pane is not the next thing and the browser is not a placeholder for
+it. D-038's position — that the room belongs outside the session on its merits —
+now rests on use rather than on argument.
+
+Still open is whether arrival wants announcing. That is a different question with a
+different answer for someone watching a pairing closely than for someone dipping in
+during long solo stretches, and it remains unanswered.
+
 ---
 
 ## D-040 — The injected block is fenced with an unforgeable value, and framed by classification
