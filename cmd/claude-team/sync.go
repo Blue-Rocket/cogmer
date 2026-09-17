@@ -14,9 +14,14 @@ import (
 //
 // Deliberately omitted, and none of it changes what the experiment measures:
 // invitations and guest lists (§12) — peers are named by CLAUDE_TEAM_PEERS;
-// signatures (§25) — a peer is trusted to report its own identity; real-time push
-// (§16) — polling stands in, so peer latency is the poll interval rather than the
-// network. Any of these would entrench a format before D-023 has settled one.
+// signatures (§25) — a peer is trusted to report its own identity. Either would
+// entrench a format before D-023 has settled one.
+//
+// Polling is NOT among the omissions: it is the decided default (D-031). Peer
+// propagation is half a second; arrival into a teammate's Claude waits for their
+// next prompt, which is minutes during a long turn. Push would improve the fast
+// half of a path whose slow half is the turn. Pull also makes reconnection free —
+// an absent peer recovers by asking, so nobody tracks what it missed.
 
 type syncRequest struct {
 	Room string           `json:"room"`

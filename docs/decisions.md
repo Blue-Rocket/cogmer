@@ -1246,3 +1246,47 @@ protection that does not exist.
 - *Refusing to expose the peer API until authentication exists* — that is the
   ordering D-023 warns against: it would mean building identity before ever running
   across a network, and the network is what the identity is for.
+
+---
+
+## D-031 — Peer synchronization polls; the push worth building is the local UI's
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Context.** Polling was chosen for the two-peer experiment and recorded only as a
+code comment calling push "deliberately omitted". It was an interim measure that
+was never revisited, which is the gap this log exists to prevent. Asked directly
+whether it was interim or decided, the honest answer was that nobody had decided.
+
+**Decision.** Polling is the default for peer synchronization, not a placeholder.
+§31 lists real-time push as Phase 3; it should not be built for the peer layer
+without a reason beyond latency.
+
+**The argument is C4's own measurement.** Peer propagation is roughly half a
+second. Propagation *into a teammate's Claude* is not until their next prompt —
+minutes, during a long agentic turn. Push would take the fast half from 500 ms to
+50 ms while the slow half remains measured in minutes. It optimises the wrong side
+of the path, and §16's sub-second target is already met by a one-second poll.
+
+**Pull has properties push does not.** A peer that was absent recovers by asking,
+so reconnection needs no retry queue, no delivery tracking, and nobody has to
+remember what a missing peer missed. Push requires the sender to know who is
+connected and what each has, which is state that can be wrong. Under session-scoped
+rooms, where peers come and go with sessions, "ask for what you lack" is the
+simpler shape as well as the cheaper one.
+
+**The push that does matter is a different one.** §17 requires the local UI to
+update live. That is the daemon pushing to a browser on loopback — server-sent
+events — not peers pushing to each other. §31 places "Real-Time Push" in the peer
+layer, where its value is lowest, and the UI has no phase of its own at all.
+
+**Revisit when** something needs sub-second peer propagation for a reason other
+than conversation: presence indicators (§35) are the likely first, since "Claude
+working…" is stale the moment it is a second old. Large rooms where constant polling
+is wasteful would be the second.
+
+**Rejected.**
+- *Push now, for §16's target* — the target is met, and the measurement showing it
+  is met also shows why it does not help.
+- *Leaving it undecided* — an interim measure nobody revisits becomes a decision
+  taken by default, without the reasoning that would let anyone overturn it.
