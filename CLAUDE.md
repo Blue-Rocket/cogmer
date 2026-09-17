@@ -11,6 +11,10 @@ its members leave or it lies dormant. It has two identifiers: a `roomId` UUID th
 everything keys on, and a generated `roomName` like `misty-canyon` for people.
 **Never key on the name** — names collide, identities do not (D-017).
 
+A room begins when someone is **invited**, never when a session starts — so solo
+work before that is captured nowhere and is never handed over retroactively
+(D-022). "From its beginning" always means the room's beginning.
+
 A session belongs to **at most one room at a time**, and may not move to another
 room once teammate context has been injected, because injected context cannot be
 withdrawn from a context window (D-016). Process exit makes a member *absent*, not

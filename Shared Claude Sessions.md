@@ -179,7 +179,7 @@ Do not attempt to share Claude Code session internals between machines.
 
 A room exists for as long as the sessions that joined it.
 
-Membership is held by a Claude Code session, identified by its session ID. A room is created by one peer, joined by others through an explicit invitation, and closed when its members have left it.
+Membership is held by a Claude Code session, identified by its session ID. A room is created by one peer at the moment they invite someone into it, joined by others through that invitation, and closed when its members have left it.
 
 A Claude Code session becoming inactive is not a departure. Sessions are resumable, so a process exiting makes a member absent rather than gone.
 
@@ -704,6 +704,22 @@ A Claude Code session holds membership in at most one room at any time.
 
 This is a constraint of the event model, not a policy preference. Every captured event belongs to exactly one room, and a session in two rooms provides no basis for choosing which. Injected context is subject to the same problem from the other direction: a session receiving turns from two unrelated conversations has no way to separate them, and neither does the developer reading the result.
 
+## Creation
+
+A room comes into existence when a developer creates one, and not before.
+
+Creating a room is the act of inviting someone into it. The `roomId` and `roomName` are generated at that moment, the creating session becomes the first member, and the room's history begins there.
+
+Nothing earlier belongs to the room. A session that has been working alone has published nothing, because there was no room to publish to, and issuing an invitation does not hand over that work retroactively.
+
+This is deliberate. Were a room created when a session started, every solo session would accumulate a conversation that the first person invited then received in full — hours of work disclosed by an act that looks like saying hello. Where a room begins is therefore an explicit decision, made by the person whose conversation it is.
+
+**"From its beginning", throughout this specification, means the beginning of the room — never the beginning of a session that belongs to it.**
+
+Before a room exists, a session is an ordinary Claude Code session. Nothing is captured, nothing is injected, nothing is shared. Collaboration is something a developer starts, not a state they are in.
+
+One consequence should be acknowledged rather than discovered. A developer usually wants to invite someone *because* of what just happened, and that conversation is exactly what the new room does not contain. The prototype accepts this. Deliberately contributing selected earlier turns is a reasonable later addition; contributing them by default is not.
+
 ## Joining
 
 A session joins a room by presenting an invitation.
@@ -1044,7 +1060,7 @@ I don't think that's actually the problem.
 
 Do not repeatedly inject the entire room.
 
-A session that joins a room already in progress is an exception: it receives the room from its beginning. This is affordable precisely because a room is bounded by the sessions that created it.
+A session that joins a room already in progress is an exception: it receives the room from its beginning — the room's beginning, which is when it was created, not when any member's session started. This is affordable precisely because a room is bounded by the work it was created for.
 
 ---
 

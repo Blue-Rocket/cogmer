@@ -761,3 +761,51 @@ naming-people constraint is the work, not the arithmetic.
 **Revisit when** `peerId` becomes a key fingerprint. The derivation needs no
 change, but the verified/unverified display rule becomes enforceable rather than
 advisory, and that is the point at which names become trustworthy at all.
+
+---
+
+## D-022 — A room begins when someone is invited into it, and never earlier
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Context.** The specification said a room is "created by one peer" and that a late
+joiner "receives the room from its beginning," in three places, without ever
+saying when the beginning is. Nothing said what happens before a room exists.
+
+**Decision.** The `roomId` and `roomName` are generated at the moment a developer
+invites someone. Creating a room and issuing the first invitation are the same
+act. The creating session becomes the first member and the room's history starts
+there.
+
+Before that, a session is an ordinary Claude Code session: nothing captured,
+nothing injected, nothing shared. Collaboration is something a developer starts,
+not a state they are in.
+
+**The alternative is a silent disclosure.** The natural implementation — create a
+room when a session starts, so capture is always on — means a developer who works
+alone for two hours and then invites a colleague hands over all two hours. The
+invitation looks like saying hello and behaves like publishing a transcript.
+Nothing in the interface would suggest otherwise, and the disclosure is
+irreversible.
+
+So the specification now states that *"from its beginning" means the beginning of
+the room, never of a session that belongs to it* — the ambiguity that made the
+wrong reading available.
+
+**Acknowledged cost.** A developer usually wants to invite someone *because* of
+what just happened, and that conversation is precisely what the new room does not
+contain. The prototype accepts this; the workaround is the one people already use,
+which is to explain. Deliberately contributing selected earlier turns is a
+reasonable later feature. Contributing them by default is not, and the difference
+is consent.
+
+**Rejected.**
+- *Create a room at session start* — the disclosure above.
+- *Create a room lazily at the first captured event* — same outcome, reached less
+  visibly.
+- *Offer to include prior turns when inviting* — better than defaulting, but it is
+  a prompt to share under time pressure, which is a poor moment to ask. Left for
+  a later design with the turns shown before they are sent.
+
+**Revisit when** selective contribution of earlier turns is designed, since that is
+the feature this decision defers rather than forecloses.
