@@ -9,11 +9,21 @@ with a real implementation.** What did not hold up is mostly at the seams —
 places where two sections are individually reasonable but jointly ambiguous, and
 one place where the specification still poses a question that has been answered.
 
+**Scope.** This reviews the *specification*. A finding is resolved when the
+specification says the right thing — never because the implementation does. Where
+the code has run ahead of the text, that is noted as context and does not close
+anything.
+
+Divergence between the code and the specification is a different kind of problem
+with a different remedy, and is collected under *Implementation conformance* at the
+end rather than given a finding number.
+
 Findings are ordered by consequence, not by section number.
 
-**Status, as of the last revision.** Eight of the original fourteen are resolved, two
-dissolved by a change of model rather than fixed, and four remain open. Two further
-findings were raised afterwards: B4, resolved, and A5, open. Each carries its own
+**Status, as of the last revision.** Seven of the original fourteen are resolved, two
+dissolved by a change of model rather than fixed, and five remain open — A1 among
+them, reopened after being closed on implementation work rather than specification
+work. Two further findings were raised afterwards: B4, resolved, and A5, open. Each carries its own
 status line; the open ones are collected at the end so they are not lost among the
 closed.
 
@@ -29,18 +39,19 @@ A2's proposed fix was sound for the model it assumed, and that model was replace
 
 ### A1 — §19 never says *when* delivery state advances, nor what counts as delivered
 
-**RESOLVED — D-014, implemented and verified.** Delivery is now derived from
-evidence: the daemon confirms teammate events only once it observes the injected
-block in the session transcript as a `hook_success` attachment, matched on a hash
-of the exact text emitted. Delivery became a set rather than a watermark, since a
-lost injection leaves a hole a contiguous watermark cannot represent. Verified
-against live sessions — a normal turn confirms and stops re-offering, a simulated
-lost response re-offers rather than losing. Guarded by behavior check B20.
+**REOPENED — was wrongly closed.** This was marked resolved on the strength of
+D-014 being implemented and verified. The implementation is sound: delivery is
+derived from evidence, confirmed only when the injected block is observed in the
+transcript, with a set rather than a watermark and a fallback gated on B20 failing.
 
-Testing the fix caught a second instance of the same bug: the first version
-committed on trust whenever no attachment was found, which is indistinguishable
-from the injection never arriving. The fallback is now gated on B20 being recorded
-as *failing*.
+But §19 was never changed. It still says only "update the session's
+incorporated-event state," without saying when, or what counts as incorporated —
+which is the finding, verbatim. A second implementation reading the specification
+would make the same mistake the first one did.
+
+The remedy is a specification edit, not more code: state that delivery state must
+not advance on offering an injection, and that it advances on evidence the injection
+was received.
 
 **High.** §19 lists five ordered steps, ending "update the session's
 incorporated-event state," but binds that update to nothing. It also never says
@@ -189,18 +200,17 @@ widening (D-005). Keep the investigative framing only for what is still unknown.
 
 ## B. Under-specification that will make peers diverge
 
-### A5 — D-028's policy on losing a room database is not implemented, and the loss is silent
+### A5 — Nothing in the specification requires a peer to notice that a room's state is gone
 
-**OPEN — specified, not implemented.** §22 now defines `membership.db`: one record
-per joined room, holding the room's identifiers, its state, and the highest sequence
-this peer has issued in it, stored outside every room database so it shares the
-identity's fate rather than the room's. §22 previously placed membership *inside*
-the room database, which contradicted the requirement; that is corrected.
+**OPEN.** §22 defines `membership.db` and §8 says a recovering peer resumes above
+its recorded sequence. Between them sits an unspecified step: nothing says a peer
+must **check** the index when opening a room, nor what it owes the user on finding a
+discrepancy.
 
-The implementation still creates an empty room silently and restarts at 1. The
-reproduction below stands.
+That gap is what allows an implementation to be entirely conformant and still fail
+silently — which is not hypothetical; see *Implementation conformance*.
 
-**Found 2026-09-16 by deleting a room database and watching.**
+**Found 2026-09-16 by deleting a room database and watching what happened.**
 
 **High.** §8 says a peer that has lost a room's local state must stop using its
 identifier in that room, and D-028 says its membership ends. Nothing enforces
@@ -223,20 +233,15 @@ one event where it held six.
 This is the same shape as A1 and B4: a failure with no error path, discovered only
 by testing the failure rather than the success.
 
-**Recommend** *(revised — D-029 replaced the policy this was written against)*.
-The same durable state is needed; what changes is what happens when it fires:
+**Recommend.** Specify the two steps that currently fall between §22 and §8:
 
-- **Durable membership state outside any room database** — which rooms this peer
-  belongs to and the highest sequence it reached in each. Without it, lost state
-  cannot be told from a new room. The sequence must be reserved before the event
-  using it is published.
-- **A check on opening a room.** If the index claims membership and the database is
-  absent, or its highest sequence is below what the index recorded, state has been
-  lost.
-- **Recover, and say so.** Resume above the recorded sequence, refetch the room from
-  any member, and keep membership. Tell the user the history is refetching and that
-  some teammate context may repeat — a room in that state is not the same as one
-  working normally.
+- **A peer must check the membership index when opening a room.** If the index
+  claims membership and the room's database is absent, or its highest sequence is
+  below what the index recorded, local state has been lost.
+- **A peer must say so.** A room refetching its history, and possibly repeating some
+  teammate context, is in a different state from one working normally, and the
+  difference must be reported rather than inferred. Recovery that is silent is
+  indistinguishable from nothing having gone wrong.
 
 Detection at startup does not cover the open-handle case, where the file is
 unlinked beneath a running daemon. That is the smaller half of the problem and can
@@ -482,11 +487,12 @@ Worth recording, because the useful output of a review is not only a defect list
 
 ## Still open
 
-Five findings and three notes, after the work of 2026-09-16:
+Six findings and three notes, after the work of 2026-09-16:
 
 | | finding | why it survives |
 |---|---|---|
-| A5 | room-loss policy unimplemented; loss is silent | spec says leave, code restarts at 1 |
+| A1 | §19 still does not say when delivery advances | reopened; was closed on implementation work |
+| A5 | detecting lost room state is unspecified | §22 defines the data, nothing requires checking it |
 | B1 | §24 has no ordering comparator | peers can diverge silently |
 | B2 | injection order unspecified | late-arriving events injected out of sequence |
 | C1 | behavior dependence unacknowledged | `doctor` exists; the specification does not require it |
@@ -521,3 +527,40 @@ Recorded here so the review remains the single place to look:
 - **The bearer token was never necessary** (D-024, D-025). A guest list admits a known
   peer with nothing typed, and a host present can approve a stranger's request.
   Tokens are now absent from the design entirely rather than deprecated within it.
+
+
+---
+
+## Implementation conformance
+
+Where the code and the specification disagree. These are not findings about the
+specification and carry no finding number; the remedy is code.
+
+**C-1. A lost room database is not detected, and recovery does not happen.**
+§22 requires a membership index and §8 requires resuming above a recorded sequence.
+Neither exists. Reproduced by deleting a room database:
+
+- while the daemon runs, the loss is invisible — it served all six events from its
+  open file handle after the file was deleted, so the failure stays latent until a
+  restart that may be hours away;
+- on restart the daemon silently creates an empty room and logs an ordinary startup
+  line;
+- the sequence counter restarts at 1, the precise condition D-027 detects on the
+  receiving side, while the peer that caused it is never told.
+
+The experience is that nothing appears wrong. Teammate context stops arriving, the
+peer's own events stop reaching anyone, each side sees the other fall quiet.
+
+**C-2. Rooms are selected by environment variable.** §12 and §28 describe rooms
+entered by invitation with a guest list. The implementation takes a room name from
+`CLAUDE_TEAM_ROOM` and has no invitation, membership, or guest list. Expected —
+this is Phase 1 work — but it means no part of the admission design is exercised.
+
+**C-3. Peer identity is not cryptographic.** §6 and §25 require identifiers derived
+from a public key with signatures verified. `peerId` is ten random bytes.
+Consequently the guest list, the relay rule, and attribution are conventions rather
+than controls, exactly as §25 says they are until then.
+
+**C-4. Room identifiers and names are not generated.** §3.2 requires a `roomId` UUID
+and a generated `roomName`; the implementation uses a bare string. `PeerName` is
+implemented; its room equivalent is not.
