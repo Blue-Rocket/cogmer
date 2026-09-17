@@ -441,3 +441,58 @@ favour of keeping rooms open.
 **Revisit when** a mechanism exists to scope or evict injected context within a
 live session. The refusal to move rooms is a consequence of that being impossible,
 not a value judgement about developers.
+
+---
+
+## D-017 — A room carries two identifiers: a UUID for synchronization, a generated name for people
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Context.** D-015 gave rooms a generated id plus a human-chosen label. The label
+was the weak part.
+
+**Decision.** Every room has a `roomId` — a UUID, globally unique, never reused or
+changed, carried on every event, and the key for all replication, deduplication
+and storage — and a `roomName`, generated at the same moment from two curated word
+lists (weather or sky, plus landscape): `misty-canyon`, `thunder-ridge`.
+
+**The name is generated rather than chosen, and that is the point.** A name a
+developer picks will be the name of a project, a client, or a ticket. Rooms named
+after projects become rooms scoped to projects by convention — the exact model
+D-015 abandoned. Generating the name resists that structurally instead of relying
+on anyone's discipline.
+
+Weather-plus-landscape was chosen for four properties, all of which matter because
+an invitation may be read aloud over a call: speakable, unambiguous when heard,
+short enough to type without copying, and drawn from a narrow neutral domain so
+that no random pairing produces something offensive. The domain being narrow is a
+safety property, not a stylistic one. It also happens to name a place, which is
+what a room is.
+
+**The name is explicitly non-authoritative.** Nothing synchronizes, routes,
+deduplicates, or stores by name; databases are filenamed by `roomId`. Two
+unrelated rooms may share a name, and an implementation that keys on one will
+eventually merge two unrelated conversations. This had to be stated, because a
+pleasant identifier invites exactly that misuse.
+
+**Uniqueness is scoped to a peer, not global.** Global uniqueness is impossible —
+rooms are created independently on machines that never coordinate. But a name is
+only ever resolved against the peer named in an invitation, so a peer need only
+keep its own live room names distinct, regenerating on collision. That makes a
+few hundred words per list sufficient.
+
+**Names are immutable** for the life of the room: renaming would invalidate
+outstanding invitations and make an archived room harder to recognize.
+
+**Rejected.**
+- *A single identifier* — a UUID cannot be read over a call; a name cannot be a
+  synchronization key. The two jobs have incompatible requirements.
+- *Developer-chosen names* — reintroduces project scoping by convention.
+- *Globally unique names* — unachievable without coordination, and unnecessary once
+  resolution is scoped to a peer.
+- *Including the name on every event* — it is room metadata, and putting a mutable
+  display string inside immutable events invites drift.
+
+**Revisit when** a name is needed outside the scope of a single peer, such as a
+directory of rooms across an organization. Per-peer uniqueness would no longer be
+sufficient.

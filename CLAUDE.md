@@ -6,8 +6,16 @@ architecture; section numbers (§7, §19, …) are referenced throughout the cod
 
 ## Rooms are session-scoped (D-015)
 
-A room is a set of linked Claude Code sessions with a generated id, entered by
-invitation, closed when its last member session ends. **Nothing derives a room
+A room is a set of linked Claude Code sessions, entered by invitation, closed when
+its members leave or it lies dormant. It has two identifiers: a `roomId` UUID that
+everything keys on, and a generated `roomName` like `misty-canyon` for people.
+**Never key on the name** — names collide, identities do not (D-017).
+
+A session belongs to **at most one room at a time**, and may not move to another
+room once teammate context has been injected, because injected context cannot be
+withdrawn from a context window (D-016). Process exit makes a member *absent*, not
+gone — sessions resume under the same ID, so membership is durable and presence is
+not. **Nothing derives a room
 from a directory, repository, or project.** Membership ends; the event log is
 archived and may be read, never rejoined.
 

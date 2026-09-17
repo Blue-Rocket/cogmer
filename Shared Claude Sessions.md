@@ -90,14 +90,20 @@ Claude Code should continue functioning normally if:
 
 A room is a replicated event stream shared by a set of linked Claude Code sessions.
 
-A room is identified by a generated identifier. It is not named after, derived from, or otherwise bound to a project, repository, or working directory.
+A room has two identifiers, and they are not interchangeable.
 
 ```
-roomId: r-7f3c9a2e
-label:  sessionlambda-timeout
+roomId:   0f7a4e6c-2b91-4d0a-9c3e-7f1d8a5b2c44
+roomName: misty-canyon
 ```
 
-The label exists for display. Nothing resolves a room from a directory.
+The `roomId` is the room's synchronization identity. It is generated, globally unique, never reused, and never changed. Every event carries it, and all replication, deduplication, and storage key on it.
+
+The `roomName` is for people. It is generated at the same moment and exists so a room can be spoken aloud, typed without copying, and recognized in a list.
+
+A name is never authoritative. Nothing synchronizes, routes, deduplicates, or stores by name. Two unrelated rooms may carry the same name, and an implementation that treats a name as a key will eventually merge two unrelated conversations.
+
+Neither identifier is named after, derived from, or otherwise bound to a project, repository, or working directory. Nothing resolves a room from a directory.
 
 David may locally have:
 
@@ -312,7 +318,7 @@ Example:
   "userDisplayName": "David",
   "machineId": "davids-macbook",
   "claudeSessionId": "...",
-  "roomId": "r-7f3c9a2e"
+  "roomId": "0f7a4e6c-2b91-4d0a-9c3e-7f1d8a5b2c44"
 }
 ```
 
@@ -365,7 +371,7 @@ Example event:
   "eventId": "01K5...",
   "peerId": "david-peer-id",
   "peerSequence": 1827,
-  "roomId": "r-7f3c9a2e",
+  "roomId": "0f7a4e6c-2b91-4d0a-9c3e-7f1d8a5b2c44",
   "timestamp": "...",
   "userId": "david",
   "userDisplayName": "David",
@@ -428,7 +434,7 @@ Each daemon maintains its knowledge of every peer.
 Example:
 
 ```
-Room: r-7f3c9a2e
+Room: misty-canyon  (0f7a4e6c-2b91-4d0a-9c3e-7f1d8a5b2c44)
 
 Known state:
 
@@ -540,12 +546,42 @@ Conceptually:
 
 ```
 David:   claude-team invite
-         → r-7f3c9a2e@davids-macbook:4783
+         → misty-canyon@davids-macbook:4783
 
-Alice:   claude-team join r-7f3c9a2e@davids-macbook:4783
+Alice:   claude-team join misty-canyon@davids-macbook:4783
 ```
 
-An invitation must carry enough to identify the room and to reach at least one current member.
+An invitation must carry enough to identify the room and to reach at least one current member. The joining peer resolves the name against the peer named in the invitation, receives that room's `roomId`, and uses the `roomId` from then on.
+
+## Room names
+
+A room name is generated, never chosen.
+
+Compose it from two curated word lists, one of weather or sky and one of landscape:
+
+```
+misty-canyon
+thunder-ridge
+clear-delta
+frost-hollow
+```
+
+Generating the name serves a purpose beyond convenience. A name a developer chooses will be the name of a project, a client, or a ticket — and rooms named after projects become rooms scoped to projects by convention, which is the model this specification deliberately abandoned. A generated name resists that drift without relying on anyone's discipline.
+
+A naming scheme should be:
+
+- speakable, because an invitation may be read aloud over a call;  
+- unambiguous when heard, avoiding homophones and easily confused pairs;  
+- short enough to type without copying;  
+- drawn from a narrow, neutral domain, so that no random combination produces something offensive or misleading.
+
+Weather and landscape satisfy all four, and have the further property of naming a place, which is what a room is.
+
+Each list should be large enough that collisions are uncommon; a few hundred entries per list yields tens of thousands of combinations.
+
+Names are not globally unique and cannot be, since rooms are created independently on machines that are not coordinating. A peer must ensure only that the live rooms it hosts have distinct names, regenerating on collision. That is sufficient, because a name is only ever resolved against one peer.
+
+A room's name is fixed for the life of the room. Renaming would invalidate outstanding invitations and make an archived room harder to recognize later.
 
 The peer that issued an invitation does not thereby become authoritative. It is only the first reachable member, and it may leave while the room continues.
 
@@ -793,7 +829,7 @@ Because peers synchronize their event stores, each developer sees approximately 
 Example:
 
 ```
-SESSIONLAMBDA TIMEOUT  ·  r-7f3c9a2e
+MISTY CANYON
 ──────────────────────────────────────
 
 David                         11:42
@@ -990,11 +1026,13 @@ Conceptually:
 ~/.claude-team/
     identity.json
     rooms/
-        r-7f3c9a2e.db
+        0f7a4e6c-2b91-4d0a-9c3e-7f1d8a5b2c44.db
     archive/
-        r-1c04be77.db
-        r-4a9f01d3.db
+        3c1e05b9-7d42-4a88-b016-9e2f4c7a10d5.db
+        a91f720d-4e63-4b15-8c77-05de3b8f6291.db
 ```
+
+Databases are named by `roomId`, never by name. Names may collide; identities do not.
 
 A room's database moves to the archive when the room closes. An archived room is readable and searchable. It is never rejoined, never synchronized, and never injected.
 
@@ -1162,8 +1200,8 @@ Per-room state is created when a room is created or joined. It belongs to the da
 
 ```json
 {
-  "roomId": "r-7f3c9a2e",
-  "label": "sessionlambda-timeout",
+  "roomId": "0f7a4e6c-2b91-4d0a-9c3e-7f1d8a5b2c44",
+  "roomName": "misty-canyon",
   "injectSharedContext": true
 }
 ```
@@ -1190,9 +1228,9 @@ Eventually:
 
 ```
 claude-team invite
-→ r-7f3c9a2e@davids-macbook:4783
+→ misty-canyon@davids-macbook:4783
 
-claude-team join r-7f3c9a2e@davids-macbook:4783
+claude-team join misty-canyon@davids-macbook:4783
 claude
 ```
 
