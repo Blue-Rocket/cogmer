@@ -4,6 +4,16 @@ Prototype from `Shared Claude Sessions.md` — a local-first P2P daemon replicat
 Claude Code conversations between developers. Read that spec before changing
 architecture; section numbers (§7, §19, …) are referenced throughout the code.
 
+## A view sits beside a session, never around it (D-034)
+
+Claude Code shows nothing a hook writes (D-033), so ambient display needs an outside
+view. **Do not wrap `claude` in a pseudo-terminal.** It replaces the entry point,
+reaches only terminal users — Claude Code is also a desktop app, a web app, and
+VS Code/JetBrains extensions — and needs a second implementation on Windows.
+
+A standalone view in a split pane has none of those problems and stays additive: the
+only thing installed remains the hooks Claude Code already loads.
+
 ## Rooms are session-scoped (D-015)
 
 A room is a set of linked Claude Code sessions, entered by invitation, closed when

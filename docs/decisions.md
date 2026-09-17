@@ -1404,3 +1404,59 @@ more than one.
 **Revisit if** Claude Code begins surfacing hook output. That would make an ambient
 in-session view possible and is worth noticing; it cannot be checked automatically,
 since it requires a terminal and an observer.
+
+---
+
+## D-034 — No terminal wrapper; a view sits beside the session rather than around it
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Context.** D-033 established that Claude Code surfaces nothing a hook writes, so
+ambient display needs something outside the session. A pseudo-terminal wrapper was
+proposed: `claude-team` would launch the ordinary interactive `claude` inside a PTY,
+proxy it, and draw peer turns in a reserved band the child cannot see.
+
+The technique works. A passthrough prototype was byte-for-byte identical to running
+`claude` directly — ANSI sequences, terminal dimensions, and exit code — under a
+real 24×80 pseudo-terminal. Feasibility was never the problem.
+
+**Decision.** Do not wrap. A view runs *beside* a session as a separate program,
+not *around* it.
+
+**Three reasons, compounding.**
+
+*It replaces the entry point.* Everything else this project asks of a developer is
+something Claude Code already loads: hooks. A wrapper asks them to stop running
+`claude` and run something else, permanently, and to keep doing so through every
+future habit and alias. That is a materially larger ask than an install.
+
+*It only reaches one of the ways Claude Code runs.* It is also a desktop application
+on macOS and Windows, a web application, and a VS Code and JetBrains extension. A
+pseudo-terminal intercepts the terminal and nothing else, and there is no wrapper
+equivalent for an extension host. Ambient display would exist for some users and be
+unreachable for others, with no path to closing the gap.
+
+*Windows is a second implementation.* Pseudo-terminals there are ConPTY, a different
+API from the Unix ones, and the terminal-behaviour matrix widens across Windows
+Terminal, PowerShell, tmux, and IDE terminals. D-001 chose Go specifically so that
+platforms would not diverge; this would have made the display path diverge anyway.
+
+**What survives.** A standalone terminal view — run in a split pane beside a session
+— has none of these properties. It does not replace `claude`, forks no
+pseudo-terminal, never touches Claude Code's rendering, and works on Windows because
+it owns its own terminal rather than puppeting somebody else's. It is additive: the
+only thing installed remains the hooks Claude Code already loads.
+
+**Rejected.**
+- *Wrapping* — reasons above; the prototype is reverted rather than parked, since
+  uncommitted code carrying two new dependencies would read as an intention.
+- *Treating the browser as sufficient* — it is a good way to read a long exchange and
+  a poor way to stay aware while working.
+- *Keeping the wrapper for terminal users and something else for everyone else* —
+  two display paths, the harder one reaching fewer people.
+
+**Recorded as tested, so it is not re-derived:** an invisible pseudo-terminal
+passthrough is achievable, and the reserved-band technique (shrink the child's
+winsize, set the outer scroll region) avoids rather than solves the
+partially-typed-prompt problem. If the entry-point objection ever stops applying,
+that is the approach.
