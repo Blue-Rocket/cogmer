@@ -138,8 +138,11 @@ system must work with **no VPN** when peers can already reach each other; local
 discovery is the zero-configuration path and the first transport to build.
 Tailscale is one provider among several, never a prerequisite.
 
-Discovery locates a room. It never admits anyone to one — the join secret does
-that. Do not add a "join by name on a trusted network" path: names are guessable
+Discovery locates a room. It never admits anyone to one — the **guest list** does
+that (D-024): a host records a peer it already knows, the guest types only
+`claude-team join misty-canyon`, and admission is proof of possession of a key the
+host already holds. A join code is the fallback for people who have never exchanged
+identifiers, and is explicitly weaker — it is a bearer credential. Do not add a "join by name on a trusted network" path: names are guessable
 by design (D-017), and office and conference networks are neither small nor
 trusted.
 

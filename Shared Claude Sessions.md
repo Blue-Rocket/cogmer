@@ -615,24 +615,49 @@ A room is formed by invitation, not by configuration.
 
 One peer creates a room and produces an invitation. Every other participant presents that invitation to join.
 
-Conceptually:
+Where the people involved already know one another — which is the ordinary case, since colleagues pair repeatedly — an invitation **names a guest** rather than issuing a token:
 
 ```
-David:   claude-team invite
-         → misty-canyon@davids-macbook.tail9c2f.ts.net:4783#k7qm-2xpr-9vlt
+David:   claude-team invite quiet-otter
+         → misty-canyon
 
-Alice:   claude-team join misty-canyon@davids-macbook.tail9c2f.ts.net:4783#k7qm-2xpr-9vlt
+Alice:   claude-team join misty-canyon
 ```
 
-An invitation carries three things:
+David's daemon records that the peer he knows as `quiet-otter` may enter `misty-canyon`. Alice's daemon locates the room and proves possession of the key David holds for her. Nothing secret is typed, spoken, or transmitted, and the room name — guessable by design — grants nothing to whoever guesses it.
+
+This is the intended shape: **a name locates a room, a guest list admits a peer.**
+
+The joining peer receives the room's `roomId` on admission and uses it from then on.
+
+## Knowing a guest before inviting them
+
+Admission by guest list requires that a host already hold the guest's identifier. That is one exchange per person, ever, and it is safe to make over any channel whatsoever:
 
 ```
-room:     misty-canyon
-endpoint: davids-macbook.tail9c2f.ts.net:4783
-code:     k7qm-2xpr-9vlt
+Alice:   claude-team whoami
+         → quiet-otter   ed25519:M7Kd…4Fq2
+
+         (sent to David by whatever means is convenient)
+
+David:   claude-team allow ed25519:M7Kd…4Fq2
 ```
 
-The joining peer resolves the room name against the peer at that endpoint, receives the room's `roomId`, and uses the `roomId` from then on.
+A public identifier may be pasted into a chat, mailed, printed, or read aloud, because holding it confers nothing. This is what makes a guest list better than a token rather than merely different from one: the thing exchanged out of band is worthless to an interceptor, and it is exchanged once rather than for every meeting.
+
+Set against what a token requires — something that must stay secret in transit, produced afresh for each first meeting, and impossible to check afterwards — the guest list is less work as well as safer.
+
+## First contact with no prior exchange
+
+Two people who have never exchanged identifiers, and who want to pair now rather than after a round trip, may use a single-use code:
+
+```
+claude-team join misty-canyon#k7qm-2xpr-9vlt
+```
+
+This is the weaker path and should be presented as one. A code is a bearer credential: whoever holds it may enter, so it must stay secret in transit, it cannot be verified after the fact, and an interception enrolls the wrong peer under a name that members will thereafter treat as familiar.
+
+It exists so that a first meeting needs no preparation. It should expire, admit one peer once, and be unnecessary afterwards — the peer it admitted is now known, and a known peer needs no code.
 
 ## The endpoint is a bootstrap hint
 
@@ -646,13 +671,13 @@ An invitation may therefore carry more than one endpoint, since which one works 
 
 Where peers are on the same network, a room may be found by local service discovery rather than by being told an address. The daemon advertises its live rooms; a joining daemon looks for the name it was given.
 
-This removes the endpoint from the invitation, which D-018 already established is only a bootstrap hint:
+This removes the endpoint from the invitation, which is only a bootstrap hint:
 
 ```
-claude-team join misty-canyon#k7qm-2xpr-9vlt
+claude-team join misty-canyon
 ```
 
-That is short enough to say across a desk, and it requires no account, no external service, and no configuration.
+That requires no account, no external service, no configuration, and nothing secret — the guest list decides who may enter.
 
 Discovery locates a room. It never admits anyone to one.
 
@@ -660,7 +685,7 @@ Discovery locates a room. It never admits anyone to one.
 
 A room name is drawn from a small, deliberately guessable space so that it can be spoken aloud. Tens of thousands of combinations is ample for avoiding confusion and useless for resisting a guess.
 
-Authorization to join is therefore a separate secret with real entropy, issued with the invitation and verified on joining. A peer must never admit a session to a room on the strength of a name.
+Authorization is therefore never the name. It is an entry on a guest list, proved by possession of a key — or, for a first meeting with no prior exchange, a single-use code. A peer must never admit a session to a room on the strength of a name.
 
 This matters most precisely where joining is easiest. On a shared network — an office, a conference, a cafe — any listener can enumerate advertised room names, and those names are guessable even without listening. A room contains source code, customer information, and whatever a developer has pasted into a prompt. Convenient discovery and weak authorization are separately reasonable and jointly indefensible.
 
@@ -1265,7 +1290,9 @@ For the initial Tailscale-based prototype:
 - do not expose the daemon's peer API publicly;  
 - bind Claude hook/UI APIs to localhost.
 
-An invitation is a bearer credential. Anyone holding one can reach the daemon that issued it and join the room it names, so an invitation carries the same sensitivity as the conversation it admits someone to. Treat the channel it is sent over accordingly.
+An invitation that carries a code is a bearer credential. Anyone holding it can reach the daemon that issued it and join the room it names, so it carries the sensitivity of the conversation it admits someone to, and the channel it travels on should be chosen accordingly.
+
+An invitation to a peer already on the guest list carries no such weight. It names a guest rather than granting entry, so an interceptor learns only that a room exists. Preferring the guest list is therefore a security decision and not only a convenience.
 
 Do not assume network membership alone is sufficient for a production security model.
 
@@ -1408,10 +1435,10 @@ Peer connectivity configuration should not require committing personal credentia
 Eventually:
 
 ```
-claude-team invite
-→ misty-canyon@davids-macbook.tail9c2f.ts.net:4783#k7qm-2xpr-9vlt
+claude-team invite quiet-otter
+→ misty-canyon
 
-claude-team join misty-canyon@davids-macbook.tail9c2f.ts.net:4783#k7qm-2xpr-9vlt
+claude-team join misty-canyon
 claude
 ```
 

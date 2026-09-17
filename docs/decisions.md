@@ -875,3 +875,63 @@ once is enough.
 
 **Revisit when** Phase 2 begins. This and D-020 are the same body of work, and it
 must land before peers exchange their first event.
+
+---
+
+## D-024 — Admission is a guest list; the join code is a fallback for strangers
+
+**Date:** 2026-09-16 · **Status:** active · **Corrects the emphasis of** D-018, D-020
+
+**Context.** The intent behind a guest registry was `claude-team join misty-harbor`
+with no secret in it. The specification conceded in one sentence that known peers
+need no secret, and then made the bearer code primary everywhere else.
+
+**The error was conflating two claims.** That authorization cannot rest on a
+guessable name is true. That the credential must therefore travel *in the
+invitation* does not follow, and I treated it as though it did.
+
+**Decision.** A guest list is the ordinary path. A host records that a peer it
+already knows may enter a room; the guest types only the room name; admission is
+proof of possession of a key the host already holds. The name locates, the list
+admits. Nothing secret is typed, spoken, or transmitted, and guessing the name
+gains nothing.
+
+**The out-of-band step does not disappear — it improves.** A host must hold the
+guest's identifier first. But that is a *public* identifier, exchanged once per
+person rather than once per meeting, and safe to paste into a chat, mail, print, or
+read aloud, because holding it confers nothing.
+
+Compare the two exchanges honestly, since both cost one message:
+
+| | join code | public identifier |
+|---|---|---|
+| must stay secret in transit | yes | no |
+| how often | every first meeting | once per person, ever |
+| interception | enrols the wrong peer | reveals nothing |
+| verifiable afterwards | no | yes, by fingerprint |
+
+The friction argument for codes does not survive that table. It is the same number
+of messages, in the other direction, and the safer one is also the one that stops
+recurring. `authorized_keys` is the same trade, and nobody experiences it as
+friction.
+
+**The code survives as a fallback, explicitly weaker.** Two people who have never
+exchanged identifiers should not need a round trip before pairing. A code should
+expire, admit one peer once, and be unnecessary afterwards — the peer it admitted
+is known now.
+
+**A consequence worth stating:** preferring the guest list is a security decision,
+not only a convenience. An intercepted code enrols an impostor under a name members
+will thereafter treat as familiar. An intercepted invitation naming a guest reveals
+only that a room exists.
+
+**Unchanged by this.** The ordering from D-023 still governs: none of it is
+enforceable until signatures are verified. Until then a guest list is a convention,
+and the prototype is unauthenticated whichever path it nominally uses.
+
+**Rejected.**
+- *The code as the primary mechanism* — the position this corrects.
+- *Removing codes entirely* — a first meeting should not require preparation, and
+  refusing that makes the tool harder to try than to adopt.
+- *Deriving admission from the room name on a trusted network* — the name is
+  guessable by construction (D-017); there is no network where that is safe.
