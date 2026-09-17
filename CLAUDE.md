@@ -237,12 +237,16 @@ trusted.
 
 ## Peer identity is self-asserted (D-020)
 
-A `peerId` is ten random bytes generated locally and verified by nothing — so
-**knowing one is enough to claim it.** It is a shared secret that the system
-broadcasts in every event. The fix is to make the identifier the public key itself
-(D-023), but note the ordering: it becomes safe to know when signatures are
-*checked*, not when keys are introduced. Generating keypairs without verification
-looks like the fix and delivers none of it.
+A `peerId` **is** an Ed25519 public key (`ed25519:…`), so knowing one grants nothing
+(D-042). Events are signed at origin and rejected on receipt if they do not verify,
+which is what enforces §13's rule that a relayer cannot rewrite an event's origin.
+
+The private key is in `~/.claude-team/identity.key` (0600) and **never** in
+`identity.json`, which `whoami` prints. A test asserts it never marshals.
+
+**Still a convention: admission.** Nothing proves possession on *connection*, so the
+peer API admits any host that can reach it to read a room. Integrity is solved;
+confidentiality is not. That is Phase 10.
 
 Identities are created once per machine on first use and exchanged when a peer
 joins — never obtained in advance. So

@@ -29,6 +29,9 @@ type Event struct {
 	EventType       string          `json:"eventType"`
 	Content         string          `json:"content"`
 	Metadata        json.RawMessage `json:"metadata,omitempty"`
+	// Signature is made by the originating peer over signingBytes, and is what
+	// distinguishes a relayed event from one the relayer composed (§13).
+	Signature string `json:"signature,omitempty"`
 }
 
 const (
@@ -53,6 +56,7 @@ CREATE TABLE IF NOT EXISTS events (
   event_type        TEXT NOT NULL,
   content           TEXT,
   metadata          TEXT,
+  signature         TEXT,
   UNIQUE(peer_id, peer_sequence)
 );
 CREATE INDEX IF NOT EXISTS idx_events_room ON events(room_id, rowid_alias);
@@ -159,6 +163,9 @@ func (s *Store) Append(id *Identity, room, sessionID, eventType, content string,
 		Content:         content,
 		Metadata:        rawMeta,
 	}
+	if id.private != nil {
+		ev.Sign(id.private)
+	}
 	res, err := s.Insert(ev)
 	if err != nil {
 		return nil, err
@@ -257,10 +264,11 @@ func (s *Store) Insert(ev *Event) (InsertResult, error) {
 	if _, err := tx.Exec(`
 		INSERT INTO events
 		  (event_id, peer_id, peer_sequence, room_id, timestamp, user_id,
-		   user_display_name, machine_id, claude_session_id, event_type, content, metadata)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+		   user_display_name, machine_id, claude_session_id, event_type, content, metadata, signature)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		ev.EventID, ev.PeerID, ev.PeerSequence, ev.RoomID, ev.Timestamp, ev.UserID,
-		ev.UserDisplayName, ev.MachineID, ev.ClaudeSessionID, ev.EventType, ev.Content, string(ev.Metadata)); err != nil {
+		ev.UserDisplayName, ev.MachineID, ev.ClaudeSessionID, ev.EventType, ev.Content,
+		string(ev.Metadata), ev.Signature); err != nil {
 		return InsertStored, err
 	}
 	return InsertStored, tx.Commit()
@@ -300,12 +308,13 @@ func scanEvents(rows *sql.Rows) ([]Event, error) {
 	var out []Event
 	for rows.Next() {
 		var e Event
-		var meta sql.NullString
+		var meta, sig sql.NullString
 		var rowid int64
 		if err := rows.Scan(&rowid, &e.EventID, &e.PeerID, &e.PeerSequence, &e.RoomID, &e.Timestamp,
-			&e.UserID, &e.UserDisplayName, &e.MachineID, &e.ClaudeSessionID, &e.EventType, &e.Content, &meta); err != nil {
+			&e.UserID, &e.UserDisplayName, &e.MachineID, &e.ClaudeSessionID, &e.EventType, &e.Content, &meta, &sig); err != nil {
 			return nil, err
 		}
+		e.Signature = sig.String
 		if meta.Valid && meta.String != "" {
 			e.Metadata = json.RawMessage(meta.String)
 		}
@@ -315,7 +324,7 @@ func scanEvents(rows *sql.Rows) ([]Event, error) {
 }
 
 const selectCols = `rowid_alias, event_id, peer_id, peer_sequence, room_id, timestamp,
-	user_id, user_display_name, machine_id, claude_session_id, event_type, content, metadata`
+	user_id, user_display_name, machine_id, claude_session_id, event_type, content, metadata, signature`
 
 // orderBy is the deterministic total order every peer must agree on (review B1).
 //

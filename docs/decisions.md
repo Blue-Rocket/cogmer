@@ -1827,3 +1827,52 @@ specification does, and a design that enumerates surfaces is wrong within a rele
 §3.8 is stated so that the answer follows from the mechanism rather than from a list.
 Whether any particular surface runs hooks locally remains a question to answer by
 testing that surface, not by consulting a table.
+
+---
+
+## D-042 — Peer identity is an Ed25519 key pair; events are signed at origin
+
+**Date:** 2026-09-17 · **Status:** active (implemented)
+
+**Context.** Phase 9. D-023 required an identifier safe to know; §13 required that a
+relayer never rewrite an event's origin, with nothing enforcing it; §25 asked for
+signable identity and got a random string.
+
+**Decision.** A peer's identifier *is* its Ed25519 public key, rendered
+`ed25519:<base64url>`. Events are signed at origin over a length-prefixed encoding
+of their own fields, and a receiving peer verifies every event against the key its
+own identifier names.
+
+**Why the identifier is the key rather than a fingerprint of it.** It is
+self-certifying: a signature can be checked from the identifier alone, with nothing
+to look up and no key distribution step. And it settles D-023's requirement
+absolutely rather than approximately — knowing an identifier grants nothing, which
+is what allows the system to put one in every event, every interface, and every
+exchange, as it does by design.
+
+**The private key lives in its own file.** `identity.json` is printed by `whoami`
+and is meant to be handed to a colleague; an identity that cannot be shown without
+checking what else is in it is not much of an identity. A test asserts the key never
+marshals.
+
+**Signing covers length-prefixed fields with a purpose tag.** Concatenating fields
+directly would let a boundary move — a content ending in one value and a session id
+beginning with another could swap undetected. The leading tag binds a signature to
+this purpose and version, so one made here can never be replayed as one made over
+something else.
+
+**Rejection, not quarantine.** A sequence conflict is ambiguous — a peer may have
+lost its state — so D-027 keeps the evidence. A failed signature has no benign
+reading, so it is refused and logged. Verified live: a peer impersonating another
+and offering an event signed by nobody was rejected, and nothing reached the room.
+
+**What this does not do, stated because the startup warning used to overclaim.** It
+gives integrity and attribution: nothing can be forged, altered in transit, or
+falsely attributed, and §13 is enforced rather than merely stated. It does not
+decide who may *connect*, so the peer API still admits any host that can reach it to
+read a room. Proof of possession on connection is Phase 10, with admission, and the
+warning now says exactly this rather than claiming identity is not cryptographic.
+
+**Migration.** An `identity.json` whose identifier is not the local key is rewritten
+to match it. The old identifier named an identity nothing could verify; preserving
+it would preserve a claim.

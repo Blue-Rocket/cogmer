@@ -112,11 +112,26 @@ func (d *Daemon) pullFrom(client *http.Client, addr string) (int, error) {
 
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	stored := 0
+	stored, rejected := 0, 0
 	for i := range out.Events {
 		ev := out.Events[i]
-		// §13: events keep their origin through a relay. Nothing here rewrites
-		// peerId, peerSequence, or eventId.
+
+		// §13 says events keep their origin through a relay, and until now that
+		// was a rule with nothing enforcing it: an event arriving from one peer
+		// claiming to originate with another was indistinguishable from one the
+		// sender composed. The signature is made by the originating peer over the
+		// event's own fields, so a relayer can carry it and cannot author it.
+		//
+		// Rejected rather than quarantined: a bad signature is not ambiguous the
+		// way a sequence conflict is. There is no benign reading of it.
+		if err := ev.Verify(); err != nil {
+			log.Printf("sync: REJECTED event %.12s from %s — %v", ev.EventID, addr, err)
+			rejected++
+			continue
+		}
+
+		// Nothing below rewrites peerId, peerSequence, or eventId; doing so would
+		// invalidate the signature, which is now how that rule is enforced.
 		res, err := d.store.Insert(&ev)
 		if err != nil {
 			return stored, err
@@ -128,6 +143,9 @@ func (d *Daemon) pullFrom(client *http.Client, addr string) (int, error) {
 			log.Printf("sync: CONFLICT from %s — peer %s sequence %d is already held by a different event; run `claude-team conflicts`",
 				addr, PeerName(ev.PeerID), ev.PeerSequence)
 		}
+	}
+	if rejected > 0 {
+		log.Printf("sync: %d event(s) from %s failed verification and were not stored", rejected, addr)
 	}
 	if stored > 0 {
 		d.notify()

@@ -166,10 +166,10 @@ func runDaemon() {
 	log.Printf("  hooks and UI  http://%s  (loopback)", addr())
 	log.Printf("  peer sync     http://%s", peerAddr())
 	if !isLoopback(peerAddr()) {
-		log.Printf("  WARNING: the peer API is reachable from other machines and is NOT")
-		log.Printf("           authenticated — any host that can reach %s may read this", peerAddr())
-		log.Printf("           room and publish into it. See §25; peer identity is not yet")
-		log.Printf("           cryptographic, so nothing verifies who is connecting.")
+		log.Printf("  WARNING: the peer API is reachable from other machines and admits")
+		log.Printf("           anyone who can reach %s. Events are signed, so nothing", peerAddr())
+		log.Printf("           can be forged or attributed falsely — but the room can still")
+		log.Printf("           be READ by any such host. Connection is not yet authenticated.")
 	}
 
 	// Behaviour checks spend a Claude turn and take a few seconds. Run them
@@ -320,9 +320,13 @@ func runWhoami() {
 	defer store.Close()
 	buf, _ := json.MarshalIndent(map[string]any{
 		"identity": id, "peerName": id.PeerName, "room": room, "addr": addr(),
-		"nameSpace": PeerNameSpace(),
 	}, "", "  ")
 	fmt.Println(string(buf))
+	// The whole identifier, grouped for reading aloud. §25 requires a comparison
+	// be made against all of a key: a short mnemonic catches an accident, not an
+	// adversary.
+	fmt.Printf("\nfingerprint (compare in full, over a channel the invitation did not travel on):\n  %s\n",
+		Fingerprint(id.PeerID))
 }
 
 func min(a, b int) int {

@@ -1040,9 +1040,11 @@ eventId
 
 during relay.
 
-This is presently a rule without an enforcement. A relaying peer is trusted not to alter what it passes on, and a receiving peer cannot tell the difference: an event arriving from Alice claiming to originate with David is indistinguishable from one Alice composed herself.
+Signing events at their origin is what makes this rule enforceable rather than merely stated. A signature is made by the originating peer over the event's own fields, so a relaying peer can carry an event and cannot author one: an event arriving from Alice claiming to originate with David is now distinguishable from one Alice composed, because Alice cannot produce David's signature.
 
-Signing events at their origin is what makes relay verifiable rather than merely well-behaved. Transitive synchronization is the strongest reason to make peer identity cryptographic, independent of how peers are admitted to a room.
+A receiving peer verifies every event against the key its own identifier names, and rejects what does not verify. Rejection rather than quarantine: a failed signature has no benign reading, unlike a sequence conflict, which may be a peer that lost its state.
+
+Note what this does and does not provide. It gives integrity and attribution — nothing can be forged, altered in transit, or falsely attributed. It does not decide who may connect, or who may read a room. Those are matters of admission, and are dealt with there.
 
 This property substantially improves resilience.
 

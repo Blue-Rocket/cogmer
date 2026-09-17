@@ -467,7 +467,17 @@ to rewind the watermark. Minor drift between the specification and the decision.
 
 ### C7 — §25 asks for signable peer identity; identity is currently a random string
 
-**Addressed in the specification; not implemented — see D-020.** §25 now states
+**RESOLVED for integrity; open for admission.** Identifiers are now Ed25519 public
+keys, events are signed at origin, and a receiving peer rejects anything that does
+not verify against the key its own identifier names. §13's relay rule is enforced
+rather than stated, and attribution is no longer a claim a peer can make freely.
+
+What remains is admission: nothing yet proves possession of a key *on connection*,
+so the peer API still admits any host that can reach it to read a room. That is
+Phase 10's work, and the startup warning now says exactly that rather than claiming
+identity is not cryptographic.
+
+**Previously — see D-020.** §25 now states
 what cryptographic identity requires and which rules are conventions until it
 exists, §13 records that the relay rule has no enforcement, and §6 warns that
 attribution is not resistant to a peer that lies. The severity was understated
@@ -592,10 +602,13 @@ entered by invitation with a guest list. The implementation takes a room name fr
 `CLAUDE_TEAM_ROOM` and has no invitation, membership, or guest list. Expected —
 this is Phase 1 work — but it means no part of the admission design is exercised.
 
-**C-3. Peer identity is not cryptographic.** §6 and §25 require identifiers derived
-from a public key with signatures verified. `peerId` is ten random bytes.
-Consequently the guest list, the relay rule, and attribution are conventions rather
-than controls, exactly as §25 says they are until then.
+**C-3. Peer identity is cryptographic — resolved.** Identifiers are Ed25519 public
+keys (`ed25519:…`), the private key lives in its own `0600` file and never reaches
+`whoami`, events are signed at origin, and receipt rejects what does not verify.
+Attribution and the relay rule are now controls rather than conventions.
+
+Still a convention: **admission**. Nothing proves possession of a key on connection,
+so the guest list remains unenforceable until Phase 10.
 
 **C-4. Room identifiers and names are not generated.** §3.2 requires a `roomId` UUID
 and a generated `roomName`; the implementation uses a bare string. `PeerName` is
