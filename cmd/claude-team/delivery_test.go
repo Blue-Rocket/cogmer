@@ -159,3 +159,96 @@ func TestPrunePendingBoundsGrowth(t *testing.T) {
 		t.Fatalf("pruning left %d rows, want <= 5", n)
 	}
 }
+
+// B4: a peer that loses its room database restarts its counter, so everything it
+// publishes afterwards lands on a sequence another peer already holds. Absorbing
+// that as a duplicate is silently unrecoverable.
+func TestSequenceConflictIsQuarantinedNotAbsorbed(t *testing.T) {
+	s := testStore(t)
+	held := &Event{
+		EventID: "evt-original", PeerID: "peer-alice", PeerSequence: 1,
+		RoomID: "test", Timestamp: "2026-09-16T00:00:00Z", EventType: EventUserPrompt,
+		Content: "the turn Alice actually sent",
+	}
+	if res, err := s.Insert(held); err != nil || res != InsertStored {
+		t.Fatalf("setup: %v %v", res, err)
+	}
+
+	// Same peer and sequence, different event: Alice restarted from a lost database.
+	conflicting := &Event{
+		EventID: "evt-after-restore", PeerID: "peer-alice", PeerSequence: 1,
+		RoomID: "test", Timestamp: "2026-09-16T01:00:00Z", EventType: EventUserPrompt,
+		Content: "a different turn entirely",
+	}
+	res, err := s.Insert(conflicting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res != InsertConflict {
+		t.Fatalf("got %v, want conflict — a restarted counter was absorbed silently", res)
+	}
+
+	// The room keeps what it held; the conflicting event does not overwrite it.
+	evs, err := s.ListRoom("test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 || evs[0].EventID != "evt-original" {
+		t.Fatalf("room was modified by a conflicting event: %+v", evs)
+	}
+
+	// The rejected event is kept, because discarding it destroys the evidence
+	// that distinguishes lost state from forgery.
+	cs, err := s.ListConflicts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cs) != 1 {
+		t.Fatalf("conflict not recorded: %d", len(cs))
+	}
+	if cs[0].HeldEventID != "evt-original" || cs[0].IncomingEventID != "evt-after-restore" {
+		t.Errorf("conflict record does not identify both events: %+v", cs[0])
+	}
+}
+
+// Ordinary redelivery must stay silent, or anti-entropy and transitive relay
+// would report a conflict on every repeated exchange.
+func TestRedeliveryIsNotAConflict(t *testing.T) {
+	s := testStore(t)
+	ev := &Event{
+		EventID: "evt-1", PeerID: "peer-alice", PeerSequence: 1,
+		RoomID: "test", Timestamp: "2026-09-16T00:00:00Z", EventType: EventUserPrompt, Content: "hello",
+	}
+	if res, _ := s.Insert(ev); res != InsertStored {
+		t.Fatalf("first insert: %v", res)
+	}
+	for i := 0; i < 3; i++ {
+		res, err := s.Insert(ev)
+		if err != nil || res != InsertDuplicate {
+			t.Fatalf("redelivery %d: %v %v", i, res, err)
+		}
+	}
+	if cs, _ := s.ListConflicts(); len(cs) != 0 {
+		t.Errorf("redelivery recorded %d conflict(s)", len(cs))
+	}
+	if evs, _ := s.ListRoom("test"); len(evs) != 1 {
+		t.Errorf("redelivery duplicated the event: %d copies", len(evs))
+	}
+}
+
+// Distinct events from the same peer must still store normally.
+func TestSequentialEventsStoreNormally(t *testing.T) {
+	s := testStore(t)
+	for i := int64(1); i <= 3; i++ {
+		ev := &Event{
+			EventID: "evt-" + string(rune('a'+i)), PeerID: "peer-alice", PeerSequence: i,
+			RoomID: "test", Timestamp: "2026-09-16T00:00:00Z", EventType: EventUserPrompt, Content: "x",
+		}
+		if res, err := s.Insert(ev); err != nil || res != InsertStored {
+			t.Fatalf("sequence %d: %v %v", i, res, err)
+		}
+	}
+	if evs, _ := s.ListRoom("test"); len(evs) != 3 {
+		t.Fatalf("want 3 events, got %d", len(evs))
+	}
+}

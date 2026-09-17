@@ -13,7 +13,7 @@ Findings are ordered by consequence, not by section number.
 
 **Status, as of the last revision.** Eight of the original fourteen are resolved, two
 dissolved by a change of model rather than fixed, and four remain open. One further
-finding (B4) was raised afterwards and is open. Each carries its own
+finding (B4) was raised afterwards and is resolved. Each carries its own
 status line; the open ones are collected at the end so they are not lost among the
 closed.
 
@@ -253,7 +253,18 @@ same room. Excluding by *peer* would blind each session to the other; excluding 
 
 ### B4 — A restarted sequence counter is silently absorbed as a duplicate
 
-**OPEN. Found 2026-09-16 while documenting `peerSequence`'s lifecycle.**
+**RESOLVED — specified and implemented, 2026-09-16.** §8 now states that a sequence
+is scoped to a room, never reset or reused, that a peer unable to continue its
+sequence must stop using its identifier in that room, and that redelivery and
+conflict must be distinguished on receipt.
+
+`Insert` now returns `stored` / `duplicate` / `conflict` instead of silently
+ignoring both of the last two. A conflict is quarantined with both event
+identifiers and the rejected event retained — discarding it would destroy the
+evidence that distinguishes lost state from forgery — and `claude-team conflicts`
+surfaces them, since a conflict is never routine and is invisible unless asked for.
+Three tests cover the conflict, ordinary redelivery staying silent, and normal
+sequential inserts.
 
 **Medium, latent.** §8 makes `peerId` + `peerSequence` the pair that identifies an
 event, and §9 builds anti-entropy on "the highest contiguous sequence received from
@@ -418,13 +429,12 @@ Worth recording, because the useful output of a review is not only a defect list
 
 ## Still open
 
-Five findings and three notes, after the work of 2026-09-16:
+Four findings and three notes, after the work of 2026-09-16:
 
 | | finding | why it survives |
 |---|---|---|
 | B1 | §24 has no ordering comparator | peers can diverge silently |
 | B2 | injection order unspecified | late-arriving events injected out of sequence |
-| B4 | restarted sequence absorbed as duplicate | silent divergence; unreachable until Phase 2 |
 | C1 | behavior dependence unacknowledged | `doctor` exists; the specification does not require it |
 | C2 | compaction has no standing section | findings live only in a findings document |
 | C3 | automatic compaction unowned | will first appear under Phase 4 pressure |

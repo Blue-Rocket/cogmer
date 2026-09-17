@@ -35,6 +35,8 @@ func main() {
 		runLog()
 	case "whoami":
 		runWhoami()
+	case "conflicts":
+		runConflicts()
 	case "doctor":
 		deep := len(os.Args) > 2 && os.Args[2] == "--deep"
 		runDoctor(deep)
@@ -66,6 +68,7 @@ func usage() {
   claude-team seed            Insert a simulated teammate conversation
   claude-team log             Print the room transcript
   claude-team whoami          Show this peer's identity and room
+  claude-team conflicts       Show quarantined events (sequence conflicts)
   claude-team doctor [--deep] Verify relied-on Claude Code behaviors
   claude-team behaviors       List those behaviors (--markdown to render docs)
 
@@ -217,6 +220,31 @@ func runLog() {
 		}
 		fmt.Printf("%-22s %s  [%s/%d]\n%s\n\n", speaker, ts, PeerName(e.PeerID), e.PeerSequence, content)
 	}
+}
+
+// runConflicts surfaces quarantined events. A conflict means a peer's sequence
+// counter went backwards -- lost local state, or a forged event. It is never
+// routine, and it is invisible unless asked for.
+func runConflicts() {
+	store, _, room := openLocal()
+	defer store.Close()
+
+	cs, err := store.ListConflicts()
+	if err != nil {
+		log.Fatalf("conflicts: %v", err)
+	}
+	if len(cs) == 0 {
+		fmt.Printf("no sequence conflicts in room %q\n", room)
+		return
+	}
+	fmt.Printf("%d sequence conflict(s) in room %q\n\n", len(cs), room)
+	for _, c := range cs {
+		fmt.Printf("  %s  peer %s (%s) sequence %d\n", c.DetectedAt, PeerName(c.PeerID), c.PeerID, c.PeerSequence)
+		fmt.Printf("    held:     %s\n    rejected: %s\n\n", c.HeldEventID, c.IncomingEventID)
+	}
+	fmt.Println("A conflict means that peer's sequence counter went backwards.")
+	fmt.Println("Either it lost its local state, or an event was forged. Its events")
+	fmt.Println("since then have not been stored, and anti-entropy cannot recover them.")
 }
 
 func runWhoami() {

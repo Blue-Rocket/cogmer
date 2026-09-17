@@ -57,6 +57,20 @@ CREATE TABLE IF NOT EXISTS events (
 );
 CREATE INDEX IF NOT EXISTS idx_events_room ON events(room_id, rowid_alias);
 
+-- Events that could not be stored because their (peer_id, peer_sequence) was
+-- already held by a DIFFERENT event. Quarantined rather than dropped: discarding
+-- one destroys the evidence needed to tell lost peer state from forgery.
+CREATE TABLE IF NOT EXISTS event_conflicts (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  detected_at       TEXT NOT NULL,
+  room_id           TEXT NOT NULL,
+  peer_id           TEXT NOT NULL,
+  peer_sequence     INTEGER NOT NULL,
+  held_event_id     TEXT NOT NULL,
+  incoming_event_id TEXT NOT NULL,
+  incoming          TEXT NOT NULL
+);
+
 -- §19 delivery state, derived from evidence rather than recorded as intent.
 --
 -- A set rather than a watermark: delivery is confirmed per injection by
@@ -145,20 +159,140 @@ func (s *Store) Append(id *Identity, room, sessionID, eventType, content string,
 		Content:         content,
 		Metadata:        rawMeta,
 	}
-	return ev, s.Insert(ev)
+	res, err := s.Insert(ev)
+	if err != nil {
+		return nil, err
+	}
+	if res == InsertConflict {
+		// Locally generated sequences come from MAX()+1, so this means the local
+		// store is inconsistent rather than that a peer misbehaved.
+		return nil, fmt.Errorf("local sequence %d for peer %s is already held by another event", ev.PeerSequence, ev.PeerID)
+	}
+	return ev, nil
 }
 
-// Insert is idempotent: re-delivery of an event already held is a no-op, which
-// is what makes anti-entropy sync (§10) and transitive relay (§13) safe.
-func (s *Store) Insert(ev *Event) error {
-	_, err := s.db.Exec(`
-		INSERT OR IGNORE INTO events
+// InsertResult distinguishes the three things that can happen on receipt. The
+// middle and last cases look identical to a bare INSERT OR IGNORE, which is why
+// this is not one.
+type InsertResult int
+
+const (
+	// InsertStored: a new event was written.
+	InsertStored InsertResult = iota
+	// InsertDuplicate: the same event was already held. Ordinary redelivery --
+	// this is what makes anti-entropy (§10) and transitive relay (§13) safe.
+	InsertDuplicate
+	// InsertConflict: this peer and sequence are already held by a DIFFERENT
+	// event. Not a duplicate. Either the sending peer lost its state and
+	// restarted its counter, or an event was forged.
+	InsertConflict
+)
+
+func (r InsertResult) String() string {
+	switch r {
+	case InsertStored:
+		return "stored"
+	case InsertDuplicate:
+		return "duplicate"
+	default:
+		return "conflict"
+	}
+}
+
+// Insert stores an event, distinguishing redelivery from conflict.
+//
+// §8 makes (peerId, peerSequence) an event's identity, and §9 builds anti-entropy
+// on the highest contiguous sequence per peer. Both assume a counter only moves
+// forward. A peer that loses its room database restarts at 1 while others still
+// hold higher numbers under its identifier, so everything it publishes afterwards
+// collides.
+//
+// Absorbing that as a duplicate is silently wrong and unrecoverable: the sender
+// believes it shared, the receiver never sees it, and anti-entropy cannot repair
+// it because the sender's highest sequence is now BELOW what the receiver reports
+// holding. So a conflict is quarantined and reported instead -- keeping the
+// rejected event, because discarding it destroys the evidence that distinguishes
+// lost state from forgery.
+func (s *Store) Insert(ev *Event) (InsertResult, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return InsertStored, err
+	}
+	defer tx.Rollback()
+
+	var heldID string
+	err = tx.QueryRow(`SELECT event_id FROM events WHERE peer_id = ? AND peer_sequence = ?`,
+		ev.PeerID, ev.PeerSequence).Scan(&heldID)
+	switch {
+	case err == sql.ErrNoRows:
+		// nothing holds this slot; fall through to insert
+	case err != nil:
+		return InsertStored, err
+	case heldID == ev.EventID:
+		return InsertDuplicate, nil
+	default:
+		raw, _ := json.Marshal(ev)
+		if _, err := tx.Exec(`
+			INSERT INTO event_conflicts
+			  (detected_at, room_id, peer_id, peer_sequence, held_event_id, incoming_event_id, incoming)
+			VALUES (?,?,?,?,?,?,?)`,
+			time.Now().UTC().Format(time.RFC3339Nano), ev.RoomID, ev.PeerID, ev.PeerSequence,
+			heldID, ev.EventID, string(raw)); err != nil {
+			return InsertConflict, err
+		}
+		return InsertConflict, tx.Commit()
+	}
+
+	// A different event id may still collide on event_id alone if the same event
+	// arrives having been assigned a different sequence somewhere. Treat that as
+	// redelivery too rather than writing it twice.
+	var exists int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM events WHERE event_id = ?`, ev.EventID).Scan(&exists); err != nil {
+		return InsertStored, err
+	}
+	if exists > 0 {
+		return InsertDuplicate, nil
+	}
+
+	if _, err := tx.Exec(`
+		INSERT INTO events
 		  (event_id, peer_id, peer_sequence, room_id, timestamp, user_id,
 		   user_display_name, machine_id, claude_session_id, event_type, content, metadata)
 		VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
 		ev.EventID, ev.PeerID, ev.PeerSequence, ev.RoomID, ev.Timestamp, ev.UserID,
-		ev.UserDisplayName, ev.MachineID, ev.ClaudeSessionID, ev.EventType, ev.Content, string(ev.Metadata))
-	return err
+		ev.UserDisplayName, ev.MachineID, ev.ClaudeSessionID, ev.EventType, ev.Content, string(ev.Metadata)); err != nil {
+		return InsertStored, err
+	}
+	return InsertStored, tx.Commit()
+}
+
+// Conflict is a quarantined event, kept for diagnosis.
+type Conflict struct {
+	DetectedAt      string `json:"detectedAt"`
+	RoomID          string `json:"roomId"`
+	PeerID          string `json:"peerId"`
+	PeerSequence    int64  `json:"peerSequence"`
+	HeldEventID     string `json:"heldEventId"`
+	IncomingEventID string `json:"incomingEventId"`
+}
+
+func (s *Store) ListConflicts() ([]Conflict, error) {
+	rows, err := s.db.Query(`SELECT detected_at, room_id, peer_id, peer_sequence,
+		held_event_id, incoming_event_id FROM event_conflicts ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Conflict
+	for rows.Next() {
+		var c Conflict
+		if err := rows.Scan(&c.DetectedAt, &c.RoomID, &c.PeerID, &c.PeerSequence,
+			&c.HeldEventID, &c.IncomingEventID); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
 }
 
 func scanEvents(rows *sql.Rows) ([]Event, error) {

@@ -498,6 +498,24 @@ allows peers to efficiently determine which events they are missing.
 
 Timestamps are primarily for conversational display and approximate inter-peer ordering.
 
+## The lifecycle of a sequence
+
+A sequence belongs to a peer **within a room**. A peer participating in two rooms keeps two independent sequences. Rooms synchronize independently, so a shared counter would leave each room permanent gaps that the highest-contiguous rule could never close.
+
+Within a room, a sequence begins at a peer's first event, advances by one for each event that peer originates, and is never reset, reused, or rewritten. It is frozen when the room is archived.
+
+A peer that cannot continue its sequence — because it has lost the room's local state — must not go on using its identifier in that room. Resuming at a lower number republishes sequence numbers that other peers already hold against different events.
+
+## Redelivery and conflict are not the same thing
+
+A receiving peer must distinguish them, because they are indistinguishable to the obvious implementation and only one of them is harmless.
+
+An event arriving with a `peerId` and `peerSequence` already held, carrying the **same** `eventId`, is ordinary redelivery. Ignore it. This is what makes anti-entropy and transitive relay safe to repeat.
+
+The same pair arriving with a **different** `eventId` is not a duplicate. It is evidence that a peer has lost its state or that an event has been forged. It must be surfaced and retained rather than absorbed.
+
+Absorbing it is silently unrecoverable. The sending peer believes it has shared; the receiving peer never sees it; neither is told; and synchronization cannot repair the gap, because the sender's highest sequence is now *below* what the receiver reports holding. Retain the rejected event rather than discarding it — without it there is no way to tell lost state from forgery afterwards.
+
 ---
 
 # 9\. Synchronization State

@@ -1035,3 +1035,50 @@ describing how to handle one safely.
 - *Keeping codes for the absent-host-unknown-guest case* — the host must act anyway.
 - *Keeping codes as an optional convenience* — an avoidable credential that exists is
   a credential that will be used, and its weaknesses do not become optional with it.
+
+---
+
+## D-027 — A sequence conflict is quarantined, not dropped
+
+**Date:** 2026-09-16 · **Status:** active (implemented)
+
+**Context.** B4: a peer that loses its room database restarts its sequence at 1
+while other peers hold higher numbers under its identifier, so everything it
+publishes afterwards collides. `INSERT OR IGNORE` against
+`UNIQUE(peer_id, peer_sequence)` absorbed that as an ordinary duplicate.
+
+**Decision.** Distinguish the three outcomes on receipt — `stored`, `duplicate`,
+`conflict` — where a conflict is the same peer and sequence arriving with a
+*different* event identifier.
+
+**Quarantine rather than reject.** The rejected event is retained alongside both
+identifiers. Rejecting it outright would keep the room consistent, which is the
+part that matters, but destroys the only evidence that distinguishes a peer which
+lost its state from an event that was forged. Those call for opposite responses,
+and by the time anyone investigates, the event is the only thing that can tell them
+apart.
+
+**Why not repair it automatically.** Reassigning the incoming event a free sequence
+number would preserve it, and §13 forbids rewriting `peerSequence` during relay for
+good reason: the pair is an identity, and a receiver that edits it makes its copy
+disagree with every other peer's. A conflict is a condition to report, not to
+paper over.
+
+**Surfacing matters as much as detecting.** `claude-team conflicts` exists because a
+quarantined event is invisible otherwise. The failure being silent was the whole
+of B4; detecting it into a table nobody reads would reproduce that.
+
+**Rejected.**
+- *Keeping `INSERT OR IGNORE`* — correct for redelivery, silently wrong here, and
+  unrecoverable: the sender believes it shared, the receiver never sees it, and
+  anti-entropy cannot repair a gap where the sender's highest sequence is below what
+  the receiver reports holding.
+- *Overwriting the held event* — the incoming event has no better claim, and events
+  are immutable.
+- *Waiting until Phase 2* — `Insert` is the method peer synchronization will call.
+  Fixing it while the code is small costs almost nothing; fixing it once peers are
+  exchanging events means diagnosing it first.
+
+**Note.** Locally generated events take their sequence from `MAX()+1`, so a conflict
+on a local `Append` means the local store is inconsistent rather than that a peer
+misbehaved. It is reported as such.
