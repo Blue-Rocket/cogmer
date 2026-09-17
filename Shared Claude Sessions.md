@@ -1134,6 +1134,118 @@ Do not proceed until both directions work reliably.
 
 ---
 
+## Phase 0a — Compaction Probe
+
+Phase 0 establishes that conversation capture and context injection work.
+
+Compaction is the one mechanism that can silently invalidate both.
+
+Run this probe before building any daemon beyond the spike.
+
+Determine how the installed Claude Code behaves when a session compacts:
+
+- whether a compaction hook fires, for automatic and for manual compaction;  
+- what that hook receives;  
+- whether the Claude session ID survives compaction;  
+- whether the transcript path survives compaction;  
+- whether the transcript is appended to, rewritten, or truncated;  
+- whether a compaction boundary is marked in the transcript;  
+- whether compaction can occur mid-turn, between prompt submission and turn completion.
+
+### The critical question
+
+Stored history and injected context are separate.
+
+Delivery state is tracked separately again:
+
+```
+lastSharedContextState
+```
+
+Compaction may discard injected teammate conversation while that record still claims the session incorporated it.
+
+The session is then marked as having received conversation it can no longer see.
+
+Nothing reports this:
+
+```
+teammate turn injected
+        │
+        ▼
+session compacts
+        │
+        ▼
+injected turn discarded from context
+        │
+        ▼
+delivery state still says "incorporated"
+        │
+        ▼
+Claude silently loses the referent
+```
+
+Determine whether this occurs.
+
+### Demonstrate
+
+```
+inject a teammate turn
+        │
+        ▼
+drive the session past the compaction threshold
+        │
+        ▼
+submit a prompt whose referent exists only in that injected turn
+        │
+        ▼
+observe whether Claude still resolves it
+```
+
+This is the referential test from the Phase 0 spike, applied across a compaction boundary.
+
+The failure is not an error condition.
+
+It presents as Claude quietly misunderstanding a teammate reference it previously understood, so test it explicitly rather than waiting to encounter it.
+
+### Remediation
+
+If injected context does not survive compaction, evaluate:
+
+- rewinding delivery state when compaction is detected, so unseen teammate turns are injected again on the next prompt;  
+- re-injecting a bounded floor of recent teammate turns after any compaction boundary, regardless of delivery state;  
+- recording a COMPACTION event, a type the event model already reserves;  
+- relying on Claude Code's own compaction summary to carry the injected conversation forward.
+
+Prefer the least invasive mechanism that restores the referent.
+
+Do not introduce summarization of teammate conversation.
+
+Duplicate injection is acceptable where loss is not.
+
+### Turn Reassembly Across a Boundary
+
+Verify that assistant turn reassembly still functions after compaction.
+
+Reassembly locates the most recent human-submitted prompt record and collects the assistant records following it.
+
+If compaction rewrites or truncates the transcript, that anchor may no longer be present.
+
+Determine what reassembly returns when it is not.
+
+### Document
+
+As in Phase 0:
+
+- the exact hooks and fields observed;  
+- whether compaction is observable at all;  
+- whether automatic and manual compaction behave identically;  
+- limitations;  
+- the chosen remediation, and why.
+
+Do not begin Phase 1 until the behavior of injected context across compaction is known, and, if that context is lost, a remediation has been demonstrated.
+
+---
+
 ## Phase 1 — Single-Machine Daemon
 
 Build:

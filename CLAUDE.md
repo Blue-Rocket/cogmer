@@ -10,6 +10,13 @@ Phase 0 (integration spike) is complete — see `docs/phase0-findings.md`.
 **Peer networking does not exist yet.** Per §36.10 the spike stopped deliberately;
 do not start Phase 1+ without saying so explicitly.
 
+**Phase 0a (compaction probe) is the next step and is not done.** Compaction was
+never exercised in Phase 0 — `PreCompact` did not fire. It can invalidate both
+proven directions silently: if compaction discards injected teammate turns, the
+`session_context` watermark still claims delivery, so the turns are never
+re-injected and Claude loses a referent with no error anywhere. Treat any
+watermark change as touching this.
+
 ## Two findings the code depends on
 
 These were established empirically against Claude Code 2.1.273 and are easy to
