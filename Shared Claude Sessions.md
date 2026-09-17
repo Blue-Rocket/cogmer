@@ -350,6 +350,8 @@ Conceptually:
    Claude Code        Browser          teammates
 ```
 
+The daemon is started by the session-start hook rather than by the developer, and outlives any one session. Installation is covered under the desired developer experience.
+
 The daemon is responsible for:
 
 - capturing local events;  
@@ -1747,6 +1749,32 @@ claude-team invite quiet-otter
 claude-team join misty-canyon
 claude
 ```
+
+## Installation
+
+A participant installs one thing, and it is a thing Claude Code already understands:
+
+```
+claude plugin install claude-team
+```
+
+The plugin carries the hooks. No shell profile is modified, no configuration file is hand-edited, no service is registered with the operating system, and nothing about how Claude Code is started changes.
+
+This follows from Claude Code being launched and used unchanged. A plugin is loaded by Claude Code wherever Claude Code loads plugins, so the system reaches those surfaces without needing to know they exist — which matters because that set will change, and a design that enumerates surfaces will be wrong within a release.
+
+## Starting the daemon
+
+A developer should not have to start the daemon, notice that it has stopped, or know that it exists.
+
+The session-start hook starts it when it is not already running. Installation is then the whole of setup, and the first session after installing is indistinguishable from every session after that.
+
+Three requirements follow, each easy to get wrong:
+
+- **Starting must not delay the session.** Waiting on a daemon nobody asked for is worse than having no daemon. The hook returns immediately and the daemon becomes useful when it is ready; a session that begins before the daemon is listening simply has nothing to inject yet.  
+- **Already running is the ordinary case, not an error.** Several sessions begin at once on one machine routinely. Each attempts to start the daemon, at most one succeeds, and none reports a problem. A failure to bind is the expected outcome, not a fault.  
+- **Failure is silent to the developer and recorded by the daemon.** A daemon that cannot start means no collaboration, which is degraded rather than broken: the session continues exactly as it would have without any of this, and says nothing about it.
+
+The daemon outlives the session that started it, because a room may have members in several sessions and because starting it repeatedly is worse than leaving it running. It must therefore be discoverable and stoppable by the person whose machine it is on. A background process a developer cannot find is not acceptable merely because it is useful.
 
 The developer should not have to:
 

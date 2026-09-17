@@ -1768,3 +1768,52 @@ exactly what the framing now asserts.
 - *Relying on the model to be robust* — it was, here, and that is a property of the
   model rather than of this design. The fence holds whether or not the next model
   does.
+
+---
+
+## D-041 — Ship as a Claude Code plugin; the session-start hook starts the daemon
+
+**Date:** 2026-09-17 · **Status:** active (specified; not implemented)
+
+**Context.** §3.8 requires that the only thing installed is something Claude Code
+already loads. That settled what *not* to build — no wrapper, no launcher — without
+saying what installation actually looks like. In practice it was still a manual
+daemon start, a hand-written settings file, and environment variables.
+
+**Decision.** Package as a plugin carrying the hooks, installed with
+`claude plugin install claude-team`. The plugin surface is real and includes
+`install`, `uninstall`, `update`, `validate`, `init`, and `marketplace`.
+
+**And the session-start hook starts the daemon.** This is the part that converts the
+install from "run these commands and edit this file" to one line — which was the
+original objection to the wrapper, now answered without any of the wrapper's costs.
+A developer should not have to start the daemon, notice it has stopped, or know it
+exists.
+
+**Three requirements, each easy to get wrong.**
+
+*Starting must not delay the session.* Waiting on a daemon nobody asked for is worse
+than having no daemon. The same fault was already made once, where the behaviour
+preflight ran before the listeners and left a new room unreachable for several
+seconds.
+
+*Already running is the ordinary case, not an error.* Several sessions begin at once
+on one machine routinely; each attempts the start, at most one succeeds, none
+reports anything. A failure to bind is the expected outcome.
+
+*Failure is silent to the developer and recorded by the daemon.* No daemon means no
+collaboration, which is degraded rather than broken — the same fail-open rule the
+hooks already follow.
+
+**A background process must remain findable.** The daemon outlives the session that
+started it, since a room may have members in several sessions and restarting it
+repeatedly is worse than leaving it up. That makes it something a developer did not
+start and might not know about, so it must be discoverable and stoppable by the
+person whose machine it runs on.
+
+**Deliberately not encoded: which surfaces this reaches.** A surface matrix — CLI,
+desktop, editor extensions, and whatever comes next — changes faster than a
+specification does, and a design that enumerates surfaces is wrong within a release.
+§3.8 is stated so that the answer follows from the mechanism rather than from a list.
+Whether any particular surface runs hooks locally remains a question to answer by
+testing that surface, not by consulting a table.

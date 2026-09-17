@@ -24,6 +24,18 @@ settle questions argument cannot: glanced at or forgotten, watched or consulted,
 whether arrival needs announcing. Solo use answers the ergonomic half without a
 second participant.
 
+## Installation is one line (D-041)
+
+`claude plugin install claude-team`. The plugin carries the hooks; the **session-start
+hook starts the daemon** when it is not already running. No settings file to
+hand-edit, no env vars, no service to register.
+
+Three rules when implementing it: starting must not delay the session, *already
+running* is the ordinary outcome rather than an error, and failure is silent to the
+developer. The daemon outlives the session that started it, so it must stay
+discoverable and stoppable — a background process nobody can find is not acceptable
+because it is useful.
+
 ## Claude Code is launched and used unchanged (§3.8)
 
 The single test to apply to any proposal. A developer starts and uses Claude Code
