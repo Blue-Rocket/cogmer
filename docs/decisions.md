@@ -1290,3 +1290,56 @@ is wasteful would be the second.
   is met also shows why it does not help.
 - *Leaving it undecided* — an interim measure nobody revisits becomes a decision
   taken by default, without the reasoning that would let anyone overturn it.
+
+---
+
+## D-032 — Re-sequence the phases, and follow them
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Context.** Work had proceeded opportunistically: Phase 4 was completed inside
+Phase 0, Phase 2 was completed before Phase 1 finished, Phase 3 was decided against,
+Phase 6 was deferred, and parts of Phase 7 were taken early. That was the right trade
+while the assumptions underneath the sequence were being tested. It stopped being
+right once §31 described a plan nobody was following, which is worse than either
+following it or replacing it.
+
+**Decision.** Record actual status against every phase, add the phases the original
+sequence lacked, and state an execution order to follow from here:
+
+```
+Phase 8  complete the local room   →  Phase 9  peer identity
+      →  Phase 10 pairing          →  Phase 5  offline and reconnection
+      →  Phase 7  hardening
+```
+
+Numbers are never reused or reassigned, so references in this log and in the code
+still resolve. Superseded phases are marked, not rewritten.
+
+**Why the local room comes first.** It is entirely local, so it entrenches no
+protocol that later phases must live with. And it contains the UI, which is the
+reason this ordering matters: every experiment so far measured whether *Claude*
+understands a teammate's conversation, and none measured whether a *person* finds
+watching one useful. That is half of §30, it has never been tested, and it cannot be
+while the only way to read a room is a command-line dump.
+
+**Why identity precedes pairing.** A guest list admits whoever claims a name until
+identity is verifiable, so an admission flow built before Phase 9 would be built
+twice. Transitive relay cannot be made safe without signing either. D-023 warned that
+identity entrenches at the first exchange between peers; the experiments have already
+exchanged events, but nothing has been released, so the warning still applies to the
+first real use rather than to the first packet.
+
+**What this does not change.** Pairs remain the target. Phase 6 waits for evidence
+that a third peer is wanted, since it adds noise to a working session and is unlikely
+to invalidate anything.
+
+**Rejected.**
+- *Follow §31 as written* — it specifies Tailscale, peer push, and a project-scoped
+  room, all displaced by later decisions. Following it would mean building things
+  already decided against.
+- *Renumber the phases* — breaks every reference in this log and in the findings
+  documents, to save reading one status table.
+- *Leave the order implicit and keep working by judgement* — that is what produced a
+  plan document contradicting the work, and it hid the UI gap for the length of the
+  project.

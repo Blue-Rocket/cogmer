@@ -1660,6 +1660,26 @@ Optimize the prototype for answering these questions, not for production complet
 
 # 31\. Implementation Order
 
+## Status
+
+Phase numbers are never reused or reassigned, so that references elsewhere continue to resolve. Where a later phase supersedes an earlier one, the earlier is marked rather than rewritten.
+
+| | |
+|---|---|
+| Phase 0 — Integration spike | **complete** |
+| Phase 0a — Compaction probe | **complete** |
+| Phase 1 — Single-machine daemon | **partial** — hooks, daemon and storage work; no local UI |
+| Phase 2 — Two-peer synchronization | **complete**, ahead of Phase 1 and not over Tailscale |
+| Phase 3 — Real-time push | **will not be built** as written; polling is the decided mechanism for peers |
+| Phase 4 — Cross-Claude context | **complete**, in Phase 0 |
+| Phase 5 — Offline/reconnection | outstanding |
+| Phase 6 — Three-peer/transitive | deferred |
+| Phase 7 — Hardening | partial, taken early where it was cheap |
+
+The original sequence assumed four things that have since been displaced: a room scoped to a project, Tailscale as the transport, push between peers, and admission by a shared secret. Work proceeded out of order while those assumptions were being tested, which was the right trade during an experiment and is the wrong one now.
+
+**Execute the remaining phases in the order given below, not in numeric order.**
+
 ## Phase 0 — Claude Code Integration Spike
 
 Before building networking:
@@ -1931,6 +1951,57 @@ Add:
 - better reconnection;  
 - database recovery;  
 - diagnostics.
+
+Partially taken already, where doing so was cheaper than deferring: verification of relied-on host behaviour, quarantine of conflicting events, and separation of the local and peer network interfaces.
+
+---
+
+## Phase 8 — Complete the local room
+
+Build what a room is, before building how rooms are joined:
+
+- a room identifier and a generated room name;  
+- the membership index, the check that reads it, and the report when it finds state missing;  
+- the local UI, updating without the reader acting.
+
+All of it is local. None of it commits to a protocol, so none of it can entrench a format that later phases have to live with.
+
+The UI is the reason this comes first. Every experiment so far has measured whether *Claude* understands a teammate's conversation. Whether a *person* finds it useful to watch one has never been tested, and cannot be while the only way to read a room is a command-line dump. That is half of the question this prototype exists to answer.
+
+## Phase 9 — Peer identity
+
+- identifiers derived from a public key;  
+- possession proved on connection;  
+- events signed at origin, and signatures verified on receipt.
+
+Before pairing rather than after. A guest list admits whoever claims a name until identity is verifiable, so an admission flow built first would be built twice — and transitive relay cannot be made safe at all without signing.
+
+## Phase 10 — Pairing
+
+- invitations;  
+- joining;  
+- known peers, and a room's guests;  
+- admission by proof of possession, or by a host approving a request.
+
+Nothing here should be built earlier. Its correctness rests entirely on Phase 9.
+
+---
+
+## Order of remaining work
+
+```
+Phase 8    complete the local room
+   ↓
+Phase 9    peer identity
+   ↓
+Phase 10   pairing
+   ↓
+Phase 5    offline and reconnection
+   ↓
+Phase 7    hardening
+```
+
+Pairs are the target throughout. A third peer adds noise to a working session and is unlikely to invalidate anything, so Phase 6 waits for evidence that anyone wants it.
 
 ---
 
