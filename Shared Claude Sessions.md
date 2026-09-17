@@ -1647,6 +1647,25 @@ The second rests on trust taken at first contact, and its weakness should be sta
 
 Verification is therefore worth doing once, shortly after a first meeting, by comparing rendered identifiers over a channel the invitation did not travel on. Two colleagues already on a call can do it in seconds. The value of doing it once is that it never needs doing again.
 
+## What the second channel actually provides
+
+A rendered identifier is no harder to intercept than the identifier itself: it is the same bytes, spaced for reading. Nothing about the rendering resists interception, and treating it as though it did is the mistake this section exists to prevent.
+
+The protection lies entirely in the channel, and in two properties of it rather than one.
+
+- **Diversity** — an attacker must now compromise two paths instead of one. Comparing a rendering over the same path the identifier arrived on accomplishes nothing at all.  
+- **Recognition** — the person verifying can tell *who they are talking to*.
+
+The second is the one that matters most, and the one most easily overlooked. It is why a voice call works and a second written channel does not: two written channels are both text, and whoever controls the delivery of one may control the other. A voice adds a fact no interception supplies — that this is the colleague, not somebody in their place.
+
+State the requirement accordingly. The channel must be one the identifier did not travel on **and** one on which the other party can be recognised. A rendering compared with a stranger, however carefully, verifies that two parties hold the same key and says nothing about whose it is.
+
+## The case with no answer
+
+Two people who have never met cannot recognise each other, so neither property is fully available on first contact. Nothing in this design resolves that, and no rendering will.
+
+What remains is to make the moment visible rather than to pretend it is covered: the first exchange is where trust is taken rather than established, and a system that hides that has moved a risk rather than removed it.
+
 Admission is not retraction. Removing a peer from a list prevents it rejoining and prevents future presence. It does not withdraw what that peer has already seen.
 
 ---

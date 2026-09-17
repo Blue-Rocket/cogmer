@@ -398,7 +398,9 @@ func runAllow(args []string) {
 			log.Fatalf("allow: %v", err)
 		}
 		fmt.Printf("recorded %s as %s\n", PeerName(args[0]), firstNonEmpty(name, PeerName(args[0])))
-		fmt.Println("verify the whole identifier with them over a channel this did not travel on:")
+		fmt.Println("verify this with them somewhere you can recognise them — a call, not a message.")
+		fmt.Println("the rendering below is no harder to intercept than the identifier was; the")
+		fmt.Println("protection is that an attacker would need the other channel too:")
 		fmt.Printf("  %s\n", Fingerprint(args[0]))
 	})
 }
