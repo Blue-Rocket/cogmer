@@ -214,16 +214,20 @@ one event where it held six.
 This is the same shape as A1 and B4: a failure with no error path, discovered only
 by testing the failure rather than the success.
 
-**Recommend.** The policy needs three things to become real, none of them large:
+**Recommend** *(revised — D-029 replaced the policy this was written against)*.
+The same durable state is needed; what changes is what happens when it fires:
 
 - **Durable membership state outside any room database** — which rooms this peer
   belongs to and the highest sequence it reached in each. Without it, lost state
-  cannot be told from a new room.
+  cannot be told from a new room. The sequence must be reserved before the event
+  using it is published.
 - **A check on opening a room.** If the index claims membership and the database is
   absent, or its highest sequence is below what the index recorded, state has been
   lost.
-- **Refusal, and saying so.** Do not publish into that room. Tell the user the
-  membership has ended and why, rather than starting quietly at 1.
+- **Recover, and say so.** Resume above the recorded sequence, refetch the room from
+  any member, and keep membership. Tell the user the history is refetching and that
+  some teammate context may repeat — a room in that state is not the same as one
+  working normally.
 
 Detection at startup does not cover the open-handle case, where the file is
 unlinked beneath a running daemon. That is the smaller half of the problem and can

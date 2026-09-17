@@ -176,15 +176,19 @@ model reasons about attribution.
 admitting known peers over holders of a secret — the secret is a first-contact
 mechanism, not a standing requirement.
 
-## Losing a room database (D-028)
+## Losing a room database (D-029, supersedes D-028)
 
-Ends that peer's membership in that room. It leaves; it does not resume publishing.
-The conversation survives on other members and the identity survives in
-`identity.json`, so the cost is one room.
+**Membership survives.** The database holds the record, not the value — the session
+already has those turns in context. Ending membership would also strand the session,
+since D-016 forbids it moving to another room.
 
-Counter-intuitive: losing `identity.json` is the **safe** failure (new peer, new
-sequence space, no collision). Losing `rooms/<id>.db` while keeping identity is the
-dangerous one. Do not design backups on the opposite assumption.
+The peer's **sequence position lives outside the room database**, with the identity.
+So: lose the room, keep the sequence, resume above it and refetch. Lose everything,
+get a new identity and a new sequence space. There is no loss that keeps an
+identifier and forgets what it issued — which was the precondition for B4.
+
+Reserve a sequence **before** publishing the event that uses it. The reverse
+publishes a number with no record of it.
 
 ## Invariants
 

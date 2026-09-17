@@ -1087,7 +1087,9 @@ misbehaved. It is reported as such.
 
 ## D-028 — Losing a room database ends that peer's membership; recovery is not attempted
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** SUPERSEDED BY D-029 — the cost of ending
+membership was assessed wrongly, and the mechanism that avoids it is cheaper than
+the sequence epoch this entry rejected.
 
 **Context.** D-027 made a restarted sequence counter detectable. It did not say what
 a peer should do when it is the one that lost its state.
@@ -1139,3 +1141,64 @@ already made the loss cheap.
 **Revisit when** a room is long-lived enough that losing membership in one is
 expensive — which would most likely mean the session-scoped model itself was being
 reconsidered.
+
+---
+
+## D-029 — Losing a room database does not end membership; the sequence lives with the identity
+
+**Date:** 2026-09-16 · **Status:** active · **Supersedes** D-028
+
+**Context.** D-028 treated a lost room database as the end of that peer's
+membership, on the grounds that a session-scoped room is cheap to lose. Two things
+were wrong with that assessment.
+
+**The database is not where the value is.** A developer's own turns, and the
+teammate turns injected into their session, are already in that session's context —
+stored under `~/.claude/projects/`, untouched by the loss. What the room database
+holds is the *record*. Losing it is nearer to losing scrollback than to losing work,
+and D-028 traded something consequential for something largely recoverable.
+
+**And it took more than it appeared to.** D-016 forbids a session that has received
+teammate context from moving to another room. So a peer whose membership ended could
+not collaborate again *from that session at all* — it would have to abandon the
+Claude session, and with it the working context that was the actual point. A disk
+hiccup cost the afternoon. Neither decision was wrong alone; their composition was.
+
+**Decision.** Membership survives. Only one thing must survive with it for the room
+to stay safe — the peer's own sequence position — so that is stored **outside the
+room database, sharing the fate of the identity** rather than the fate of the events.
+
+This inverts the dangerous failure rather than tolerating it:
+
+- room events lost, identity and sequence intact → resume above the recorded number,
+  refetch events from any member, membership continues;
+- everything lost including identity → a new peer with a new sequence space, which
+  can collide with nothing.
+
+There is no longer any loss that both keeps an identifier and forgets what that
+identifier issued — which was the precondition for B4.
+
+**Reserve before publishing.** The sequence must be recorded before the event using
+it is sent, never after. Failing between the two records a number that went unused,
+which is harmless. The reverse publishes a number with no record of it, which is the
+entire problem.
+
+**Why this beats the sequence epoch D-028 rejected.** An epoch solves the same
+problem by making a restarted counter occupy a different space, at the cost of a
+field on every event and a synchronization state exchange keyed by peer *and* epoch.
+Persisting the counter avoids the restart instead of accommodating it, changes no
+event, and touches no protocol. D-028 was right that an epoch was disproportionate
+and wrong that the alternative was giving up.
+
+**Costs, stated so they are expected.** Events return only from peers that still hold
+them, so a member recovering alone has a correct sequence and an empty history until
+others reconnect. Delivery state is lost with the database, so some teammate turns
+are injected twice — redundant rather than harmful, bounded by the room's lifetime,
+and the right direction per D-014. The user should be told the room is refetching,
+because that state is not the same as working normally.
+
+**Rejected.**
+- *Ending membership* (D-028) — see above.
+- *A sequence epoch* — correct, and unnecessary once the counter cannot be lost.
+- *Keeping the counter in the room database with a backup copy elsewhere* — two
+  copies that can disagree, and the disagreement is the failure.

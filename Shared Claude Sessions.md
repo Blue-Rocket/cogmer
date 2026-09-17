@@ -504,33 +504,36 @@ A sequence belongs to a peer **within a room**. A peer participating in two room
 
 Within a room, a sequence begins at a peer's first event, advances by one for each event that peer originates, and is never reset, reused, or rewritten. It is frozen when the room is archived.
 
-A peer that cannot continue its sequence — because it has lost the room's local state — must not go on using its identifier in that room. Resuming at a lower number republishes sequence numbers that other peers already hold against different events.
+A peer that cannot establish where its sequence had reached must not publish into that room until it can. Resuming at a lower number republishes sequence numbers that other peers already hold against different events.
 
 ## Losing a room's local state
 
-Treat it as the end of that peer's membership in that room. The peer leaves; it does not rejoin, and it does not resume publishing.
+Losing a room's local database does not end a peer's membership in that room.
 
-This is narrower than it sounds, and deliberately so. Three things are commonly conflated here, and only the first is actually lost:
+What the database holds is the *record* of a conversation, not that conversation's value to the person who was in it. Their own turns, and the teammate turns injected into their session, are already in that session's context — which is stored separately and is unaffected. Ending membership would take something consequential in exchange for something largely recoverable, and it would take more than it appears to: a session that has received teammate context may not move to another room, so a peer that lost its membership could not collaborate again without abandoning the session, and with it the working context that was the point.
 
-- **the peer's membership in that room** — lost;  
-- **the conversation** — not lost, because every other member holds a full replica;  
-- **the peer's identity** — not lost, because it does not live in a room's storage.
+Only one thing must survive for membership to continue safely: **the peer's own sequence position.** Everything else can be refetched from any other member, because events are immutable and replicated.
 
-So the cost is one room, in a system where a room is bounded by the work that created it. The developer starts or joins another and carries on.
+A peer's highest issued sequence for a room must therefore be stored outside that room's database, sharing the fate of the peer's identity rather than the fate of the room's events.
 
-Note the inversion, which is worth understanding before designing around it. A peer that loses its *identity* is safe: it becomes a new peer, with a new sequence space, and can collide with nothing. A peer that loses a *room* while keeping its identity is the dangerous case, because it is the one that can republish sequence numbers others already hold.
+That inverts the failure which made this dangerous:
 
-## Why recovery is not specified
+- lose the room's events, keep identity and sequence — resume above the recorded number, refetch the events, membership continues;  
+- lose everything, identity included — a new peer, a new sequence space, nothing it could collide with.
 
-Recovery is not obviously out of reach, which is why the reasoning belongs here rather than being left as an omission.
+There is then no loss that both keeps an identifier and forgets what that identifier has issued.
 
-Because events are immutable and replicated, a peer could refetch a room from any member — including its own past events — and resume above its highest sequence. Anti-entropy already performs that exchange.
+A sequence must be reserved **before** the event using it is published, never after. A peer that fails between the two has recorded a number it did not use, which is harmless. The reverse publishes a number it has no record of, which is the entire problem.
 
-The difficulty is establishing what "its highest sequence" is. It must be the highest held by *any* member, and a member that is offline may hold a higher one than any that can be reached. Resuming below that reproduces the conflict. Resuming far above it leaves a permanent gap, which the highest-contiguous rule can never close, so every peer would believe indefinitely that it was missing events.
+## What recovery costs
 
-A sequence epoch resolves this — an incarnation number alongside the sequence, raised on recovery, so a restarted counter occupies a different space instead of colliding. It is the standard answer to this problem. It also changes the event model and the synchronization state exchange, for a case that a bounded, replicated, short-lived room has already made cheap.
+The costs are modest, and should be expected rather than discovered.
 
-Do not add it until a loss has actually cost something worth the complexity.
+A room's events return only from peers that still hold them. A member that recovers while alone has a correct sequence position and an empty history. It may publish safely, and the history fills as others reconnect.
+
+Delivery state is lost with the database, so teammate turns already seen may be injected again. This is redundant rather than harmful — the session holds them already — and it is bounded by the room's own lifetime. Duplicate injection is the acceptable direction; the alternative is silence about turns that were never delivered at all.
+
+Say what happened. A room that is refetching its history and may repeat some teammate context is in a different state from one working normally, and the difference should be visible rather than inferred.
 
 ## Redelivery and conflict are not the same thing
 
