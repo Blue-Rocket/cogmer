@@ -27,7 +27,9 @@ type uiEvent struct {
 	EventType string `json:"eventType"`
 	Content   string `json:"content"`
 	Clock     string `json:"clock"`
-	ToolCalls int    `json:"toolCalls"`
+	ToolCalls int      `json:"toolCalls"`
+	Tools     []string `json:"tools"`
+	Mine      bool     `json:"mine"`
 }
 
 type uiPeer struct {
@@ -91,13 +93,19 @@ func (d *Daemon) snapshot() (uiState, error) {
 		ue := uiEvent{
 			EventID: e.EventID, PeerID: e.PeerID, PeerName: PeerName(e.PeerID),
 			Display: e.UserDisplayName, EventType: e.EventType, Content: e.Content, Clock: ts,
+			// §6/D-021 require the identifier be shown for any peer whose identity
+			// is unverified. That is every remote peer today. It is not required
+			// for your own turns, where it identifies nothing you did not know.
+			Mine: e.PeerID == d.id.PeerID,
 		}
 		if len(e.Metadata) > 0 {
 			var m struct {
-				ToolCalls int `json:"toolCalls"`
+				ToolCalls int      `json:"toolCalls"`
+				Tools     []string `json:"tools"`
 			}
 			if json.Unmarshal(e.Metadata, &m) == nil {
 				ue.ToolCalls = m.ToolCalls
+				ue.Tools = m.Tools
 			}
 		}
 		st.Events = append(st.Events, ue)

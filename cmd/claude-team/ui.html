@@ -40,7 +40,10 @@
              font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
   .body pre code{background:none;padding:0}
   .body ul{margin:.5em 0;padding-left:1.3em}
-  .tools{font-size:12px;color:var(--dim);margin-top:6px}
+  .tools{font-size:12px;color:var(--dim);margin-top:8px}
+  .tools summary{cursor:pointer;list-style:revert}
+  .tools summary:hover{color:var(--fg)}
+  .tools[open]{padding-bottom:2px}
   .empty{color:var(--dim);text-align:center;padding:60px 20px}
   .empty code{background:var(--code);padding:2px 6px;border-radius:3px;font-size:13px}
 </style>
@@ -91,11 +94,23 @@
       const mine=e.peerId===state.selfPeerId;
       const claude=e.eventType==='ASSISTANT_MESSAGE';
       const name=claude?('Claude — '+e.userDisplayName):e.userDisplayName;
-      const tools=(e.toolCalls||0)>0?'<div class="tools">▸ '+e.toolCalls+' tool operation'+(e.toolCalls>1?'s':'')+'</div>':'';
+      // A real disclosure rather than a triangle that does nothing: the tool
+      // names are stored, so the summary expands to them.
+      let tools='';
+      if((e.toolCalls||0)>0){
+        const names=(e.tools&&e.tools.length)?e.tools:[];
+        const counted={}; names.forEach(n=>counted[n]=(counted[n]||0)+1);
+        const list=Object.keys(counted).map(n=>esc(n)+(counted[n]>1?' ×'+counted[n]:'')).join(', ');
+        tools='<details class="tools"><summary>'+e.toolCalls+' tool operation'
+             +(e.toolCalls>1?'s':'')+'</summary>'+(list||'(names not recorded)')+'</details>';
+      }
+      // The derived name and the unverified marker earn their place only on a
+      // peer that is not you; on your own turns they are noise.
+      const ident = mine ? ''
+        : '<span class="peer">'+esc(e.peerName)+'</span><span class="unverified">unverified</span>';
       return '<div class="turn"><div class="who">'
         +'<span class="name '+(mine?'me':'them')+'">'+esc(name)+'</span>'
-        +'<span class="peer">'+esc(e.peerName)+'</span>'
-        +(mine?'':'<span class="unverified">unverified</span>')
+        +ident
         +'<span class="time">'+esc(e.clock)+'</span></div>'
         +'<div class="body">'+render(e.content)+tools+'</div></div>';
     }).join('');

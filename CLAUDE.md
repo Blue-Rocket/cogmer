@@ -16,6 +16,17 @@ re-attempt it as a display channel. If an MCP server is ever shipped here for an
 reason, it must not expose *sampling* — that would let a peer cause inference in an
 interactive session, violating §3.7.
 
+## No false affordances in the view
+
+`▸ 1 tool operation` used to look expandable and do nothing. It is now a real
+`<details>` listing the stored tool names. A control that invites a click it cannot
+honour is worse than no control — and this view will accumulate them, because the
+data is richer than what is shown.
+
+Identity display follows D-021: the derived name and `unverified` marker appear on
+**other** peers, where the spec requires them, and not on your own turns, where they
+identify nothing you did not know.
+
 ## The browser view is the settled avenue (D-039)
 
 Used and judged right. A separate window is consulted rather than forgotten, so the
