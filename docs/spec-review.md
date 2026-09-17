@@ -198,8 +198,6 @@ widening (D-005). Keep the investigative framing only for what is still unknown.
 
 ---
 
-## B. Under-specification that will make peers diverge
-
 ### A5 — Nothing in the specification requires a peer to notice that a room's state is gone
 
 **RESOLVED.** §8 now requires the index be consulted on every room open, defines
@@ -250,6 +248,8 @@ by testing the failure rather than the success.
 Detection at startup does not cover the open-handle case, where the file is
 unlinked beneath a running daemon. That is the smaller half of the problem and can
 follow.
+
+## B. Under-specification that will make peers diverge
 
 ### B1 — §24 lists ordering fields but defines no comparator
 
@@ -319,8 +319,6 @@ same room. Excluding by *peer* would blind each session to the other; excluding 
 
 ---
 
-## C. Gaps the discoveries opened
-
 ### B4 — A restarted sequence counter is silently absorbed as a duplicate
 
 **RESOLVED — specified and implemented, 2026-09-16.** §8 now states that a sequence
@@ -370,6 +368,8 @@ history, but do not prevent it.
 **Not yet reachable.** Nothing relays events between peers, so no conflict can
 occur today. `Insert` is the method peer synchronization will call, which is why it
 is worth fixing before Phase 2 rather than after.
+
+## C. Gaps the discoveries opened
 
 ### C1 — Nothing in the specification acknowledges that it depends on undocumented behavior
 
