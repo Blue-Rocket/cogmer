@@ -139,6 +139,17 @@ that. Do not add a "join by name on a trusted network" path: names are guessable
 by design (D-017), and office and conference networks are neither small nor
 trusted.
 
+## Peer identity is self-asserted (D-020)
+
+A `peerId` is ten random bytes generated locally and verified by nothing. So
+attribution is accurate among cooperating peers and not resistant to one that
+lies, a guest list cannot replace the join secret, and §13's rule that a relayer
+must not rewrite event origin has no enforcement.
+
+**Build nothing that assumes otherwise.** Once identity is cryptographic, prefer
+admitting known peers over holders of a secret — the secret is a first-contact
+mechanism, not a standing requirement.
+
 ## Invariants
 
 - **Hooks must never break Claude Code** (§3.1). Every failure path exits 0 with

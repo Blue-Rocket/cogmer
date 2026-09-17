@@ -624,3 +624,62 @@ default.
 
 **Revisit when** a transport is added whose peers have no addressable endpoint,
 where `discover` cannot be expressed as returning candidates.
+
+---
+
+## D-020 — A guest list replaces the join secret only once peer identity is cryptographic
+
+**Date:** 2026-09-16 · **Status:** active (partly deferred)
+
+**Context.** If a room keeps a list of invited peers, is the join secret from D-018
+still needed?
+
+**Finding: not with identity as it stands.** A guest list is an *authorization*
+mechanism and presupposes *authentication*. A `peerId` today is ten random bytes
+generated locally, asserted by the peer that sends it, and verified by nothing.
+A list of unverifiable names is a convenience, not a control — any peer can claim
+any identifier.
+
+It would also be worse than the secret it replaced. A join code is used once and
+discarded; a `peerId` appears in every event the peer originates, so it is far
+more discoverable than the credential it would be standing in for.
+
+**Decision.** Keep the secret for now. State in the specification that peer
+identity must become cryptographic — identifiers derived from a public key,
+possession proved on connection, events signed at origin — and that until it does,
+the guest list, the relay rule, and attribution are conventions rather than
+controls.
+
+**Once identity is cryptographic, the guest list is the better mechanism** and the
+specification says to prefer it. Admission becomes proof of possession rather than
+presentation of a token: nothing transmitted can be replayed by an interceptor,
+nothing expires, and admission can be withdrawn.
+
+**They compose rather than compete.** A guest list does not remove the first
+exchange — two peers who have never met must still establish keys over a channel
+they trust, exactly as a secret must be sent over one. It removes every *subsequent*
+exchange, because a verified key is durable where a secret is spent. So: a
+single-use secret admits a peer that is not yet known, being admitted is what makes
+it known, and between known peers no secret is required. This is the model SSH uses
+for host keys, and the reasoning is the same.
+
+**The stronger argument for doing the work is unrelated to admission.** §13 requires
+that a relaying peer never rewrite `originPeerId`, `peerSequence`, or `eventId` —
+but nothing enforces it. An event arriving from Alice claiming to originate with
+David is indistinguishable from one Alice composed herself, and transitive relay is
+a stated resilience feature rather than an edge case. Signing at origin is what
+makes relay verifiable instead of merely well-behaved. This closes review item C7.
+
+A guest list also makes broadcast discovery (D-019) safe to enumerate: if admission
+requires a key, a listener learning every advertised room name gains nothing.
+
+**Rejected.**
+- *Guest list instead of the secret, now* — authorization without authentication.
+- *Guest list keyed on `userId` or `machineId`* — the same defect with friendlier
+  names.
+- *Deferring identity until after Phase 2* — Phase 6 tests transitive relay, which
+  is precisely what unsigned events cannot make safe.
+
+**Revisit when** implementing Phase 2. Peer identity format is entrenched by the
+first event two peers exchange, so the keypair decision wants making before peers
+exist, not after.

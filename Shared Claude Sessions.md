@@ -345,6 +345,8 @@ Example:
 }
 ```
 
+A peer identifier is presently self-asserted: it is generated locally and nothing verifies it on receipt. Attribution is therefore accurate among cooperating peers and not resistant to a peer that chooses to lie. This is acceptable in a prototype and must not be mistaken for a property the system provides.
+
 `machineId` is an identity label, used for attribution and display. It is never an address, and nothing routes by it. Where a peer can be reached is a property of the transport and changes independently of who the peer is.
 
 A Claude response must always remain attributable to its originating developer/session.
@@ -620,6 +622,8 @@ The secret also disambiguates. Names are unique only among the rooms one peer ho
 
 The code should be single-use, and should expire: an invitation is a request to pair now, not a standing permission.
 
+A secret is a mechanism for first contact. Once peers know each other by verified key, admission should rest on that instead, and no secret should be required between them.
+
 ## Room names
 
 A room name is generated, never chosen.
@@ -779,6 +783,10 @@ eventId
 ```
 
 during relay.
+
+This is presently a rule without an enforcement. A relaying peer is trusted not to alter what it passes on, and a receiving peer cannot tell the difference: an event arriving from Alice claiming to originate with David is indistinguishable from one Alice composed herself.
+
+Signing events at their origin is what makes relay verifiable rather than merely well-behaved. Transitive synchronization is the strongest reason to make peer identity cryptographic, independent of how peers are admitted to a room.
 
 This property substantially improves resilience.
 
@@ -1197,7 +1205,31 @@ An invitation is a bearer credential. Anyone holding one can reach the daemon th
 
 Do not assume network membership alone is sufficient for a production security model.
 
-Design peer identity so cryptographic signing can be added later.
+## Peer identity
+
+Peer identity must eventually become cryptographic. Until it does, several rules in this specification are conventions rather than controls.
+
+A peer identifier should be derived from a public key, a peer should prove possession of the corresponding private key on connecting, and events should be signed by the peer that originated them.
+
+Until that exists:
+
+- a peer identifier is self-asserted, and any peer may claim any identifier;  
+- a list of permitted peers is a convenience rather than a control, because the names on it cannot be verified;  
+- a relaying peer is trusted not to forge events attributed to others.
+
+Build nothing that depends on those properties holding.
+
+## Known peers
+
+Once identity is cryptographic, admit known peers rather than holders of a secret.
+
+A peer keeps a list of the peers it has met and the public keys it knows them by. A room admits members drawn from that list, and joining becomes a proof of possession rather than the presentation of a token. That is better in every respect that matters here: nothing is transmitted that an interceptor could reuse, nothing expires, and admission can be withdrawn.
+
+This does not remove the first exchange. Two peers that have never met must still establish each other's keys over some channel they trust, exactly as a join secret must be sent over one. What it removes is every exchange after the first: a key once verified is durable, whereas a secret is spent on use.
+
+The two mechanisms therefore compose rather than compete. A single-use secret admits a peer that is not yet known, and being admitted is what makes it known. Between peers that already know each other, no secret is required and none should be demanded.
+
+Admission is not retraction. Removing a peer from a list prevents it rejoining and prevents future presence. It does not withdraw what that peer has already seen.
 
 ---
 

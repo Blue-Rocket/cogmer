@@ -261,6 +261,12 @@ to rewind the watermark. Minor drift between the specification and the decision.
 
 ### C7 — §25 asks for signable peer identity; identity is currently a random string
 
+**Addressed in the specification; not implemented — see D-020.** §25 now states
+what cryptographic identity requires and which rules are conventions until it
+exists, §13 records that the relay rule has no enforcement, and §6 warns that
+attribution is not resistant to a peer that lies. The severity was understated
+below: transitive relay cannot be made safe without it.
+
 **Low.** §25 says to design peer identity so cryptographic signing can be added
 later. `identity.json` holds a random hex `peerId` with no keypair. Nothing is
 broken yet — there is no peer traffic — but "design for it later" becomes harder
