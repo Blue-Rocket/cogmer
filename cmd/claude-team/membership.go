@@ -38,6 +38,32 @@ CREATE TABLE IF NOT EXISTS room_guests (
   room_id TEXT NOT NULL,
   peer_id TEXT NOT NULL,
   PRIMARY KEY (room_id, peer_id)
+);
+
+-- Which room each agent session belongs to. A session holds membership in at most
+-- one room at a time (§12a), which is expressible only because this is keyed on the
+-- session rather than on the daemon.
+CREATE TABLE IF NOT EXISTS session_rooms (
+  session_id TEXT PRIMARY KEY,
+  room_id    TEXT NOT NULL,
+  joined_at  TEXT NOT NULL,
+  injected   INTEGER NOT NULL DEFAULT 0
+);
+
+-- Where a room's other members can be reached. An endpoint is reachability, not
+-- identity (D-018): it changes when a machine moves and is only ever a hint.
+CREATE TABLE IF NOT EXISTS room_peers (
+  room_id  TEXT NOT NULL,
+  endpoint TEXT NOT NULL,
+  PRIMARY KEY (room_id, endpoint)
+);
+
+-- Machine-level state. current_room is the room a session joins when it begins:
+-- a session cannot be asked which room it wants, because nothing knows a session
+-- exists until its first hook fires.
+CREATE TABLE IF NOT EXISTS settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
 );`
 
 type Membership struct{ db *sql.DB }
@@ -195,6 +221,110 @@ func (m *Membership) Guests(roomID string) ([]string, error) {
 		out = append(out, p)
 	}
 	return out, rows.Err()
+}
+
+// RecordRoom stores a room learned from an invitation. The guest did not create it
+// and cannot invent its identity, so both come from the invitation.
+func (m *Membership) RecordRoom(roomID, roomName string) error {
+	_, err := m.db.Exec(`
+		INSERT INTO rooms (room_id, room_name, state, created_at) VALUES (?,?,'joined',?)
+		ON CONFLICT(room_id) DO UPDATE SET state = 'joined'`,
+		roomID, roomName, time.Now().UTC().Format(time.RFC3339))
+	return err
+}
+
+func (m *Membership) AddRoomPeer(roomID, endpoint string) error {
+	_, err := m.db.Exec(`INSERT OR IGNORE INTO room_peers (room_id, endpoint) VALUES (?,?)`, roomID, endpoint)
+	return err
+}
+
+// RoomPeers lists where a room's other members might be. Endpoints go stale, so
+// this is a set of things to try rather than a directory.
+func (m *Membership) RoomPeers(roomID string) []string {
+	rows, err := m.db.Query(`SELECT endpoint FROM room_peers WHERE room_id = ?`, roomID)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var e string
+		if rows.Scan(&e) == nil {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+// SetCurrentRoom names the room new sessions join. It is deliberately machine-level
+// rather than per-terminal: a developer works in one room at a time, and asking
+// every session which room it wants would mean asking at a moment when nobody is
+// there to answer.
+func (m *Membership) SetCurrentRoom(roomID string) error {
+	if roomID == "" {
+		_, err := m.db.Exec(`DELETE FROM settings WHERE key = 'current_room'`)
+		return err
+	}
+	_, err := m.db.Exec(`
+		INSERT INTO settings (key, value) VALUES ('current_room', ?)
+		ON CONFLICT(key) DO UPDATE SET value = excluded.value`, roomID)
+	return err
+}
+
+func (m *Membership) CurrentRoom() (Room, bool) {
+	var roomID string
+	if err := m.db.QueryRow(`SELECT value FROM settings WHERE key = 'current_room'`).Scan(&roomID); err != nil {
+		return Room{}, false
+	}
+	return m.RoomByID(roomID)
+}
+
+func (m *Membership) RoomByID(roomID string) (Room, bool) {
+	var r Room
+	err := m.db.QueryRow(`SELECT room_id, room_name, state, created_at FROM rooms WHERE room_id = ?`, roomID).
+		Scan(&r.RoomID, &r.RoomName, &r.State, &r.CreatedAt)
+	return r, err == nil
+}
+
+// RoomForSession binds a session to a room on first sight and keeps it there.
+//
+// Binding at first sight rather than asking is what makes §12a's constraint
+// enforceable: a session that has already been told something cannot be moved, and
+// there is no moment later at which moving it would be safe.
+func (m *Membership) RoomForSession(sessionID string) (Room, bool) {
+	var roomID string
+	err := m.db.QueryRow(`SELECT room_id FROM session_rooms WHERE session_id = ?`, sessionID).Scan(&roomID)
+	if err == nil {
+		return m.RoomByID(roomID)
+	}
+	cur, ok := m.CurrentRoom()
+	if !ok {
+		return Room{}, false // no room joined; this session collaborates with nobody
+	}
+	_, _ = m.db.Exec(`INSERT OR IGNORE INTO session_rooms (session_id, room_id, joined_at) VALUES (?,?,?)`,
+		sessionID, cur.RoomID, time.Now().UTC().Format(time.RFC3339))
+	return cur, true
+}
+
+// MarkInjected records that a session has received teammate context, after which
+// §12a forbids moving it to another room: injected context cannot be withdrawn.
+func (m *Membership) MarkInjected(sessionID string) error {
+	_, err := m.db.Exec(`UPDATE session_rooms SET injected = 1 WHERE session_id = ?`, sessionID)
+	return err
+}
+
+func (m *Membership) HasReceivedContext(sessionID string) bool {
+	var n int
+	err := m.db.QueryRow(`SELECT injected FROM session_rooms WHERE session_id = ?`, sessionID).Scan(&n)
+	return err == nil && n == 1
+}
+
+// SessionsInRoom reports how many sessions are bound to a room, which is what
+// presence is derived from rather than asserted.
+func (m *Membership) SessionsInRoom(roomID string) int {
+	var n int
+	_ = m.db.QueryRow(`SELECT COUNT(*) FROM session_rooms WHERE room_id = ?`, roomID).Scan(&n)
+	return n
 }
 
 // IsGuest is the admission decision. Authentication established who is asking;

@@ -54,6 +54,10 @@ func main() {
 		runRooms()
 	case "create":
 		runCreateRoom()
+	case "join":
+		runJoin(os.Args[2:])
+	case "leave":
+		runLeave()
 	case "guests":
 		runGuests()
 	case "invite":
@@ -99,6 +103,8 @@ func usage() {
 
   claude-team rooms           List rooms
   claude-team create          Create a room
+  claude-team join <room>     Make a room current, so new sessions join it
+  claude-team leave           Leave the current room
   claude-team guests          List who may enter the current room
   claude-team invite <peer>   Admit a known peer to the current room
   claude-team revoke <peer>   Withdraw admission
@@ -165,35 +171,28 @@ func openLocal() (*Store, *Identity, string) {
 }
 
 func runDaemon() {
-	// Detect room formation before opening, so the first daemon for a room can
-	// verify the behaviors that room's correctness depends on.
-	newRoom := !roomExists(LoadConfig().Room)
-
-	store, id, room := openLocal()
-	defer store.Close()
-
-
-	// Rooms are records, not arbitrary strings: a name must resolve to something
-	// with an identity and a guest list, or admission has nothing to consult.
+	id, err := LoadIdentity()
+	if err != nil {
+		log.Fatalf("identity: %v", err)
+	}
 	members, err := OpenMembership()
 	if err != nil {
 		log.Fatalf("membership: %v", err)
 	}
-	rec, ok := members.FindRoom(room)
-	if !ok {
-		// A daemon pointed at a room nobody created makes one and admits its
-		// creator, so an existing setup keeps working. §12 has invitation as the
-		// deliberate act; this is the bridge until a session joins a room rather
-		// than a daemon serving one.
-		rec, err = members.CreateRoom(id.PeerID)
-		if err != nil {
-			log.Fatalf("create room: %v", err)
+
+	// CLAUDE_TEAM_ROOM is a convenience for choosing the current room, not a
+	// statement about what this daemon serves: it serves every room this peer
+	// belongs to, and a session says which one it is in (§5).
+	if name := os.Getenv("CLAUDE_TEAM_ROOM"); name != "" {
+		if r, ok := members.FindRoom(name); ok {
+			_ = members.SetCurrentRoom(r.RoomID)
+		} else {
+			log.Printf("no room named %q; `claude-team rooms` lists them, `create` makes one", name)
 		}
-		log.Printf("no room named %q existed; created %s", room, rec.RoomName)
 	}
 
-	d := &Daemon{store: store, id: id, room: room, roomID: rec.RoomID,
-		members: members, claudeVersion: ClaudeVersion()}
+	d := &Daemon{id: id, members: members, claudeVersion: ClaudeVersion()}
+	defer d.closeStores()
 
 	if !isLoopback(addr()) {
 		log.Fatalf("refusing to serve hooks on %s: the hook API publishes into the room "+
@@ -208,24 +207,21 @@ func runDaemon() {
 		log.Fatalf("listen (peer): %v", err)
 	}
 
-	guests, _ := members.Guests(rec.RoomID)
-	log.Printf("claude-team daemon  room=%s (%d guest(s))  peer=%s (%s)",
-		rec.RoomName, len(guests), id.UserDisplayName, id.PeerName)
+	rooms, _ := members.Rooms()
+	log.Printf("claude-team daemon  peer=%s (%s)  serving %d room(s)",
+		id.UserDisplayName, id.PeerName, len(rooms))
+	if cur, ok := members.CurrentRoom(); ok {
+		g, _ := members.Guests(cur.RoomID)
+		log.Printf("  current room  %s (%d guest(s))", cur.RoomName, len(g))
+	} else {
+		log.Printf("  current room  none — `claude-team create` or `claude-team join <room>`")
+	}
 	log.Printf("  hooks and UI  http://%s  (loopback)", addr())
 	log.Printf("  peer sync     http://%s", peerAddr())
 	if !isLoopback(peerAddr()) {
-		log.Printf("  WARNING: the peer API is reachable from other machines.")
-		log.Printf("           Requests are authenticated, so you will know which peer asked,")
-		log.Printf("           and events are signed, so nothing can be forged. But nothing yet")
-		log.Printf("           Only this room's %d guest(s) are admitted; others are refused.", len(guests))
-	}
-
-	// Behaviour checks spend a Claude turn and take a few seconds. Run them
-	// alongside the daemon rather than ahead of it: D-009 says a failed check
-	// never blocks the room, and a check that delays the room from answering at
-	// all is the same fault in a smaller form.
-	if newRoom {
-		go EnsureVerified(room)
+		log.Printf("  WARNING: the peer API is reachable from other machines. Requests are")
+		log.Printf("           authenticated and events are signed, and only each room's")
+		log.Printf("           guests are admitted — but anything reachable is worth knowing about.")
 	}
 
 	go d.RunSync(peerList(), syncInterval())
@@ -425,6 +421,7 @@ func runForget(args []string) {
 
 func runRooms() {
 	withMembership(func(m *Membership, _ *Identity) {
+		cur, hasCur := m.CurrentRoom()
 		rooms, err := m.Rooms()
 		if err != nil {
 			log.Fatalf("rooms: %v", err)
@@ -435,7 +432,12 @@ func runRooms() {
 		}
 		for _, r := range rooms {
 			g, _ := m.Guests(r.RoomID)
-			fmt.Printf("  %-24s %-8s %d guest(s)  %s\n", r.RoomName, r.State, len(g), r.RoomID)
+			mark := " "
+			if hasCur && r.RoomID == cur.RoomID {
+				mark = "*"
+			}
+			fmt.Printf("%s %-24s %-8s %d guest(s)  %d session(s)\n",
+				mark, r.RoomName, r.State, len(g), m.SessionsInRoom(r.RoomID))
 		}
 	})
 }
@@ -446,17 +448,115 @@ func runCreateRoom() {
 		if err != nil {
 			log.Fatalf("create: %v", err)
 		}
-		fmt.Printf("created %s\n  %s\n\n", r.RoomName, r.RoomID)
-		fmt.Printf("run the daemon on it with:\n  CLAUDE_TEAM_ROOM=%s claude-team daemon\n", r.RoomName)
+		if err := m.SetCurrentRoom(r.RoomID); err != nil {
+			log.Fatalf("create: %v", err)
+		}
+		fmt.Printf("created %s and made it current\n  %s\n\n", r.RoomName, r.RoomID)
+		fmt.Println("invite someone with:")
+		fmt.Println("  claude-team allow <their identifier> <name>")
+		fmt.Printf("  claude-team invite <name>\n")
 	})
 }
 
+// currentRoom is the room a developer is working in. Commands act on it so that
+// nobody has to name a room they are already inside.
 func currentRoom(m *Membership) Room {
-	r, ok := m.FindRoom(LoadConfig().Room)
+	if name := os.Getenv("CLAUDE_TEAM_ROOM"); name != "" {
+		if r, ok := m.FindRoom(name); ok {
+			return r
+		}
+		log.Fatalf("no room named %q; `claude-team rooms` lists them", name)
+	}
+	r, ok := m.CurrentRoom()
 	if !ok {
-		log.Fatalf("no room named %q; `claude-team rooms` lists them", LoadConfig().Room)
+		log.Fatal("not in a room. `claude-team create` makes one, `claude-team join <room>` enters one")
 	}
 	return r
+}
+
+// invitation renders what a guest needs: which room, and somewhere to start
+// looking for it. Both are public.
+func invitation(r Room, endpoint, hostPeerID string) string {
+	return fmt.Sprintf("%s/%s@%s#%s", r.RoomName, r.RoomID, endpoint, hostPeerID)
+}
+
+// parseInvitation accepts a full invitation or the name of a room already known.
+func parseInvitation(arg string) (name, id, endpoint, host string, full bool) {
+	hash := strings.LastIndex(arg, "#")
+	if hash > 0 {
+		host = arg[hash+1:]
+		arg = arg[:hash]
+	}
+	at := strings.LastIndex(arg, "@")
+	slash := strings.Index(arg, "/")
+	if at < 0 || slash < 0 || slash > at {
+		return arg, "", "", "", false
+	}
+	return arg[:slash], arg[slash+1 : at], arg[at+1:], host, true
+}
+
+func runJoin(args []string) {
+	if len(args) == 0 {
+		log.Fatal("usage: claude-team join <invitation>   (or a room you already know)")
+	}
+	withMembership(func(m *Membership, id *Identity) {
+		name, roomID, endpoint, host, full := parseInvitation(args[0])
+		if full {
+			// A room learned from an invitation: the guest did not create it, so
+			// its identity comes from the invitation rather than being invented.
+			if err := m.RecordRoom(roomID, name); err != nil {
+				log.Fatalf("join: %v", err)
+			}
+			if err := m.AddRoomPeer(roomID, endpoint); err != nil {
+				log.Fatalf("join: %v", err)
+			}
+			// Admit whoever offered the invitation. Synchronisation is a pull in
+			// both directions, so a guest that records the room and not its host
+			// can read that room and never be read -- which looks like one-way
+			// collaboration and is really a one-sided guest list.
+			if host != "" {
+				if err := m.Allow(host, ""); err != nil {
+					log.Fatalf("join: %v", err)
+				}
+				if err := m.Invite(roomID, host); err != nil {
+					log.Fatalf("join: %v", err)
+				}
+			}
+		}
+		r, ok := m.FindRoom(name)
+		if !ok {
+			log.Fatalf("no room named %q. Ask its host for an invitation; yours to give them is:\n  %s",
+				name, id.PeerID)
+		}
+		if err := m.SetCurrentRoom(r.RoomID); err != nil {
+			log.Fatalf("join: %v", err)
+		}
+		fmt.Printf("now in %s. Sessions started from here join it.\n", r.RoomName)
+		if host != "" {
+			fmt.Printf("admitted %s, who invited you — verify their identifier with them:\n  %s\n",
+				PeerName(host), Fingerprint(host))
+		}
+		if peers := m.RoomPeers(r.RoomID); len(peers) > 0 {
+			fmt.Printf("reaching its members at: %s\n", strings.Join(peers, ", "))
+		}
+		fmt.Println("Sessions already running stay where they are: a session cannot be moved once")
+		fmt.Println("it has been told something, because what it was told cannot be withdrawn.")
+	})
+}
+
+func runLeave() {
+	withMembership(func(m *Membership, _ *Identity) {
+		cur, ok := m.CurrentRoom()
+		if !ok {
+			fmt.Println("not in a room")
+			return
+		}
+		if err := m.SetCurrentRoom(""); err != nil {
+			log.Fatalf("leave: %v", err)
+		}
+		fmt.Printf("left %s. New sessions collaborate with nobody until you join a room.\n", cur.RoomName)
+		fmt.Println("What you already published stays in the room; leaving does not un-say it.")
+	})
 }
 
 func runGuests() {
@@ -481,7 +581,7 @@ func runInvite(args []string) {
 	if len(args) == 0 {
 		log.Fatal("usage: claude-team invite <peer>")
 	}
-	withMembership(func(m *Membership, _ *Identity) {
+	withMembership(func(m *Membership, self *Identity) {
 		r := currentRoom(m)
 		pid, err := resolvePeer(m, args[0])
 		if err != nil {
@@ -490,8 +590,12 @@ func runInvite(args []string) {
 		if err := m.Invite(r.RoomID, pid); err != nil {
 			log.Fatalf("invite: %v", err)
 		}
-		fmt.Printf("%s may now enter %s\n", PeerName(pid), r.RoomName)
-		fmt.Printf("tell them:\n  CLAUDE_TEAM_ROOM=%s claude-team daemon\n", r.RoomName)
+		fmt.Printf("%s may now enter %s\n\n", PeerName(pid), r.RoomName)
+		// An invitation carries a room's identity and where to reach it. It carries
+		// no secret: admission is the guest list entry just made, proved later by
+		// possession of their key (D-026). Interception reveals that a room exists.
+		fmt.Println("give them:")
+		fmt.Printf("  claude-team join %s\n", invitation(r, peerAddr(), self.PeerID))
 	})
 }
 

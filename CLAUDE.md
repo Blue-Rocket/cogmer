@@ -334,6 +334,18 @@ hard problem so far has been host-specific.
 so a column added later is missing from every older room and fails at first query,
 not at open. `migrate()` runs on open; adding a column there is the whole job.
 
+## The daemon serves many rooms (D-046)
+
+It is the machine's local service, **not a room**. One store per room, opened on
+demand. A **session** binds to a room on first sight, from the machine-level current
+room that `join` sets. A session in no room captures and injects nothing.
+
+Guest lists are **per-peer**, so two peers can disagree about who belongs — that
+presented once as one-way collaboration and was really an asymmetric list. An
+invitation therefore carries the room's name, identity, endpoint, **and the inviting
+peer's identifier**, so joining admits them back. Peers advertise where they listen,
+signed, because a peer polls that address.
+
 ## Invariants
 
 - **Hooks must never break Claude Code** (§3.1). Every failure path exits 0 with

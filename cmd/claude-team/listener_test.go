@@ -10,8 +10,14 @@ import (
 // The separation is the security property, not a convention. A hook endpoint
 // reachable from another machine is equivalent to that machine being the local
 // developer: it can publish into the room and read the conversation back.
+func mustDaemon(t *testing.T) *Daemon {
+	t.Helper()
+	d, _ := testDaemon(t)
+	return d
+}
+
 func TestPeerListenerDoesNotServeHooks(t *testing.T) {
-	d := &Daemon{room: "test", id: &Identity{PeerID: "peer-x"}}
+	d := mustDaemon(t)
 	peer := d.PeerRoutes()
 
 	for _, path := range []string{"/hook/prompt", "/hook/stop", "/events"} {
@@ -26,7 +32,7 @@ func TestPeerListenerDoesNotServeHooks(t *testing.T) {
 // Conversely, synchronization is not offered on loopback, so the two surfaces
 // cannot drift into being the same thing by accident.
 func TestLocalListenerDoesNotServeSync(t *testing.T) {
-	d := &Daemon{room: "test", id: &Identity{PeerID: "peer-x"}}
+	d := mustDaemon(t)
 	rec := httptest.NewRecorder()
 	d.LocalRoutes().ServeHTTP(rec, httptest.NewRequest("POST", "/sync", strings.NewReader("{}")))
 	if rec.Code != 404 {
@@ -35,7 +41,7 @@ func TestLocalListenerDoesNotServeSync(t *testing.T) {
 }
 
 func TestBothListenersReportHealth(t *testing.T) {
-	d := &Daemon{room: "test", id: &Identity{PeerID: "peer-x"}}
+	d := mustDaemon(t)
 	for name, mux := range map[string]*http.ServeMux{
 		"local": d.LocalRoutes(), "peer": d.PeerRoutes(),
 	} {

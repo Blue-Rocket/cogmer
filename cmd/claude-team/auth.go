@@ -29,11 +29,11 @@ import (
 
 const (
 	authTolerance = 2 * time.Minute
-	authTag       = "claude-team/sync-request/v1"
+	authTag       = "claude-team/sync-request/v2"
 )
 
 // signRequest produces the credentials a peer presents when asking to sync.
-func signRequest(id *Identity, room string) (ts, nonce, sig string, err error) {
+func signRequest(id *Identity, room, endpoint string) (ts, nonce, sig string, err error) {
 	if id.private == nil {
 		return "", "", "", errors.New("no private key: this peer cannot prove who it is")
 	}
@@ -44,7 +44,7 @@ func signRequest(id *Identity, room string) (ts, nonce, sig string, err error) {
 	nonce = base64.RawURLEncoding.EncodeToString(raw)
 	ts = time.Now().UTC().Format(time.RFC3339Nano)
 	sig = base64.RawURLEncoding.EncodeToString(
-		ed25519.Sign(id.private, requestBytes(id.PeerID, room, ts, nonce)))
+		ed25519.Sign(id.private, requestBytes(id.PeerID, room, ts, nonce, endpoint)))
 	return ts, nonce, sig, nil
 }
 
@@ -53,7 +53,7 @@ func signRequest(id *Identity, room string) (ts, nonce, sig string, err error) {
 // The `have` map is deliberately not covered. Altering it gains an authenticated
 // peer nothing -- it can ask for everything anyway -- and canonicalising a map for
 // signing invites the kind of ambiguity length-prefixing exists to avoid.
-func requestBytes(peerID, room, ts, nonce string) []byte {
+func requestBytes(peerID, room, ts, nonce, endpoint string) []byte {
 	var b strings.Builder
 	put := func(s string) {
 		var n [4]byte
@@ -66,6 +66,10 @@ func requestBytes(peerID, room, ts, nonce string) []byte {
 	put(room)
 	put(ts)
 	put(nonce)
+	// The caller's endpoint is signed because a peer acts on it -- it polls there.
+	// An unsigned one could redirect a peer's polling, which forges nothing but
+	// denies plenty.
+	put(endpoint)
 	return []byte(b.String())
 }
 
@@ -95,7 +99,7 @@ func (g *replayGuard) admit(nonce string, now time.Time) bool {
 
 // verifyRequest establishes WHO is asking. It does not decide whether they may:
 // that is admission, and it belongs with the guest list.
-func (d *Daemon) verifyRequest(req syncRequest) error {
+func (d *Daemon) verifyRequest(req syncRequest, roomID string) error {
 	if req.PeerID == "" || req.Signature == "" {
 		return errors.New("unauthenticated request")
 	}
@@ -107,7 +111,7 @@ func (d *Daemon) verifyRequest(req syncRequest) error {
 	if err != nil {
 		return fmt.Errorf("signature is not valid base64url: %w", err)
 	}
-	if !ed25519.Verify(pub, requestBytes(req.PeerID, req.Room, req.Timestamp, req.Nonce), sig) {
+	if !ed25519.Verify(pub, requestBytes(req.PeerID, req.Room, req.Timestamp, req.Nonce, req.Endpoint), sig) {
 		return errors.New("signature does not match the peer id presenting it")
 	}
 
@@ -126,7 +130,7 @@ func (d *Daemon) verifyRequest(req syncRequest) error {
 	// Who is established. Whether they may is a separate question, and answering
 	// only the first is what let a stranger with a freshly generated key read a
 	// private room (D-044).
-	if d.members != nil && d.roomID != "" && !d.members.IsGuest(d.roomID, req.PeerID) {
+	if roomID != "" && !d.members.IsGuest(roomID, req.PeerID) {
 		return fmt.Errorf("%s (%s) is authenticated but is not a guest of this room",
 			PeerName(req.PeerID), req.PeerID[:24])
 	}

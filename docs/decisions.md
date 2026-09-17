@@ -2015,3 +2015,50 @@ deliberate act and D-022 has a room beginning when someone is invited; a daemon
 creating a room on startup is neither. It stands until a session joins a room rather
 than a daemon serving one, which is the multi-room refactor §5 describes and this
 phase did not attempt.
+
+---
+
+## D-046 — The daemon serves many rooms; a session says which one it is in
+
+**Date:** 2026-09-17 · **Status:** active (implemented)
+
+**Context.** A daemon served exactly one room, chosen by an environment variable at
+startup — so it invented a room when pointed at one nobody had created. That
+contradicted §12 and D-022, where a room begins when somebody is invited, and it was
+recorded as a bridge rather than hidden.
+
+**Decision.** The daemon is the machine's local service, not a room. It opens a
+store per room on demand, and a **session** binds to a room on first sight. A
+session in no room is an ordinary Claude Code session: nothing captured, nothing
+injected, nothing shared.
+
+**Binding at first sight rather than asking**, because nothing knows a session exists
+until its first hook fires, and there is nobody to ask at that moment. A machine-level
+*current room* answers instead: `join` sets it, and sessions started afterwards enter
+it. Once a session has been offered teammate context it is marked, because §12a
+forbids moving it and there is no later moment at which moving it would be safe.
+
+**Two gaps only the end-to-end test exposed.** Both had the same shape — one side of
+a symmetric arrangement.
+
+*A guest knew no room existed.* Invitation recorded admission on the host's side
+alone, so the guest had nothing to join. An invitation now carries the room's name,
+its identity, and where to reach it — all public, no token (D-026).
+
+*Synchronisation was one-way.* The guest could read the host and never be read, for
+two compounding reasons. The host had no address for the guest, since a pull needs
+somewhere to pull from — so a peer now advertises where it listens, signed, because a
+peer acts on that address by polling it and an unsigned one would redirect polling.
+And the guest had recorded the room without its host, leaving a one-sided guest list
+that refused the host's requests. An invitation now carries the inviting peer's
+identifier, and joining admits them.
+
+The second is worth keeping in mind generally: **a guest list is per-peer, so two
+peers can disagree about who belongs.** Here it presented as one-way collaboration
+and was really an asymmetric list.
+
+**What this makes possible that was not before.** A developer can be in several
+rooms across different sessions, which §12a's constraint describes and a one-room
+daemon could not express. A room outlives the session that created it. And nothing
+is created by starting a process — the bridge is gone, not because it was removed but
+because the situation it papered over no longer arises.

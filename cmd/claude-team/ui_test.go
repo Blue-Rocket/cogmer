@@ -9,8 +9,8 @@ import (
 
 func uiDaemon(t *testing.T) *Daemon {
 	t.Helper()
-	s := testStore(t)
-	return &Daemon{store: s, room: "test", id: &Identity{PeerID: "peer-me", UserDisplayName: "David"}}
+	d, _ := testDaemon(t)
+	return d
 }
 
 // The UI is local-only. It reads the whole conversation, so serving it to peers
@@ -35,10 +35,14 @@ func TestUIIsNotServedToPeers(t *testing.T) {
 // and collided during the first two-peer run, so the UI must not rely on them
 // alone to tell two people apart (D-021).
 func TestSnapshotDistinguishesPeersClaimingOneName(t *testing.T) {
-	d := uiDaemon(t)
+	d, room := testDaemon(t)
+	store, err := d.storeFor(room.RoomID)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, p := range []string{"peer-aaa", "peer-bbb"} {
-		if _, err := d.store.Append(&Identity{PeerID: p, UserDisplayName: "David"},
-			"test", "s", EventUserPrompt, "hello from "+p, nil); err != nil {
+		if _, err := store.Append(&Identity{PeerID: p, UserDisplayName: "David"},
+			room.RoomID, "s", EventUserPrompt, "hello from "+p, nil); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -62,13 +66,17 @@ func TestSnapshotDistinguishesPeersClaimingOneName(t *testing.T) {
 // Room content arrives from other peers. It must reach the browser as data, never
 // as markup the server has pre-rendered.
 func TestSnapshotCarriesContentAsData(t *testing.T) {
-	d := uiDaemon(t)
+	d, room := testDaemon(t)
+	store, err := d.storeFor(room.RoomID)
+	if err != nil {
+		t.Fatal(err)
+	}
 	hostile := `<script>alert(1)</script>`
-	if _, err := d.store.Append(d.id, "test", "s", EventUserPrompt, hostile, nil); err != nil {
+	if _, err := store.Append(d.id, room.RoomID, "s", EventUserPrompt, hostile, nil); err != nil {
 		t.Fatal(err)
 	}
 	st, _ := d.snapshot()
-	if st.Events[0].Content != hostile {
+	if len(st.Events) == 0 || st.Events[0].Content != hostile {
 		t.Errorf("content was altered in transit: %q", st.Events[0].Content)
 	}
 	buf, err := json.Marshal(st)

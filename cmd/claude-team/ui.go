@@ -78,13 +78,23 @@ func (d *Daemon) notify() {
 }
 
 func (d *Daemon) snapshot() (uiState, error) {
+	cur, ok := d.members.CurrentRoom()
+	if !ok {
+		// No room joined. Showing an empty feed would imply a quiet room rather
+		// than no room, which are different things to a person looking at it.
+		return uiState{SelfPeerID: d.id.PeerID}, nil
+	}
+	store, err := d.storeFor(cur.RoomID)
+	if err != nil {
+		return uiState{}, err
+	}
 	d.mu.Lock()
-	evs, err := d.store.ListRoom(d.room)
+	evs, err := store.ListRoom(cur.RoomID)
 	d.mu.Unlock()
 	if err != nil {
 		return uiState{}, err
 	}
-	st := uiState{Room: d.room, RoomName: d.room, SelfPeerID: d.id.PeerID, Peers: d.peerStatus()}
+	st := uiState{Room: cur.RoomID, RoomName: cur.RoomName, SelfPeerID: d.id.PeerID, Peers: d.peerStatus()}
 	for _, e := range evs {
 		ts := e.Timestamp
 		if t, err := time.Parse(time.RFC3339Nano, e.Timestamp); err == nil {

@@ -33,6 +33,9 @@ type syncRequest struct {
 	Timestamp string `json:"timestamp"`
 	Nonce     string `json:"nonce"`
 	Signature string `json:"signature"`
+	// Endpoint is where the caller listens. Synchronisation is a pull, so a peer
+	// that never says where it is can be read from and never read.
+	Endpoint string `json:"endpoint,omitempty"`
 }
 
 type syncResponse struct {
@@ -50,18 +53,32 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	// Establish who is asking before answering anything. A room's conversation is
-	// not public, and until now any host that could reach this port could read it.
-	if err := d.verifyRequest(req); err != nil {
-		log.Printf("sync: refused a request — %v", err)
+	// A request names the room it wants. A daemon serving several cannot infer one,
+	// and inferring one was how a single-room daemon avoided asking.
+	room, ok := d.members.FindRoom(req.Room)
+	if !ok {
+		// Do not distinguish "no such room" from "not a guest": both answers are
+		// the same to anyone entitled to neither, and one of them is a disclosure.
 		http.Error(w, "unauthenticated", http.StatusUnauthorized)
 		return
 	}
-	if req.Room != d.room {
-		http.Error(w, "unknown room", http.StatusNotFound)
+	if err := d.verifyRequest(req, room.RoomID); err != nil {
+		log.Printf("sync: refused a request for %s — %v", room.RoomName, err)
+		http.Error(w, "unauthenticated", http.StatusUnauthorized)
 		return
 	}
-	evs, err := d.store.EventsSince(d.room, req.Have)
+	// A guest that tells us where it listens becomes reachable, which is what
+	// makes the exchange mutual rather than one peer reading another.
+	if req.Endpoint != "" {
+		_ = d.members.AddRoomPeer(room.RoomID, req.Endpoint)
+	}
+
+	store, err := d.storeFor(room.RoomID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	evs, err := store.EventsSince(room.RoomID, req.Have)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -70,7 +87,7 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 	for _, e := range evs {
 		out = append(out, toWire(e))
 	}
-	writeJSON(w, syncResponse{Protocol: wireVersion, Room: d.room, Events: out})
+	writeJSON(w, syncResponse{Protocol: wireVersion, Room: room.RoomName, Events: out})
 }
 
 func peerList() []string {
@@ -90,13 +107,10 @@ func peerList() []string {
 // RunSync polls each configured peer. A failed poll is not an error condition:
 // peers are expected to be absent, and the next round recovers whatever was
 // missed (§26).
-func (d *Daemon) RunSync(peers []string, every time.Duration) {
-	if len(peers) == 0 {
-		return
-	}
-	log.Printf("sync: polling %d peer(s) every %s", len(peers), every)
+func (d *Daemon) RunSync(_ []string, every time.Duration) {
 	client := &http.Client{Timeout: 5 * time.Second}
 	for {
+		peers := d.syncTargets() // re-read: a room joined since last round has peers
 		for _, addr := range peers {
 			if n, err := d.pullFrom(client, addr); err != nil {
 				log.Printf("sync: %s unreachable (%v)", addr, err)
@@ -109,19 +123,65 @@ func (d *Daemon) RunSync(peers []string, every time.Duration) {
 }
 
 func (d *Daemon) pullFrom(client *http.Client, addr string) (int, error) {
+	rooms, err := d.members.Rooms()
+	if err != nil {
+		return 0, err
+	}
+	total := 0
+	for _, r := range rooms {
+		n, err := d.pullRoom(client, addr, r)
+		if err != nil {
+			return total, err
+		}
+		total += n
+	}
+	return total, nil
+}
+
+// syncTargets is every address worth asking: those configured for this machine,
+// and those each room was joined through. A room carries its own peers because
+// reachability is a property of a room's membership, not of the daemon.
+func (d *Daemon) syncTargets() []string {
+	seen := map[string]bool{}
+	var out []string
+	add := func(a string) {
+		if a != "" && !seen[a] {
+			seen[a] = true
+			out = append(out, a)
+		}
+	}
+	for _, a := range peerList() {
+		add(a)
+	}
+	if rooms, err := d.members.Rooms(); err == nil {
+		for _, r := range rooms {
+			for _, a := range d.members.RoomPeers(r.RoomID) {
+				add(a)
+			}
+		}
+	}
+	return out
+}
+
+func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, error) {
+	store, err := d.storeFor(room.RoomID)
+	if err != nil {
+		return 0, err
+	}
 	d.mu.Lock()
-	have, err := d.store.SyncState(d.room)
+	have, err := store.SyncState(room.RoomID)
 	d.mu.Unlock()
 	if err != nil {
 		return 0, err
 	}
-	ts, nonce, sig, err := signRequest(d.id, d.room)
+	ts, nonce, sig, err := signRequest(d.id, room.RoomName, peerAddr())
 	if err != nil {
 		return 0, err
 	}
 	body, _ := json.Marshal(syncRequest{
-		Protocol: wireVersion, Room: d.room, Have: have,
+		Protocol: wireVersion, Room: room.RoomName, Have: have,
 		PeerID: d.id.PeerID, Timestamp: ts, Nonce: nonce, Signature: sig,
+		Endpoint: peerAddr(),
 	})
 	resp, err := client.Post("http://"+addr+"/sync", "application/json", bytes.NewReader(body))
 	if err != nil {
@@ -129,7 +189,9 @@ func (d *Daemon) pullFrom(client *http.Client, addr string) (int, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusUnauthorized {
-		return 0, fmt.Errorf("peer refused our credentials")
+		// Not a guest there, or no such room. Both are ordinary when a peer hosts
+		// rooms we are not in, so this is not an error worth repeating every second.
+		return 0, nil
 	}
 
 	var out syncResponse
@@ -167,7 +229,7 @@ func (d *Daemon) pullFrom(client *http.Client, addr string) (int, error) {
 
 		// Nothing below rewrites peerId, peerSequence, or eventId; doing so would
 		// invalidate the signature, which is now how that rule is enforced.
-		res, err := d.store.Insert(&ev)
+		res, err := store.Insert(&ev)
 		if err != nil {
 			return stored, err
 		}

@@ -4,6 +4,25 @@ import (
 	"testing"
 )
 
+// testDaemon builds a daemon the way the real one is now built: no room of its
+// own, a membership store, and rooms opened on demand.
+func testDaemon(t *testing.T) (*Daemon, Room) {
+	t.Helper()
+	m := testMembership(t)
+	id := testIdentity(t)
+	room, err := m.CreateRoom(id.PeerID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := m.SetCurrentRoom(room.RoomID); err != nil {
+		t.Fatal(err)
+	}
+	d := &Daemon{id: id, members: m}
+	t.Cleanup(d.closeStores)
+	return d, room
+}
+
+
 func testMembership(t *testing.T) *Membership {
 	t.Helper()
 	t.Setenv("HOME", t.TempDir())

@@ -22,12 +22,16 @@ const (
 )
 
 type Daemon struct {
-	store         *Store
 	id            *Identity
-	room          string
-	roomID        string
 	members       *Membership
 	claudeVersion string
+
+	// One store per room, opened on first use. The daemon is the machine's local
+	// service, not a room: §5 has it serving several concurrently, and a session
+	// says which room it is in rather than a daemon deciding for every session on
+	// the machine.
+	stores   map[string]*Store
+	storesMu sync.Mutex
 
 	subs    map[chan struct{}]bool
 	subsMu  sync.Mutex
@@ -82,7 +86,40 @@ func (d *Daemon) PeerRoutes() *http.ServeMux {
 }
 
 func (d *Daemon) health(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, map[string]any{"ok": true, "room": d.room, "peerId": d.id.PeerID})
+	cur, ok := d.members.CurrentRoom()
+	room := ""
+	if ok {
+		room = cur.RoomName
+	}
+	writeJSON(w, map[string]any{"ok": true, "room": room, "peerId": d.id.PeerID})
+}
+
+// storeFor opens a room's database on demand and keeps it. A daemon that served
+// one room could open it at startup; one that serves many cannot know which it
+// will need.
+func (d *Daemon) storeFor(roomID string) (*Store, error) {
+	d.storesMu.Lock()
+	defer d.storesMu.Unlock()
+	if d.stores == nil {
+		d.stores = map[string]*Store{}
+	}
+	if s, ok := d.stores[roomID]; ok {
+		return s, nil
+	}
+	s, err := OpenStore(roomID)
+	if err != nil {
+		return nil, err
+	}
+	d.stores[roomID] = s
+	return s, nil
+}
+
+func (d *Daemon) closeStores() {
+	d.storesMu.Lock()
+	defer d.storesMu.Unlock()
+	for _, s := range d.stores {
+		_ = s.Close()
+	}
 }
 
 // handlePrompt captures the submitted prompt (§14) and returns any unseen
@@ -97,15 +134,29 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	// Read the unseen set BEFORE appending, so the local user's own prompt is
-	// never echoed back into their own context.
-	pending, err := d.store.UndeliveredFor(d.room, req.SessionID)
+	// Which room this belongs to is a property of the session, not of the daemon.
+	// A session in no room is an ordinary Claude Code session: nothing captured,
+	// nothing injected, nothing shared (§12a).
+	room, ok := d.members.RoomForSession(req.SessionID)
+	if !ok {
+		writeJSON(w, map[string]any{"context": ""})
+		return
+	}
+	store, err := d.storeFor(room.RoomID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if _, err := d.store.Append(d.id, d.room, req.SessionID, EventUserPrompt, req.Prompt,
+	// Read the unseen set BEFORE appending, so the local user's own prompt is
+	// never echoed back into their own context.
+	pending, err := store.UndeliveredFor(room.RoomID, req.SessionID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if _, err := store.Append(d.id, room.RoomID, req.SessionID, EventUserPrompt, req.Prompt,
 		map[string]any{"cwd": req.CWD, "promptId": req.PromptID}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -116,14 +167,19 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 	// would lose the context permanently and silently. Confirmation happens at
 	// Stop, from evidence in the transcript.
 	text := FormatTeamContext(pending)
-	if err := d.store.RecordPending(req.PromptID, req.SessionID, pending, text); err != nil {
+	if err := store.RecordPending(req.PromptID, req.SessionID, pending, text); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	_ = d.store.PrunePending(req.SessionID, maxPendingPerSession)
+	_ = store.PrunePending(req.SessionID, maxPendingPerSession)
+	if len(pending) > 0 {
+		// Once teammate context has been offered, this session cannot be moved to
+		// another room: injected context cannot be withdrawn (§12a).
+		_ = d.members.MarkInjected(req.SessionID)
+	}
 
 	d.notify()
-	log.Printf("USER_PROMPT session=%.8s offered=%d events", req.SessionID, len(pending))
+	log.Printf("USER_PROMPT room=%s session=%.8s offered=%d events", room.RoomName, req.SessionID, len(pending))
 	writeJSON(w, map[string]any{"context": text})
 }
 
@@ -139,14 +195,24 @@ func (d *Daemon) handleStop(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	d.confirmDelivery(req)
+	room, ok := d.members.RoomForSession(req.SessionID)
+	if !ok {
+		writeJSON(w, map[string]any{"stored": false})
+		return
+	}
+	store, serr := d.storeFor(room.RoomID)
+	if serr != nil {
+		http.Error(w, serr.Error(), http.StatusInternalServerError)
+		return
+	}
+	d.confirmDelivery(store, req)
 	if strings.TrimSpace(turn.Text) == "" {
 		writeJSON(w, map[string]any{"stored": false})
 		return
 	}
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if _, err := d.store.Append(d.id, d.room, req.SessionID, EventAssistantMessage, turn.Text,
+	if _, err := store.Append(d.id, room.RoomID, req.SessionID, EventAssistantMessage, turn.Text,
 		map[string]any{"toolCalls": len(turn.ToolCalls), "tools": turn.ToolCalls}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -159,7 +225,7 @@ func (d *Daemon) handleStop(w http.ResponseWriter, r *http.Request) {
 
 // confirmDelivery derives §19 delivery state from what the transcript shows
 // Claude actually received, rather than from the fact that a hook was called.
-func (d *Daemon) confirmDelivery(req stopReq) {
+func (d *Daemon) confirmDelivery(store *Store, req stopReq) {
 	blocks, err := InjectedBlocks(req.TranscriptPath)
 	if err != nil {
 		log.Printf("delivery: transcript unreadable (%v); nothing confirmed", err)
@@ -178,13 +244,13 @@ func (d *Daemon) confirmDelivery(req stopReq) {
 		// leave the events pending: they will be re-offered next prompt, which
 		// is noisy and self-announcing rather than silent and lossy.
 		if !BehaviorKnownBroken(d.claudeVersion, "B20") {
-			if n, _ := d.store.PendingCount(req.SessionID); n > 0 {
+			if n, _ := store.PendingCount(req.SessionID); n > 0 {
 				log.Printf("delivery: no injection evidence in session %.8s (%d pending); re-offering. If this repeats, run `claude-team doctor` (B20)",
 					req.SessionID, n)
 			}
 			return
 		}
-		n, err := d.store.CommitPending(req.SessionID, req.PromptID)
+		n, err := store.CommitPending(req.SessionID, req.PromptID)
 		if err != nil {
 			log.Printf("delivery: fallback commit failed: %v", err)
 			return
@@ -199,7 +265,7 @@ func (d *Daemon) confirmDelivery(req stopReq) {
 	for i, b := range blocks {
 		hashes[i] = HashBlock(b)
 	}
-	n, err := d.store.ConfirmDelivered(req.SessionID, hashes)
+	n, err := store.ConfirmDelivered(req.SessionID, hashes)
 	if err != nil {
 		log.Printf("delivery: confirmation failed: %v", err)
 		return
@@ -210,12 +276,22 @@ func (d *Daemon) confirmDelivery(req stopReq) {
 }
 
 func (d *Daemon) handleEvents(w http.ResponseWriter, r *http.Request) {
-	evs, err := d.store.ListRoom(d.room)
+	cur, ok := d.members.CurrentRoom()
+	if !ok {
+		writeJSON(w, map[string]any{"room": "", "events": []Event{}})
+		return
+	}
+	store, err := d.storeFor(cur.RoomID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, map[string]any{"room": d.room, "events": evs})
+	evs, err := store.ListRoom(cur.RoomID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, map[string]any{"room": cur.RoomName, "events": evs})
 }
 
 // FormatTeamContext renders teammate turns in the explicitly attributed form
