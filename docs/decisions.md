@@ -1580,3 +1580,66 @@ inference. If Claude Code supports it, that is a direct route to violating §3.7
 peer's daemon could cause inference in an interactive session by way of a server.
 Whether Claude Code implements sampling was not tested. Any MCP server this project
 ships must not expose one.
+
+---
+
+## D-037 — Claude Code is launched and used unchanged
+
+**Date:** 2026-09-17 · **Status:** active · **Generalises** D-034
+
+**Context.** D-034 ruled out a pseudo-terminal wrapper by enumerating its costs:
+it replaces the entry point, reaches only terminal users, and needs a second
+implementation on Windows. That reasoning was correct and too specific — it had to
+be re-derived for each new proposal, and it was derived *after* a prototype had
+already been built.
+
+**Decision.** State it as a principle instead. A developer starts and uses Claude
+Code exactly as they do today; this system installs *into* it, never *around* it.
+The only things a participant installs are things Claude Code already loads: hooks,
+skills, MCP servers, and whatever else it accepts.
+
+The value is that it applies without argument. If a proposal requires starting
+Claude Code differently, installing something it does not already load, or
+understanding how it renders — it is out, and no cost-benefit discussion is needed.
+Applied earlier, it would have stopped the wrapper before anything was written.
+
+**What it buys.** Claude Code is a terminal program, a desktop application, and an
+editor extension. A system extending it through its own mechanisms works on all of
+them without knowing any of them exist. A system wrapping its process works on one
+and cannot be made to work on the others. The constraint also keeps terminal
+emulation, ConPTY, editor terminals, shell integration, and every future Anthropic
+surface out of this project's responsibility.
+
+**The consequence that must be accepted, not escaped.** Claude Code's extension
+points all deliver to the model — hooks supply context, skills supply instructions,
+MCP servers supply capability — and each reaches a person only through what the
+model then says. Confirmed independently three times: D-033 (hooks display nothing),
+D-036 (MCP logging is never rendered), and skills being markdown instructions rather
+than programs.
+
+So conversation semantics must work everywhere and do, being model-facing, while
+presentation is best effort. A view *outside* the session remains permitted: it is a
+separate program a developer may run, not a change to how they start Claude Code.
+What is forbidden is taking ownership of Claude Code in order to draw inside it.
+
+**On searching for an undocumented display seam.** Proposed, and declined. The
+installed artifact is a native binary, so there is no source to read; "Channels"
+does not appear in this version; and the plugin surface is packaging — `claude
+plugin details` reports a *projected token cost*, which confirms its components are
+model-facing.
+
+More decisively, a seam found that way would be a worse dependency than the wrapper,
+not a better one: undocumented, unversioned, and unverifiable by the behaviour
+registry, since visual correctness needs an observer rather than an assertion. "Find
+an internal seam" and "do not take ownership of Claude Code" are in tension, and the
+first loses.
+
+**Preferred instead, if ambient awareness is wanted.** The daemon can raise an
+operating-system notification directly — no Claude Code involvement, nothing to
+break on upgrade, and it works on every surface because it never touches any of
+them. That yields the signal ambiently and the content on demand, which is what the
+extension surface can actually support.
+
+If a display primitive is ever wanted from Anthropic, the request is small and
+already well-specified here: append a display-only message to the current session,
+without scheduling inference — §3.7 states that second half precisely.

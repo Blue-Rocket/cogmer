@@ -16,15 +16,22 @@ re-attempt it as a display channel. If an MCP server is ever shipped here for an
 reason, it must not expose *sampling* — that would let a peer cause inference in an
 interactive session, violating §3.7.
 
-## A view sits beside a session, never around it (D-034)
+## Claude Code is launched and used unchanged (§3.8)
 
-Claude Code shows nothing a hook writes (D-033), so ambient display needs an outside
-view. **Do not wrap `claude` in a pseudo-terminal.** It replaces the entry point,
-reaches only terminal users — Claude Code is also a desktop app, a web app, and
-VS Code/JetBrains extensions — and needs a second implementation on Windows.
+The single test to apply to any proposal. A developer starts and uses Claude Code
+**exactly as today**; this installs *into* it, never *around* it. The only things
+installed are things it already loads — hooks, skills, MCP servers.
 
-A standalone view in a split pane has none of those problems and stays additive: the
-only thing installed remains the hooks Claude Code already loads.
+Out, without further discussion: anything requiring a different launch command,
+anything requiring an install Claude Code does not already load, anything requiring
+knowledge of how it renders. That rules out the PTY wrapper (D-034) on principle
+rather than on a cost tally.
+
+**Accept the consequence.** Every extension point delivers to the *model*; a person
+sees only what the model then says (D-033, D-036). So semantics work everywhere and
+presentation is best effort. A view *outside* the session is fine — it is a separate
+program, not a change to how Claude Code starts. For ambient awareness prefer an OS
+notification from the daemon: no Claude Code involvement, nothing to break.
 
 ## Rooms are session-scoped (D-015)
 

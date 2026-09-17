@@ -227,6 +227,35 @@ What must hold either way is that no such run becomes the interactive session's 
 
 ---
 
+## 3.8 Claude Code is launched and used unchanged
+
+A developer starts Claude Code exactly as they do today, and uses it exactly as they do today. This system is installed *into* it and never *around* it.
+
+The only things a participant installs are things Claude Code already loads on its own: hooks, skills, MCP servers, and whatever else it accepts as an extension. Nothing replaces the command, wraps the process, interposes a terminal, or patches the application.
+
+This is a constraint on the product boundary before it is a technical one. The alternative — shipping an alternate way to launch Claude Code — makes terminal emulation, pseudo-terminals on each operating system, editor terminals, shell integration, and every surface Anthropic adds in future into this project's responsibility. None of that is this project's problem, and none of it should become so.
+
+It also buys reach that cannot be bought any other way. Claude Code is a terminal program, a desktop application, and an editor extension. A system that extends it through its own mechanisms works on all of them without knowing any of them exist. A system that wraps its process works on one, and cannot be made to work on the others.
+
+The constraint is useful precisely because it can be applied without argument:
+
+- if a proposal requires a developer to start Claude Code differently, it is out;  
+- if it requires installing something Claude Code does not already load, it is out;  
+- if it requires understanding how Claude Code renders, it is out.
+
+### Consequence: not everything is equally achievable
+
+Claude Code's extension points deliver to the model. Hooks supply context, skills supply instructions, MCP servers supply capability — and each reaches a person only through what the model then says.
+
+So the two halves of this system are not equally served by the constraint:
+
+- **conversation semantics** — capture, synchronization, and context injection — must work everywhere, and do, because they are model-facing;  
+- **presentation** — a developer seeing a teammate's turn arrive — is best effort, because nothing in the extension surface displays anything.
+
+Accept the asymmetry rather than escaping it. A view outside the session is permitted and does not violate this principle: it is a separate program a developer may run, not a change to how they start Claude Code. What is not permitted is taking ownership of Claude Code in order to draw inside it.
+
+---
+
 # 4\. Initial Networking Strategy
 
 ## No network provider is required
