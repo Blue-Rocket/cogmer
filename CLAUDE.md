@@ -17,6 +17,16 @@ rejected as duplicate injection for no benefit.
 
 Phase 1 is unblocked but not started.
 
+## Before proposing a change to how any of this works
+
+Read `docs/decisions.md`. It records what was decided, and — more usefully — what
+was **rejected and why**. Several awkward-looking choices are load-bearing:
+`mergeTail` is not a plain append on purpose, turn segmentation is positional on
+purpose, and the compaction watermark is deliberately left alone. Each entry has a
+"Revisit when" naming the check that would invalidate it.
+
+Add an entry whenever a real alternative was weighed. Never renumber; supersede.
+
 ## The behavior registry — read this before changing assumptions
 
 `cmd/claude-team/behaviors.go` records every Claude Code behavior this project

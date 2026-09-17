@@ -65,6 +65,12 @@ CLAUDE_TEAM_ROOM=demo ./bin/claude-team log
 `CLAUDE_TEAM_ROOM` overrides the room; `CLAUDE_TEAM_ADDR` the daemon address;
 `CLAUDE_TEAM_PREFLIGHT=off` skips behavior checks on new rooms.
 
+## Why things are the way they are
+
+[`docs/decisions.md`](docs/decisions.md) — 13 decisions with the alternatives
+rejected and why, each tied to the check that would invalidate it. Read it before
+proposing a simplification; some of the awkwardness is deliberate.
+
 ## Behavior checks
 
 This project depends on ~19 **undocumented** Claude Code behaviors — how hooks
