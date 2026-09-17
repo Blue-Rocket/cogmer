@@ -16,6 +16,14 @@ re-attempt it as a display channel. If an MCP server is ever shipped here for an
 reason, it must not expose *sampling* — that would let a peer cause inference in an
 interactive session, violating §3.7.
 
+## One renderer until it has been used (D-039)
+
+The browser view is built; nothing further is. **Do not build a terminal view or OS
+notifications yet** — what a view should be is currently all reasoning, and use will
+settle questions argument cannot: glanced at or forgotten, watched or consulted,
+whether arrival needs announcing. Solo use answers the ergonomic half without a
+second participant.
+
 ## Claude Code is launched and used unchanged (§3.8)
 
 The single test to apply to any proposal. A developer starts and uses Claude Code

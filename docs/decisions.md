@@ -1684,3 +1684,35 @@ the room cannot be shown inside a session. It opens with why the room belongs
 outside one, and treats the constraint as agreeing with the design rather than
 causing it. The distinction matters for anyone reading later: a reader who believes
 this is a workaround will try to undo it the moment an in-session display appears.
+
+---
+
+## D-039 — One renderer until it has been used
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Context.** D-038 established that the room belongs outside the session, which made
+two further renderers look attractive: a terminal view for a pane beside the
+session, and an operating-system notification for ambient arrival.
+
+**Decision.** Build neither yet. The browser view exists; nobody has worked with it.
+
+**Why this order.** Everything now known about what a view should be is reasoning.
+The questions that decide the next renderer cannot be answered by more of it: whether
+glancing at a second window is acceptable or whether it is one window too many;
+whether a room is watched continuously or consulted occasionally; whether arrival
+needs announcing at all, or whether noticing on the next glance is enough. Each has a
+different answer for a pair than for four people, and none is knowable in advance.
+
+A second renderer built now would encode a guess and then have to be maintained
+whether or not the guess held.
+
+**What using it will settle.** Solo use is sufficient to start: a developer watching
+their own turns appear tests readability, live update, and whether a separate window
+is glanced at or forgotten — without needing a second participant. The
+collaboration-specific questions need a pair, but the ergonomic ones do not.
+
+**Revisit when** there is experience to report. The likely outcomes are that the
+browser is fine and nothing more is needed; that it is right but wants announcing,
+making the notification next; or that a second window is not consulted at all, making
+the terminal pane next. Those lead to different work, which is the reason to wait.
