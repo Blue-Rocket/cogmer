@@ -1351,3 +1351,56 @@ to invalidate anything.
 - *Leave the order implicit and keep working by judgement* — that is what produced a
   plan document contradicting the work, and it hid the UI gap for the length of the
   project.
+
+---
+
+## D-033 — The room cannot be displayed inside Claude Code; asking is the free affordance
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Context.** §17 specified a browser at `localhost`, and a browser was built to it.
+That turned out not to match what was wanted: the expectation was that the whole
+experience lived inside the Claude Code session. Worth testing rather than
+arguing, since a hook already pulls the teammate's turns — perhaps it could show
+them too.
+
+**Finding: it cannot.** Tested directly. A hook's standard output becomes context
+for the model and never appears on screen. Standard error is not surfaced. Writing
+to `/dev/tty` is not surfaced. Confirmed from the other side by an interactive
+session: injection landed — the transcript holds the attachment, and the model
+answered questions about the teammate's conversation in detail — while the
+developer saw nothing but Claude's reply.
+
+Claude Code owns its display. No arrangement of hooks produces an ambient view
+inside a session, and the specification now says so rather than leaving someone to
+rediscover it.
+
+**What the test surfaced that was worth more than the answer.** A developer can
+simply *ask*: "what is the team discussing?" gets a full answer — who said what, and
+that they are unverified — from context already injected. It needs no code, no view,
+and no protocol. For a pair on one problem it answers most of what a view would.
+
+It also demonstrated D-021 reaching the person it was for. The `unverified` marker,
+added so a model would not treat a display name as fact, was relayed to the
+developer unprompted in the model's own words. An attribution caveat travelling from
+the wire to a human without a UI in between is the design working end to end.
+
+**Decision.** §17 no longer prescribes a browser. It states that the room cannot be
+shown inside the session, names asking as the affordance that already exists, and
+treats a terminal view and a browser view as different moments rather than
+competitors — one for glancing at without leaving the keyboard, one for reading a
+long exchange properly. Both read only from the local daemon, which is what permits
+more than one.
+
+**Rejected.**
+- *Making the injected block readable so it doubles as the display* — the premise
+  was that the block is shown. It is not.
+- *Writing to the terminal from a hook* — tested; not surfaced, and it would
+  contend with Claude Code's own rendering even if it were.
+- *Treating the browser as the answer* — it is a good way to read a long exchange
+  and a poor way to stay aware while working, which is what was actually being
+  asked for.
+
+**Revisit if** Claude Code begins surfacing hook output. That would make an ambient
+in-session view possible and is worth noticing; it cannot be checked automatically,
+since it requires a terminal and an observer.

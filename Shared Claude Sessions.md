@@ -1144,13 +1144,36 @@ Report the two separately wherever propagation is described. A system that quote
 
 # 17\. Shared Conversation UI
 
-Each developer opens their own local UI:
+## The room cannot be shown inside Claude Code
+
+Established by testing rather than assumed. A hook's output reaches the model and never reaches the person: standard output becomes context, and neither standard error nor a direct write to the controlling terminal is surfaced. Claude Code owns its display, and nothing a hook does appears in it.
+
+So a developer has no ambient view of the room from within their session, and no arrangement of hooks will produce one.
+
+Two affordances remain, and they are different in kind.
+
+## Asking
+
+A developer can ask their own Claude what the room has been discussing, and it will answer from the context already injected — naming who said what, and which of them are unverified.
+
+This costs nothing to provide; it follows from injection working at all. It is a pull: it tells a developer what they thought to ask about, and never that something has arrived.
+
+Do not overlook it because it required no building. For a pair working on one problem, "what has the team found?" answers most of what a view would.
+
+## Watching
+
+Ambient awareness — seeing a teammate's turn arrive without asking — requires a view outside the Claude Code session.
+
+Two forms, and they are not alternatives so much as different moments:
+
+- a terminal view, run beside the session, for glancing at without leaving the keyboard;  
+- a browser view, for reading a long exchange properly, with code and formatting.
+
+Both read only from the local daemon, which is what allows more than one to exist. Neither is required for the system to function: a developer who wants neither still has injection and asking.
 
 ```
 http://localhost:4782
 ```
-
-The UI reads only from the local daemon.
 
 Because peers synchronize their event stores, each developer sees approximately the same room.
 
