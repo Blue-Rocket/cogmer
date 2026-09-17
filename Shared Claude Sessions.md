@@ -88,13 +88,16 @@ Claude Code should continue functioning normally if:
 
 ## 3.2 Replicated rooms
 
-A room is a replicated event stream.
+A room is a replicated event stream shared by a set of linked Claude Code sessions.
 
-Example:
+A room is identified by a generated identifier. It is not named after, derived from, or otherwise bound to a project, repository, or working directory.
 
 ```
-room: verantid-remote-idv
+roomId: r-7f3c9a2e
+label:  sessionlambda-timeout
 ```
+
+The label exists for display. Nothing resolves a room from a directory.
 
 David may locally have:
 
@@ -163,6 +166,29 @@ Each developer retains:
 Synchronization occurs around those sessions.
 
 Do not attempt to share Claude Code session internals between machines.
+
+---
+
+## 3.6 Session-scoped rooms
+
+A room exists for as long as the sessions that joined it.
+
+Membership is held by a Claude Code session, identified by its session ID. A room is created by one peer, joined by others through an explicit invitation, and closed when its last member session ends.
+
+There is no standing room that developers drift into and out of over weeks.
+
+Consequences:
+
+- a room's history is bounded by the work that produced it;  
+- a developer beginning a new Claude Code session creates a new room or is invited to one, rather than resuming an old room;  
+- nothing about a room is inferred from a repository, directory, or project;  
+- joining is always a deliberate act by every participant.
+
+A resumed Claude Code session rejoins the room it belonged to, because the Claude session ID survives resumption.
+
+Membership is what ends. The record is not discarded; a closed room is retained as an archive that may be read but never rejoined.
+
+This bounds several problems that an indefinitely-lived room creates. Unseen conversation cannot accumulate beyond the pairing that produced it. A session joining late can be given the room from its beginning rather than a truncated tail. And because a room is never derived from a directory, a developer cannot inadvertently publish one project's conversation into a room opened for another.
 
 ---
 
@@ -242,10 +268,15 @@ The daemon is responsible for:
 - capturing local events;  
 - storing events;  
 - broadcasting events to the local UI;  
-- discovering/connecting to peers;  
+- connecting to peers named by an invitation;  
 - exchanging missing events;  
 - deduplicating events;  
-- providing unseen team context to Claude hooks.
+- providing unseen team context to Claude hooks;  
+- creating, joining, and closing rooms;  
+- tracking which sessions are members of which room;  
+- archiving a room once its last member session ends.
+
+A single daemon serves several rooms concurrently. Every request identifies the room it concerns; the daemon never infers one.
 
 ---
 
@@ -277,7 +308,7 @@ Example:
   "userDisplayName": "David",
   "machineId": "davids-macbook",
   "claudeSessionId": "...",
-  "roomId": "verantid-remote-idv"
+  "roomId": "r-7f3c9a2e"
 }
 ```
 
@@ -330,7 +361,7 @@ Example event:
   "eventId": "01K5...",
   "peerId": "david-peer-id",
   "peerSequence": 1827,
-  "roomId": "verantid-remote-idv",
+  "roomId": "r-7f3c9a2e",
   "timestamp": "...",
   "userId": "david",
   "userDisplayName": "David",
@@ -393,7 +424,7 @@ Each daemon maintains its knowledge of every peer.
 Example:
 
 ```
-Room: verantid-remote-idv
+Room: r-7f3c9a2e
 
 Known state:
 
@@ -451,11 +482,12 @@ This means synchronization works after:
 - temporary network loss;  
 - laptop sleep;  
 - daemon restart;  
-- several hours offline;  
-- working on an airplane;  
-- switching networks.
+- switching networks;  
+- a member session being resumed.
 
 The system should converge automatically.
+
+Because a room lives only as long as its member sessions, synchronization reconciles interruptions within an active pairing. It is not required to reconcile weeks of divergence, and the anti-entropy mechanism should not be designed as though it were.
 
 ---
 
@@ -494,21 +526,26 @@ Conversation events themselves should remain immutable.
 
 ---
 
-# 12\. Peer Discovery
+# 12\. Session Pairing
 
-For the initial prototype, peer configuration may be explicit.
+A room is formed by invitation, not by configuration.
 
-Example:
+One peer creates a room and produces an invitation. Every other participant presents that invitation to join.
 
-```json
-{
-  "room": "verantid-remote-idv",
-  "peers": [
-    "alice-machine",
-    "carlos-machine"
-  ]
-}
+Conceptually:
+
 ```
+David:   claude-team invite
+         → r-7f3c9a2e@davids-macbook:4783
+
+Alice:   claude-team join r-7f3c9a2e@davids-macbook:4783
+```
+
+An invitation must carry enough to identify the room and to reach at least one current member.
+
+The peer that issued an invitation does not thereby become authoritative. It is only the first reachable member, and it may leave while the room continues.
+
+For the initial prototype an invitation may be copied by hand.
 
 Do not spend significant effort on automatic discovery initially.
 
@@ -517,7 +554,7 @@ Later possibilities include:
 - Tailscale device discovery;  
 - mDNS on LAN;  
 - invitation links;  
-- room membership exchange;  
+- membership exchange between joined peers;  
 - libp2p discovery.
 
 ---
@@ -680,7 +717,7 @@ Because peers synchronize their event stores, each developer sees approximately 
 Example:
 
 ```
-VERANTID REMOTE IDV
+SESSIONLAMBDA TIMEOUT  ·  r-7f3c9a2e
 ──────────────────────────────────────
 
 David                         11:42
@@ -792,6 +829,8 @@ I don't think that's actually the problem.
 
 Do not repeatedly inject the entire room.
 
+A session that joins a room already in progress is an exception: it receives the room from its beginning. This is affordable precisely because a room is bounded by the sessions that created it.
+
 ---
 
 # 20\. Attribution in Injected Context
@@ -825,21 +864,23 @@ Claude should understand:
 
 # 21\. Context Window Management
 
-Stored history and injected context are separate concepts.
+Stored history and injected context remain separate concepts.
 
-Each machine may store:
-
-```
-months of room history
-```
-
-while Claude receives:
+A machine may retain many closed-room archives:
 
 ```
-recent unseen relevant conversation
+months of archived rooms
 ```
 
-For the prototype, inject unseen recent events.
+while Claude receives only:
+
+```
+unseen conversation from the room it is a member of
+```
+
+An archive is never injected. Only a live room's conversation is.
+
+Because a room lives only as long as its member sessions, the unseen conversation available for injection is bounded by the pairing that produced it rather than by however long a project has existed. This is the principal reason to scope rooms to sessions.
 
 Set configurable limits based on:
 
@@ -847,7 +888,9 @@ Set configurable limits based on:
 - character count;  
 - estimated token count.
 
-If the unseen conversation exceeds the limit:
+Treat these as a safety valve rather than the ordinary path. Under session-scoped rooms, exceeding them indicates an unusually long or unusually busy pairing, not the normal accumulation of history.
+
+If the limit is exceeded:
 
 ```
 CONTEXT_CATCHUP_REQUIRED
@@ -871,9 +914,15 @@ Conceptually:
 ~/.claude-team/
     identity.json
     rooms/
-        verantid-remote-idv.db
-        bohl-loyalty.db
+        r-7f3c9a2e.db
+    archive/
+        r-1c04be77.db
+        r-4a9f01d3.db
 ```
+
+A room's database moves to the archive when its last member session ends. An archived room is readable and searchable. It is never rejoined, never synchronized, and never injected.
+
+Retaining the archive is what allows membership to be ephemeral without discarding the conversation. Preserving the actual conversation remains a requirement; resuming membership in it does not.
 
 The database should contain:
 
@@ -995,6 +1044,8 @@ E F G H I J            E F G H I J
 
 Neither developer should have to initiate manual reconciliation.
 
+Offline operation is bounded by the room's lifetime. A peer whose session has ended has left the room, and does not rejoin by coming back online; reconciliation applies to members that are still members.
+
 ---
 
 # 27\. Tool Activity
@@ -1027,19 +1078,21 @@ Tool synchronization is secondary to prompt/response synchronization.
 
 # 28\. Configuration
 
-Separate shared project configuration from personal identity.
+A room is never configured by a project. Nothing in a repository, and nothing about a working directory, determines which room a session joins. Rooms are entered by invitation only.
 
-Project configuration might contain:
+Separate personal identity from per-room state.
+
+Per-room state is created when a room is created or joined. It belongs to the daemon, not to any repository, and is not committed anywhere:
 
 ```json
 {
-  "collaboration": {
-    "enabled": true,
-    "room": "verantid-remote-idv",
-    "injectSharedContext": true
-  }
+  "roomId": "r-7f3c9a2e",
+  "label": "sessionlambda-timeout",
+  "injectSharedContext": true
 }
 ```
+
+Disabling `injectSharedContext` makes a room visible to its members as a conversation while placing none of it into any participant's Claude session. This matters because injection carries a teammate's conversation into another developer's session, and therefore to that developer's model provider under their own account.
 
 Personal machine configuration:
 
@@ -1060,7 +1113,10 @@ Peer connectivity configuration should not require committing personal credentia
 Eventually:
 
 ```
-claude-team join verantid-remote-idv
+claude-team invite
+→ r-7f3c9a2e@davids-macbook:4783
+
+claude-team join r-7f3c9a2e@davids-macbook:4783
 claude
 ```
 
@@ -1478,6 +1534,8 @@ Carlos
 ```
 
 ### Searchable history
+
+Across archived rooms, since a live room holds only its own pairing:
 
 ```
 What did we discover about DLDV last Tuesday?

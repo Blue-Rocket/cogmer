@@ -316,3 +316,64 @@ the right way round.
 
 **Revisit when** B20 fires, or if re-offering proves disruptive enough in practice
 that duplicate context costs more than the loss it prevents.
+
+---
+
+## D-015 — Rooms are scoped to sessions, not to projects
+
+**Date:** 2026-09-16 · **Status:** active · **Supersedes** the project-scoped room
+model throughout the specification; **dissolves** A2 in `spec-review.md`
+
+**Context.** A2 found §5, §22 and §28 mutually inconsistent about how a hook call
+resolves to a room, and the proposed fix was a `cwd` → project-config → room
+lookup. That fix was answering the wrong question: it assumed rooms are durable
+things a project owns.
+
+**Decision.** A room is a set of linked Claude Code sessions, identified by a
+generated id, entered by invitation, and closed when its last member session
+ends. Nothing about a room is derived from a directory, repository, or project.
+
+The strongest argument is one the original specification did not make: §21's
+`CONTEXT_CATCHUP_REQUIRED` exists only because rooms outlive sessions. With a
+room that persists for months and a delivery watermark keyed per session, a fresh
+session on Monday faces weeks of unseen events, and the specification's answer was
+to inject a truncated tail and admit the rest was dropped. That is a designed-in
+truncation which only a durable-room model requires. Session-scoped rooms remove
+the condition instead of coping with it, and a late joiner can be given the room
+from its beginning.
+
+Two facts made this cheap. Our implementation was already session-centric —
+delivery keyed on `claudeSessionId`, events carrying it, with only the room *name*
+being project-shaped. And Phase 0a verified that `claudeSessionId` survives both
+`--resume` and compaction, so session-scoped membership is stable across laptop
+sleep and session resumption rather than fragile.
+
+**Split that makes it work:** membership is ephemeral, the record is not. A closed
+room's event log is archived — readable and searchable, never rejoined, never
+synchronized, never injected. This keeps "preserve the actual conversation" at
+no cost while letting membership end cleanly.
+
+**Rejected.**
+- *Project-scoped rooms with `cwd` resolution* (the A2 proposal) — needs a config
+  file, a walk-up rule, a default-off guard, and room-name validation against path
+  traversal, all to infer something that an invitation states outright.
+- *Standing team rooms* — the Slack-shaped model. Appealing, but it is precisely
+  what produces the catch-up problem and A3's exposure, and §30's question is
+  about real-time shared conversation, which it does not need.
+- *Discarding the log when a room closes* — would satisfy "no continuity" more
+  literally while losing conversation the specification requires preserving.
+
+**Cost, stated plainly.** §10 and §26 lose most of their purpose: anti-entropy no
+longer reconciles "several hours offline" or "working on an airplane," only
+interruptions inside a live pairing. §35's durable team memory must be built over
+archives rather than live rooms. Both sections were amended rather than deleted,
+because the machinery is still correct — it simply has far less to do, which
+argues for simplifying Phase 2.
+
+**Open, and deliberately not decided here.** Whether one session may hold
+membership in two rooms at once. If it may, injected context needs per-room
+attribution inside a single context window. The specification currently implies
+one room per session without saying so.
+
+**Revisit when** the experiment in §30 suggests asynchronous catch-up is more
+valuable than bounded context — that is the trade this decision makes.

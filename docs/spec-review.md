@@ -65,6 +65,14 @@ conservative fallback, depending only on behaviors already verified.
 
 ### A2 — Room resolution is undefined, and §5, §22, and §28 disagree
 
+**Resolved, by dissolution — see D-015.** The recommendation below assumed rooms
+are durable project-owned things. They are not: rooms are now scoped to a set of
+linked sessions and entered by invitation, so there is nothing to resolve from a
+working directory. The `cwd` mapping, the config file, the walk-up rule, the
+default-off guard and the room-name traversal check are all unnecessary. The
+original finding is retained because the inconsistency it identified is what
+prompted the model change.
+
 **High.** Three sections describe mutually incompatible shapes:
 
 - §5 — one daemon, one port (`127.0.0.1:4782`)
@@ -85,6 +93,12 @@ resolves each hook call by `cwd`, plus what to do when `cwd` matches no
 configured room (most likely: do nothing, silently, per §3.1).
 
 ### A3 — §25 does not address what injection does with other people's data
+
+**Partially addressed.** §28 now states that injection carries a teammate's
+conversation into another developer's session, and therefore to that developer's
+model provider under their own account, and gives `injectSharedContext` a stated
+purpose. D-015 also makes consent per-pairing and explicit rather than a committed
+repository setting. §25 itself is still silent, so the finding stands.
 
 **High.** §25 correctly identifies that conversation history may contain
 proprietary source, customer information, and pasted credentials, and requires

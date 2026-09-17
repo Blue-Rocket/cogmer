@@ -4,6 +4,17 @@ Prototype from `Shared Claude Sessions.md` — a local-first P2P daemon replicat
 Claude Code conversations between developers. Read that spec before changing
 architecture; section numbers (§7, §19, …) are referenced throughout the code.
 
+## Rooms are session-scoped (D-015)
+
+A room is a set of linked Claude Code sessions with a generated id, entered by
+invitation, closed when its last member session ends. **Nothing derives a room
+from a directory, repository, or project.** Membership ends; the event log is
+archived and may be read, never rejoined.
+
+**The implementation has not caught up with this yet.** `CLAUDE_TEAM_ROOM` selects
+a single room per daemon process, there is no invite, no membership tracking, and
+no archive. That is Phase 1 work; do not treat the current shape as the design.
+
 ## Where things stand
 
 Phase 0 (integration spike) is complete — see `docs/phase0-findings.md`.
