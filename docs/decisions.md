@@ -2067,7 +2067,9 @@ because the situation it papered over no longer arises.
 
 ## D-047 — The fingerprint is the only manual link, and had the least careful encoding
 
-**Date:** 2026-09-17 · **Status:** open — encoding to be changed
+**Date:** 2026-09-17 · **Status:** held — see D-048. The encoding argument below
+stands; it applies to a construction that may be replaced, so the change waits on
+that decision rather than landing ahead of it.
 
 **Context.** Asked what a fingerprint is and what it accomplishes. Demonstrating it
 made the answer sharper than expected.
@@ -2133,3 +2135,99 @@ that is for machines and for pasting, where the alphabet is fine.
 reading a string, and it was given the least design attention of anything in it.
 Where a design has exactly one manual step, that step deserves the most care rather
 than the least.
+
+---
+
+## D-048 — Verification should bind a live exchange, not a standing identifier (ZRTP's SAS)
+
+**Date:** 2026-09-17 · **Status:** accepted in principle — construction to be built in
+Phase 9; D-047 held pending it
+
+**Context.** Tracing the manual steps produced a count: there are **two**. Alice runs
+`whoami` and her identifier reaches David somehow (transfer); David then asks her to
+confirm the fingerprint (confirmation). §12 says transfer is safe "over any channel
+whatsoever, because holding it confers nothing" — true of **confidentiality** and
+silent about **integrity**, which is where the entire risk lives. Nothing is lost when
+an interceptor reads an identifier; everything is lost when one swaps it, which D-047
+demonstrated end to end with zero refusals.
+
+Confirmation only means something across a channel boundary. Alice pasting into Slack
+and David asking in Slack is one step performed twice: same bytes, same path, same
+attacker.
+
+And the two steps collapse into one when done properly — on a call, Alice reads the
+identifier out and transfer and confirmation are a single act. **The two-step shape is
+the asynchronous convenience, not a stronger construction.** It exists because reading
+43 base64 characters aloud is miserable and pasting is not. Worth labelling as an
+ergonomic trade so nobody later defends it on security grounds.
+
+**What ZRTP does.** Two parties agree a fresh Diffie-Hellman over the media path,
+derive a **Short Authentication String** — around 16–20 bits, rendered as words —
+from a hash of the shared secret and both public values, and read it aloud over the
+voice call they are already on. Two properties make that sound at a length we had
+assumed was unusable:
+
+- a **hash commitment** forces each side to fix its contribution before seeing the
+  other's, so a relaying attacker cannot search for a substitution that collides on
+  both sides — he is reduced to one blind guess;
+- the compared value is **fresh**, so there is nothing to precompute against.
+
+Key continuity does the rest: the secret is cached and chained into later calls, so
+the ceremony happens once and a later mismatch is an alarm. That is our known-peers
+list, structurally.
+
+**What it corrects here.** §25 said a short mnemonic "catches an accident and not an
+adversary, because the bits it does not cover are free to differ." The conclusion is
+right for the construction we chose and the reason given was wrong, and the wrong
+reason made the rule look universal. The real line is **offline precomputation versus
+one online guess**:
+
+- a standing identifier can be ground against offline, at a cost of exactly the
+  entropy displayed (D-047 measured it), so it must be compared in full;
+- a committed, freshly randomised value cannot be aimed at in advance, so a short
+  form is sound.
+
+"Render the whole key" is therefore a consequence of having chosen a static
+construction, not a law of the domain. §25 now says so, because as written it
+foreclosed the better option while appearing to rule it out on principle.
+
+**Decision.** Adopt the live-exchange form. **Join is the moment** — both daemons are
+connected and interactive when `claude-team join` runs, so commit/reveal fits there:
+each side commits to a hash of its contribution, both reveal, the string derives from
+both long-term identity keys plus both fresh nonces, and each side prints two or three
+words for the people to compare on the call they are already on.
+
+Three consequences, in order of how much they change:
+
+1. Confirmation costs **two words instead of 43 characters**. The friction that makes
+   people skip it mostly disappears — and disappears for a principled reason rather
+   than by making the same long string prettier.
+2. Transfer stops needing to be trustworthy. What is authenticated is whichever key
+   actually arrived, however it arrived, so §12's "any channel whatsoever" becomes
+   true about integrity as well.
+3. **D-047 is held, not cancelled.** Words beat grouped base64 under either
+   construction, but it is a rendering change to a construction we may not keep, and a
+   two-word SAS makes the question much smaller. Decide the construction first and the
+   rendering falls out. A `verified` flag — which today does not exist anywhere in
+   `membership.go`, so the `unverified` marker is a constant true of every peer
+   forever — should record whichever ceremony is actually built, and is therefore
+   sequenced behind this rather than ahead of it.
+
+**What this does not fix.** Nothing, for two people who have never met. ZRTP rests on
+recognising a voice, which presumes prior acquaintance; §25's "case with no answer"
+survives untouched. This improves the ergonomics of the case that *can* be handled.
+Do not let a cheap ceremony be read as having closed the expensive gap.
+
+**The hazard to implement against.** A short string with unlimited silent retries is
+weak — the attacker simply tries again. What protects it is that failure is
+**conspicuous**: a mismatch must refuse the join, say plainly that something
+intercepted it, and never present itself as a transient error worth repeating. And a
+commitment step implemented incorrectly degrades to a grindable value while still
+looking like a ceremony, producing the confidence without the property. That is worse
+than performing no ceremony at all.
+
+**Revisit when** the construction is built, or if verification is ever wanted at a
+moment when the two peers are **not** simultaneously connected. The short form is
+unavailable there and the full-length comparison of D-047 is the only option, so both
+renderings may need to exist — the live one for joining, the static one for
+confirming a peer after the fact.

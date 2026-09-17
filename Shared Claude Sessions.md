@@ -759,7 +759,7 @@ The joining peer receives the room's `roomId` on admission and uses it from then
 
 ## Knowing a guest before inviting them
 
-Admission by guest list requires that a host already hold the guest's identifier. That is one exchange per person, ever, and it is safe to make over any channel whatsoever:
+Admission by guest list requires that a host already hold the guest's identifier. That is one exchange per person, ever, and nothing about it needs to stay secret:
 
 ```
 Alice:   claude-team whoami
@@ -771,6 +771,8 @@ David:   claude-team allow ed25519:M7Kd…4Fq2
 ```
 
 A public identifier may be pasted into a chat, mailed, printed, or read aloud, because holding it confers nothing. This is what makes a guest list better than a token rather than merely different from one: the thing exchanged out of band is worthless to an interceptor, and it is exchanged once rather than for every meeting.
+
+Read that as a claim about **confidentiality only**. This exchange needs no privacy and it does need **integrity**, and the integrity is not supplied by anything above. An interceptor who reads the identifier learns nothing; an interceptor who **replaces** it is recorded as the guest, under the name the host expected, durably and with nothing appearing wrong. That is the attack §25 exists to answer, and the answer is the verification step described there — not this paragraph. Do not read "safe to send anywhere" as "safe on its own."
 
 Set against what a token requires — something that must stay secret in transit, produced afresh for each first meeting, and impossible to check afterwards — the guest list is less work as well as safer.
 
@@ -1631,7 +1633,11 @@ This does not remove the first exchange. Two peers that have never met must stil
 
 What it removes is every exchange after the first: a key once verified is durable, whereas a secret is spent on use.
 
-That verification should be made against a rendering of the **whole** key, not a sample of it. A short mnemonic drawn from part of an identifier catches an accident and not an adversary, because the bits it does not cover are free to differ. Where a key is compared by people — read aloud, or checked side by side — render all of it, as a sequence of words or grouped digits. A peer name is not that, and must not be offered as though it were.
+That verification should be made against a rendering of the **whole** key. Where a key is compared by people — read aloud, or checked side by side — render all of it, as a sequence of words or grouped digits. A peer name is not that, and must not be offered as though it were.
+
+The reason is narrower than it first appears, and stating it loosely forecloses a better construction. A long-term identifier sits still: an attacker who has intercepted one can grind **offline**, at leisure, for a key of his own whose rendering matches, and the cost is exactly the entropy displayed. Sixteen characters would be beyond reach; three fall in under a second. Rendering all of it is the rule that avoids having to reason about where the threshold lies.
+
+What that argument does *not* establish is that a short string is inherently too weak to compare. It is too weak **for a value an attacker can aim at in advance**. A value derived from a fresh exchange, in which each side commits to its contribution before learning the other's, cannot be aimed at: the attacker must choose blind, gets one guess, and a wrong guess is a mismatch the two people hear. That is a different construction with different arithmetic, and it is what makes a two-word comparison sound elsewhere. See "A short string, if the exchange is live" below.
 
 The two mechanisms therefore compose rather than compete. A single-use secret admits a peer that is not yet known, and being admitted is what makes it known. Between peers that already know each other, no secret is required and none should be demanded.
 
@@ -1659,6 +1665,25 @@ The protection lies entirely in the channel, and in two properties of it rather 
 The second is the one that matters most, and the one most easily overlooked. It is why a voice call works and a second written channel does not: two written channels are both text, and whoever controls the delivery of one may control the other. A voice adds a fact no interception supplies — that this is the colleague, not somebody in their place.
 
 State the requirement accordingly. The channel must be one the identifier did not travel on **and** one on which the other party can be recognised. A rendering compared with a stranger, however carefully, verifies that two parties hold the same key and says nothing about whose it is.
+
+## A short string, if the exchange is live
+
+The comparison described above is expensive to perform honestly. Forty-three characters of base64 read over a telephone is a task people do badly or skip, and skipping it leaves no trace, so the verified entropy is whatever was actually checked rather than whatever was displayed.
+
+ZRTP solves the same problem in the same setting — two people already on a call, wanting to know that nobody sits between them — and solves it with **two words**. It is worth stating why that is sound, because the arithmetic is instructive and because the design is available to us.
+
+Two properties carry it:
+
+- **Commitment.** Each side sends a hash of its contribution before seeing the other's. An attacker relaying between them must fix what he presents to one party before he learns what the other will present, so he cannot search for a substitution whose displayed string collides on both sides. He is reduced to a single blind guess.
+- **Freshness.** The compared value derives from per-exchange randomness, not from a standing identifier. There is nothing to precompute against, because the target does not exist until the exchange is under way.
+
+Together these convert an offline search into one online guess. Where an offline search makes a short string worthless, a single guess at a two-word space is a risk comparable to the rest of the system — and, crucially, a failed guess is not a silent failure. The two people read different words and hear it.
+
+The retry question follows from that and must be answered explicitly: a short string with unlimited silent attempts is weak, because the attacker simply tries again. What protects it is that **failure is conspicuous**. A mismatch must refuse the exchange, must say plainly that something intercepted it, and must not present itself as a transient error worth repeating. An implementation that lets a mismatch be shrugged off and retried has the ceremony without the property.
+
+This bears on where verification should happen. A standing identifier passed by whatever means, then confirmed later, forces the full-length comparison, because by then there is nothing fresh to bind to. An exchange conducted while both peers are connected — which is precisely the moment one joins a room — admits the short form. The second is not merely more convenient; it also removes the requirement that the first channel be trustworthy at all, since what is authenticated is whichever key actually arrived.
+
+Whichever is chosen, a commitment step implemented incorrectly degrades to a grindable value while still looking like a ceremony, which is worse than performing none: it produces the confidence without the property.
 
 ## The case with no answer
 
