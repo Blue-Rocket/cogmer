@@ -218,6 +218,21 @@ identifier and forgets what it issued — which was the precondition for B4.
 Reserve a sequence **before** publishing the event that uses it. The reverse
 publishes a number with no record of it.
 
+## A remote peer never initiates local execution (§3.7)
+
+A received event must **never** cause Claude to run here — no starting a session, no
+resuming one, no scheduling a run. Remote events are stored, displayed, and queued;
+they become context at the next **locally initiated** turn and at no other moment.
+
+This is a security boundary. Claude Code edits files and runs commands, and peer
+identity is not verified, so a path from received data to execution is arbitrary
+execution authorised by whoever can reach the port.
+
+Guarded structurally: `sync.go`, `daemon.go`, `store.go` and `transcript.go` must not
+import `os/exec` or `syscall`, and must not call `RunProbe`/`EnsureVerified`/
+`runDoctor`. A test enforces both. If you need to break either, that is the moment to
+be asked why.
+
 ## Invariants
 
 - **Hooks must never break Claude Code** (§3.1). Every failure path exits 0 with

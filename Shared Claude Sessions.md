@@ -201,6 +201,26 @@ This bounds several problems that an indefinitely-lived room creates. Unseen con
 
 ---
 
+## 3.7 A remote peer never initiates local execution
+
+A remote event must never cause Claude to run in a receiving session.
+
+Remote events are stored, displayed, and queued. They become model context at the receiving session's next **locally initiated** turn, and at no other moment. A peer may place something in front of a developer's Claude; only that developer may cause it to be read.
+
+This is a security boundary before it is an ergonomic one. Claude Code edits files and runs commands. An event that could initiate a turn on a receiving machine is arbitrary execution on that machine, authorised by whoever sent the event — and peer identity is not verified, so that is whoever can reach the port. Nothing else in this design would matter after that.
+
+It is also the developer's own resources. A turn spends their subscription, their context window, and their attention, on their repository. None of that is a teammate's to spend.
+
+The distinction worth holding is between *possible* and *permitted*. A daemon can start a Claude run; the host offers ways to do so. This invariant is therefore a rule rather than an observation, and it constrains work that has not been written yet:
+
+- a peer event must not start a session, background or otherwise;  
+- a peer event must not resume, prompt, or otherwise drive an existing session;  
+- a scheduled or triggered run must originate locally, never from received data.
+
+The local-first principle says a developer's session must survive every peer disappearing. This is its converse: a developer's session must be unaffected by every peer arriving.
+
+---
+
 # 4\. Initial Networking Strategy
 
 ## No network provider is required
@@ -1132,7 +1152,9 @@ This is the one path where pushing earns its cost: a person watching a conversat
 
 ## Daemon to a Claude session
 
-There is no such path.
+There is no such path, and there must not be one.
+
+No mechanism exists to place context into a session already underway. That is a property of the host. That a peer event must never *create* a turn — by starting a session, resuming one, or scheduling a run — is a rule of this system, stated under the architecture principles.
 
 Context reaches a Claude Code session when a prompt is submitted, and at no other moment. A session part-way through a turn cannot be told anything. A turn that runs for minutes will not learn of a teammate's message until it ends and the next prompt begins.
 

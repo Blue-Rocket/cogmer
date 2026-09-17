@@ -1460,3 +1460,52 @@ passthrough is achievable, and the reserved-band technique (shrink the child's
 winsize, set the outer scroll region) avoids rather than solves the
 partially-typed-prompt problem. If the entry-point objection ever stops applying,
 that is the approach.
+
+---
+
+## D-035 — A remote peer never initiates local execution
+
+**Date:** 2026-09-17 · **Status:** active (implementation already conforms)
+
+**Context.** Proposed as an invariant: a remote peer event must not initiate Claude
+execution in a receiving session; remote events are displayed asynchronously and
+queued, becoming model context only at the receiving session's next locally
+initiated turn.
+
+**The implementation already conforms**, and not by design so much as by not having
+written the code. The only path that starts a Claude run is `RunProbe`, reachable
+from `runDoctor` (a typed command) and `EnsureVerified` (daemon startup). The
+remote-event path, `pullFrom`, reaches neither.
+
+**The specification did not state it, and said something weaker that was also
+wrong.** §16 read "Daemon to a Claude session: there is no such path" — descriptive,
+and untrue at the system level. `claude --bg` exists; a daemon could spawn a run on
+receiving an event. The specification documented a limitation of *in-session
+injection* while leaving open exactly what the invariant forbids.
+
+**Decision.** State it as §3.7, an architecture principle rather than an observation,
+because it constrains code that has not been written: no starting a session on a peer
+event, no resuming or driving an existing one, no scheduled run originating from
+received data.
+
+**It is a security boundary before it is an ergonomic one.** Claude Code edits files
+and runs commands. An event that could initiate a turn on a receiving machine is
+arbitrary execution on that machine, authorised by whoever sent the event — and peer
+identity is not verified (D-023), so that is whoever can reach the port. It is also
+the developer's subscription, context window, attention, and repository, none of
+which are a teammate's to spend.
+
+§3.7 is the converse of local-first: that principle says a session must survive every
+peer disappearing; this says a session must be unaffected by every peer arriving.
+
+**Guarded structurally rather than by review.** A test asserts that the files
+handling peer traffic do not import `os/exec` or `syscall`, and do not call the
+probe. Checking imports rather than call graphs is crude, and deliberately so: it
+fails the moment the capability is added to the wrong file, which is when someone
+should be asked to justify it.
+
+**Note on what this forecloses.** Earlier discussion observed that background
+sessions could let a peer's turn trigger a Claude run — "your Claude participates
+while you are at lunch". This invariant rules that out in its automatic form. If it
+is ever wanted, it must be something the local developer starts, not something a
+remote event causes.
