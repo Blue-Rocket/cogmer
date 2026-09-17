@@ -1202,3 +1202,47 @@ because that state is not the same as working normally.
 - *A sequence epoch* — correct, and unnecessary once the counter cannot be lost.
 - *Keeping the counter in the room database with a backup copy elsewhere* — two
   copies that can disagree, and the disagreement is the failure.
+
+---
+
+## D-030 — Two listeners: hooks on loopback, peer sync separately
+
+**Date:** 2026-09-16 · **Status:** active (implemented)
+
+**Context.** Making a pair work across two machines was preferred over a three-peer
+run: transitive relay is nearly free in a pull design, so Phase 6 was unlikely to
+invalidate anything, while two machines still hold real risk — clock skew, real
+partitions, real latency — and are what makes the thing usable at all.
+
+The blocker was small and structural. One listener on `127.0.0.1` served hooks, the
+UI, and synchronization. A second machine could not reach it, and exposing it would
+have exposed the hook API too.
+
+**Decision.** Two listeners. `CLAUDE_TEAM_ADDR` carries hooks and the UI and
+**refuses to bind anything but loopback**. `CLAUDE_TEAM_PEER_ADDR` carries
+synchronization, defaults to loopback, and warns when bound elsewhere.
+
+Separate listeners rather than one mux with a path filter, because the property that
+matters is *which interface can reach an endpoint*, and a filter is a rule someone
+can edit later without seeing what it guarded. Tests assert that neither serves the
+other's routes.
+
+**Why the hook API is the strict one.** Reaching `/hook/prompt` is equivalent to
+being the local developer: it publishes into the room and returns the room's
+conversation. That is not an API to expose under any configuration, so it is refused
+rather than discouraged.
+
+**The peer API is exposed with a warning rather than refused,** because exposing it
+is the entire point of a second machine. The warning states plainly that it is
+unauthenticated and that nothing verifies who connects — true until identity becomes
+cryptographic (D-023). Refusing would block the work; staying silent would imply a
+protection that does not exist.
+
+**Rejected.**
+- *One listener, path filtering* — the boundary becomes a line of code rather than a
+  network interface.
+- *Exposing the peer API by default* — nothing should be reachable until someone
+  decides it should be.
+- *Refusing to expose the peer API until authentication exists* — that is the
+  ordering D-023 warns against: it would mean building identity before ever running
+  across a network, and the network is what the identity is for.

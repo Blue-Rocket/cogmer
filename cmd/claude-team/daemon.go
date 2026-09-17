@@ -45,16 +45,33 @@ type stopReq struct {
 	LastAssistantMessage string `json:"last_assistant_message"`
 }
 
-func (d *Daemon) Routes() *http.ServeMux {
+// LocalRoutes serves Claude Code's hooks and the local UI. It is bound to
+// loopback and must never carry the peer API: the hook endpoints publish into the
+// room and read the conversation back, so reaching them is equivalent to being the
+// local developer (§5, §25).
+func (d *Daemon) LocalRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, map[string]any{"ok": true, "room": d.room, "peerId": d.id.PeerID})
-	})
+	mux.HandleFunc("/healthz", d.health)
 	mux.HandleFunc("/hook/prompt", d.handlePrompt)
 	mux.HandleFunc("/hook/stop", d.handleStop)
 	mux.HandleFunc("/events", d.handleEvents)
+	return mux
+}
+
+// PeerRoutes serves other peers. It carries synchronization and nothing else.
+//
+// The two are separate listeners rather than one mux with a filter, because the
+// distinction that matters is which network interface can reach an endpoint, and
+// a filter is a rule someone can edit without noticing what it guarded.
+func (d *Daemon) PeerRoutes() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", d.health)
 	mux.HandleFunc("/sync", d.handleSync)
 	return mux
+}
+
+func (d *Daemon) health(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, map[string]any{"ok": true, "room": d.room, "peerId": d.id.PeerID})
 }
 
 // handlePrompt captures the submitted prompt (§14) and returns any unseen

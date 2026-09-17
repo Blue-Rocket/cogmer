@@ -569,6 +569,18 @@ peer name and marks the speaker unverified inside the injected text, per §20 an
 D-021. Recorded here because it was a live divergence found by running the system,
 not by reading it.
 
+**C-6. One listener served hooks, UI and sync — fixed.** §5 diagrams a localhost
+interface for Claude Code and the local UI and a separate peer interface, and §25
+requires it. The implementation bound all three to one loopback address, so the
+separation the specification treats as a security boundary did not exist. It was
+also the blocker for two machines: exposing sync would have exposed the hook API,
+which publishes into the room and reads the conversation back.
+
+There are now two listeners. Hooks and UI refuse to bind anything but loopback.
+Peer sync defaults to loopback and warns, when bound elsewhere, that it is reachable
+and unauthenticated — which it is, until D-023 lands. Tests assert that neither
+listener serves the other's routes.
+
 **C-2. Rooms are selected by environment variable.** §12 and §28 describe rooms
 entered by invitation with a guest list. The implementation takes a room name from
 `CLAUDE_TEAM_ROOM` and has no invitation, membership, or guest list. Expected —

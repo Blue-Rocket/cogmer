@@ -14,7 +14,13 @@ import (
 	"time"
 )
 
-const defaultAddr = "127.0.0.1:4782" // localhost only (§25)
+const (
+	// defaultAddr carries hooks and the local UI. Loopback, always (§25).
+	defaultAddr = "127.0.0.1:4782"
+	// defaultPeerAddr carries synchronization. Loopback by default so that
+	// nothing is reachable until someone decides it should be.
+	defaultPeerAddr = "127.0.0.1:4783"
+)
 
 func main() {
 	if len(os.Args) < 2 {
@@ -75,7 +81,8 @@ func usage() {
 
 Environment:
   CLAUDE_TEAM_ROOM        override the active room
-  CLAUDE_TEAM_ADDR        override the daemon address
+  CLAUDE_TEAM_ADDR        hooks and UI address (loopback only, default 127.0.0.1:4782)
+  CLAUDE_TEAM_PEER_ADDR   peer sync address (default 127.0.0.1:4783)
   CLAUDE_TEAM_PREFLIGHT   set to "off" to skip behavior checks on new rooms
   CLAUDE_TEAM_PEERS       comma-separated peer addresses to synchronize with
   CLAUDE_TEAM_SYNC_MS     poll interval in milliseconds (default 1000)
@@ -87,6 +94,26 @@ func addr() string {
 		return a
 	}
 	return defaultAddr
+}
+
+func peerAddr() string {
+	if a := os.Getenv("CLAUDE_TEAM_PEER_ADDR"); a != "" {
+		return a
+	}
+	return defaultPeerAddr
+}
+
+// isLoopback reports whether an address is unreachable from another machine.
+func isLoopback(hostport string) bool {
+	host, _, err := net.SplitHostPort(hostport)
+	if err != nil {
+		return false
+	}
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func syncInterval() time.Duration {
@@ -124,14 +151,37 @@ func runDaemon() {
 	}
 
 	d := &Daemon{store: store, id: id, room: room, claudeVersion: ClaudeVersion()}
-	ln, err := net.Listen("tcp", addr())
+
+	if !isLoopback(addr()) {
+		log.Fatalf("refusing to serve hooks on %s: the hook API publishes into the room "+
+			"and reads the conversation back, so it must stay on loopback (§25)", addr())
+	}
+	local, err := net.Listen("tcp", addr())
 	if err != nil {
 		log.Fatalf("listen: %v", err)
 	}
-	log.Printf("claude-team daemon on http://%s  room=%s  peer=%s (%s)",
-		addr(), room, id.UserDisplayName, id.PeerName)
+	peer, err := net.Listen("tcp", peerAddr())
+	if err != nil {
+		log.Fatalf("listen (peer): %v", err)
+	}
+
+	log.Printf("claude-team daemon  room=%s  peer=%s (%s)", room, id.UserDisplayName, id.PeerName)
+	log.Printf("  hooks and UI  http://%s  (loopback)", addr())
+	log.Printf("  peer sync     http://%s", peerAddr())
+	if !isLoopback(peerAddr()) {
+		log.Printf("  WARNING: the peer API is reachable from other machines and is NOT")
+		log.Printf("           authenticated — any host that can reach %s may read this", peerAddr())
+		log.Printf("           room and publish into it. See §25; peer identity is not yet")
+		log.Printf("           cryptographic, so nothing verifies who is connecting.")
+	}
+
 	go d.RunSync(peerList(), syncInterval())
-	if err := http.Serve(ln, d.Routes()); err != nil {
+	go func() {
+		if err := http.Serve(peer, d.PeerRoutes()); err != nil {
+			log.Fatalf("peer server: %v", err)
+		}
+	}()
+	if err := http.Serve(local, d.LocalRoutes()); err != nil {
 		log.Fatal(err)
 	}
 }
