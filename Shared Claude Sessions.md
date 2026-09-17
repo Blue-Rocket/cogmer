@@ -808,6 +808,8 @@ The challenge must be new every time. An exchange that can be replayed is a bear
 
 Nothing secret passes in either direction, so this needs no confidential channel. It needs integrity, which the signature supplies.
 
+Proving possession establishes **who** is asking. It does not establish **whether they may**, and the two must not be confused: a peer can generate a key pair as easily as anyone else, so a system that authenticates every caller and admits every authenticated caller has gained a name for its visitors and nothing more. Confidentiality begins at the guest list, not at the signature.
+
 ## When someone not on the list asks to join
 
 A peer that is not a guest is refused. Refusal must be more than silence.

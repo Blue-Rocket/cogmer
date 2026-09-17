@@ -28,6 +28,11 @@ type syncRequest struct {
 	Protocol int              `json:"protocol"`
 	Room     string           `json:"room"`
 	Have     map[string]int64 `json:"have"`
+	// Credentials proving the caller holds the key its identifier names.
+	PeerID    string `json:"peerId"`
+	Timestamp string `json:"timestamp"`
+	Nonce     string `json:"nonce"`
+	Signature string `json:"signature"`
 }
 
 type syncResponse struct {
@@ -43,6 +48,13 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 	var req syncRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Establish who is asking before answering anything. A room's conversation is
+	// not public, and until now any host that could reach this port could read it.
+	if err := d.verifyRequest(req); err != nil {
+		log.Printf("sync: refused a request — %v", err)
+		http.Error(w, "unauthenticated", http.StatusUnauthorized)
 		return
 	}
 	if req.Room != d.room {
@@ -103,12 +115,22 @@ func (d *Daemon) pullFrom(client *http.Client, addr string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	body, _ := json.Marshal(syncRequest{Protocol: wireVersion, Room: d.room, Have: have})
+	ts, nonce, sig, err := signRequest(d.id, d.room)
+	if err != nil {
+		return 0, err
+	}
+	body, _ := json.Marshal(syncRequest{
+		Protocol: wireVersion, Room: d.room, Have: have,
+		PeerID: d.id.PeerID, Timestamp: ts, Nonce: nonce, Signature: sig,
+	})
 	resp, err := client.Post("http://"+addr+"/sync", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return 0, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusUnauthorized {
+		return 0, fmt.Errorf("peer refused our credentials")
+	}
 
 	var out syncResponse
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {

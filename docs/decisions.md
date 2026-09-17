@@ -1928,3 +1928,47 @@ added since is missing from every room that predates it — surfacing not at ope
 at the first query that names it. An existing room failed with *no such column:
 signature* only when a peer asked it to sync. Rooms are now migrated on open, and
 adding a column to that list is the whole of what a future migration needs.
+
+---
+
+## D-044 — Sync requests are signed; authentication is not admission
+
+**Date:** 2026-09-17 · **Status:** active (implemented)
+
+**Context.** Phase 9's third part. Signing events gave integrity — nothing could be
+forged or falsely attributed — while the peer API still answered anyone who could
+reach it.
+
+**Decision.** Every sync request carries the caller's identifier, a timestamp, a
+nonce, and a signature over all four plus a purpose tag. The receiver verifies the
+signature against the key the identifier names, rejects a timestamp outside two
+minutes, and rejects a nonce it has already seen.
+
+**Signed requests rather than a session.** The protocol polls. A handshake per poll
+would cost two round trips a second to avoid holding one piece of state, and a
+server-issued challenge would add a round trip for the same reason. A timestamp and
+a nonce give replay protection without either.
+
+**Two minutes of tolerance** because clocks differ: two NTP-synced machines measured
+408ms apart, and a peer on a worse network should still sync. Wide enough to work,
+narrow enough that the seen-nonce set stays small — and it is pruned on every
+admission, so a daemon polled every second does not accumulate.
+
+**The `have` map is not signed.** Altering it gains an authenticated peer nothing,
+since it may ask for everything anyway, and canonicalising a map for signing invites
+exactly the ambiguity that length-prefixing exists to prevent.
+
+**What this does not do, and the test that proves it.** Authentication establishes
+*who* is asking. It does not establish *whether they may*. A stranger generated a key
+pair, authenticated correctly, and read a private room — while the host logged
+nothing, because nothing was wrong with the request.
+
+That is worth stating plainly because it is easy to bank: a system that
+authenticates every caller and admits every authenticated caller has gained a name
+for its visitors and nothing else. The confidentiality gap narrowed from "anyone who
+can reach the port" to "anyone who can reach the port and generates a key", which is
+no barrier.
+
+**So what Phase 9 delivers is the ability to make an admission decision, not the
+decision.** The guest list is Phase 10, and until it exists the startup warning says
+exactly this rather than implying the room is protected.

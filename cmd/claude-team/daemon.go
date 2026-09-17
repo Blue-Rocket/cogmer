@@ -31,6 +31,7 @@ type Daemon struct {
 	subsMu  sync.Mutex
 	peerSeen map[string]time.Time
 	peerMu   sync.Mutex
+	replay   replayGuard
 	mu    sync.Mutex // serializes sequence allocation + append
 }
 

@@ -244,9 +244,13 @@ which is what enforces §13's rule that a relayer cannot rewrite an event's orig
 The private key is in `~/.claude-team/identity.key` (0600) and **never** in
 `identity.json`, which `whoami` prints. A test asserts it never marshals.
 
-**Still a convention: admission.** Nothing proves possession on *connection*, so the
-peer API admits any host that can reach it to read a room. Integrity is solved;
-confidentiality is not. That is Phase 10.
+Sync requests are signed too (D-044): identifier, timestamp, nonce, signature, with
+replay and staleness rejected.
+
+**Authentication is not admission.** A stranger can generate a key, authenticate
+correctly, and read a room — verified. Nothing yet decides *which* peers may ask, so
+confidentiality begins at the guest list, not at the signature. Do not describe the
+peer API as protected until Phase 10 lands.
 
 Identities are created once per machine on first use and exchanged when a peer
 joins — never obtained in advance. So

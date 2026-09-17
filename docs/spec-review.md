@@ -607,8 +607,11 @@ keys (`ed25519:…`), the private key lives in its own `0600` file and never rea
 `whoami`, events are signed at origin, and receipt rejects what does not verify.
 Attribution and the relay rule are now controls rather than conventions.
 
-Still a convention: **admission**. Nothing proves possession of a key on connection,
-so the guest list remains unenforceable until Phase 10.
+Possession is now proved on connection too: sync requests are signed, with replay
+and staleness rejected. **Admission remains a convention.** Verified by test — a
+stranger generated a key, authenticated correctly, and read a private room, because
+nothing yet decides *which* peers may ask. Authenticating every caller and admitting
+every authenticated caller is not confidentiality. That is Phase 10.
 
 **C-4. Room identifiers and names are not generated.** §3.2 requires a `roomId` UUID
 and a generated `roomName`; the implementation uses a bare string. `PeerName` is

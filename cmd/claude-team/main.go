@@ -166,10 +166,11 @@ func runDaemon() {
 	log.Printf("  hooks and UI  http://%s  (loopback)", addr())
 	log.Printf("  peer sync     http://%s", peerAddr())
 	if !isLoopback(peerAddr()) {
-		log.Printf("  WARNING: the peer API is reachable from other machines and admits")
-		log.Printf("           anyone who can reach %s. Events are signed, so nothing", peerAddr())
-		log.Printf("           can be forged or attributed falsely — but the room can still")
-		log.Printf("           be READ by any such host. Connection is not yet authenticated.")
+		log.Printf("  WARNING: the peer API is reachable from other machines.")
+		log.Printf("           Requests are authenticated, so you will know which peer asked,")
+		log.Printf("           and events are signed, so nothing can be forged. But nothing yet")
+		log.Printf("           limits WHICH peers may ask: any host that can reach %s", peerAddr())
+		log.Printf("           and generate a key can read this room. Admission comes with pairing.")
 	}
 
 	// Behaviour checks spend a Claude turn and take a few seconds. Run them
