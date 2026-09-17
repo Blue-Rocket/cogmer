@@ -141,8 +141,11 @@ Tailscale is one provider among several, never a prerequisite.
 Discovery locates a room. It never admits anyone to one — the **guest list** does
 that (D-024): a host records a peer it already knows, the guest types only
 `claude-team join misty-canyon`, and admission is proof of possession of a key the
-host already holds. A join code is the fallback for people who have never exchanged
-identifiers, and is explicitly weaker — it is a bearer credential. Do not add a "join by name on a trusted network" path: names are guessable
+host already holds. Two scopes: **known peers** (per machine, durable) and **a room's guests** (per
+room). Admission is a fresh signed challenge — never replayable. A peer not on the
+list is refused *and the host is told*, so approval in the moment is the normal way
+strangers pair (D-025). Join codes now cover one case only: inviting in advance
+when the host will not be present. Do not add a "join by name on a trusted network" path: names are guessable
 by design (D-017), and office and conference networks are neither small nor
 trusted.
 

@@ -647,6 +647,54 @@ A public identifier may be pasted into a chat, mailed, printed, or read aloud, b
 
 Set against what a token requires — something that must stay secret in transit, produced afresh for each first meeting, and impossible to check afterwards — the guest list is less work as well as safer.
 
+## The guest list
+
+Two lists, at different scopes, because knowing someone and admitting them to a particular conversation are different decisions.
+
+**Known peers** belongs to a machine. It records the identifiers a peer has learned and the names it knows them by. It is durable, outlives every room, and is why a colleague is recognized on a later occasion rather than met afresh.
+
+**A room's guests** belongs to that room. It names which known peers may enter. It is created with the room and archived with it.
+
+A developer may know six colleagues and admit two of them to a room concerning customer data. Collapsing the two lists would make that impossible to express.
+
+Both must be inspectable and changeable:
+
+```
+claude-team peers                      list known peers
+claude-team allow <identifier> [name]  record a peer
+claude-team forget <peer>              discard a peer
+
+claude-team guests                     list this room's guests
+claude-team invite <peer>              admit a known peer
+claude-team revoke <peer>              withdraw admission
+```
+
+A room's creator is its first guest.
+
+Forgetting and revoking are not the same act. Revoking withdraws admission to one room. Forgetting discards the identity itself, so a later meeting is a first meeting again.
+
+## Proving admission
+
+A joining peer presents its identifier. The host looks for that identifier among the room's guests and, finding it, issues a fresh unpredictable challenge, which the joining peer signs with the private key its identifier corresponds to.
+
+The challenge must be new every time. An exchange that can be replayed is a bearer credential with extra steps.
+
+Nothing secret passes in either direction, so this needs no confidential channel. It needs integrity, which the signature supplies.
+
+## When someone not on the list asks to join
+
+A peer that is not a guest is refused. Refusal must be more than silence.
+
+The host is told that a peer asked to enter, and shown the identifier and derived name it presented. The host may then admit it, which makes that peer known and a guest in one act.
+
+This matters because it is how two people who have never met will ordinarily pair. Alice attempts to join, David sees the request, David recognizes the moment, David approves. No identifier is exchanged beforehand and no token is issued.
+
+Approval is a human act and should remain one. What a host approves is an identifier; the name beside it is a claim made by a stranger who chose when to make it.
+
+The refused peer is told it was refused and shown its own identifier, so its user can say what the host needs to allow.
+
+A request is not a queue. If the host is absent the request fails. It does not wait, and it does not grant entry later without the host's attention.
+
 ## First contact with no prior exchange
 
 Two people who have never exchanged identifiers, and who want to pair now rather than after a round trip, may use a single-use code:
@@ -657,7 +705,9 @@ claude-team join misty-canyon#k7qm-2xpr-9vlt
 
 This is the weaker path and should be presented as one. A code is a bearer credential: whoever holds it may enter, so it must stay secret in transit, it cannot be verified after the fact, and an interception enrolls the wrong peer under a name that members will thereafter treat as familiar.
 
-It exists so that a first meeting needs no preparation. It should expire, admit one peer once, and be unnecessary afterwards — the peer it admitted is now known, and a known peer needs no code.
+It exists for the case the two paths above do not cover: inviting someone **in advance**, when the host will not be present to approve a request. Where a host is present, approving a request is better in every respect, because a person decides rather than a token.
+
+A code should expire, admit one peer once, and be unnecessary afterwards — the peer it admitted is now known, and a known peer needs no code.
 
 ## The endpoint is a bootstrap hint
 
@@ -1410,7 +1460,8 @@ Per-room state is created when a room is created or joined. It belongs to the da
 {
   "roomId": "0f7a4e6c-2b91-4d0a-9c3e-7f1d8a5b2c44",
   "roomName": "misty-canyon",
-  "injectSharedContext": true
+  "injectSharedContext": true,
+  "guests": ["ed25519:M7Kd…4Fq2", "ed25519:Rb91…7Twc"]
 }
 ```
 

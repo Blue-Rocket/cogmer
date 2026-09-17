@@ -935,3 +935,65 @@ and the prototype is unauthenticated whichever path it nominally uses.
   refusing that makes the tool harder to try than to adopt.
 - *Deriving admission from the room name on a trusted network* — the name is
   guessable by construction (D-017); there is no network where that is safe.
+
+---
+
+## D-025 — The guest list, specified: two scopes, a signed challenge, and approval in the moment
+
+**Date:** 2026-09-16 · **Status:** active · **Completes** D-024
+
+**Context.** D-024 made the guest list the primary admission path and invoked
+`authorized_keys` as the precedent. It did not specify the mechanism: where a list
+lives, how entries are added or removed, what the proof consists of, or what
+happens to a peer that is not on one. Naming an analogy is not specifying a design.
+
+**Two lists, at different scopes.** Knowing someone and admitting them to a
+particular conversation are different decisions, and collapsing them makes the
+second inexpressible. **Known peers** belongs to a machine, is durable, and outlives
+every room — it is why a colleague is recognized later rather than met afresh.
+**A room's guests** belongs to the room, names which known peers may enter, and is
+archived with it. A developer may know six colleagues and admit two to a room
+concerning customer data.
+
+Commands for both, because a list that cannot be inspected or corrected is not
+administrable: `peers`, `allow`, `forget`; `guests`, `invite`, `revoke`. Forgetting
+and revoking differ — revoking withdraws admission to one room, forgetting discards
+the identity, so a later meeting is a first meeting again.
+
+**Admission is a fresh signed challenge.** The joiner presents an identifier, the
+host finds it among the room's guests and issues an unpredictable challenge, the
+joiner signs it. The challenge must be new every time: an exchange that can be
+replayed is a bearer credential with extra steps. Nothing secret passes in either
+direction, so the exchange needs integrity rather than confidentiality.
+
+**Refusal must be more than silence, and that changes the role of codes.** A peer
+not on the list is refused — and the host is *told*, and shown the identifier and
+derived name presented. The host may admit it, which makes that peer known and a
+guest in one act.
+
+This is how two people who have never met will ordinarily pair: Alice attempts to
+join, David sees the request, recognizes the moment, approves. **No identifier is
+exchanged beforehand and no token is issued.** It removes the round trip that was
+the whole argument for keeping codes when both people are present.
+
+What a host approves is an identifier. The name beside it is a claim made by a
+stranger who chose when to make it, and the interface should not let the two be
+confused.
+
+The refused peer is told, and shown its own identifier, so its user can say what
+the host needs to allow. A request is not a queue: if the host is absent the
+request fails rather than waiting, and never grants entry later without attention.
+
+**Codes now cover one case only:** inviting in advance, when the host will not be
+present to approve. Where a host is present, approval is better in every respect,
+because a person decides rather than a token.
+
+**Rejected.**
+- *One combined list* — cannot express knowing someone without admitting them
+  everywhere.
+- *Silent refusal* — leaves both sides with no way to proceed, and makes the
+  no-prior-exchange case impossible without a code.
+- *Queuing requests for an absent host* — an admission that completes without
+  attention is the token model wearing a different name.
+- *Approving by displayed name* — the name is the stranger\'s claim; the identifier
+  is the fact.
