@@ -706,13 +706,6 @@ func runWhoami() {
 	}
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // runVerify is the two-word check (D-048). Both people run it, at the same time,
 // on a call where each can recognise the other's voice.
 //
