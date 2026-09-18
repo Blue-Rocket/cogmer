@@ -279,7 +279,14 @@ func (m *Membership) CurrentRoom() (Room, bool) {
 	return m.RoomByID(roomID)
 }
 
+// RoomByID resolves a room by its identity alone. FindRoom also accepts a name,
+// which is right at a command line and wrong on the wire: room names collide by
+// design (D-017), so a request naming one can address a room its sender did not
+// mean. Anything arriving from a peer resolves here.
 func (m *Membership) RoomByID(roomID string) (Room, bool) {
+	if roomID == "" {
+		return Room{}, false
+	}
 	var r Room
 	err := m.db.QueryRow(`SELECT room_id, room_name, state, created_at FROM rooms WHERE room_id = ?`, roomID).
 		Scan(&r.RoomID, &r.RoomName, &r.State, &r.CreatedAt)

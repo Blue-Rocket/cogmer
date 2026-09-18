@@ -13,7 +13,7 @@ import "encoding/json"
 // Nothing here mentions the agent that produced an event. A session identifier is
 // an opaque string naming where a turn came from; that it is currently a Claude
 // Code session is a fact about the adapter, not about the protocol.
-const wireVersion = 1
+const wireVersion = 2
 
 type wireEvent struct {
 	EventID         string          `json:"eventId"`

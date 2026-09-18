@@ -29,11 +29,11 @@ import (
 
 const (
 	authTolerance = 2 * time.Minute
-	authTag       = "claude-team/sync-request/v2"
+	authTag       = "claude-team/sync-request/v3"
 )
 
 // signRequest produces the credentials a peer presents when asking to sync.
-func signRequest(id *Identity, room, endpoint string) (ts, nonce, sig string, err error) {
+func signRequest(id *Identity, roomID, endpoint string) (ts, nonce, sig string, err error) {
 	if id.private == nil {
 		return "", "", "", errors.New("no private key: this peer cannot prove who it is")
 	}
@@ -44,7 +44,7 @@ func signRequest(id *Identity, room, endpoint string) (ts, nonce, sig string, er
 	nonce = base64.RawURLEncoding.EncodeToString(raw)
 	ts = time.Now().UTC().Format(time.RFC3339Nano)
 	sig = base64.RawURLEncoding.EncodeToString(
-		ed25519.Sign(id.private, requestBytes(id.PeerID, room, ts, nonce, endpoint)))
+		ed25519.Sign(id.private, requestBytes(id.PeerID, roomID, ts, nonce, endpoint)))
 	return ts, nonce, sig, nil
 }
 
@@ -53,7 +53,7 @@ func signRequest(id *Identity, room, endpoint string) (ts, nonce, sig string, er
 // The `have` map is deliberately not covered. Altering it gains an authenticated
 // peer nothing -- it can ask for everything anyway -- and canonicalising a map for
 // signing invites the kind of ambiguity length-prefixing exists to avoid.
-func requestBytes(peerID, room, ts, nonce, endpoint string) []byte {
+func requestBytes(peerID, roomID, ts, nonce, endpoint string) []byte {
 	var b strings.Builder
 	put := func(s string) {
 		var n [4]byte
@@ -63,7 +63,7 @@ func requestBytes(peerID, room, ts, nonce, endpoint string) []byte {
 	}
 	put(authTag)
 	put(peerID)
-	put(room)
+	put(roomID)
 	put(ts)
 	put(nonce)
 	// The caller's endpoint is signed because a peer acts on it -- it polls there.
@@ -111,7 +111,7 @@ func (d *Daemon) verifyRequest(req syncRequest, roomID string) error {
 	if err != nil {
 		return fmt.Errorf("signature is not valid base64url: %w", err)
 	}
-	if !ed25519.Verify(pub, requestBytes(req.PeerID, req.Room, req.Timestamp, req.Nonce, req.Endpoint), sig) {
+	if !ed25519.Verify(pub, requestBytes(req.PeerID, req.RoomID, req.Timestamp, req.Nonce, req.Endpoint), sig) {
 		return errors.New("signature does not match the peer id presenting it")
 	}
 

@@ -52,7 +52,7 @@ func TestWireRoundTripPreservesEverything(t *testing.T) {
 // A signature covers field values, so a peer on a different protocol version may
 // be signing something else entirely. Guessing is worse than refusing.
 func TestProtocolVersionIsCarried(t *testing.T) {
-	buf, _ := json.Marshal(syncResponse{Protocol: wireVersion, Room: "r"})
+	buf, _ := json.Marshal(syncResponse{Protocol: wireVersion, RoomID: "r"})
 	if !strings.Contains(string(buf), `"protocol":`) {
 		t.Errorf("sync response carries no protocol version: %s", buf)
 	}

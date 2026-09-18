@@ -1,8 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"encoding/base64"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 )
@@ -19,13 +23,13 @@ func authDaemon(t *testing.T) (*Daemon, *Identity, Room) {
 	return d, guest, room
 }
 
-func credentials(t *testing.T, id *Identity, room string) syncRequest {
+func credentials(t *testing.T, id *Identity, roomID string) syncRequest {
 	t.Helper()
-	ts, nonce, sig, err := signRequest(id, room, "127.0.0.1:4783")
+	ts, nonce, sig, err := signRequest(id, roomID, "127.0.0.1:4783")
 	if err != nil {
 		t.Fatal(err)
 	}
-	return syncRequest{Protocol: wireVersion, Room: room, PeerID: id.PeerID,
+	return syncRequest{Protocol: wireVersion, RoomID: roomID, PeerID: id.PeerID,
 		Timestamp: ts, Nonce: nonce, Signature: sig, Endpoint: "127.0.0.1:4783"}
 }
 
@@ -33,14 +37,14 @@ func credentials(t *testing.T, id *Identity, room string) syncRequest {
 // peer port could read one.
 func TestUnauthenticatedRequestIsRefused(t *testing.T) {
 	d, _, room := authDaemon(t)
-	if err := d.verifyRequest(syncRequest{Room: room.RoomName}, room.RoomID); err == nil {
+	if err := d.verifyRequest(syncRequest{RoomID: room.RoomID}, room.RoomID); err == nil {
 		t.Error("a request with no credentials was accepted")
 	}
 }
 
 func TestGenuineRequestIsAccepted(t *testing.T) {
 	d, id, room := authDaemon(t)
-	if err := d.verifyRequest(credentials(t, id, room.RoomName), room.RoomID); err != nil {
+	if err := d.verifyRequest(credentials(t, id, room.RoomID), room.RoomID); err != nil {
 		t.Fatalf("a correctly signed request was refused: %v", err)
 	}
 }
@@ -53,7 +57,7 @@ func TestKnowingAnIdentifierIsNotEnough(t *testing.T) {
 
 	// The attacker knows the victim's identifier -- everyone does -- and signs
 	// with the only key it has.
-	req := credentials(t, attacker, room.RoomName)
+	req := credentials(t, attacker, room.RoomID)
 	req.PeerID = victim.PeerID
 	if err := d.verifyRequest(req, room.RoomID); err == nil {
 		t.Error("a peer authenticated as another by presenting its identifier")
@@ -63,7 +67,7 @@ func TestKnowingAnIdentifierIsNotEnough(t *testing.T) {
 // A captured request must not work twice.
 func TestReplayedRequestIsRefused(t *testing.T) {
 	d, id, room := authDaemon(t)
-	req := credentials(t, id, room.RoomName)
+	req := credentials(t, id, room.RoomID)
 	if err := d.verifyRequest(req, room.RoomID); err != nil {
 		t.Fatalf("first use refused: %v", err)
 	}
@@ -75,11 +79,11 @@ func TestReplayedRequestIsRefused(t *testing.T) {
 // Old credentials must expire, or a capture is good forever.
 func TestStaleRequestIsRefused(t *testing.T) {
 	d, id, room := authDaemon(t)
-	req := credentials(t, id, room.RoomName)
+	req := credentials(t, id, room.RoomID)
 	req.Timestamp = time.Now().UTC().Add(-10 * time.Minute).Format(time.RFC3339Nano)
 	// Re-sign so the only defect is age, not the signature.
 	req.Signature = base64.RawURLEncoding.EncodeToString(
-		ed25519.Sign(id.private, requestBytes(req.PeerID, req.Room, req.Timestamp, req.Nonce, req.Endpoint)))
+		ed25519.Sign(id.private, requestBytes(req.PeerID, req.RoomID, req.Timestamp, req.Nonce, req.Endpoint)))
 	if err := d.verifyRequest(req, room.RoomID); err == nil {
 		t.Error("a ten-minute-old request was accepted")
 	}
@@ -89,7 +93,7 @@ func TestStaleRequestIsRefused(t *testing.T) {
 func TestCredentialsAreBoundToTheRoom(t *testing.T) {
 	d, id, room := authDaemon(t)
 	req := credentials(t, id, "a-different-room")
-	req.Room = room.RoomName
+	req.RoomID = room.RoomID
 	if err := d.verifyRequest(req, room.RoomID); err == nil {
 		t.Error("credentials signed for one room were accepted for another")
 	}
@@ -100,10 +104,10 @@ func TestCredentialsAreBoundToTheRoom(t *testing.T) {
 func TestToleranceSurvivesRealClockSkew(t *testing.T) {
 	d, id, room := authDaemon(t)
 	for _, skew := range []time.Duration{-30 * time.Second, -2 * time.Second, 2 * time.Second, 30 * time.Second} {
-		req := credentials(t, id, room.RoomName)
+		req := credentials(t, id, room.RoomID)
 		req.Timestamp = time.Now().UTC().Add(skew).Format(time.RFC3339Nano)
 		req.Signature = base64.RawURLEncoding.EncodeToString(
-			ed25519.Sign(id.private, requestBytes(req.PeerID, req.Room, req.Timestamp, req.Nonce, req.Endpoint)))
+			ed25519.Sign(id.private, requestBytes(req.PeerID, req.RoomID, req.Timestamp, req.Nonce, req.Endpoint)))
 		if err := d.verifyRequest(req, room.RoomID); err != nil {
 			t.Errorf("a peer %s out of step was refused: %v", skew, err)
 		}
@@ -127,9 +131,50 @@ func TestReplayGuardForgetsOldNonces(t *testing.T) {
 // redirect another peer's polling, which forges nothing and denies plenty.
 func TestEndpointIsCoveredBySignature(t *testing.T) {
 	d, id, room := authDaemon(t)
-	req := credentials(t, id, room.RoomName)
+	req := credentials(t, id, room.RoomID)
 	req.Endpoint = "127.0.0.1:6666" // an attacker's address
 	if err := d.verifyRequest(req, room.RoomID); err == nil {
 		t.Error("a request's endpoint was altered without invalidating its signature")
+	}
+}
+
+// The wire addresses a room by identity, never by name (D-017). A name is a
+// mnemonic: it is generated from a small space, it is only unique among the rooms
+// one peer happens to hold, and nothing about it is guaranteed by the sender.
+// Accepting one here would let a request address a room its sender did not mean.
+func TestTheWireRefusesARoomName(t *testing.T) {
+	d, id, room := authDaemon(t)
+
+	// Correct in every other respect: a genuine guest, signing genuinely, naming
+	// the room it really is a guest of -- by its name.
+	req := credentials(t, id, room.RoomName)
+	body, _ := json.Marshal(req)
+	w := httptest.NewRecorder()
+	d.handleSync(w, httptest.NewRequest("POST", "/sync", bytes.NewReader(body)))
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("a request addressing the room by name was answered with %d, want %d",
+			w.Code, http.StatusUnauthorized)
+	}
+}
+
+// And the same request, addressed by identity, is answered -- so the test above
+// is failing on the identifier rather than on some unrelated defect in the fixture.
+func TestTheWireAcceptsARoomID(t *testing.T) {
+	d, id, room := authDaemon(t)
+
+	body, _ := json.Marshal(credentials(t, id, room.RoomID))
+	w := httptest.NewRecorder()
+	d.handleSync(w, httptest.NewRequest("POST", "/sync", bytes.NewReader(body)))
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("a correctly addressed request was answered with %d: %s", w.Code, w.Body.String())
+	}
+	var out syncResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	if out.RoomID != room.RoomID {
+		t.Errorf("response named room %q, want %q", out.RoomID, room.RoomID)
 	}
 }

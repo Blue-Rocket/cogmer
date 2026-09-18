@@ -25,9 +25,13 @@ import (
 // an absent peer recovers by asking, so nobody tracks what it missed.
 
 type syncRequest struct {
-	Protocol int              `json:"protocol"`
-	Room     string           `json:"room"`
-	Have     map[string]int64 `json:"have"`
+	Protocol int `json:"protocol"`
+	// RoomID, never the room name. A name is for people and collides by design
+	// (D-017): two rooms on one daemon may share one, and a wire field that
+	// resolves ambiguously resolves to whichever row came back first. The guest
+	// receives the roomId on admission, so it always has this to send.
+	RoomID string           `json:"roomId"`
+	Have   map[string]int64 `json:"have"`
 	// Credentials proving the caller holds the key its identifier names.
 	PeerID    string `json:"peerId"`
 	Timestamp string `json:"timestamp"`
@@ -40,7 +44,7 @@ type syncRequest struct {
 
 type syncResponse struct {
 	Protocol int         `json:"protocol"`
-	Room     string      `json:"room"`
+	RoomID   string      `json:"roomId"`
 	Events   []wireEvent `json:"events"`
 }
 
@@ -54,8 +58,10 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// A request names the room it wants. A daemon serving several cannot infer one,
-	// and inferring one was how a single-room daemon avoided asking.
-	room, ok := d.members.FindRoom(req.Room)
+	// and inferring one was how a single-room daemon avoided asking. It is looked
+	// up by id alone: FindRoom also accepts a name, and accepting one here would
+	// let a caller address a room by an identifier that is not unique.
+	room, ok := d.members.RoomByID(req.RoomID)
 	if !ok {
 		// Do not distinguish "no such room" from "not a guest": both answers are
 		// the same to anyone entitled to neither, and one of them is a disclosure.
@@ -87,7 +93,7 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 	for _, e := range evs {
 		out = append(out, toWire(e))
 	}
-	writeJSON(w, syncResponse{Protocol: wireVersion, Room: room.RoomName, Events: out})
+	writeJSON(w, syncResponse{Protocol: wireVersion, RoomID: room.RoomID, Events: out})
 }
 
 func peerList() []string {
@@ -174,12 +180,12 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 	if err != nil {
 		return 0, err
 	}
-	ts, nonce, sig, err := signRequest(d.id, room.RoomName, peerAddr())
+	ts, nonce, sig, err := signRequest(d.id, room.RoomID, peerAddr())
 	if err != nil {
 		return 0, err
 	}
 	body, _ := json.Marshal(syncRequest{
-		Protocol: wireVersion, Room: room.RoomName, Have: have,
+		Protocol: wireVersion, RoomID: room.RoomID, Have: have,
 		PeerID: d.id.PeerID, Timestamp: ts, Nonce: nonce, Signature: sig,
 		Endpoint: peerAddr(),
 	})

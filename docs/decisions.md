@@ -2231,3 +2231,53 @@ moment when the two peers are **not** simultaneously connected. The short form i
 unavailable there and the full-length comparison of D-047 is the only option, so both
 renderings may need to exist — the live one for joining, the static one for
 confirming a peer after the fact.
+
+---
+
+## D-049 — The sync request addresses a room by id, never by name
+
+**Date:** 2026-09-17 · **Status:** active (implemented)
+
+**Context.** Asked whether the room creator's daemon signs its polling requests. It
+does — there is one polling path, `pullRoom`, every daemon takes it for every room,
+and no host role exists in the code. Reading it turned up something else: the request
+carried `room: <roomName>`, `handleSync` resolved it with `FindRoom`, which matches
+`room_id = ? OR room_name = ?`, and the **name** was what the signature covered.
+
+**What the collision actually costs — the first reading was wrong.** The obvious
+worry is that a name resolves to the wrong room. It cannot: `rooms.room_name` is
+`NOT NULL UNIQUE`, so a daemon never holds two rooms under one name and the lookup is
+unambiguous. No confidentiality was at stake and nothing read the wrong room.
+
+The real cost sits one step earlier. `CreateRoom` regenerates on a local name
+collision, but `RecordRoom` — the path taken when **joining** a room someone else
+named — has `ON CONFLICT(room_id)` only. Joining a second room whose generated name
+matches one already held violates the unique index, `runJoin` calls `log.Fatalf`, and
+the developer is told they cannot join a room for a reason that names nothing they
+did. 7,656 names make that unlikely per pair and certain at some scale. **That bug is
+not fixed by this entry** and is recorded here so it is not mistaken for fixed.
+
+**Decision.** `roomId` on the wire, in both directions, and peer-supplied
+identifiers resolve through `RoomByID` rather than `FindRoom`. `FindRoom` keeps
+accepting a name, which is right at a command line and wrong on the wire.
+
+`wireVersion` 1 → 2 and the signing tag to `claude-team/sync-request/v3`, because
+the signed bytes changed meaning rather than shape. A peer on the old version is
+refused with a version mismatch instead of failing a signature check, which is the
+difference between a diagnosis and a mystery.
+
+**Why bother, given nothing was exploitable.** D-017 says never key on the name, and
+the wire was keying on the name. The property protecting it lived somewhere else
+entirely — a unique index in a local schema, which no peer can see and nothing
+obliges the next schema change to keep. A guarantee held at that distance from the
+thing it guards is one nobody will think to preserve.
+
+**Tests.** `TestTheWireRefusesARoomName` presents a request correct in every other
+respect — genuine guest, genuine signature, a room it really is a guest of, named —
+and requires 401. Confirmed to fail with 200 when the lookup is reverted to
+`FindRoom`. `TestTheWireAcceptsARoomID` pairs with it so a future failure of the
+first is read as the lookup breaking rather than the fixture rotting.
+
+**Revisit when** a room identifier needs to be typed by a person on a path that
+reaches a peer. It should not: a person types a name, their own daemon resolves it,
+and only the id travels.
