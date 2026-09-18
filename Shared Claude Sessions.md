@@ -736,7 +736,7 @@ Conversation events themselves should remain immutable.
 
 ---
 
-# 12\. Session Pairing
+# 12\. Forming a Room
 
 A room is formed by invitation, not by configuration.
 
@@ -756,6 +756,39 @@ David's daemon records that the peer he knows as `quiet-otter` may enter `misty-
 This is the intended shape: **a name locates a room, a guest list admits a peer.**
 
 The joining peer receives the room's `roomId` on admission and uses it from then on.
+
+## Two acts, at two scopes, with two names
+
+**Pairing** is between two machines. It happens once with each colleague, outlasts
+every room the two will ever share, and is where a key is recorded and confirmed.
+
+**Inviting** is into one room. It happens as often as rooms do, means nothing
+outside the room it names, and is withdrawn by revoking without touching the
+pairing.
+
+§12 has always kept these as two lists — known peers per machine, a room's guests
+per room — and the commands should say so rather than leaving a reader to infer it
+from which list a call happens to write to. `pair` names the durable act. `invite`
+names the room-scoped one. Nothing is called `allow`, which said only that
+something had been permitted and never which of the two.
+
+The split is not cosmetic: it decides where each act can live. Pairing is
+interactive, blocks on another person, and ends with two words that must reach a
+person's eyes unaltered — so it belongs at a terminal. Inviting is a single
+non-interactive act whose output is informational, so it can be a command inside a
+Claude Code session like any other. A vocabulary that ran the two together would
+force both into the more restrictive home.
+
+Pairing also carries a **bootstrap address** alongside the identifier, for the
+reason §4 gives — an address need only be correct once. Holding it at machine scope
+is what allows verification to precede admission: without it there is nowhere to
+reach a peer until a room already exists, which would leave every first
+verification happening after the room it was supposed to protect.
+
+Neither part of a pairing string is a secret. An identifier is a public key and an
+address is where a daemon listens; an interceptor learns that a peer exists and
+gains no way in (D-026, D-042). What interception threatens is substitution, which
+is what the two-word comparison is for.
 
 ## Knowing a guest before inviting them
 

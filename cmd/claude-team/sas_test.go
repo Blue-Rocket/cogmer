@@ -311,3 +311,15 @@ func verifiableDaemon(t *testing.T) (*Daemon, string) {
 	t.Cleanup(srv.Close)
 	return d, strings.TrimPrefix(srv.URL, "http://")
 }
+
+// The pairing string is an identifier and a bootstrap address, and must survive a
+// round trip: it is typed by a person from something another person sent.
+func TestPairingStringRoundTrips(t *testing.T) {
+	id := testIdentity(t)
+	for _, endpoint := range []string{"198.51.100.7:4783", "[2001:db8::1]:4783", ""} {
+		peer, addr := parsePairing(pairingString(id.PeerID, endpoint))
+		if peer != id.PeerID || addr != endpoint {
+			t.Errorf("%q@%q round-tripped to %q@%q", id.PeerID, endpoint, peer, addr)
+		}
+	}
+}

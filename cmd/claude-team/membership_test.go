@@ -247,3 +247,71 @@ func TestMigrationDropsTheNameConstraint(t *testing.T) {
 		t.Errorf("the constraint is still enforced after migration: %v", err)
 	}
 }
+
+// Pairing is machine scope and outlives every room; a guest list is room scope.
+// Collapsing them would make it impossible to know six colleagues and admit two
+// to a room about customer data (§12).
+func TestPairingOutlivesTheRoomsItEnables(t *testing.T) {
+	m := testMembership(t)
+	self, alice := testIdentity(t), testIdentity(t)
+	if err := m.Allow(alice.PeerID, "alice"); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.MarkVerified(alice.PeerID); err != nil {
+		t.Fatal(err)
+	}
+
+	room, err := m.CreateRoom(self.PeerID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Invite(room.RoomID, alice.PeerID); err != nil {
+		t.Fatal(err)
+	}
+	// Withdrawing admission to a room says nothing about knowing the person.
+	if err := m.Revoke(room.RoomID, alice.PeerID); err != nil {
+		t.Fatal(err)
+	}
+	if m.IsGuest(room.RoomID, alice.PeerID) {
+		t.Error("revoke did not withdraw admission")
+	}
+	if !m.Knows(alice.PeerID) {
+		t.Error("revoking a room's guest discarded the pairing")
+	}
+	if !m.IsVerified(alice.PeerID) {
+		t.Error("revoking a room's guest discarded the verification")
+	}
+
+	// Forgetting the peer is the other direction, and does discard it.
+	if err := m.Forget(alice.PeerID); err != nil {
+		t.Fatal(err)
+	}
+	if m.Knows(alice.PeerID) || m.IsVerified(alice.PeerID) {
+		t.Error("forget left the peer or its verification behind")
+	}
+}
+
+// A paired peer is reachable before any room exists, which is what lets
+// verification precede admission rather than follow it.
+func TestAPairedPeerIsReachableWithoutARoom(t *testing.T) {
+	m := testMembership(t)
+	alice := testIdentity(t)
+	if err := m.Allow(alice.PeerID, "alice"); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.SetPeerEndpoint(alice.PeerID, "198.51.100.7:4783"); err != nil {
+		t.Fatal(err)
+	}
+
+	d := &Daemon{id: testIdentity(t), members: m}
+	t.Cleanup(d.closeStores)
+	found := false
+	for _, a := range d.syncTargets() {
+		if a == "198.51.100.7:4783" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("a paired peer's address is not reachable until a room exists")
+	}
+}

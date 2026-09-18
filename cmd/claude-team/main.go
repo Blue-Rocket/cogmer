@@ -47,6 +47,8 @@ func main() {
 		runConflicts()
 	case "peers":
 		runPeers()
+	case "pair":
+		runPair(os.Args[2:])
 	case "allow":
 		runAllow(os.Args[2:])
 	case "forget":
@@ -100,10 +102,14 @@ func usage() {
   claude-team whoami          Show this peer's identity and room
   claude-team conflicts       Show quarantined events (sequence conflicts)
 
+Peers — durable, above any room. Done once with each colleague:
+  claude-team pair <string>   Record a peer AND verify it, on a call with them
   claude-team peers           List peers this machine knows
-  claude-team allow <id> [nm] Record a peer, so it can be admitted to a room
+  claude-team verify <peer>   Re-run just the two-word check
+  claude-team allow <id> [nm] Record a peer WITHOUT verifying (scripts, tests)
   claude-team forget <id>     Discard a peer entirely
-  claude-team verify <peer>   Compare two words on a call (both of you, at once)
+
+Rooms — per room, repeated as often as you like:
 
   claude-team rooms           List rooms
   claude-team create          Create a room
@@ -409,11 +415,10 @@ func runAllow(args []string) {
 		if err := m.Allow(args[0], name); err != nil {
 			log.Fatalf("allow: %v", err)
 		}
-		fmt.Printf("recorded %s as %s\n", PeerName(args[0]), firstNonEmpty(name, PeerName(args[0])))
-		fmt.Println("verify this with them somewhere you can recognise them — a call, not a message.")
-		fmt.Println("the rendering below is no harder to intercept than the identifier was; the")
-		fmt.Println("protection is that an attacker would need the other channel too:")
-		fmt.Printf("  %s\n", Fingerprint(args[0]))
+		fmt.Printf("recorded %s as %s — UNVERIFIED.\n", PeerName(args[0]), firstNonEmpty(name, PeerName(args[0])))
+		fmt.Println("nothing yet says this key is theirs rather than someone who intercepted it.")
+		fmt.Printf("finish with:  claude-team verify %s\n", firstNonEmpty(name, PeerName(args[0])))
+		fmt.Println("(`claude-team pair` does both at once, and is the ordinary way.)")
 	})
 }
 
@@ -554,8 +559,11 @@ func runJoin(args []string) {
 		}
 		fmt.Printf("now in %s. Sessions started from here join it.\n", r.RoomName)
 		if host != "" {
-			fmt.Printf("admitted %s, who invited you — verify their identifier with them:\n  %s\n",
-				PeerName(host), Fingerprint(host))
+			fmt.Printf("admitted %s, who invited you.\n", PeerName(host))
+			if !m.IsVerified(host) {
+				fmt.Printf("their key is UNVERIFIED. on a call with them, both run:\n")
+				fmt.Printf("  claude-team verify %s\n", PeerName(host))
+			}
 		}
 		if peers := m.RoomPeers(r.RoomID); len(peers) > 0 {
 			fmt.Printf("reaching its members at: %s\n", strings.Join(peers, ", "))
@@ -611,7 +619,15 @@ func runInvite(args []string) {
 		if err := m.Invite(r.RoomID, pid); err != nil {
 			log.Fatalf("invite: %v", err)
 		}
-		fmt.Printf("%s may now enter %s\n\n", PeerName(pid), r.RoomName)
+		fmt.Printf("%s may now enter %s\n", PeerName(pid), r.RoomName)
+		if !m.IsVerified(pid) {
+			// Not refused: whom to admit is the host's judgement (D-051). But a
+			// room is admitting a key nobody has confirmed belongs to the person
+			// whose name is on it, and that should be said rather than implied.
+			fmt.Printf("\nNOTE: %s is unverified — nothing has confirmed this key is theirs.\n", PeerName(pid))
+			fmt.Printf("      on a call with them, both run: claude-team verify %s\n", PeerName(pid))
+		}
+		fmt.Println()
 		// An invitation carries a room's identity and where to reach it. It carries
 		// no secret: admission is the guest list entry just made, proved later by
 		// possession of their key (D-026). Interception reveals that a room exists.
@@ -674,11 +690,18 @@ func runWhoami() {
 		"identity": id, "peerName": id.PeerName, "room": room, "addr": addr(),
 	}, "", "  ")
 	fmt.Println(string(buf))
-	// The whole identifier, grouped for reading aloud. §25 requires a comparison
-	// be made against all of a key: a short mnemonic catches an accident, not an
-	// adversary.
-	fmt.Printf("\nfingerprint (compare in full, over a channel the invitation did not travel on):\n  %s\n",
-		Fingerprint(id.PeerID))
+	// The pairing string is what a colleague actually needs, and it is safe to
+	// send by any means: an identifier is a public key and an address is where a
+	// daemon listens. Neither admits anyone (D-026, D-042).
+	fmt.Printf("\nyour pairing string — send it to a colleague however is convenient:\n  %s\n",
+		pairingString(id.PeerID, peerAddr()))
+	fmt.Println("\nthey run:  claude-team pair <that string>")
+	fmt.Println("you run:   claude-team pair <theirs>")
+	fmt.Println("both at once, on a call, and you each compare two words.")
+	if isLoopback(peerAddr()) {
+		fmt.Println("\nNOTE: that address is loopback, so nobody else can reach it. Set")
+		fmt.Println("CLAUDE_TEAM_PEER_ADDR to an address they can, and restart the daemon.")
+	}
 }
 
 func min(a, b int) int {
@@ -707,42 +730,9 @@ func runVerify(args []string) {
 		peerID, name, mine = pid, PeerName(pid), id.PeerName
 	})
 
-	fmt.Printf("verifying %s. ask them to run `claude-team verify %s` now — this waits %s.\n",
+	fmt.Printf("verifying %s. ask them to run `claude-team verify %s` now — this waits %s.\n\n",
 		name, mine, verifyTimeout)
-	var out verifyStartResponse
-	if err := postLocal("/verify/start", verifyStartRequest{Peer: peerID}, &out); err != nil {
-		log.Fatalf("verify: %v  (is the daemon running?)", err)
-	}
-	if out.Error != "" {
-		log.Fatalf("verify: %s", out.Error)
-	}
-
-	fmt.Printf("\n        %s\n\n", out.Words)
-	fmt.Println("say those two words aloud. ask them to say theirs back.")
-	fmt.Print("did they say the same two words? [y/N] ")
-
-	var answer string
-	fmt.Scanln(&answer)
-	matched := answer == "y" || answer == "Y"
-
-	var res map[string]string
-	if err := postLocal("/verify/confirm", verifyConfirmRequest{Peer: peerID, Matched: matched}, &res); err != nil {
-		log.Fatalf("verify: %v", err)
-	}
-	if matched {
-		fmt.Printf("\nverified %s. you will not be asked again.\n", name)
-		fmt.Println("if this key ever changes, that is an alarm rather than a new first meeting.")
-		return
-	}
-
-	fmt.Println()
-	fmt.Println("STOP. different words mean you are not connected to each other:")
-	fmt.Println("something is relaying this exchange and showing each of you a different key.")
-	fmt.Printf("\n  the key you hold for %s:\n    %s\n\n", name, peerID)
-	fmt.Println("nothing was recorded. this is not a transient error and running it again")
-	fmt.Println("will not clear it. tell the person on the call what you saw — it is evidence,")
-	fmt.Println("and it is the only place this becomes visible.")
-	os.Exit(1)
+	verifyWith(peerID, name)
 }
 
 func postLocal(path string, body, out any) error {
@@ -763,4 +753,111 @@ func postLocal(path string, body, out any) error {
 		return fmt.Errorf("%s: %s", resp.Status, bytes.TrimSpace(msg))
 	}
 	return json.NewDecoder(resp.Body).Decode(out)
+}
+
+// --- pairing: a durable act between two machines, above any room ---
+
+// pairingString is what one person sends another, once, ever. It is an identifier
+// and a bootstrap address, and it is not a secret: an identifier is a public key,
+// and an address is where a daemon listens. Interception yields both and admits
+// nobody (D-042, D-026).
+func pairingString(peerID, endpoint string) string {
+	if endpoint == "" {
+		return peerID
+	}
+	return peerID + "@" + endpoint
+}
+
+func parsePairing(s string) (peerID, endpoint string) {
+	if at := strings.LastIndex(s, "@"); at > 0 {
+		return s[:at], s[at+1:]
+	}
+	return s, ""
+}
+
+// runPair is peer onboarding, and it is deliberately not a room operation.
+//
+// Pairing with someone happens ONCE between two machines and outlasts every room
+// they ever share; inviting them to a room happens repeatedly and means nothing
+// outside that room. §12 already keeps those as two lists -- known peers per
+// machine, guests per room -- and this is the command vocabulary catching up with
+// the data model.
+//
+// It stays a terminal command rather than becoming a slash command because it is
+// interactive, because it blocks on another person, and because the two words must
+// reach your eyes without passing through a model that reads room content from
+// unverified peers.
+func runPair(args []string) {
+	if len(args) == 0 {
+		log.Fatal("usage: claude-team pair <identifier>[@address] [name]\n" +
+			"  both of you run it, at the same time, on a call")
+	}
+	peerID, endpoint := parsePairing(args[0])
+	name := ""
+	if len(args) > 1 {
+		name = args[1]
+	}
+
+	var mine string
+	withMembership(func(m *Membership, id *Identity) {
+		if err := m.Allow(peerID, name); err != nil {
+			log.Fatalf("pair: %v", err)
+		}
+		if err := m.SetPeerEndpoint(peerID, endpoint); err != nil {
+			log.Fatalf("pair: %v", err)
+		}
+		mine = id.PeerName
+	})
+
+	fmt.Printf("recorded %s.\n", PeerName(peerID))
+	if endpoint == "" {
+		fmt.Println("no address was given, so there is nowhere to reach them yet. Ask for the")
+		fmt.Println("whole pairing string — `claude-team whoami` prints it — and run this again.")
+		return
+	}
+	fmt.Printf("now confirming the key is theirs. ask them to run `claude-team pair %s@…` now.\n\n",
+		mine)
+
+	verifyWith(peerID, PeerName(peerID))
+}
+
+// verifyWith drives the ceremony and records the answer. Shared by `pair` and
+// `verify`: the first is a first meeting, the second is confirming a key recorded
+// some other way, and the ceremony is identical.
+func verifyWith(peerID, name string) {
+	var out verifyStartResponse
+	if err := postLocal("/verify/start", verifyStartRequest{Peer: peerID}, &out); err != nil {
+		log.Fatalf("verify: %v  (is the daemon running?)", err)
+	}
+	if out.Error != "" {
+		log.Fatalf("verify: %s", out.Error)
+	}
+
+	fmt.Printf("        %s\n\n", out.Words)
+	fmt.Println("say those two words aloud. ask them to say theirs back.")
+	fmt.Print("did they say the same two words? [y/N] ")
+
+	var answer string
+	fmt.Scanln(&answer)
+	matched := answer == "y" || answer == "Y"
+
+	var res map[string]string
+	if err := postLocal("/verify/confirm", verifyConfirmRequest{Peer: peerID, Matched: matched}, &res); err != nil {
+		log.Fatalf("verify: %v", err)
+	}
+	if matched {
+		fmt.Printf("\npaired with %s. this holds for every room you ever share,\n", name)
+		fmt.Println("and you will not be asked again. if this key changes, that is an alarm")
+		fmt.Println("rather than a new first meeting.")
+		return
+	}
+
+	fmt.Println()
+	fmt.Println("STOP. different words mean you are not connected to each other:")
+	fmt.Println("something is relaying this exchange and showing each of you a different key.")
+	fmt.Printf("\n  the key you were given for %s:\n    %s\n\n", name, peerID)
+	fmt.Println("this is not a transient error and running it again will not clear it.")
+	fmt.Println("tell the person on the call what you saw — it is evidence, and it is the")
+	fmt.Println("only place this becomes visible.")
+	os.Exit(1)
 }

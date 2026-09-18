@@ -2473,3 +2473,59 @@ claim about the interface, not the protocol.
 **Revisit when** verification is wanted between peers that cannot be connected at
 the same moment. The short form is unavailable there and D-047's full-length
 rendering is the only option, so both may need to exist.
+
+---
+
+## D-053 — `pair` is machine scope and `invite` is room scope; the commands now say so
+
+**Date:** 2026-09-18 · **Status:** active (implemented)
+
+**Context.** Asked why the commands are typed at a terminal rather than as slash
+commands in a session. The honest answer was that nothing is packaged yet (D-041),
+not that it had been decided. Examining which commands *could* move produced the
+real finding: `verify` cannot — it needs stdin, it blocks on another person, and its
+two words must reach a person's eyes without passing through a model that reads room
+content from unverified peers (D-040). Observed in reply that if verification must
+live outside the session, the vocabulary should separate peer onboarding from room
+operations rather than leave them interleaved.
+
+That is the right cut, and it was already the data model: §12 has kept **known peers**
+(per machine, durable) and **a room's guests** (per room) as two lists since D-024.
+The commands did not reflect it. `allow` said only that something had been permitted
+and never which of the two, and sat in a flat list beside `invite`, which is a
+different act at a different scope.
+
+**Decision.** `claude-team pair <identifier>[@address] [name]` is the durable act:
+record the peer, record a bootstrap address, and run the two-word comparison, in one
+command that both people run at once on a call. `invite` remains room-scoped and
+unchanged. `allow` survives as the low-level "record without verifying" for scripts
+and tests, and now says **UNVERIFIED** rather than printing a fingerprint and advice
+about a ceremony it does not perform.
+
+**Why the naming matters more than it looks.** The split decides where each act can
+live. Pairing is interactive and ends in something a person must read exactly, so it
+belongs at a terminal. Inviting is one non-interactive act with informational output,
+so it can be a slash command inside a session. A vocabulary that ran the two together
+would force both into the more restrictive home — which is what "commands are typed
+at a terminal" had quietly become.
+
+§12 is retitled from "Session Pairing" to "Forming a Room", because under this
+vocabulary *pairing* means peer onboarding and the old title named the wrong act.
+Section numbers are unchanged, so every reference still resolves.
+
+**The ordering gap this closes.** `verify` previously found a peer only through
+addresses learned from room membership, so verification could not precede the room it
+was meant to protect. `known_peers.endpoint` holds a machine-scope address recorded at
+pairing, `syncTargets` includes them, and the sequence is now pair → create → invite →
+join rather than create → invite → join → verify. §4 already permits this: an endpoint
+is a bootstrap hint that need only be correct once.
+
+**Still not gated.** Sync is not refused for an unverified peer. `invite` and `join`
+now say plainly when a key nobody has confirmed is being admitted, but neither
+refuses: whom to admit is the host's judgement (D-051), and refusing would make the
+system unusable before discovery exists. This is a warning, not an enforcement, and
+should not be described as one.
+
+**Revisit when** discovery lands. A peer found on a local network has an address
+nobody typed, which changes what a pairing string is for and may reduce it to the
+identifier alone.

@@ -159,6 +159,11 @@ func (d *Daemon) syncTargets() []string {
 	for _, a := range peerList() {
 		add(a)
 	}
+	// Machine-scope addresses, learned when pairing. These exist before any room
+	// does, which is what lets verification precede admission.
+	for _, a := range d.members.PeerEndpoints() {
+		add(a)
+	}
 	if rooms, err := d.members.Rooms(); err == nil {
 		for _, r := range rooms {
 			for _, a := range d.members.RoomPeers(r.RoomID) {

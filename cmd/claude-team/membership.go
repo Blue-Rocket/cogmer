@@ -32,7 +32,12 @@ CREATE TABLE IF NOT EXISTS known_peers (
   -- they have. Without this the "unverified" marker §25 requires inside injected
   -- text is true of every peer forever, and a marker that can never change is one
   -- a reader learns to stop seeing.
-  verified_at TEXT
+  verified_at TEXT,
+  -- Where this peer was last known to listen. A bootstrap hint in §12's sense,
+  -- held at MACHINE scope because pairing precedes any room: without it there is
+  -- nowhere to reach a peer until a room already exists, which would force
+  -- verification to follow admission rather than precede it.
+  endpoint TEXT
 );
 CREATE TABLE IF NOT EXISTS rooms (
   room_id         TEXT PRIMARY KEY,
@@ -83,6 +88,7 @@ type KnownPeer struct {
 	Name       string `json:"name"`
 	AddedAt    string `json:"addedAt"`
 	VerifiedAt string `json:"verifiedAt,omitempty"`
+	Endpoint   string `json:"endpoint,omitempty"`
 }
 
 type Room struct {
@@ -137,8 +143,13 @@ func migrateMembership(db *sql.DB) error {
 	if err := rows.Err(); err != nil {
 		return err
 	}
-	if err := addColumnIfMissing(db, "known_peers", "verified_at", "TEXT"); err != nil {
-		return err
+	for _, c := range []struct{ table, column, typ string }{
+		{"known_peers", "verified_at", "TEXT"},
+		{"known_peers", "endpoint", "TEXT"},
+	} {
+		if err := addColumnIfMissing(db, c.table, c.column, c.typ); err != nil {
+			return err
+		}
 	}
 	if unique == "" {
 		return nil
@@ -173,6 +184,35 @@ func (m *Membership) Close() error { return m.db.Close() }
 
 // Allow records a peer this machine knows. The identifier is a public key, so
 // receiving one requires no confidentiality and creates no exposure (§25).
+// SetPeerEndpoint records where a peer was last known to listen. It is a hint and
+// is allowed to be wrong: §12 requires only that it be correct once, since a peer
+// that has joined a room learns how to reach the others.
+func (m *Membership) SetPeerEndpoint(peerID, endpoint string) error {
+	if endpoint == "" {
+		return nil
+	}
+	_, err := m.db.Exec(`UPDATE known_peers SET endpoint = ? WHERE peer_id = ?`, endpoint, peerID)
+	return err
+}
+
+// PeerEndpoints is every machine-scope address worth trying. Room membership
+// supplies others; these are the ones that exist before any room does.
+func (m *Membership) PeerEndpoints() []string {
+	rows, err := m.db.Query(`SELECT endpoint FROM known_peers WHERE endpoint IS NOT NULL AND endpoint <> ''`)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var e string
+		if rows.Scan(&e) == nil {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
 func (m *Membership) Allow(peerID, name string) error {
 	if _, err := PublicFromPeerID(peerID); err != nil {
 		return fmt.Errorf("refusing to record an identifier that names no key: %w", err)
@@ -229,7 +269,8 @@ func (m *Membership) IsVerified(peerID string) bool {
 }
 
 func (m *Membership) KnownPeers() ([]KnownPeer, error) {
-	rows, err := m.db.Query(`SELECT peer_id, name, added_at, COALESCE(verified_at,'') FROM known_peers ORDER BY name`)
+	rows, err := m.db.Query(`SELECT peer_id, name, added_at, COALESCE(verified_at,''), COALESCE(endpoint,'')
+		FROM known_peers ORDER BY name`)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +278,7 @@ func (m *Membership) KnownPeers() ([]KnownPeer, error) {
 	var out []KnownPeer
 	for rows.Next() {
 		var p KnownPeer
-		if err := rows.Scan(&p.PeerID, &p.Name, &p.AddedAt, &p.VerifiedAt); err != nil {
+		if err := rows.Scan(&p.PeerID, &p.Name, &p.AddedAt, &p.VerifiedAt, &p.Endpoint); err != nil {
 			return nil, err
 		}
 		out = append(out, p)
