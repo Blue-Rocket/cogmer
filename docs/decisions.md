@@ -2140,9 +2140,9 @@ than the least.
 
 ## D-048 — Verification should bind a live exchange, not a standing identifier (ZRTP's SAS)
 
-**Date:** 2026-09-17 · **Status:** superseded in placement by D-052, which built the
-ceremony as its own command rather than inside join. The reasoning below stands;
-only "join is the moment" was wrong. D-047 remains held.
+**Date:** 2026-09-17 · **Status:** active as to construction; its **placement** was
+superseded by D-052 (its own act, not part of join) and then by D-053 (at pairing).
+D-047 remains held.
 
 **Context.** Tracing the manual steps produced a count: there are **two**. Alice runs
 `whoami` and her identifier reaches David somehow (transfer); David then asks her to
@@ -2192,11 +2192,17 @@ one online guess**:
 construction, not a law of the domain. §25 now says so, because as written it
 foreclosed the better option while appearing to rule it out on principle.
 
-**Decision.** Adopt the live-exchange form. **Join is the moment** — both daemons are
-connected and interactive when `claude-team join` runs, so commit/reveal fits there:
-each side commits to a hash of its contribution, both reveal, the string derives from
-both long-term identity keys plus both fresh nonces, and each side prints two or three
-words for the people to compare on the call they are already on.
+**Decision.** Adopt the live-exchange form: each side commits to a hash of its
+contribution, both reveal, the string derives from both long-term identity keys plus
+both fresh nonces, and each side prints two words for the people to compare on the
+call they are already on.
+
+This entry placed that at **join**, reasoning that both daemons are connected there.
+D-052 rejected the placement: the ceremony is its own act, because it is interactive,
+because it blocks on another person, and because joining is a room operation while
+verifying a key is not. D-053 then moved it to **pairing**, which is the act that
+happens once between two machines. Read the placement below from D-052 and D-053; the
+construction below is as built.
 
 Three consequences, in order of how much they change:
 
@@ -2478,7 +2484,9 @@ rendering is the only option, so both may need to exist.
 
 ## D-053 — `pair` is machine scope and `invite` is room scope; the commands now say so
 
-**Date:** 2026-09-18 · **Status:** active (implemented)
+**Date:** 2026-09-18 · **Status:** active (implemented), **except its gating
+position, reversed by D-054 the same day** — verification now gates synchronization
+and injection rather than merely warning.
 
 **Context.** Asked why the commands are typed at a terminal rather than as slash
 commands in a session. The honest answer was that nothing is packaged yet (D-041),
@@ -2520,10 +2528,8 @@ pairing, `syncTargets` includes them, and the sequence is now pair → create �
 join rather than create → invite → join → verify. §4 already permits this: an endpoint
 is a bootstrap hint that need only be correct once.
 
-**Gating — superseded by D-054.** This entry left sync ungated for an unverified
-peer, with `invite` and `join` merely warning. That was reversed the same day: no
-transcript crosses to an unverified peer and no unverified turn is injected. The
-warnings described here remain, and now describe a gate rather than a caution.
+**Gating — see D-054.** The warnings this entry added to `invite` and `join` remain,
+and now announce a gate rather than a caution.
 
 **Revisit when** discovery lands. A peer found on a local network has an address
 nobody typed, which changes what a pairing string is for and may reduce it to the

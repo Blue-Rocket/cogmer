@@ -20,12 +20,17 @@ end rather than given a finding number.
 
 Findings are ordered by consequence, not by section number.
 
-**Status, as of the last revision.** Seven of the original fourteen are resolved, two
-dissolved by a change of model rather than fixed, and five remain open — A1 among
-them, reopened after being closed on implementation work rather than specification
-work. Two further findings were raised afterwards: B4, resolved, and A5, open. Each carries its own
-status line; the open ones are collected at the end so they are not lost among the
-closed.
+**Status, as of the last revision.** Of sixteen findings, nine are resolved (one by
+dissolution rather than repair), one is partly addressed and cannot be verified until
+Phase 5, and six remain open — A1 among them, reopened after being closed on
+implementation work rather than specification work.
+
+The six open findings share a shape worth naming: every one of them is the
+*specification* lagging the implementation, not a defect in either. A1, B3 and C1
+describe things the code does and the spec does not say; C2, C5 and C6 describe
+compaction, which Phase 0a settled empirically and which §21 and §3.4 have not caught
+up with. Each carries its own status line, and the open ones are collected at the end
+so they are not lost among the closed.
 
 Resolution came from three directions worth distinguishing. Some findings were
 defects and were fixed (A1). Some were questions the specification had not answered,
@@ -108,6 +113,10 @@ working directory. The `cwd` mapping, the config file, the walk-up rule, the
 default-off guard and the room-name traversal check are all unnecessary. The
 original finding is retained because the inconsistency it identified is what
 prompted the model change.
+
+Resolution by *name* survives at the command line and was removed from the wire —
+D-049 has a peer address a room by `roomId`, and D-050 lets names collide locally and
+reports the ambiguity rather than guessing at it.
 
 **High.** Three sections describe mutually incompatible shapes:
 
@@ -467,15 +476,15 @@ to rewind the watermark. Minor drift between the specification and the decision.
 
 ### C7 — §25 asks for signable peer identity; identity is currently a random string
 
-**RESOLVED for integrity; open for admission.** Identifiers are now Ed25519 public
-keys, events are signed at origin, and a receiving peer rejects anything that does
-not verify against the key its own identifier names. §13's relay rule is enforced
-rather than stated, and attribution is no longer a claim a peer can make freely.
+**RESOLVED.** Identifiers are Ed25519 public keys, events are signed at origin, and
+a receiving peer rejects anything that does not verify against the key its own
+identifier names — so §13's relay rule is enforced rather than stated.
 
-What remains is admission: nothing yet proves possession of a key *on connection*,
-so the peer API still admits any host that can reach it to read a room. That is
-Phase 10's work, and the startup warning now says exactly that rather than claiming
-identity is not cryptographic.
+Admission followed: sync requests are signed with replay and staleness rejection
+(D-044), a request is refused unless its authenticated peer is a guest of that room
+(D-045), and refused unless that peer has also been verified by a person (D-054).
+Authentication says who, the guest list says whether, and verification says the key
+is the person's.
 
 **Previously — see D-020.** §25 now states
 what cryptographic identity requires and which rules are conventions until it
@@ -561,9 +570,11 @@ Recorded here so the review remains the single place to look:
 ## Implementation conformance
 
 Where the code and the specification disagree. These are not findings about the
-specification and carry no finding number; the remedy is code.
+specification and carry no finding number; the remedy is code. Numbered in the order
+raised, and listed in that order — several of these were found by running the system
+rather than by reading it, which is the point of keeping them separate.
 
-**C-1. A lost room database is not detected, and recovery does not happen.**
+**C-1. A lost room database is not detected, and recovery does not happen — OPEN.**
 §22 requires a membership index and §8 requires resuming above a recorded sequence.
 Neither exists. Reproduced by deleting a room database:
 
@@ -576,45 +587,65 @@ Neither exists. Reproduced by deleting a room database:
   receiving side, while the peer that caused it is never told.
 
 The experience is that nothing appears wrong. Teammate context stops arriving, the
-peer's own events stop reaching anyone, each side sees the other fall quiet.
+peer's own events stop reaching anyone, each side sees the other fall quiet. This is
+Phase 7 work and the only conformance item still open.
 
-**C-5. Injected attribution used a self-asserted display name — fixed.** Both peers
-in the two-peer run asserted `David`, derived from `$USER`, and every event in the
-room read as one person despite being two. Attribution now anchors on the derived
-peer name and marks the speaker unverified inside the injected text, per §20 and
-D-021. Recorded here because it was a live divergence found by running the system,
-not by reading it.
-
-**C-6. One listener served hooks, UI and sync — fixed.** §5 diagrams a localhost
-interface for Claude Code and the local UI and a separate peer interface, and §25
-requires it. The implementation bound all three to one loopback address, so the
-separation the specification treats as a security boundary did not exist. It was
-also the blocker for two machines: exposing sync would have exposed the hook API,
-which publishes into the room and reads the conversation back.
-
-There are now two listeners. Hooks and UI refuse to bind anything but loopback.
-Peer sync defaults to loopback and warns, when bound elsewhere, that it is reachable
-and unauthenticated — which it is, until D-023 lands. Tests assert that neither
-listener serves the other's routes.
-
-**C-2. Rooms are records with guests — mostly resolved.** `membership.db` holds
-known peers, rooms, and per-room guest lists; `create`, `rooms`, `peers`, `allow`,
+**C-2. Rooms are records with guests — resolved.** `membership.db` holds known
+peers, rooms, and per-room guest lists; `create`, `rooms`, `peers`, `pair`, `allow`,
 `forget`, `guests`, `invite` and `revoke` exist; admission is enforced on every sync
-request.
-
-What remains: a daemon still *serves* one room chosen by `CLAUDE_TEAM_ROOM`, and
-creates it if absent. §5 describes a daemon serving several rooms concurrently, with
-a session joining rather than a daemon serving. That refactor is outstanding.
+request. The daemon now serves every room this peer belongs to, opening a store per
+room on demand, and a session binds to a room on first sight (D-046) — which is what
+this item was waiting on.
 
 **C-3. Peer identity is cryptographic — resolved.** Identifiers are Ed25519 public
 keys (`ed25519:…`), the private key lives in its own `0600` file and never reaches
 `whoami`, events are signed at origin, and receipt rejects what does not verify.
 Attribution and the relay rule are now controls rather than conventions.
 
-Possession is proved on connection, and **admission is now enforced** (D-045): a
-request is refused unless its authenticated peer is a guest of the room. Verified by
+Possession is proved on connection, and **admission is enforced** (D-045): a request
+is refused unless its authenticated peer is a guest of the room. Verified by
 repeating the test that failed — the same uninvited stranger now reads nothing,
-while an invited peer reads the room. C-3 is closed.
+while an invited peer reads the room.
 
 **C-4. Room identifiers and names are generated — resolved.** A room has a UUID and
-a generated `weather-landscape` name from 7,656 combinations, resolvable by either.
+a generated `weather-landscape` name from 7,656 combinations, resolvable by either
+at the command line and by identity alone on the wire (C-8).
+
+**C-5. Injected attribution used a self-asserted display name — fixed.** Both peers
+in the two-peer run asserted `David`, derived from `$USER`, and every event in the
+room read as one person despite being two. Attribution now anchors on the derived
+peer name, per §20 and D-021. Recorded here because it was a live divergence found
+by running the system, not by reading it.
+
+**C-6. One listener served hooks, UI and sync — fixed.** §5 diagrams a localhost
+interface for Claude Code and the local UI and a separate peer interface, and §25
+requires it. The implementation bound all three to one loopback address, so the
+peer interface could not be exposed without also exposing the hook API, which
+publishes into the room and reads the conversation back.
+
+There are now two listeners. Hooks and UI refuse to bind anything but loopback.
+Peer sync defaults to loopback and warns when bound elsewhere. Tests assert that
+neither listener serves the other's routes.
+
+**C-7. Transcripts flowed to peers nobody had verified — fixed.** `IsVerified`
+existed and was consulted only for a marker in injected text and two command-line
+warnings; nothing in authentication, synchronization or admission looked at it. An
+unverified guest synchronized normally and its turns entered a teammate's context
+wearing a tag. Now gated in three places — serving, accepting at the event's origin,
+and injecting — per D-054.
+
+Recorded here because the gap was invisible from the specification: every rule
+written down was implemented, and the rule that mattered had not been written down.
+
+**C-8. The wire addressed rooms by name — fixed.** D-017 says never key on the name;
+`syncRequest` carried `room: <roomName>` and the signature covered it. Nothing was
+exploitable, because `rooms.room_name` was UNIQUE and the lookup could not resolve
+wrongly — but that protection lived in a local schema no peer can see, which is too
+far from the thing it guarded for anyone to think to preserve it. Now `roomId`, with
+peer-supplied identifiers resolving through `RoomByID` (D-049).
+
+**C-9. Joining a room whose name was already held failed — fixed.** The same UNIQUE
+index that made C-8 harmless rejected a second room carrying a name already present,
+so `runJoin` aborted for a reason naming nothing the developer had done and nothing
+they could change. Names now collide locally, and an ambiguous name is reported with
+both identities rather than guessed at (D-050).

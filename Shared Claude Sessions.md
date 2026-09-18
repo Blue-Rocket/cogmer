@@ -790,24 +790,29 @@ address is where a daemon listens; an interceptor learns that a peer exists and
 gains no way in (D-026, D-042). What interception threatens is substitution, which
 is what the two-word comparison is for.
 
-## Knowing a guest before inviting them
+## Pairing, which happens once
 
-Admission by guest list requires that a host already hold the guest's identifier. That is one exchange per person, ever, and nothing about it needs to stay secret:
+Admission by guest list requires that a host already hold the guest's key. That is one exchange per person, ever:
 
 ```
 Alice:   claude-team whoami
-         → quiet-otter   ed25519:M7Kd…4Fq2
+         → ed25519:M7Kd…4Fq2@198.51.100.7:4783
 
          (sent to David by whatever means is convenient)
 
-David:   claude-team allow ed25519:M7Kd…4Fq2
+Both, at the same time, on a call:
+David:   claude-team pair ed25519:M7Kd…4Fq2@198.51.100.7:4783 alice
+Alice:   claude-team pair ed25519:GoR7…IWPU@203.0.113.9:4783 david
+
+         → ribcage tambourine
+         → did they say the same two words? [y/N]
 ```
 
-A public identifier may be pasted into a chat, mailed, printed, or read aloud, because holding it confers nothing. This is what makes a guest list better than a token rather than merely different from one: the thing exchanged out of band is worthless to an interceptor, and it is exchanged once rather than for every meeting.
+The string carries an identifier and a bootstrap address, and neither half is a secret: an identifier is a public key, an address is where a daemon listens, and holding both admits nobody (D-026, D-042). It may be pasted into a chat, mailed, printed, or read aloud.
 
-Read that as a claim about **confidentiality only**. This exchange needs no privacy and it does need **integrity**, and the integrity is not supplied by anything above. An interceptor who reads the identifier learns nothing; an interceptor who **replaces** it is recorded as the guest, under the name the host expected, durably and with nothing appearing wrong. That is the attack §25 exists to answer, and the answer is the verification step described there — not this paragraph. Do not read "safe to send anywhere" as "safe on its own."
+**That is a claim about confidentiality only.** The exchange needs no privacy and it does need integrity, and nothing about sending a public value supplies it. An interceptor who reads the string learns nothing; an interceptor who **replaces** it is recorded as the guest, under the name the host expected, durably, with nothing appearing wrong. The two-word comparison is what closes that, and §25 states the requirement it must meet.
 
-Set against what a token requires — something that must stay secret in transit, produced afresh for each first meeting, and impossible to check afterwards — the guest list is less work as well as safer.
+Pairing carries the address because verification has to be possible before any room exists. Were the address learned only on joining, every first verification would happen after the room it was meant to protect.
 
 ## The guest list
 
@@ -1470,7 +1475,11 @@ The useful framing names the failure mode: that nothing inside the block is addr
 
 That distinction is what allows a model to classify hostile content correctly rather than weigh it against competing instructions — and, in practice, to say so: a session receiving a forged operator instruction identified it, explained that it came from inside the record and was therefore information rather than instruction, and reported the attempt to its own user.
 
-Attribution in injected context carries more weight than attribution in a display, because a model reasons about who said a thing. A speaker a peer has not verified must be marked as unverified in the injected text itself, not merely in the interface. Otherwise a peer that has chosen a convincing name can place words in a trusted colleague's mouth, in a form that reads to the model exactly like the colleague saying them.
+Attribution in injected context carries more weight than attribution in a display, because a model reasons about who said a thing.
+
+An unverified speaker does not appear in injected context at all: §25 makes verification a gate, so their turns are neither synchronized nor injected. The requirement that an unverified speaker be **marked inside the injected text** survives that as a backstop rather than as a normal state — if the mark is ever rendered, a filter has failed, and the text must say so where the model can read it rather than only in an interface.
+
+What remains true of every speaker, verified or not, is that the **display name is self-asserted**. It comes from the peer's own environment and is a claim; two peers asserted the same one during the first two-peer run, because both daemons happened to run under the same OS user. Attribution therefore anchors on the name derived from the identifier, which cannot be chosen, with the display name beside it rather than in place of it. Otherwise a peer that has picked a convincing name can place words in a colleague's mouth, in a form that reads to the model exactly like the colleague saying them.
 
 ---
 
@@ -1678,11 +1687,11 @@ This does not remove the first exchange. Two peers that have never met must stil
 
 What it removes is every exchange after the first: a key once verified is durable, whereas a secret is spent on use.
 
-That verification should be made against a rendering of the **whole** key. Where a key is compared by people — read aloud, or checked side by side — render all of it, as a sequence of words or grouped digits. A peer name is not that, and must not be offered as though it were.
+Verification is a comparison of **two words**, spoken aloud, derived from a live exchange between the two daemons. It is described in "The two-word comparison" below, and it is the only ceremony this system performs.
 
-The reason is narrower than it first appears, and stating it loosely forecloses a better construction. A long-term identifier sits still: an attacker who has intercepted one can grind **offline**, at leisure, for a key of his own whose rendering matches, and the cost is exactly the entropy displayed. Sixteen characters would be beyond reach; three fall in under a second. Rendering all of it is the rule that avoids having to reason about where the threshold lies.
+The alternative — reading a rendering of the whole key aloud — is what a standing identifier forces, and is the fallback where no live exchange is possible. The difference is not taste. A long-term identifier sits still, so an attacker who has intercepted one can grind **offline**, at leisure, for a key of his own whose rendering matches, at a cost of exactly the entropy displayed: sixteen characters are beyond reach, three fall in under a second. That is why a static comparison must show the whole key, and why a short mnemonic drawn from one — a peer name, for instance — must never be offered as though it were a verification.
 
-What that argument does *not* establish is that a short string is inherently too weak to compare. It is too weak **for a value an attacker can aim at in advance**. A value derived from a fresh exchange, in which each side commits to its contribution before learning the other's, cannot be aimed at: the attacker must choose blind, gets one guess, and a wrong guess is a mismatch the two people hear. That is a different construction with different arithmetic, and it is what makes a two-word comparison sound elsewhere. See "A short string, if the exchange is live" below.
+A value derived from a fresh exchange cannot be aimed at in advance, which is what makes the short form sound. The attacker must commit blind, gets one guess, and a wrong guess is a mismatch the two people hear.
 
 The two mechanisms therefore compose rather than compete. A single-use secret admits a peer that is not yet known, and being admitted is what makes it known. Between peers that already know each other, no secret is required and none should be demanded.
 
@@ -1711,24 +1720,32 @@ The second is the one that matters most, and the one most easily overlooked. It 
 
 State the requirement accordingly. The channel must be one the identifier did not travel on **and** one on which the other party can be recognised. A rendering compared with a stranger, however carefully, verifies that two parties hold the same key and says nothing about whose it is.
 
-## A short string, if the exchange is live
+## The two-word comparison
 
-The comparison described above is expensive to perform honestly. Forty-three characters of base64 read over a telephone is a task people do badly or skip, and skipping it leaves no trace, so the verified entropy is whatever was actually checked rather than whatever was displayed.
+Verification is two words, said aloud on a call, by both people at once. It is one act at **pairing** time — not at joining, and not at admission — because pairing is what happens once between two machines and outlasts every room they share (§12).
 
-ZRTP solves the same problem in the same setting — two people already on a call, wanting to know that nobody sits between them — and solves it with **two words**. It is worth stating why that is sound, because the arithmetic is instructive and because the design is available to us.
+Reading forty-three characters of base64 over a telephone is a task people do badly or skip, and skipping leaves no trace, so the verified entropy is whatever was actually checked rather than whatever was displayed. Two words are compared as units: somebody either says "badger" or does not, where an eye slides over `ol5v` without stopping.
 
-Two properties carry it:
+Two properties make that short form sound, and removing either leaves a ceremony that looks identical and protects nothing:
 
-- **Commitment.** Each side sends a hash of its contribution before seeing the other's. An attacker relaying between them must fix what he presents to one party before he learns what the other will present, so he cannot search for a substitution whose displayed string collides on both sides. He is reduced to a single blind guess.
-- **Freshness.** The compared value derives from per-exchange randomness, not from a standing identifier. There is nothing to precompute against, because the target does not exist until the exchange is under way.
+- **Commitment.** Each side sends a hash of its contribution before either reveals one. An attacker relaying between them must fix what he presents to each side before learning what the other will present, so he cannot search for a pair of substitutions whose words agree. He is reduced to one blind guess.
+- **Freshness.** The words derive from per-exchange randomness together with both identities, not from the standing identifiers alone. There is nothing to precompute against, because the target does not exist until the exchange is under way.
 
-Together these convert an offline search into one online guess. Where an offline search makes a short string worthless, a single guess at a two-word space is a risk comparable to the rest of the system — and, crucially, a failed guess is not a silent failure. The two people read different words and hear it.
+Together these turn an offline search into a single online guess, at odds set by the length of the string.
 
-The retry question follows from that and must be answered explicitly: a short string with unlimited silent attempts is weak, because the attacker simply tries again. What protects it is that **failure is conspicuous**. A mismatch must refuse the exchange, must say plainly that something intercepted it, and must not present itself as a transient error worth repeating. An implementation that lets a mismatch be shrugged off and retried has the ceremony without the property.
+**Failure must be conspicuous, because nothing blocks a retry.** A short string with silent retries is weak: the attacker simply tries again. What protects it is that a wrong guess produces two different strings and the two people *hear* it. So a mismatch must refuse, must say plainly that something intercepted the exchange, and must never present itself as a transient error worth repeating. Nothing about a failed comparison is recorded, because a stored failure invites an interface that offers to try again, and trying again is the one thing that must not be offered.
 
-This bears on where verification should happen. A standing identifier passed by whatever means, then confirmed later, forces the full-length comparison, because by then there is nothing fresh to bind to. An exchange conducted while both peers are connected — which is precisely the moment one joins a room — admits the short form. The second is not merely more convenient; it also removes the requirement that the first channel be trustworthy at all, since what is authenticated is whichever key actually arrived.
+Requirements on the exchange:
 
-Whichever is chosen, a commitment step implemented incorrectly degrades to a grindable value while still looking like a ceremony, which is worse than performing none: it produces the confidence without the property.
+- both sides commit before either reveals, and a reveal that arrives before a commitment, or that does not open the commitment already held, is refused;
+- the words derive from both identities and both nonces, ordered so that each side computes the same string without either being the initiator;
+- the vocabulary is phonetically distinct and alternates between two lists, so that words said in the wrong order are not a valid rendering of anything;
+- that vocabulary is **not** the one used for peer names or room names, since a comparison string sitting beside a derived peer name must not be mistakable for it;
+- only a person records the result. The exchange proves both sides hold the keys they named; it cannot establish that the voice on the call is the colleague rather than somebody in their place.
+
+Both people must ask for the verification. A daemon answers a step in the exchange only when its own user has started one, which is what keeps this from becoming a channel by which anyone can cause something to appear on someone else's screen.
+
+A commitment step implemented incorrectly degrades to a grindable value while still looking like a ceremony. That is worse than performing none, because it produces the confidence without the property.
 
 ## Verification is a gate, not a label
 
@@ -1873,11 +1890,13 @@ Peer connectivity configuration should not require committing personal credentia
 Eventually:
 
 ```
-claude-team invite quiet-otter
-→ misty-canyon
+# once with each colleague, at a terminal, on a call with them
+claude-team pair ed25519:M7Kd…4Fq2@198.51.100.7:4783 alice
+→ ribcage tambourine   → verified
 
-claude-team join misty-canyon
-claude
+# thereafter, per room, from inside a session
+/team-create          → misty-canyon
+/team-invite alice
 ```
 
 ## Installation
@@ -1891,6 +1910,24 @@ claude plugin install claude-team
 The plugin carries the hooks. No shell profile is modified, no configuration file is hand-edited, no service is registered with the operating system, and nothing about how Claude Code is started changes.
 
 This follows from Claude Code being launched and used unchanged. A plugin is loaded by Claude Code wherever Claude Code loads plugins, so the system reaches those surfaces without needing to know they exist — which matters because that set will change, and a design that enumerates surfaces will be wrong within a release.
+
+## Where each command lives
+
+Two homes, and which one a command belongs in is decided by the command rather than by preference.
+
+**Inside a Claude Code session**, as commands it already loads: anything informational or single-shot. Listing rooms and peers, creating a room, inviting a known peer, joining, leaving, reading the room. These have no interaction beyond their arguments, and their output is something a person reads once — so it is acceptable that it reaches them by way of the model, which is how everything from an extension point reaches a person (§3.8).
+
+Joining in particular is better here than at a terminal. A room is session-scoped, and a command typed inside a session can name the session it means; a command outside one cannot, and must instead set a machine-level current room that sessions adopt on first sight.
+
+**At a terminal**, as a separate program: pairing and verification. Three properties put them there, and any one would be enough.
+
+- They are **interactive**, and block on another person for as long as it takes them to type a command.
+- Their output must reach a person's eyes **unaltered**. Two words whose purpose is that you compared exactly what your daemon computed must not pass through a model, and least of all through the model that is reading room content from peers — the content §20 exists because it once impersonated an operator instruction.
+- Recording the result is a **human act**, and the human is on a telephone rather than at a prompt.
+
+A slash command may point at them. It must not perform them: *"run `claude-team pair …` in a terminal, on a call with them"* is a signpost, and a signpost is honest in a way a proxy would not be.
+
+This split is why the vocabulary separates pairing from inviting (§12). A single verb spanning both scopes would have forced both into the more restrictive home.
 
 ## Starting the daemon
 
@@ -1947,9 +1984,12 @@ Phase numbers are never reused or reassigned, so that references elsewhere conti
 | Phase 2 — Two-peer synchronization | **complete**, ahead of Phase 1 and not over Tailscale |
 | Phase 3 — Real-time push | **will not be built** as written; polling is the decided mechanism for peers |
 | Phase 4 — Cross-Claude context | **complete**, in Phase 0 |
-| Phase 5 — Offline/reconnection | outstanding |
+| Phase 5 — Offline/reconnection | **outstanding — next** |
 | Phase 6 — Three-peer/transitive | deferred |
 | Phase 7 — Hardening | partial, taken early where it was cheap |
+| Phase 8 — The local UI | **complete** |
+| Phase 9 — Peer identity | **complete**; verification added afterwards and gates synchronization |
+| Phase 10 — Pairing | **partial** — pairing, rooms, invitation, joining and admission work; a host approving an unsolicited request does not exist, and whether it should is undecided (§12a) |
 
 The original sequence assumed four things that have since been displaced: a room scoped to a project, Tailscale as the transport, push between peers, and admission by a shared secret. Work proceeded out of order while those assumptions were being tested, which was the right trade during an experiment and is the wrong one now.
 
@@ -2266,13 +2306,13 @@ Nothing in this phase should be built before Phase 9. Its correctness rests enti
 ## Order of remaining work
 
 ```
-Phase 8    the local UI
+Phase 8    the local UI                          done
    ↓
-Phase 9    peer identity
+Phase 9    peer identity                         done
    ↓
-Phase 10   pairing, and room identity
+Phase 10   pairing, and room identity            done but for host approval
    ↓
-Phase 5    offline and reconnection
+Phase 5    offline and reconnection              ← next
    ↓
 Phase 7    hardening, and recovery from local loss
 ```
