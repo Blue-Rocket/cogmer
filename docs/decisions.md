@@ -2669,3 +2669,59 @@ verifies nothing.
 **Revisit when** a case appears where two people must verify and their daemons
 cannot reach each other. The honest response is probably still that they cannot
 collaborate either — but it should be decided against a real situation.
+
+---
+
+## D-056 — A session's room is fixed at first sight; the `injected` flag is removed
+
+**Date:** 2026-09-18 · **Status:** active (implemented)
+
+**Context.** Initialized CodeGraph and ran a dead-symbol sweep. Two results:
+`min`, which duplicated the Go 1.21 builtin, and `HasReceivedContext`, which
+`codegraph_callers` confirmed had none.
+
+The second is not dead code — it is a **rule recorded and never enforced**.
+`MarkInjected` wrote `session_rooms.injected = 1` after teammate context was
+offered; `HasReceivedContext` read it; nothing called `HasReceivedContext`. §12a's
+constraint was in fact enforced by something else entirely: `RoomForSession` returns
+the bound room unconditionally once a row exists, so a session can never move
+whether or not anything reached it.
+
+**The specification was therefore looser than the code, in the direction that
+matters.** §12a said a session may not move *once teammate context has been
+injected*, which permits moving one that has had none — the ordinary case of joining
+the wrong room and correcting it before anything arrives. That narrower rule existed
+on paper and nowhere else, and nobody noticed for the same reason it was safe: the
+stricter behaviour is what anyone would want.
+
+**Decision.** Keep the strict rule and delete the machinery for the loose one. A
+session binds on first sight and stays. `injected`, `MarkInjected` and
+`HasReceivedContext` are gone, and `RoomForSession` carries the comment saying it is
+the whole of the constraint.
+
+Correcting a wrongly joined room now means starting a session. That is cheaper than
+a rule which has to be right about what a context window contains — a judgement made
+from the outside, about state that cannot be inspected, where being wrong once is
+irreversible.
+
+**The column is dropped, not left.** It would have been harmless: it has a default
+and nothing writes it. But a column encoding a rule that was removed is a rule
+somebody will later find and reinstate, so `migrateMembership` drops it from
+databases that predate this.
+
+**What the sweep says about the method.** This is the second finding of the same
+shape in two days — after `Fingerprint`, which also had no callers and also
+represented a decision recorded but never wired up (D-055). Both were invisible to
+every test, because a test exercises what is called. A symbol with no callers is
+worth treating as a question rather than as tidiness: it usually means something was
+decided, written down, and then satisfied some other way.
+
+**Tests.** `TestASessionsRoomNeverChanges` states the surviving rule directly: a
+bound session stays put when the current room changes, and a session starting
+afterwards gets the new one. `TestMigrationDropsTheInjectedColumn` writes a
+pre-change database and requires both that the column is gone and that the binding it
+carried survives.
+
+**Revisit when** a case appears for moving a session that has received nothing. It
+would need a way to know that from outside the session which does not depend on a
+flag nobody reads, and the flag is what failed here.

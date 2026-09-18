@@ -567,7 +567,7 @@ A peer that cannot establish where its sequence had reached must not publish int
 
 Losing a room's local database does not end a peer's membership in that room.
 
-What the database holds is the *record* of a conversation, not that conversation's value to the person who was in it. Their own turns, and the teammate turns injected into their session, are already in that session's context — which is stored separately and is unaffected. Ending membership would take something consequential in exchange for something largely recoverable, and it would take more than it appears to: a session that has received teammate context may not move to another room, so a peer that lost its membership could not collaborate again without abandoning the session, and with it the working context that was the point.
+What the database holds is the *record* of a conversation, not that conversation's value to the person who was in it. Their own turns, and the teammate turns injected into their session, are already in that session's context — which is stored separately and is unaffected. Ending membership would take something consequential in exchange for something largely recoverable, and it would take more than it appears to: a session's room is fixed for its lifetime, so a peer that lost its membership could not collaborate again without abandoning the session, and with it the working context that was the point.
 
 Only one thing must survive for membership to continue safely: **the peer's own sequence position.** Everything else can be refetched from any other member, because events are immutable and replicated.
 
@@ -1015,17 +1015,21 @@ A closed room is never rejoined, by a former member or by anyone else.
 
 ## Joining a different room
 
-A session that has received injected teammate context may not join a different room.
+A session's room is fixed at its first prompt and never changes.
 
-It may leave. It may rejoin the room it left. Its membership is not transferable.
+It may leave. It may rejoin the room it left. Its membership is not transferable. To work in a second room, start a second Claude Code session — which costs nothing and is what a developer would do anyway.
 
 The reason is that injected context cannot be withdrawn. Once another developer's conversation has entered a session's context window it remains there for the life of that session, and anything the session subsequently produces may be shaped by it. Admitting that session to a second room would publish the first room's conversation into the second by way of the model's own output — invisibly, irreversibly, and without either room's other members being aware of it.
 
 The system cannot prevent that leak once it has occurred. It can only decline to create the conditions for it.
 
-A session that has **not** received injected teammate context may join a different room. That covers the ordinary mistake of joining the wrong room and correcting it before any teammate conversation has arrived. A session's own prompts and responses do not restrict it: that content originated with the developer, and carrying it forward is their own disclosure rather than a leak of someone else's.
+**The rule is stated on the session rather than on what the session has received**, and that is a deliberate tightening. The narrower rule — a session may move until teammate context has actually arrived — is sound in principle and covers a real case: joining the wrong room and correcting it before anything arrives. It was specified that way, and it was implemented by recording whether a session had been injected into.
 
-To work in a second room, start a second Claude Code session.
+That record was written and never read. The constraint was in fact enforced by the binding being permanent, so the narrower rule existed on paper and nowhere else, and nobody noticed because the stricter behaviour is what anybody would want anyway. Two mechanisms for one rule is how one of them rots, and this one had already rotted before it was used.
+
+So: one mechanism. A session binds on first sight and stays. Correcting a wrongly joined room means starting a session, which is cheaper than a rule that has to be right about what a context window contains.
+
+A session's own prompts and responses never restrict it. That content originated with the developer, and carrying it forward is their own disclosure rather than a leak of someone else's — but it is moot here, because the session does not move regardless.
 
 ## Presence is not membership
 
@@ -1046,7 +1050,7 @@ A session-end signal is therefore a presence signal. It must never be treated as
 
 A room closes when every member has explicitly left, or when the room has lain dormant — no member present — long enough that resumption is no longer plausible.
 
-Set that threshold generously. Overnight gaps, weekends, and illness are ordinary; a room that dissolves because everyone went home has made resumption useless. Closing early is the more damaging error, because a closed room can never be rejoined and a session that has received injected context can join no other.
+Set that threshold generously. Overnight gaps, weekends, and illness are ordinary; a room that dissolves because everyone went home has made resumption useless. Closing early is the more damaging error, because a closed room can never be rejoined and a session can join no other.
 
 Closing is the end of the room, not of the conversation. The event log is archived.
 

@@ -58,11 +58,13 @@ CREATE TABLE IF NOT EXISTS room_guests (
 -- Which room each agent session belongs to. A session holds membership in at most
 -- one room at a time (§12a), which is expressible only because this is keyed on the
 -- session rather than on the daemon.
+-- A session's room is fixed at first sight and never changes. There is no
+-- "injected yet?" column: a second mechanism for one rule is how one of them rots,
+-- and this one was written and never read (D-056).
 CREATE TABLE IF NOT EXISTS session_rooms (
   session_id TEXT PRIMARY KEY,
   room_id    TEXT NOT NULL,
-  joined_at  TEXT NOT NULL,
-  injected   INTEGER NOT NULL DEFAULT 0
+  joined_at  TEXT NOT NULL
 );
 
 -- Where a room's other members can be reached. An endpoint is reachability, not
@@ -150,6 +152,12 @@ func migrateMembership(db *sql.DB) error {
 		if err := addColumnIfMissing(db, c.table, c.column, c.typ); err != nil {
 			return err
 		}
+	}
+	// Dropped rather than left in place. It would be harmless -- it has a default
+	// and nothing writes it -- but a column encoding a rule that was removed is a
+	// rule somebody will later find and reinstate (D-056).
+	if err := dropColumnIfPresent(db, "session_rooms", "injected"); err != nil {
+		return err
 	}
 	if unique == "" {
 		return nil
@@ -483,9 +491,16 @@ func (m *Membership) RoomByID(roomID string) (Room, bool) {
 
 // RoomForSession binds a session to a room on first sight and keeps it there.
 //
-// Binding at first sight rather than asking is what makes §12a's constraint
-// enforceable: a session that has already been told something cannot be moved, and
-// there is no moment later at which moving it would be safe.
+// This is the whole of §12a's constraint and the only thing that enforces it. A
+// session's room is fixed from the first prompt it submits: the row is written once
+// and read thereafter, so `join` changing the current room affects only sessions
+// that start afterwards.
+//
+// Stricter than §12a's letter, which forbids moving a session once teammate context
+// has been injected and so permits moving one that has had none. That distinction
+// was tracked in an `injected` column that nothing ever read, and the looser rule it
+// allowed serves no case anyone has wanted -- a session that has joined but not yet
+// taken a turn. Simplicity won (D-056).
 func (m *Membership) RoomForSession(sessionID string) (Room, bool) {
 	var roomID string
 	err := m.db.QueryRow(`SELECT room_id FROM session_rooms WHERE session_id = ?`, sessionID).Scan(&roomID)
@@ -499,19 +514,6 @@ func (m *Membership) RoomForSession(sessionID string) (Room, bool) {
 	_, _ = m.db.Exec(`INSERT OR IGNORE INTO session_rooms (session_id, room_id, joined_at) VALUES (?,?,?)`,
 		sessionID, cur.RoomID, time.Now().UTC().Format(time.RFC3339))
 	return cur, true
-}
-
-// MarkInjected records that a session has received teammate context, after which
-// §12a forbids moving it to another room: injected context cannot be withdrawn.
-func (m *Membership) MarkInjected(sessionID string) error {
-	_, err := m.db.Exec(`UPDATE session_rooms SET injected = 1 WHERE session_id = ?`, sessionID)
-	return err
-}
-
-func (m *Membership) HasReceivedContext(sessionID string) bool {
-	var n int
-	err := m.db.QueryRow(`SELECT injected FROM session_rooms WHERE session_id = ?`, sessionID).Scan(&n)
-	return err == nil && n == 1
 }
 
 // SessionsInRoom reports how many sessions are bound to a room, which is what
@@ -559,5 +561,34 @@ func addColumnIfMissing(db *sql.DB, table, column, typ string) error {
 		return nil // no such table yet; the schema above will have made it
 	}
 	_, err = db.Exec("ALTER TABLE " + table + " ADD COLUMN " + column + " " + typ)
+	return err
+}
+
+// dropColumnIfPresent removes a column that has stopped meaning anything. SQLite
+// has supported DROP COLUMN since 3.35, and the column is unindexed and unreferenced
+// here, which is the case it supports.
+func dropColumnIfPresent(db *sql.DB, table, column string) error {
+	rows, err := db.Query(`SELECT name FROM pragma_table_info(?)`, table)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	found := false
+	for rows.Next() {
+		var n string
+		if err := rows.Scan(&n); err != nil {
+			return err
+		}
+		if n == column {
+			found = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if !found {
+		return nil
+	}
+	_, err = db.Exec("ALTER TABLE " + table + " DROP COLUMN " + column)
 	return err
 }

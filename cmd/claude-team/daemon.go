@@ -184,12 +184,6 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = store.PrunePending(req.SessionID, maxPendingPerSession)
-	if len(pending) > 0 {
-		// Once teammate context has been offered, this session cannot be moved to
-		// another room: injected context cannot be withdrawn (§12a).
-		_ = d.members.MarkInjected(req.SessionID)
-	}
-
 	d.notify()
 	log.Printf("USER_PROMPT room=%s session=%.8s offered=%d events", room.RoomName, req.SessionID, len(pending))
 	writeJSON(w, map[string]any{"context": text})

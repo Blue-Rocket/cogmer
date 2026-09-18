@@ -315,3 +315,89 @@ func TestAPairedPeerIsReachableWithoutARoom(t *testing.T) {
 		t.Error("a paired peer's address is not reachable until a room exists")
 	}
 }
+
+// A session's room is fixed from first sight, and that is the only thing enforcing
+// §12a. An earlier design tracked "has this session been injected into?" in a
+// column nothing read; the rule below is what actually held, so it is what is
+// tested.
+func TestASessionsRoomNeverChanges(t *testing.T) {
+	m := testMembership(t)
+	self := testIdentity(t)
+	first, err := m.CreateRoom(self.PeerID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := m.SetCurrentRoom(first.RoomID); err != nil {
+		t.Fatal(err)
+	}
+
+	got, ok := m.RoomForSession("session-a")
+	if !ok || got.RoomID != first.RoomID {
+		t.Fatalf("session did not bind to the current room: %+v", got)
+	}
+
+	// Join a different room. A session already bound stays where it is, whether or
+	// not anything has been injected into it.
+	second, err := m.CreateRoom(self.PeerID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := m.SetCurrentRoom(second.RoomID); err != nil {
+		t.Fatal(err)
+	}
+
+	got, ok = m.RoomForSession("session-a")
+	if !ok || got.RoomID != first.RoomID {
+		t.Errorf("an existing session moved to %s; it must stay in %s", got.RoomID, first.RoomID)
+	}
+	// A session starting afterwards gets the new room, which is the point of
+	// changing it at all.
+	if got, ok = m.RoomForSession("session-b"); !ok || got.RoomID != second.RoomID {
+		t.Errorf("a new session bound to %s, want %s", got.RoomID, second.RoomID)
+	}
+}
+
+// The column is removed from databases that predate the change, not merely ignored.
+func TestMigrationDropsTheInjectedColumn(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	if err := os.MkdirAll(homeDir(), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	old, err := sql.Open("sqlite", filepath.Join(homeDir(), "membership.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := old.Exec(`CREATE TABLE session_rooms (
+	  session_id TEXT PRIMARY KEY,
+	  room_id    TEXT NOT NULL,
+	  joined_at  TEXT NOT NULL,
+	  injected   INTEGER NOT NULL DEFAULT 0
+	);
+	INSERT INTO session_rooms (session_id, room_id, joined_at, injected)
+	  VALUES ('s1','r1','2026-09-01T00:00:00Z',1)`); err != nil {
+		t.Fatal(err)
+	}
+	old.Close()
+
+	m, err := OpenMembership()
+	if err != nil {
+		t.Fatalf("opening a database from before the change: %v", err)
+	}
+	t.Cleanup(func() { m.Close() })
+
+	var n int
+	if err := m.db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('session_rooms') WHERE name = 'injected'`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Error("the injected column survived migration")
+	}
+	// Migrated, not orphaned: the binding it carried is still there.
+	var room string
+	if err := m.db.QueryRow(`SELECT room_id FROM session_rooms WHERE session_id = 's1'`).Scan(&room); err != nil {
+		t.Fatalf("the existing binding did not survive: %v", err)
+	}
+	if room != "r1" {
+		t.Errorf("binding became %q, want r1", room)
+	}
+}

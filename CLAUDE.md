@@ -84,9 +84,11 @@ A room begins when someone is **invited**, never when a session starts — so so
 work before that is captured nowhere and is never handed over retroactively
 (D-022). "From its beginning" always means the room's beginning.
 
-A session belongs to **at most one room at a time**, and may not move to another
-room once teammate context has been injected, because injected context cannot be
-withdrawn from a context window (D-016). Process exit makes a member *absent*, not
+A session's room is **fixed at its first prompt and never changes** (D-016, D-056),
+because injected context cannot be withdrawn from a context window. Stricter than
+§12a's original letter, which allowed moving a session nothing had reached yet; that
+permission was tracked in a flag nothing read, so it existed on paper only. Correcting
+a wrongly joined room means starting a session. Process exit makes a member *absent*, not
 gone — sessions resume under the same ID, so membership is durable and presence is
 not. **Nothing derives a room
 from a directory, repository, or project.** Membership ends; the event log is

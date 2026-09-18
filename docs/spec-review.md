@@ -649,3 +649,14 @@ index that made C-8 harmless rejected a second room carrying a name already pres
 so `runJoin` aborted for a reason naming nothing the developer had done and nothing
 they could change. Names now collide locally, and an ambiguous name is reported with
 both identities rather than guessed at (D-050).
+
+**C-10. §12a's rule was enforced by something other than the mechanism built for
+it — reconciled.** `session_rooms.injected` was written after every injection and
+read by nothing; the constraint held because `RoomForSession` binds permanently. The
+specification was the looser of the two, permitting a session with no teammate
+context to move, and that permission existed on paper only. Resolved by keeping the
+strict behaviour and deleting the flag (D-056).
+
+Found by a dead-symbol sweep after indexing the project, not by reading either the
+code or the specification — which is the point worth keeping: a symbol with no
+callers usually means a decision was recorded and then satisfied some other way.
