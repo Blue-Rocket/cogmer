@@ -2520,12 +2520,76 @@ pairing, `syncTargets` includes them, and the sequence is now pair → create �
 join rather than create → invite → join → verify. §4 already permits this: an endpoint
 is a bootstrap hint that need only be correct once.
 
-**Still not gated.** Sync is not refused for an unverified peer. `invite` and `join`
-now say plainly when a key nobody has confirmed is being admitted, but neither
-refuses: whom to admit is the host's judgement (D-051), and refusing would make the
-system unusable before discovery exists. This is a warning, not an enforcement, and
-should not be described as one.
+**Gating — superseded by D-054.** This entry left sync ungated for an unverified
+peer, with `invite` and `join` merely warning. That was reversed the same day: no
+transcript crosses to an unverified peer and no unverified turn is injected. The
+warnings described here remain, and now describe a gate rather than a caution.
 
 **Revisit when** discovery lands. A peer found on a local network has an address
 nobody typed, which changes what a pairing string is for and may reduce it to the
 identifier alone.
+
+---
+
+## D-054 — Verification gates synchronization and injection, not just a marker
+
+**Date:** 2026-09-18 · **Status:** active (implemented)
+
+**Context.** Asked whether we plan to admit unverified guests. We did — by omission
+rather than by decision. `IsVerified` was consulted in exactly three places: the
+marker inside injected text and two command-line warnings. Nothing in `auth.go`,
+`sync.go` or `Invite` looked at it, so an unverified guest synchronised normally and
+its turns entered a teammate's model context carrying a tag and nothing else.
+
+Answered directly: there should be no exchange of transcript and no injection of
+context without verification.
+
+**Why the previous position did not hold.** It rested on D-051 — whom to admit is
+the host's judgement — but that is an answer to a different question. Admission
+decides whether a key may enter. Verification decides whether the key is the
+person's. Every check in the system passes for a key substituted in transit, because
+a substituted key is a real key held by whoever substituted it, and D-047
+demonstrated exactly that end to end with **zero refusals**. A marker is the right
+thing to show once content is in front of a reader; it is not a control, and the one
+manual step the whole chain rests on will be skipped if skipping it costs nothing.
+
+**Decision.** Three gates, because there are three ways in:
+
+1. **Serving.** `verifyRequest` refuses a sync request from an unverified peer,
+   after the guest check. Not a disclosure — a caller reaching that line is already a
+   recorded guest, so it learns nothing it did not put there.
+2. **Accepting.** An event whose **origin** peer is unverified is not stored. At the
+   origin rather than the sender, so a verified relay cannot launder an unverified
+   author (§13).
+3. **Injecting.** `onlyVerified` filters again at the prompt hook. Belt and braces:
+   an event stored while its peer was verified outlives a later `forget`, and
+   injection is the step that cannot be undone, because a context window has no
+   delete.
+
+**Held, not discarded.** Sync is a pull against a watermark, so refusing to store
+leaves events on offer and does not advance the mark. When the two people verify,
+the next poll brings the whole backlog. That is what makes the gate safe to apply
+early: nothing is lost by waiting, and nothing has to be re-sent.
+
+**Silence had to be explained.** A room quiet because of a gate is indistinguishable
+from a room where nobody is talking, so the refusal names the peer and the command,
+the poll logs what is being held back, and `invite` now says that inviting an
+unverified peer does nothing until they are verified. A gate nobody can see reads as
+a bug and gets debugged as one.
+
+**Inviting an unverified peer remains permitted** and remains inert. D-051 is not
+overridden: the host still decides whom to admit. The second gate asks a different
+question of a different party, and the two compose rather than compete.
+
+**Tests.** `TestAnUnverifiedGuestIsRefused` builds a request correct in every other
+respect — real key, real signature, real guest of a real room — requires refusal,
+requires the message to say what to do, and then requires that verifying is what
+opens it. `TestUnverifiedEventsAreNotInjected` covers the third gate. Both confirmed
+to fail with their checks disabled. The existing `authDaemon` fixture now verifies
+its guest, which is itself evidence the gate bites: every authentication test failed
+until it did.
+
+**Revisit when** a case appears where two people genuinely cannot verify but must
+collaborate. §25's "case with no answer" is the candidate, and the right response is
+probably still refusal — but it should be decided against a real situation rather
+than in advance.

@@ -561,8 +561,8 @@ func runJoin(args []string) {
 		if host != "" {
 			fmt.Printf("admitted %s, who invited you.\n", PeerName(host))
 			if !m.IsVerified(host) {
-				fmt.Printf("their key is UNVERIFIED. on a call with them, both run:\n")
-				fmt.Printf("  claude-team verify %s\n", PeerName(host))
+				fmt.Printf("their key is UNVERIFIED, so nothing will sync yet. On a call with them,\n")
+				fmt.Printf("both run:\n  claude-team verify %s\n", PeerName(host))
 			}
 		}
 		if peers := m.RoomPeers(r.RoomID); len(peers) > 0 {
@@ -621,11 +621,13 @@ func runInvite(args []string) {
 		}
 		fmt.Printf("%s may now enter %s\n", PeerName(pid), r.RoomName)
 		if !m.IsVerified(pid) {
-			// Not refused: whom to admit is the host's judgement (D-051). But a
-			// room is admitting a key nobody has confirmed belongs to the person
-			// whose name is on it, and that should be said rather than implied.
-			fmt.Printf("\nNOTE: %s is unverified — nothing has confirmed this key is theirs.\n", PeerName(pid))
-			fmt.Printf("      on a call with them, both run: claude-team verify %s\n", PeerName(pid))
+			// Admission and verification are separate gates and BOTH are required
+			// (D-054). Inviting an unverified peer is allowed and does nothing on
+			// its own, so say so plainly: a room that looks empty for a reason
+			// nobody stated is worse than a refusal.
+			fmt.Printf("\nNOTE: %s is UNVERIFIED, so no transcript will pass in either\n", PeerName(pid))
+			fmt.Printf("      direction until it is. On a call with them, both run:\n")
+			fmt.Printf("        claude-team verify %s\n", PeerName(pid))
 		}
 		fmt.Println()
 		// An invitation carries a room's identity and where to reach it. It carries

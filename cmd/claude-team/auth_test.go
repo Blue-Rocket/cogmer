@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -17,7 +18,15 @@ func authDaemon(t *testing.T) (*Daemon, *Identity, Room) {
 	t.Helper()
 	d, room := testDaemon(t)
 	guest := testIdentity(t)
+	// Admitted AND verified. Both gates: admission says this key may enter, and
+	// verification says the key is the person's. Neither implies the other.
+	if err := d.members.Allow(guest.PeerID, "guest"); err != nil {
+		t.Fatal(err)
+	}
 	if err := d.members.Invite(room.RoomID, guest.PeerID); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.members.MarkVerified(guest.PeerID); err != nil {
 		t.Fatal(err)
 	}
 	return d, guest, room
@@ -176,5 +185,65 @@ func TestTheWireAcceptsARoomID(t *testing.T) {
 	}
 	if out.RoomID != room.RoomID {
 		t.Errorf("response named room %q, want %q", out.RoomID, room.RoomID)
+	}
+}
+
+// No transcript crosses to a peer nobody has verified, however impeccable its
+// credentials. Everything else about this request is correct: a real key, a real
+// signature, a real guest of a real room.
+func TestAnUnverifiedGuestIsRefused(t *testing.T) {
+	d, _, room := authDaemon(t)
+	guest := testIdentity(t)
+	if err := d.members.Allow(guest.PeerID, "unverified"); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.members.Invite(room.RoomID, guest.PeerID); err != nil {
+		t.Fatal(err)
+	}
+
+	err := d.verifyRequest(credentials(t, guest, room.RoomID), room.RoomID)
+	if err == nil {
+		t.Fatal("an unverified guest was served the room")
+	}
+	// The refusal has to be actionable, or it reads as a fault and someone
+	// goes looking for a network problem.
+	if !strings.Contains(err.Error(), "verify") {
+		t.Errorf("refusal does not say what to do: %v", err)
+	}
+
+	// And verifying is what opens it -- nothing else changes.
+	if err := d.members.MarkVerified(guest.PeerID); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.verifyRequest(credentials(t, guest, room.RoomID), room.RoomID); err != nil {
+		t.Errorf("a verified guest was still refused: %v", err)
+	}
+}
+
+// Injection is the step that cannot be undone, so it filters again rather than
+// trusting that nothing unverified was ever stored.
+func TestUnverifiedEventsAreNotInjected(t *testing.T) {
+	d, _, _ := authDaemon(t)
+	stranger, known := testIdentity(t), testIdentity(t)
+	if err := d.members.Allow(known.PeerID, "known"); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.members.MarkVerified(known.PeerID); err != nil {
+		t.Fatal(err)
+	}
+
+	evs := []Event{
+		{PeerID: stranger.PeerID, Content: "from an unverified peer"},
+		{PeerID: known.PeerID, Content: "from a verified peer"},
+		{PeerID: d.id.PeerID, Content: "my own turn"},
+	}
+	got := onlyVerified(evs, d.id.PeerID, d.members.IsVerified)
+	if len(got) != 2 {
+		t.Fatalf("kept %d events, want 2", len(got))
+	}
+	for _, e := range got {
+		if e.PeerID == stranger.PeerID {
+			t.Error("an unverified peer's turn was offered for injection")
+		}
 	}
 }

@@ -134,5 +134,18 @@ func (d *Daemon) verifyRequest(req syncRequest, roomID string) error {
 		return fmt.Errorf("%s (%s) is authenticated but is not a guest of this room",
 			PeerName(req.PeerID), req.PeerID[:24])
 	}
+
+	// Authentication says WHO holds the key. Admission says WHETHER that key may
+	// enter. Neither says the key is the person's -- only a verification does, and
+	// without one every check above passes just as well for whoever substituted it
+	// in transit (D-047). So no transcript crosses to an unverified peer.
+	//
+	// Not a disclosure: a caller reaching this line is already a recorded guest,
+	// so it learns nothing it did not put there itself, and the message has to be
+	// actionable or the refusal looks like a fault.
+	if roomID != "" && !d.members.IsVerified(req.PeerID) {
+		return fmt.Errorf("%s is a guest but is UNVERIFIED — nothing has confirmed this key is theirs; "+
+			"both of you run `claude-team verify`", PeerName(req.PeerID))
+	}
 	return nil
 }

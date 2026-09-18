@@ -1730,6 +1730,43 @@ This bears on where verification should happen. A standing identifier passed by 
 
 Whichever is chosen, a commitment step implemented incorrectly degrades to a grindable value while still looking like a ceremony, which is worse than performing none: it produces the confidence without the property.
 
+## Verification is a gate, not a label
+
+No transcript crosses to or from a peer that has not been verified, and no
+unverified peer's turn enters anyone's model context. Admission and verification
+are **two** requirements and both must hold.
+
+They answer different questions and neither implies the other. Admission says this
+key may enter this room; it is a decision about a key. Verification says the key is
+the person's; it is a decision about a human being. Every cryptographic check in
+this specification passes just as well for a key substituted in transit, because
+the substituted key is a real key, held by whoever substituted it. Only the
+comparison over a recognising channel distinguishes them.
+
+An earlier draft made verification a marker on injected text. That is necessary and
+insufficient. The whole chain here is exact and automatic and rests on one human
+step, and a step that is optional, skippable, and costs nothing to skip is a step
+that will be skipped — after which nothing looks wrong, which is precisely the
+failure the marker was meant to warn about.
+
+Three consequences follow, and all three are load-bearing:
+
+- **Refuse at the origin, not the sender.** An event relayed under §13 is judged by
+  the peer that wrote it, never by the peer that carried it. Otherwise a verified
+  relay would launder an unverified author.
+- **Hold, do not discard.** Synchronization is a pull against a watermark, so
+  refusing to store simply leaves events on offer. When the two people verify, the
+  next poll brings the whole backlog. Nothing is lost by waiting and nothing needs
+  to be re-sent.
+- **Say what is happening.** A room that is silent because of a gate is
+  indistinguishable from a room that is silent because nobody is talking. Both the
+  refusal and the holding back must name the peer and the command that clears it.
+
+Inviting an unverified peer is permitted and has no effect until they are verified.
+That is deliberate: whom to admit remains the host's judgement (D-051), and the
+second gate is not a second opinion about that judgement — it is a different
+question, asked of a different party.
+
 ## The case with no answer
 
 Two people who have never met cannot recognise each other, so neither property is fully available on first contact. Nothing in this design resolves that, and no rendering will.

@@ -174,6 +174,10 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 	// may never reach the hook (3s timeout, daemon restart), and committing now
 	// would lose the context permanently and silently. Confirmation happens at
 	// Stop, from evidence in the transcript.
+	// Filtered again here, not only at the door. An event stored while its peer
+	// was verified outlives a later `forget`, and injection is the step that
+	// cannot be undone -- a context window has no delete.
+	pending = onlyVerified(pending, d.id.PeerID, d.members.IsVerified)
 	text := FormatTeamContext(pending, d.members.IsVerified)
 	if err := store.RecordPending(req.PromptID, req.SessionID, pending, text); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -376,4 +380,17 @@ func FormatTeamContext(evs []Event, verified func(peerID string) bool) string {
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+// onlyVerified drops events whose ORIGIN peer has not been verified. Own events
+// pass: a peer does not verify itself, and its own turns are not teammate context
+// in any case.
+func onlyVerified(evs []Event, self string, verified func(string) bool) []Event {
+	out := evs[:0:0]
+	for _, e := range evs {
+		if e.PeerID == self || verified(e.PeerID) {
+			out = append(out, e)
+		}
+	}
+	return out
 }

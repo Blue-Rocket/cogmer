@@ -220,7 +220,7 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	stored, rejected := 0, 0
+	stored, rejected, unverified := 0, 0, 0
 	for i := range out.Events {
 		ev := fromWire(out.Events[i])
 
@@ -238,6 +238,20 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 			continue
 		}
 
+		// A valid signature proves the event came from the key it names. It does
+		// not prove that key belongs to the person whose name is on it, and an
+		// unverified origin is exactly the case where those differ. Refused at the
+		// ORIGIN rather than at the sender, so a relayed event (§13) is judged by
+		// who wrote it rather than by who carried it.
+		//
+		// Not stored, not quarantined, and not counted as seen: sync is a pull
+		// against a watermark, so refusing simply leaves the events on offer. When
+		// the two people verify, the next poll brings the whole backlog.
+		if ev.PeerID != d.id.PeerID && !d.members.IsVerified(ev.PeerID) {
+			unverified++
+			continue
+		}
+
 		// Nothing below rewrites peerId, peerSequence, or eventId; doing so would
 		// invalidate the signature, which is now how that rule is enforced.
 		res, err := store.Insert(&ev)
@@ -251,6 +265,13 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 			log.Printf("sync: CONFLICT from %s — peer %s sequence %d is already held by a different event; run `claude-team conflicts`",
 				addr, PeerName(ev.PeerID), ev.PeerSequence)
 		}
+	}
+	if unverified > 0 {
+		// Said once per poll and made actionable: this is not a fault, it is the
+		// gate doing its job, and the only thing that clears it is two people on a
+		// call. Silence here would look like an empty room.
+		log.Printf("sync: %d event(s) held back — their origin peer is UNVERIFIED. "+
+			"Both of you run `claude-team verify`; they arrive in full once you have.", unverified)
 	}
 	if rejected > 0 {
 		log.Printf("sync: %d event(s) from %s failed verification and were not stored", rejected, addr)
