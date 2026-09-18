@@ -145,10 +145,14 @@ func (e *Event) Verify() error {
 	return nil
 }
 
-// Fingerprint renders a whole identifier for comparison by people (§25).
+// Fingerprint groups an identifier so a person can read it. It is a DISPLAY, not
+// a ceremony, and nothing about looking at one marks a peer verified.
 //
-// Grouped for reading aloud. It covers the entire key: a short mnemonic catches an
-// accident and not an adversary, because the bits it omits are free to differ.
+// There is exactly one way to verify a peer (§25): the two-word comparison in
+// sas.go, over a live exchange. A second method would be a weaker way to satisfy
+// the same gate, and a gate is only as strong as the weakest ceremony that
+// satisfies it. This exists for the one place a person genuinely reads an
+// identifier -- when a key has changed and there are two of them side by side.
 func Fingerprint(peerID string) string {
 	body := strings.TrimPrefix(peerID, keyPrefix)
 	var out []string

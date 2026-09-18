@@ -440,15 +440,15 @@ An identity belongs to a machine rather than to a person. A developer working fr
 
 ## An identifier must be safe to know
 
-A peer identifier should **be** the peer's public key, or a fingerprint of it. Knowing it should grant nothing.
+A peer identifier **is** the peer's Ed25519 public key. Knowing it grants nothing.
 
 This is not a detail of encoding. An identifier appears in every event its peer originates, is displayed in every interface, and must be exchangeable for peers to recognize one another at all. An identifier that confers a capability on whoever learns it therefore cannot be protected, because the system is built to spread it.
 
-The present identifier fails this. It is a random value, generated locally, that nothing verifies on receipt — so knowing one is sufficient to claim it, and to publish events attributed to its owner. It is a shared secret wearing the costume of an identifier, and it is broadcast by design.
-
 The remedy is not to keep identifiers private, which is impossible here. It is to make them worthless to hold: a public key can be printed, listed, logged, and read aloud, because possession of it proves nothing. Only the private key, which never leaves the machine that made it, can produce a signature.
 
-Note the order in which this becomes true. Changing the identifier's format does not by itself help: while nothing verifies signatures, a peer can still simply assert someone else's identifier and be believed. **The identifier becomes safe to know at the moment signatures are checked, not at the moment keys are introduced.** Until then, attribution is accurate among cooperating peers and not resistant to a peer that chooses to lie. This is acceptable in a prototype and must not be mistaken for a property the system provides.
+Note the order in which that became true, because it is the order any similar change must follow. Changing the identifier's format does not by itself help: while nothing verifies signatures, a peer can still assert someone else's identifier and be believed. **An identifier becomes safe to know at the moment signatures are checked, not at the moment keys are introduced.** Both are now in place — events are signed at origin and rejected on receipt if they do not verify — so attribution is a control rather than a convention among cooperating peers.
+
+What an identifier still cannot do is say *whose* key it is. That is not a property any format supplies, and it is what §25's verification exists for.
 
 `machineId` is an identity label, used for attribution and display. It is never an address, and nothing routes by it. Where a peer can be reached is a property of the transport and changes independently of who the peer is.
 
@@ -1687,11 +1687,17 @@ This does not remove the first exchange. Two peers that have never met must stil
 
 What it removes is every exchange after the first: a key once verified is durable, whereas a secret is spent on use.
 
-Verification is a comparison of **two words**, spoken aloud, derived from a live exchange between the two daemons. It is described in "The two-word comparison" below, and it is the only ceremony this system performs.
+Verification is a comparison of **two words**, spoken aloud, derived from a live exchange between the two daemons. It is described in "The two-word comparison" below, and it is the **only** ceremony this system performs. A peer is verified or it is not, and there is one way to become so.
 
-The alternative — reading a rendering of the whole key aloud — is what a standing identifier forces, and is the fallback where no live exchange is possible. The difference is not taste. A long-term identifier sits still, so an attacker who has intercepted one can grind **offline**, at leisure, for a key of his own whose rendering matches, at a cost of exactly the entropy displayed: sixteen characters are beyond reach, three fall in under a second. That is why a static comparison must show the whole key, and why a short mnemonic drawn from one — a peer name, for instance — must never be offered as though it were a verification.
+No second method is offered, and the omission is deliberate. Comparing a rendering of the whole identifier is the ceremony a standing value forces, and it would be available without a live exchange — but that advantage buys nothing here. Verification gates synchronization, so an unverified peer cannot collaborate; verification therefore matters only when collaboration is about to happen; and collaboration already requires both daemons running and mutually reachable, which is exactly what the live exchange needs. There is no state in which a peer needs verifying and cannot be verified this way.
 
-A value derived from a fresh exchange cannot be aimed at in advance, which is what makes the short form sound. The attacker must commit blind, gets one guess, and a wrong guess is a mismatch the two people hear.
+What a second method would add is a **weaker way to satisfy the same gate**, which is what people reach for when the stronger one is inconvenient. A gate is only as strong as the weakest ceremony that satisfies it, and the weaker one here is the one people demonstrably perform badly: shown forty-three characters to check over a telephone, a reader takes the first group, the last group, and skims the middle, reducing the verified entropy to whatever was actually compared.
+
+Rendering an identifier for a person to *read* remains useful — when a key has changed and somebody is looking at two of them, grouped output is kinder than an unbroken run of base64. That is a display, not a ceremony, and nothing about looking at it marks a peer verified.
+
+The reason a short string is sound where a static one is not is worth keeping, because it is what makes the single method defensible. A long-term identifier sits still, so an attacker who has intercepted one can grind **offline**, at leisure, for a key of his own whose rendering matches, at a cost of exactly the entropy displayed: sixteen characters are beyond reach, three fall in under a second. A value derived from a fresh exchange cannot be aimed at in advance. The attacker must commit blind, gets one guess, and a wrong guess is a mismatch the two people hear.
+
+This also settles what a peer name is for. A name derived from an identifier is a mnemonic for an identity already verified, never a verification in itself — it covers too few bits and, being derived, is grindable by anyone who wants a particular one.
 
 The two mechanisms therefore compose rather than compete. A single-use secret admits a peer that is not yet known, and being admitted is what makes it known. Between peers that already know each other, no secret is required and none should be demanded.
 

@@ -2067,9 +2067,9 @@ because the situation it papered over no longer arises.
 
 ## D-047 — The fingerprint is the only manual link, and had the least careful encoding
 
-**Date:** 2026-09-17 · **Status:** held — see D-048. The encoding argument below
-stands; it applies to a construction that may be replaced, so the change waits on
-that decision rather than landing ahead of it.
+**Date:** 2026-09-17 · **Status:** CLOSED, not implemented — the construction it
+argued about was removed. See the closing note at the end of this entry; the
+measurements below are kept because they are what justified removing it.
 
 **Context.** Asked what a fingerprint is and what it accomplishes. Demonstrating it
 made the answer sharper than expected.
@@ -2126,10 +2126,28 @@ base64 is neither.
 A comparison that is tiresome to do accurately is one people do badly or skip — and
 skipping it reproduces the demonstration above exactly, where nothing looks wrong.
 
-**Decision.** Render the fingerprint as words. Digits would also work and are what
-Signal uses, but curated wordlists already exist here, and this is the one place
-where slow to read beats quick to mishear. The identifier itself stays base64url:
-that is for machines and for pasting, where the alphabet is fine.
+**Decision at the time.** Render the fingerprint as words. Digits would also work
+and are what Signal uses, but curated wordlists already exist here, and this is the
+one place where slow to read beats quick to mishear.
+
+**Closed without implementing it (2026-09-18).** The question "how should the
+fingerprint be rendered for comparison" stopped having an answer when comparing a
+fingerprint stopped being a way to verify anything. D-052 built the two-word
+comparison and D-055 removed the whole-key comparison entirely, so there is one
+ceremony and the fingerprint is not it.
+
+The argument above is what closed it rather than what was overtaken by it. Its
+finding — that security here is bounded by what a person will actually do, not by
+what the system displays — is the reason a second, harder ceremony could not be left
+standing beside an easier one. Two accepted ceremonies means the weaker is what gets
+performed, and this entry measured exactly how weak that is: three characters fell in
+339,297 tries and under a second, and a reader shown forty-three of them checks the
+first group, the last group, and skims the middle.
+
+`Fingerprint` survives as a **display**, used where a person genuinely reads an
+identifier — when a key has changed and two are side by side. Nothing about looking
+at one marks a peer verified, and its test now asserts that it is lossless rather
+than that it is a comparison.
 
 **The general point worth keeping.** The weakest link in this system is a human
 reading a string, and it was given the least design attention of anything in it.
@@ -2599,3 +2617,55 @@ until it did.
 collaborate. §25's "case with no answer" is the candidate, and the right response is
 probably still refusal — but it should be decided against a real situation rather
 than in advance.
+
+---
+
+## D-055 — There is exactly one way to verify a peer
+
+**Date:** 2026-09-18 · **Status:** active (implemented)
+
+**Context.** §25 retained the whole-key comparison as a fallback for where no live
+exchange is possible. Asked why. There is no good reason, and three against.
+
+**Its only advantage buys nothing.** What distinguishes the static comparison is
+working without a live connection between the daemons. But verification now gates
+synchronization (D-054), so an unverified peer cannot collaborate; verification
+therefore matters only when collaboration is about to happen; and collaboration
+already requires both daemons running and mutually reachable — exactly what the live
+exchange needs. There is no state in which a peer needs verifying and cannot be
+verified by the two-word comparison.
+
+**It is a downgrade path.** A gate is only as strong as the weakest ceremony that
+satisfies it, and a second, harder ceremony beside an easier one is not a choice
+people make on the merits — it is what gets reached for when the other is
+inconvenient. D-047 measured the cost: shown forty-three characters to check over a
+telephone, a reader takes the first group, the last group, and skims the middle.
+
+**It did not exist.** `Fingerprint` had no callers outside its own test, and nothing
+marked a peer verified from a fingerprint comparison — `verified_at` is reachable
+only from the two-word confirmation. So the specification described an affordance the
+implementation did not offer, which is the prose form of the false-affordance problem
+this project already decided is worse than nothing.
+
+**Decision.** One ceremony. A peer is verified or it is not, and there is one way to
+become so. §25 says so, and says why the omission is deliberate rather than an
+oversight somebody should helpfully repair.
+
+**What is kept.** Rendering an identifier for a person to *read* remains useful, and
+is not a ceremony: when a key has changed and somebody is looking at two of them,
+grouped output is kinder than an unbroken run of base64. `Fingerprint` is now
+documented as display-only, used in the mismatch alarm, and its test asserts
+losslessness rather than fitness for comparison.
+
+Also kept: the reasoning about why a short string is sound where a static one is
+not. It is no longer a comparison between two available methods, but it is what makes
+the single remaining method defensible, and removing it would leave the two-word
+comparison looking like a shortcut.
+
+**Consequence.** D-047 is closed without being implemented. "How should the
+fingerprint be rendered for comparison" has no answer once comparing a fingerprint
+verifies nothing.
+
+**Revisit when** a case appears where two people must verify and their daemons
+cannot reach each other. The honest response is probably still that they cannot
+collaborate either — but it should be decided against a real situation.

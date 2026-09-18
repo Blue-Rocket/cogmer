@@ -857,7 +857,7 @@ func verifyWith(peerID, name string) {
 	fmt.Println()
 	fmt.Println("STOP. different words mean you are not connected to each other:")
 	fmt.Println("something is relaying this exchange and showing each of you a different key.")
-	fmt.Printf("\n  the key you were given for %s:\n    %s\n\n", name, peerID)
+	fmt.Printf("\n  the key you were given for %s:\n    %s\n\n", name, Fingerprint(peerID))
 	fmt.Println("this is not a transient error and running it again will not clear it.")
 	fmt.Println("tell the person on the call what you saw — it is evidence, and it is the")
 	fmt.Println("only place this becomes visible.")

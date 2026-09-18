@@ -23,9 +23,11 @@ interactive session, violating §3.7.
 honour is worse than no control — and this view will accumulate them, because the
 data is richer than what is shown.
 
-Identity display follows D-021: the derived name and `unverified` marker appear on
-**other** peers, where the spec requires them, and not on your own turns, where they
-identify nothing you did not know.
+Identity display follows D-021: the derived name appears on **other** peers, where
+the spec requires it, and not on your own turns, where it identifies nothing you did
+not know. The `unverified` marker is now a backstop rather than a normal state —
+D-054 keeps unverified peers out of the room entirely, so seeing one means a filter
+failed.
 
 ## The browser view is the settled avenue (D-039)
 
@@ -103,27 +105,36 @@ Phase 8 local UI  →  Phase 9 identity  →  Phase 10 pairing + room identity
      →  Phase 5 offline  →  Phase 7 hardening + recovery from local loss
 ```
 
-Phase 8 (the local UI) is **done** — `http://127.0.0.1:4782`, embedded in the
-binary, live over SSE. **Room content is untrusted**: it arrives from other peers,
-so `ui.html` escapes before applying markup and a test asserts that order. Next is
-Phase 9, peer identity.
+Phases 8, 9 and 10 are **done**. The local UI is at `http://127.0.0.1:4782`,
+embedded in the binary, live over SSE — and **room content is untrusted**, so
+`ui.html` escapes before applying markup and a test asserts that order. Identity is
+cryptographic and verification gates synchronization. Pairing, rooms, invitation,
+joining and admission all work.
 
-Phase 8 was **the UI, alone**: every experiment so far measured whether Claude
-understands a teammate, never whether a person finds watching one useful. That is
-half of §30 and it is untested. It depends on nothing else, so nothing precedes it.
+**Phase 5, offline and reconnection, is next.** It is also the only thing that can
+close review finding B2: injection order cannot be exercised with one live peer,
+because the block then contains only that peer's turns already in sequence. It needs
+a peer reconnecting with a backlog alongside a live one, which is what Phase 5 builds.
+
+Phase 10 is done **except** for a host approving an unsolicited join request, and
+whether that should exist is undecided rather than pending (§12a, D-051).
 
 ## Where things stand
 
 Phase 0 (integration spike) is complete — see `docs/phase0-findings.md`.
-**Peer networking does not exist yet.** Per §36.10 the spike stopped deliberately;
-do not start Phase 1+ without saying so explicitly.
 
 Phase 0a (compaction probe) is complete — see `docs/phase0a-findings.md`.
 Injected context survives compaction, so **the watermark is correct as written**.
 Do not add a compaction rewind or a re-injection floor: both were evaluated and
 rejected as duplicate injection for no benefit.
 
-Phase 1 is unblocked but not started.
+**Peer networking works.** Two peers synchronized over the open internet in 0.44 s
+with identical event ordering — see `docs/phase2-experiment.md`, which is also where
+§30's question is answered affirmatively.
+
+Not built: plugin packaging (D-041), local network discovery (D-019's
+zero-configuration path), and detection of a lost room database (review C-1, Phase 7).
+The `claude-team` binary is tracked in git and re-commits on every build.
 
 ## Before proposing a change to how any of this works
 
@@ -235,11 +246,11 @@ present to approve. Do not add a "join by name on a trusted network" path: names
 by design (D-017), and office and conference networks are neither small nor
 trusted.
 
-## Peer identity is self-asserted (D-020)
+## Peer identity is cryptographic (D-042), and verification is a gate (D-054)
 
-A `peerId` **is** an Ed25519 public key (`ed25519:…`), so knowing one grants nothing
-(D-042). Events are signed at origin and rejected on receipt if they do not verify,
-which is what enforces §13's rule that a relayer cannot rewrite an event's origin.
+A `peerId` **is** an Ed25519 public key (`ed25519:…`), so knowing one grants nothing.
+Events are signed at origin and rejected on receipt if they do not verify, which is
+what enforces §13's rule that a relayer cannot rewrite an event's origin.
 
 The private key is in `~/.claude-team/identity.key` (0600) and **never** in
 `identity.json`, which `whoami` prints. A test asserts it never marshals.
@@ -247,31 +258,38 @@ The private key is in `~/.claude-team/identity.key` (0600) and **never** in
 Sync requests are signed too (D-044): identifier, timestamp, nonce, signature, with
 replay and staleness rejected.
 
-**Admission is enforced** (D-045): a sync request is refused unless its
-authenticated peer is a guest of that room. Authentication says *who*; the guest list
-says *whether*. Verified both ways — an uninvited stranger reads nothing, an invited
-peer reads the room.
+Three checks, and they answer three different questions. Do not collapse them:
 
-`membership.db` holds known peers (machine-wide) and per-room guests. `forget`
-discards an identity; `revoke` withdraws admission to one room. Only identifiers that
-name a key can be recorded or admitted.
+- **Authentication** says *who* holds the key (signature).
+- **Admission** says *whether* that key may enter this room (D-045, the guest list).
+- **Verification** says the key is *the person's* (D-054, the two-word comparison).
 
-Identities are created once per machine on first use and exchanged when a peer
-joins — never obtained in advance. So
-attribution is accurate among cooperating peers and not resistant to one that
-lies, a guest list cannot replace the join secret, and §13's rule that a relayer
-must not rewrite event origin has no enforcement.
+Every check but the last passes exactly as well for a key substituted in transit,
+because a substituted key is a real key held by whoever substituted it. That was
+demonstrated end to end with **zero refusals** (D-047). So verification is enforced,
+not annotated: an unverified peer is refused sync, its events are refused at their
+**origin** — so a verified relay cannot launder an unverified author — and injection
+filters again because a context window has no delete.
 
-Peer names (`quiet-otter`) are **derived** from `peerId`, never chosen or stored —
-`PeerName()` hashes it, so it keeps working when the id becomes a key fingerprint.
-A derived name is not unforgeable: 8,280 combinations are grindable, so a name is a
+Events from an unverified peer are **held, not dropped**. Sync is a pull against a
+watermark, so refusing to store leaves them on offer; verifying brings the whole
+backlog on the next poll. A room silent because of a gate looks exactly like a room
+where nobody is talking, so every refusal names the peer and the command that clears
+it.
+
+**There is exactly one way to verify** (D-055): two words, derived from a live
+commit/reveal exchange, compared aloud on a call, by both people at once. No
+fallback, deliberately — a gate is only as strong as the weakest ceremony that
+satisfies it. `Fingerprint` is a display for the mismatch alarm and marks nothing.
+
+**Pairing is machine scope; inviting is room scope** (D-053). Pairing happens once
+with a colleague and outlasts every room; `revoke` withdraws one room's admission
+and leaves it intact; `forget` discards the identity. `allow` records without
+verifying and exists for scripts and tests.
+
+Peer names (`quiet-otter`) are **derived** from `peerId`, never chosen or stored. A
+derived name is not unforgeable — 8,280 combinations are grindable — so a name is a
 mnemonic for an identity already verified, never an introduction to a stranger.
-Unverified speakers must be marked **inside injected text**, not just in a UI — the
-model reasons about attribution.
-
-**Build nothing that assumes otherwise.** Once identity is cryptographic, prefer
-admitting known peers over holders of a secret — the secret is a first-contact
-mechanism, not a standing requirement.
 
 ## Losing a room database (D-029, supersedes D-028)
 

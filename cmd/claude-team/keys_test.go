@@ -119,11 +119,13 @@ func TestIdentityNeverMarshalsThePrivateKey(t *testing.T) {
 	}
 }
 
-func TestFingerprintCoversTheWholeKey(t *testing.T) {
+// Fingerprint is a display, not a verification method (§25). It must therefore
+// lose nothing -- a person comparing two keys after an alarm is reading all of it.
+func TestFingerprintIsLosslessAndDisplayOnly(t *testing.T) {
 	id := testIdentity(t)
 	fp := strings.ReplaceAll(Fingerprint(id.PeerID), " ", "")
-	if fp != strings.TrimPrefix(id.PeerID, "ed25519:") {
-		t.Error("fingerprint is a sample of the key rather than all of it")
+	if want := strings.TrimPrefix(id.PeerID, keyPrefix); fp != want {
+		t.Errorf("fingerprint is not the whole identifier:\n got %s\nwant %s", fp, want)
 	}
 }
 
