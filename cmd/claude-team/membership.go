@@ -2,9 +2,11 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -29,7 +31,10 @@ CREATE TABLE IF NOT EXISTS known_peers (
 );
 CREATE TABLE IF NOT EXISTS rooms (
   room_id         TEXT PRIMARY KEY,
-  room_name       TEXT NOT NULL UNIQUE,
+  -- Not UNIQUE. Names collide by design (D-017) and this table holds rooms other
+  -- peers named, so a uniqueness rule here is not a rule about the world -- it is
+  -- this machine refusing to record something that has already happened.
+  room_name       TEXT NOT NULL,
   state           TEXT NOT NULL,
   issued_sequence INTEGER NOT NULL DEFAULT 0,
   created_at      TEXT NOT NULL
@@ -93,7 +98,66 @@ func OpenMembership() (*Membership, error) {
 	if _, err := db.Exec(membershipSchema); err != nil {
 		return nil, fmt.Errorf("init membership: %w", err)
 	}
+	if err := migrateMembership(db); err != nil {
+		return nil, fmt.Errorf("migrate membership: %w", err)
+	}
 	return &Membership{db: db}, nil
+}
+
+// migrateMembership brings an existing membership.db up to date. CREATE TABLE IF
+// NOT EXISTS leaves an older table exactly as it was, so a rule relaxed in the
+// schema above is still enforced on every database created before this ran.
+//
+// The rule in question is UNIQUE on rooms.room_name. It cannot be dropped in
+// place -- SQLite has no DROP CONSTRAINT -- so the table is rebuilt.
+func migrateMembership(db *sql.DB) error {
+	rows, err := db.Query(`SELECT name, origin FROM pragma_index_list('rooms')`)
+	if err != nil {
+		return err
+	}
+	unique := ""
+	for rows.Next() {
+		var name, origin string
+		if err := rows.Scan(&name, &origin); err != nil {
+			rows.Close()
+			return err
+		}
+		// origin 'u' is an index SQLite created for a UNIQUE column constraint.
+		if origin == "u" {
+			unique = name
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if unique == "" {
+		return nil
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for _, stmt := range []string{
+		`CREATE TABLE rooms_new (
+		  room_id         TEXT PRIMARY KEY,
+		  room_name       TEXT NOT NULL,
+		  state           TEXT NOT NULL,
+		  issued_sequence INTEGER NOT NULL DEFAULT 0,
+		  created_at      TEXT NOT NULL
+		)`,
+		`INSERT INTO rooms_new (room_id, room_name, state, issued_sequence, created_at)
+		   SELECT room_id, room_name, state, issued_sequence, created_at FROM rooms`,
+		`DROP TABLE rooms`,
+		`ALTER TABLE rooms_new RENAME TO rooms`,
+	} {
+		if _, err := tx.Exec(stmt); err != nil {
+			return fmt.Errorf("rebuild rooms: %w", err)
+		}
+	}
+	return tx.Commit()
 }
 
 func (m *Membership) Close() error { return m.db.Close() }
@@ -149,10 +213,19 @@ func (m *Membership) CreateRoom(selfPeerID string) (Room, error) {
 			RoomID: uuidV4(), RoomName: NewRoomName(), State: "joined",
 			CreatedAt: time.Now().UTC().Format(time.RFC3339),
 		}
-		_, err := m.db.Exec(`INSERT INTO rooms (room_id, room_name, state, created_at) VALUES (?,?,?,?)`,
-			r.RoomID, r.RoomName, r.State, r.CreatedAt)
-		if err != nil {
-			continue // name already taken here; try another
+		// Asked rather than caught. A name this peer mints is one it is free to
+		// mint differently, so avoiding a local clash costs nothing -- unlike a
+		// name that arrives with a room somebody else already named.
+		var taken int
+		if err := m.db.QueryRow(`SELECT COUNT(*) FROM rooms WHERE room_name = ?`, r.RoomName).Scan(&taken); err != nil {
+			return Room{}, err
+		}
+		if taken > 0 {
+			continue
+		}
+		if _, err := m.db.Exec(`INSERT INTO rooms (room_id, room_name, state, created_at) VALUES (?,?,?,?)`,
+			r.RoomID, r.RoomName, r.State, r.CreatedAt); err != nil {
+			return Room{}, err
 		}
 		if err := m.Invite(r.RoomID, selfPeerID); err != nil {
 			return Room{}, err
@@ -179,14 +252,45 @@ func (m *Membership) Rooms() ([]Room, error) {
 	return out, rows.Err()
 }
 
+var errNoSuchRoom = errors.New("no such room")
+
 // FindRoom resolves either identifier. A name is for people and an id is for
 // machines, and a person typing one should not have to know which (§3.2).
-func (m *Membership) FindRoom(nameOrID string) (Room, bool) {
-	var r Room
-	err := m.db.QueryRow(`SELECT room_id, room_name, state, created_at FROM rooms
-		WHERE room_id = ? OR room_name = ?`, nameOrID, nameOrID).
-		Scan(&r.RoomID, &r.RoomName, &r.State, &r.CreatedAt)
-	return r, err == nil
+//
+// It reports three outcomes rather than two, because a name can now match more
+// than one room. Returning "not found" for an ambiguous name would be a lie that
+// sends someone looking for a room they are already in; returning whichever row
+// came back first would pick on their behalf without saying so.
+func (m *Membership) FindRoom(nameOrID string) (Room, error) {
+	rows, err := m.db.Query(`SELECT room_id, room_name, state, created_at FROM rooms
+		WHERE room_id = ? OR room_name = ? ORDER BY created_at`, nameOrID, nameOrID)
+	if err != nil {
+		return Room{}, err
+	}
+	defer rows.Close()
+	var found []Room
+	for rows.Next() {
+		var r Room
+		if err := rows.Scan(&r.RoomID, &r.RoomName, &r.State, &r.CreatedAt); err != nil {
+			return Room{}, err
+		}
+		found = append(found, r)
+	}
+	if err := rows.Err(); err != nil {
+		return Room{}, err
+	}
+	switch len(found) {
+	case 0:
+		return Room{}, fmt.Errorf("%w: %q", errNoSuchRoom, nameOrID)
+	case 1:
+		return found[0], nil
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "%d rooms are called %q. Say which by its identity:", len(found), nameOrID)
+	for _, r := range found {
+		fmt.Fprintf(&b, "\n  %s  (%s, joined %s)", r.RoomID, r.State, r.CreatedAt)
+	}
+	return Room{}, errors.New(b.String())
 }
 
 // Invite admits a peer to a room. Nothing here issues a token: admission is a

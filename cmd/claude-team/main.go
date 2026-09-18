@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -184,10 +185,14 @@ func runDaemon() {
 	// statement about what this daemon serves: it serves every room this peer
 	// belongs to, and a session says which one it is in (§5).
 	if name := os.Getenv("CLAUDE_TEAM_ROOM"); name != "" {
-		if r, ok := members.FindRoom(name); ok {
+		r, err := members.FindRoom(name)
+		switch {
+		case err == nil:
 			_ = members.SetCurrentRoom(r.RoomID)
-		} else {
+		case errors.Is(err, errNoSuchRoom):
 			log.Printf("no room named %q; `claude-team rooms` lists them, `create` makes one", name)
+		default:
+			log.Printf("CLAUDE_TEAM_ROOM: %v", err)
 		}
 	}
 
@@ -464,10 +469,14 @@ func runCreateRoom() {
 // nobody has to name a room they are already inside.
 func currentRoom(m *Membership) Room {
 	if name := os.Getenv("CLAUDE_TEAM_ROOM"); name != "" {
-		if r, ok := m.FindRoom(name); ok {
+		r, err := m.FindRoom(name)
+		if err == nil {
 			return r
 		}
-		log.Fatalf("no room named %q; `claude-team rooms` lists them", name)
+		if errors.Is(err, errNoSuchRoom) {
+			log.Fatalf("no room named %q; `claude-team rooms` lists them", name)
+		}
+		log.Fatal(err)
 	}
 	r, ok := m.CurrentRoom()
 	if !ok {
@@ -525,10 +534,13 @@ func runJoin(args []string) {
 				}
 			}
 		}
-		r, ok := m.FindRoom(name)
-		if !ok {
+		r, err := m.FindRoom(name)
+		if errors.Is(err, errNoSuchRoom) {
 			log.Fatalf("no room named %q. Ask its host for an invitation; yours to give them is:\n  %s",
 				name, id.PeerID)
+		}
+		if err != nil {
+			log.Fatal(err)
 		}
 		if err := m.SetCurrentRoom(r.RoomID); err != nil {
 			log.Fatalf("join: %v", err)

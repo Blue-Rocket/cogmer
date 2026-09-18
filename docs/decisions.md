@@ -2281,3 +2281,57 @@ first is read as the lookup breaking rather than the fixture rotting.
 **Revisit when** a room identifier needs to be typed by a person on a path that
 reaches a peer. It should not: a person types a name, their own daemon resolves it,
 and only the id travels.
+
+---
+
+## D-050 — Room names may collide locally; the schema stops forbidding it
+
+**Date:** 2026-09-17 · **Status:** active (implemented)
+
+**Context.** Found while making the wire address rooms by id (D-049).
+`rooms.room_name` was `NOT NULL UNIQUE`. `CreateRoom` coped by regenerating on a
+clash, but `RecordRoom` — the path taken when **joining** a room somebody else
+named — had `ON CONFLICT(room_id)` only, so the insert violated the index and
+`runJoin` called `log.Fatalf`. The developer was told they could not join a room,
+for a reason naming nothing they had done and nothing they could change.
+
+Not hypothetical at any real scale. Names are drawn from 7,656 combinations, the
+table accumulates **every room ever recorded** rather than the ones currently in
+use, and the clash is with rooms other peers named — which this machine cannot
+influence. Around a hundred rooms over a machine's lifetime makes it a coin flip.
+
+**Decision.** Drop the constraint. Names collide by design (D-017) and this table
+holds rooms other peers named, so uniqueness here was never a rule about the world:
+it was this machine refusing to record something that had already happened
+elsewhere.
+
+Three consequences, each a place the constraint was silently doing work:
+
+- `CreateRoom` **asks** whether a name is free instead of catching the violation. A
+  name this peer mints it is free to mint differently, so avoiding a local clash
+  still costs nothing — unlike one arriving with a room already named.
+- `FindRoom` reports **three** outcomes, not two. Answering "no such room" for an
+  ambiguous name would send someone looking for a room they are already in, and
+  returning whichever row came back first would choose for them without saying so.
+  It now names both identities and asks which was meant.
+- `migrateMembership` rebuilds the table, since SQLite has no `DROP CONSTRAINT`.
+  `CREATE TABLE IF NOT EXISTS` leaves an older table exactly as it was, so without
+  this the relaxed schema would apply only to databases created after it — the same
+  trap `migrate()` exists for on the room stores.
+
+**What was not done.** Renaming a joined room locally to keep names unique was the
+obvious alternative and is worse: it makes this machine disagree with the host about
+what the room is called, so the name David says aloud is not the name Alice sees.
+A name is a mnemonic for a room, and one that differs per peer is not a mnemonic.
+Ambiguity is the honest state and is reported as such.
+
+**Tests.** `TestJoiningTwoRoomsWithOneNameSucceeds` is the bug itself;
+`TestAnAmbiguousNameIsReportedNotGuessed` requires the report to be distinguishable
+from "unknown" and to name both ids; `TestMigrationDropsTheNameConstraint` writes a
+pre-change database, opens it, and requires both that the old room survives and that
+the second insert succeeds. All three confirmed to fail against the pre-change
+schema with the migration disabled.
+
+**Revisit when** a person needs to refer to a room across peers by name in a context
+with no host to resolve it against. §12 says a name is only ever resolved against a
+specific peer; anything that breaks that assumption reopens this.
