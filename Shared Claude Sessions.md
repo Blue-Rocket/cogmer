@@ -818,13 +818,25 @@ A peer that is not a guest is refused. Refusal must be more than silence.
 
 The host is told that a peer asked to enter, and shown the identifier and derived name it presented. The host may then admit it, which makes that peer known and a guest in one act.
 
-This matters because it is how two people who have never met will ordinarily pair. Alice attempts to join, David sees the request, David recognizes the moment, David approves. No identifier is exchanged beforehand and no token is issued.
+**What this is for.** Two people who work together, whose machines have not met. That is the ordinary first contact: not an absence of trust, an absence of a recorded key. David knows Alice; his daemon does not yet know hers. Without this path, that case is served only by Alice sending her identifier out of band and David pasting it into `allow` — which works, and is a manual step carried forever for a relationship established long ago.
 
-Approval is a human act and should remain one. What a host approves is an identifier; the name beside it is a claim made by a stranger who chose when to make it.
+Approval is a human act and should remain one. What a host approves is an identifier; the name beside it is a claim made by whoever chose when to make it.
 
 The refused peer is told it was refused and shown its own identifier, so its user can say what the host needs to allow.
 
 A request is not a queue. If the host is absent the request fails. It does not wait, and it does not grant entry later without the host's attention.
+
+## Pairing with someone you do not know is not a supported case
+
+An earlier draft called that the ordinary use of the path above. It is not, and it contradicted §12, which says correctly that colleagues pairing repeatedly is the ordinary case.
+
+It is excluded on the specification's own terms rather than on taste. §25 requires verification over a channel where the other party can be **recognised**, and records that two people who have never met have no such channel. A pairing between strangers would therefore run the ceremony and take nothing from it: the words would be compared, they would match, and the match would establish that two parties hold the same key while saying nothing about whose. Every other pairing gets a real assurance from that step. This one would get its appearance, which is worse than omitting it, because the appearance is what people act on.
+
+The exposure is also asymmetric with the benefit. What a room carries is a working session — prompts, the discussion around a repository, whatever is in context — and admission sends a member's turns to another developer's model provider under that developer's account (§28). The situations that would want stranger pairing are ones where a call or a message is almost always available anyway, so what is bought is convenience rather than capability.
+
+The mechanism above does not forbid it: a host who approves a request from someone unknown to them has paired with a stranger. That is a judgement the host made, and nothing here overrides it. What is excluded is **designing for it** — no affordance should present it as intended, and no claim should be made that verification protects it, because in that case it does not.
+
+**Undecided: whether a request may arrive unsolicited.** As described, any peer that can reach the host's address and name the room can cause something to appear on the host's screen, and room names are guessable by design (D-017). Guessing grants nothing, which is the property that makes names safe; producing an interruption is a different matter, and a prompt people learn to dismiss quickly is a poor place to put a decision that matters. The alternative is that requests are accepted only while the host has said they are expecting someone. That is not a token and does not reopen D-026 — arriving during such a window admits nobody, it only earns the right to ask, and the host still approves. Decide this before the path is built.
 
 ## There is no join token
 

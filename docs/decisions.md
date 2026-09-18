@@ -2335,3 +2335,63 @@ schema with the migration disabled.
 **Revisit when** a person needs to refer to a room across peers by name in a context
 with no host to resolve it against. §12 says a name is only ever resolved against a
 specific peer; anything that breaks that assumption reopens this.
+
+---
+
+## D-051 — Stranger pairing is not a supported case
+
+**Date:** 2026-09-17 · **Status:** active (specification)
+
+**Context.** §12a said the host-approval path exists "because it is how two people who
+have never met will ordinarily pair." Questioned directly: why would two strangers
+sharing linked Claude sessions be ordinary? They would not, and §12 says the opposite
+two sections earlier — "where the people involved already know one another, **which is
+the ordinary case**, since colleagues pair repeatedly." The specification asserted both.
+
+**The distinction that was collapsed.** There are two first contacts, and §12a merged
+them under one word. **Socially strangers**: no relationship, no established reason for
+trust. **Known people whose machines have not met**: you work with Alice daily and
+there is simply no key on file. The second is genuinely the ordinary first contact and
+needs the mechanism §12a describes; it needs none of the trust the word "stranger"
+implies. Calling it "two people who have never met" made a colleague-ergonomics feature
+read as a stranger-trust feature.
+
+**Decision.** Exclude stranger pairing as a design target, on the specification's own
+terms rather than on taste.
+
+§25 requires verification over a channel where the other party can be **recognised**,
+and already records that people who have never met have no such channel. A stranger
+pairing would run the ceremony and take nothing from it: the words match, and a match
+between strangers establishes that two parties hold the same key while saying nothing
+about whose. Every other pairing gets a real assurance from that step. This one gets
+its appearance — worse than omitting it, because the appearance is what people act on.
+
+Secondarily, the exposure is asymmetric with the benefit. A room carries a working
+session, and admission sends a member's turns to another developer's provider under
+that developer's account (§28). The situations wanting stranger pairing — mentoring, an
+interview, a contractor's first day — are ones where a call is almost always available,
+so what is bought is convenience rather than capability.
+
+**What is not decided.** The mechanism does not forbid it: a host who approves a
+request from someone unknown has paired with a stranger, and that is their judgement.
+What is excluded is designing for it — no affordance presents it as intended, and no
+claim is made that verification protects it.
+
+Also not decided: whether the host-approval path is built at all. Its value is
+removing the manual identifier paste between colleagues, and that is a separate
+question answered separately. Noted because the two were previously argued as one, and
+conflating them is how a mechanism gets justified by a case nobody wants.
+
+**Recorded as open in §12a**: whether a request may arrive unsolicited. Any peer that
+can reach the address and name the room could otherwise cause something to appear on
+the host's screen, and names are guessable by design (D-017). Guessing grants nothing,
+which is what makes names safe; producing an interruption is a different matter, and a
+prompt people learn to dismiss quickly is a poor place for a decision that matters.
+The alternative — requests accepted only while the host has said they are expecting
+someone — is not a token and does not reopen D-026: arriving in the window admits
+nobody, it only earns the right to ask.
+
+**Revisit when** there is a concrete use for pairing with someone unknown that a call
+cannot serve, or if a verification channel becomes available that does not depend on
+recognising the other party. Both would change the argument rather than merely the
+appetite.
