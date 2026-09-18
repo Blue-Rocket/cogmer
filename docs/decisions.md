@@ -2140,8 +2140,9 @@ than the least.
 
 ## D-048 — Verification should bind a live exchange, not a standing identifier (ZRTP's SAS)
 
-**Date:** 2026-09-17 · **Status:** accepted in principle — construction to be built in
-Phase 9; D-047 held pending it
+**Date:** 2026-09-17 · **Status:** superseded in placement by D-052, which built the
+ceremony as its own command rather than inside join. The reasoning below stands;
+only "join is the moment" was wrong. D-047 remains held.
 
 **Context.** Tracing the manual steps produced a count: there are **two**. Alice runs
 `whoami` and her identifier reaches David somehow (transfer); David then asks her to
@@ -2395,3 +2396,80 @@ nobody, it only earns the right to ask.
 cannot serve, or if a verification channel becomes available that does not depend on
 recognising the other party. Both would change the argument rather than merely the
 appetite.
+
+---
+
+## D-052 — The SAS is its own act, not part of joining or approving
+
+**Date:** 2026-09-17 · **Status:** active (implemented)
+
+**Context.** D-048 accepted ZRTP's short authentication string in principle and put
+it "at join, where both daemons are connected." Asked for the two-word approach
+directly, and asked whether that was the same thing as the host-approval path
+(§12a). It is not, and conflating them would have made a verification feature wait
+on an admission feature nobody has decided to build.
+
+**The two are orthogonal.** The approval path is about **how a key arrives** —
+pasted after `whoami`, or presented in a request a host approves. The SAS is about
+**whether the key that arrived is the right one**, whichever way it came. Building
+the second requires nothing of the first.
+
+**Decision.** `claude-team verify <peer>`, run by **both** people at the same time,
+on a call. Each CLI asks its own daemon to open a session; each daemon runs
+commit-commit-reveal-reveal with the other; both print the same two words; each
+person answers whether the other said the same ones.
+
+**Both sides run it, and that is what keeps §12a's open question closed.** A daemon
+answers a verification step only when its own user has asked for one — otherwise
+409, and nothing is displayed to anyone. So this adds no inbound surface, no prompt
+that can be trained away, and no path by which a stranger causes anything to appear
+on a host's screen. The question of unsolicited requests stays open in §12a and is
+not reached here.
+
+**The exchange is symmetric.** Each side sends its commitment and receives the
+other's as the reply, so there is no initiator to elect and no race to resolve. The
+address is discovered by trying each peer address this machine knows and keeping the
+one that answers **signed by the identity asked for** — a reply from a different
+peer is a wrong peer, not a wrong address, and is refused.
+
+**Only a person may record a verification.** The exchange proves both sides hold the
+keys they named; it cannot establish that the voice on the call is the colleague
+rather than somebody in their place. `MarkVerified` is reached only from the
+confirmation, never from the protocol. A mismatch records **nothing** — there is no
+failed-verification state, because storing one invites an interface that offers to
+retry, and retrying is precisely what must not be offered.
+
+**The marker now means something.** `known_peers.verified_at` is NULL until two
+people compare words, `FormatTeamContext` takes a predicate, and a verified peer
+loses the `unverified` tag inside injected text. Before this the tag was true of
+every peer forever, which is a marker a reader learns to stop seeing — the failure
+mode §25 cares about, since the model is the reader that reasons about attribution.
+
+**Wordlists.** The PGP biometric word list, 256 words each for even and odd
+positions, alternating. Alternation makes a transposition detectable: said in the
+wrong order the pair is not a valid rendering of anything. Deliberately **not** the
+peer-name or room-name vocabularies — a SAS sits on screen beside a derived peer
+name, and one mnemonic mistakable for the other is how somebody compares the wrong
+thing. A test asserts the lists are disjoint and exactly 256 unique words each,
+since the security argument assumes one byte per word.
+
+**Tests, and the two that matter.** `TestAnInterceptorProducesDifferentWords` is the
+property itself: a relayed exchange derives each side's words from a different pair
+of identities, and the strings disagree. `TestRevealBeforeCommitIsRefused` and
+`TestARevealMustOpenItsCommitment` guard the ordering, which **is** the security —
+both confirmed to answer 200 instead of 400 when the check is removed, so a
+commitment step that degraded to decoration would be caught. Also covered:
+symmetry, per-exchange freshness, list disjointness, refusal of unsigned messages,
+refusal of unknown peers, refusal of unsolicited sessions, and a real two-daemon
+exchange over HTTP reaching identical words.
+
+**Not done.** The words are 16 bits, so a blind guess succeeds once in 65,536 and
+the protection against repetition is that **failure is conspicuous** rather than that
+retries are blocked. Nothing rate-limits attempts. That is the right place to look
+first if this is ever attacked, and it is recorded rather than fixed because the
+conspicuousness argument only holds while a mismatch stops a person — which is a
+claim about the interface, not the protocol.
+
+**Revisit when** verification is wanted between peers that cannot be connected at
+the same moment. The short form is unavailable there and D-047's full-length
+rendering is the only option, so both may need to exist.

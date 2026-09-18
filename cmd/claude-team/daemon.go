@@ -33,12 +33,17 @@ type Daemon struct {
 	stores   map[string]*Store
 	storesMu sync.Mutex
 
-	subs    map[chan struct{}]bool
-	subsMu  sync.Mutex
+	// Verification sessions, one per peer, held only while a person has asked
+	// for one. Nothing here is created by an incoming request (D-052).
+	verifying map[string]*verifySession
+	verifyMu  sync.Mutex
+
+	subs     map[chan struct{}]bool
+	subsMu   sync.Mutex
 	peerSeen map[string]time.Time
 	peerMu   sync.Mutex
 	replay   replayGuard
-	mu    sync.Mutex // serializes sequence allocation + append
+	mu       sync.Mutex // serializes sequence allocation + append
 }
 
 type promptReq struct {
@@ -70,6 +75,8 @@ func (d *Daemon) LocalRoutes() *http.ServeMux {
 	mux.HandleFunc("/events", d.handleEvents)
 	mux.HandleFunc("/", d.handleUI)
 	mux.HandleFunc("/stream", d.handleStream)
+	mux.HandleFunc("/verify/start", d.handleVerifyStart)
+	mux.HandleFunc("/verify/confirm", d.handleVerifyConfirm)
 	return mux
 }
 
@@ -82,6 +89,7 @@ func (d *Daemon) PeerRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", d.health)
 	mux.HandleFunc("/sync", d.handleSync)
+	mux.HandleFunc("/verify", d.handleVerify)
 	return mux
 }
 
@@ -166,7 +174,7 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 	// may never reach the hook (3s timeout, daemon restart), and committing now
 	// would lose the context permanently and silently. Confirmation happens at
 	// Stop, from evidence in the transcript.
-	text := FormatTeamContext(pending)
+	text := FormatTeamContext(pending, d.members.IsVerified)
 	if err := store.RecordPending(req.PromptID, req.SessionID, pending, text); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -307,7 +315,7 @@ func (d *Daemon) handleEvents(w http.ResponseWriter, r *http.Request) {
 // So each block carries a fence value the content cannot know, that value is
 // removed from the content if it somehow appears, and the framing is restated at
 // the close -- the last thing read, rather than only the first.
-func FormatTeamContext(evs []Event) string {
+func FormatTeamContext(evs []Event, verified func(peerID string) bool) string {
 	if len(evs) == 0 {
 		return ""
 	}
@@ -338,7 +346,15 @@ func FormatTeamContext(evs []Event) string {
 		// requires an unverified speaker be marked as such inside the injected text
 		// rather than only in an interface, since the model is the reader that
 		// reasons about who said a thing.
-		who := fmt.Sprintf("%s (%s, unverified)", e.UserDisplayName, PeerName(e.PeerID))
+		// The marker is now a fact rather than a constant: a peer whose key has
+		// been compared over a recognising channel (D-052) is not marked, and one
+		// whose has not still is. A marker true of everyone forever is one the
+		// reader learns to skip.
+		mark := ", unverified"
+		if verified != nil && verified(e.PeerID) {
+			mark = ""
+		}
+		who := fmt.Sprintf("%s (%s%s)", e.UserDisplayName, PeerName(e.PeerID), mark)
 		speaker := who
 		if e.EventType == EventAssistantMessage {
 			speaker = "Claude-" + who

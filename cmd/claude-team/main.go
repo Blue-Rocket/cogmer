@@ -51,6 +51,8 @@ func main() {
 		runAllow(os.Args[2:])
 	case "forget":
 		runForget(os.Args[2:])
+	case "verify":
+		runVerify(os.Args[2:])
 	case "rooms":
 		runRooms()
 	case "create":
@@ -101,6 +103,7 @@ func usage() {
   claude-team peers           List peers this machine knows
   claude-team allow <id> [nm] Record a peer, so it can be admitted to a room
   claude-team forget <id>     Discard a peer entirely
+  claude-team verify <peer>   Compare two words on a call (both of you, at once)
 
   claude-team rooms           List rooms
   claude-team create          Create a room
@@ -385,7 +388,11 @@ func runPeers() {
 			return
 		}
 		for _, p := range known {
-			fmt.Printf("  %-22s %s\n", p.Name, p.PeerID)
+			state := "unverified"
+			if p.VerifiedAt != "" {
+				state = "verified " + p.VerifiedAt[:10]
+			}
+			fmt.Printf("  %-22s %-14s %s\n", p.Name, state, p.PeerID)
 		}
 	})
 }
@@ -679,4 +686,81 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// runVerify is the two-word check (D-048). Both people run it, at the same time,
+// on a call where each can recognise the other's voice.
+//
+// The recognition is the point and cannot be automated: the exchange proves both
+// sides hold the keys they named, and only a person can say that the voice saying
+// the words is the colleague rather than somebody in their place (§25).
+func runVerify(args []string) {
+	if len(args) == 0 {
+		log.Fatal("usage: claude-team verify <peer>   (both of you, on a call, at the same time)")
+	}
+	var peerID, name, mine string
+	withMembership(func(m *Membership, id *Identity) {
+		pid, err := resolvePeer(m, args[0])
+		if err != nil {
+			log.Fatal(err)
+		}
+		peerID, name, mine = pid, PeerName(pid), id.PeerName
+	})
+
+	fmt.Printf("verifying %s. ask them to run `claude-team verify %s` now — this waits %s.\n",
+		name, mine, verifyTimeout)
+	var out verifyStartResponse
+	if err := postLocal("/verify/start", verifyStartRequest{Peer: peerID}, &out); err != nil {
+		log.Fatalf("verify: %v  (is the daemon running?)", err)
+	}
+	if out.Error != "" {
+		log.Fatalf("verify: %s", out.Error)
+	}
+
+	fmt.Printf("\n        %s\n\n", out.Words)
+	fmt.Println("say those two words aloud. ask them to say theirs back.")
+	fmt.Print("did they say the same two words? [y/N] ")
+
+	var answer string
+	fmt.Scanln(&answer)
+	matched := answer == "y" || answer == "Y"
+
+	var res map[string]string
+	if err := postLocal("/verify/confirm", verifyConfirmRequest{Peer: peerID, Matched: matched}, &res); err != nil {
+		log.Fatalf("verify: %v", err)
+	}
+	if matched {
+		fmt.Printf("\nverified %s. you will not be asked again.\n", name)
+		fmt.Println("if this key ever changes, that is an alarm rather than a new first meeting.")
+		return
+	}
+
+	fmt.Println()
+	fmt.Println("STOP. different words mean you are not connected to each other:")
+	fmt.Println("something is relaying this exchange and showing each of you a different key.")
+	fmt.Printf("\n  the key you hold for %s:\n    %s\n\n", name, peerID)
+	fmt.Println("nothing was recorded. this is not a transient error and running it again")
+	fmt.Println("will not clear it. tell the person on the call what you saw — it is evidence,")
+	fmt.Println("and it is the only place this becomes visible.")
+	os.Exit(1)
+}
+
+func postLocal(path string, body, out any) error {
+	raw, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	// The exchange waits up to verifyTimeout for the other person to type the
+	// command, so the client must outlast it.
+	client := &http.Client{Timeout: verifyTimeout + 30*time.Second}
+	resp, err := client.Post("http://"+addr()+path, "application/json", bytes.NewReader(raw))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		msg, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("%s: %s", resp.Status, bytes.TrimSpace(msg))
+	}
+	return json.NewDecoder(resp.Body).Decode(out)
 }

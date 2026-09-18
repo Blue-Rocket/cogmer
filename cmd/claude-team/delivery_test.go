@@ -40,7 +40,7 @@ func TestLostInjectionIsReofferedNotLost(t *testing.T) {
 	if err != nil || len(offered) != 2 {
 		t.Fatalf("expected 2 offered, got %d (%v)", len(offered), err)
 	}
-	text := FormatTeamContext(offered)
+	text := FormatTeamContext(offered, nil)
 	if err := s.RecordPending("prompt-1", "mine", offered, text); err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestConfirmedInjectionIsNotReoffered(t *testing.T) {
 	s := testStore(t)
 	seedTeammate(t, s, 2)
 	offered, _ := s.UndeliveredFor("test", "mine")
-	text := FormatTeamContext(offered)
+	text := FormatTeamContext(offered, nil)
 	if err := s.RecordPending("prompt-1", "mine", offered, text); err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func TestConfirmationIsSelfHealing(t *testing.T) {
 	s := testStore(t)
 	seedTeammate(t, s, 1)
 	first, _ := s.UndeliveredFor("test", "mine")
-	firstText := FormatTeamContext(first)
+	firstText := FormatTeamContext(first, nil)
 	_ = s.RecordPending("prompt-1", "mine", first, firstText)
 
 	seedTeammate(t, s, 1)
@@ -91,7 +91,7 @@ func TestConfirmationIsSelfHealing(t *testing.T) {
 	if len(second) != 2 {
 		t.Fatalf("expected both events still outstanding, got %d", len(second))
 	}
-	secondText := FormatTeamContext(second)
+	secondText := FormatTeamContext(second, nil)
 	_ = s.RecordPending("prompt-2", "mine", second, secondText)
 
 	// A later Stop sees both attachments at once.
@@ -126,7 +126,7 @@ func TestFallbackCommitWhenEvidenceUnavailable(t *testing.T) {
 	s := testStore(t)
 	seedTeammate(t, s, 2)
 	offered, _ := s.UndeliveredFor("test", "mine")
-	_ = s.RecordPending("prompt-1", "mine", offered, FormatTeamContext(offered))
+	_ = s.RecordPending("prompt-1", "mine", offered, FormatTeamContext(offered, nil))
 
 	n, err := s.CommitPending("mine", "prompt-1")
 	if err != nil || n != 2 {

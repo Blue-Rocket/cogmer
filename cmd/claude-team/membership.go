@@ -25,9 +25,14 @@ import (
 
 const membershipSchema = `
 CREATE TABLE IF NOT EXISTS known_peers (
-  peer_id  TEXT PRIMARY KEY,
-  name     TEXT NOT NULL,
-  added_at TEXT NOT NULL
+  peer_id     TEXT PRIMARY KEY,
+  name        TEXT NOT NULL,
+  added_at    TEXT NOT NULL,
+  -- When two people compared a SAS and said it matched (D-048/D-052). NULL until
+  -- they have. Without this the "unverified" marker §25 requires inside injected
+  -- text is true of every peer forever, and a marker that can never change is one
+  -- a reader learns to stop seeing.
+  verified_at TEXT
 );
 CREATE TABLE IF NOT EXISTS rooms (
   room_id         TEXT PRIMARY KEY,
@@ -74,9 +79,10 @@ CREATE TABLE IF NOT EXISTS settings (
 type Membership struct{ db *sql.DB }
 
 type KnownPeer struct {
-	PeerID  string `json:"peerId"`
-	Name    string `json:"name"`
-	AddedAt string `json:"addedAt"`
+	PeerID     string `json:"peerId"`
+	Name       string `json:"name"`
+	AddedAt    string `json:"addedAt"`
+	VerifiedAt string `json:"verifiedAt,omitempty"`
 }
 
 type Room struct {
@@ -129,6 +135,9 @@ func migrateMembership(db *sql.DB) error {
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
+		return err
+	}
+	if err := addColumnIfMissing(db, "known_peers", "verified_at", "TEXT"); err != nil {
 		return err
 	}
 	if unique == "" {
@@ -185,8 +194,42 @@ func (m *Membership) Forget(peerID string) error {
 	return err
 }
 
+// Knows reports whether this machine holds a key for a peer. Verification
+// confirms a key already on file, so there is nothing to confirm for a stranger.
+func (m *Membership) Knows(peerID string) bool {
+	var n int
+	if err := m.db.QueryRow(`SELECT COUNT(*) FROM known_peers WHERE peer_id = ?`, peerID).Scan(&n); err != nil {
+		return false
+	}
+	return n > 0
+}
+
+// MarkVerified records that two people compared a SAS and it matched. It is
+// recorded only on a human saying so: the exchange proves both sides hold the keys
+// they named, and only a person can say that the voice on the call was the
+// colleague rather than somebody in their place (§25).
+func (m *Membership) MarkVerified(peerID string) error {
+	res, err := m.db.Exec(`UPDATE known_peers SET verified_at = ? WHERE peer_id = ?`,
+		time.Now().UTC().Format(time.RFC3339), peerID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return fmt.Errorf("%s is not a peer this machine knows", PeerName(peerID))
+	}
+	return nil
+}
+
+func (m *Membership) IsVerified(peerID string) bool {
+	var at string
+	if err := m.db.QueryRow(`SELECT COALESCE(verified_at,'') FROM known_peers WHERE peer_id = ?`, peerID).Scan(&at); err != nil {
+		return false
+	}
+	return at != ""
+}
+
 func (m *Membership) KnownPeers() ([]KnownPeer, error) {
-	rows, err := m.db.Query(`SELECT peer_id, name, added_at FROM known_peers ORDER BY name`)
+	rows, err := m.db.Query(`SELECT peer_id, name, added_at, COALESCE(verified_at,'') FROM known_peers ORDER BY name`)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +237,7 @@ func (m *Membership) KnownPeers() ([]KnownPeer, error) {
 	var out []KnownPeer
 	for rows.Next() {
 		var p KnownPeer
-		if err := rows.Scan(&p.PeerID, &p.Name, &p.AddedAt); err != nil {
+		if err := rows.Scan(&p.PeerID, &p.Name, &p.AddedAt, &p.VerifiedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, p)
@@ -445,4 +488,35 @@ func (m *Membership) IsGuest(roomID, peerID string) bool {
 	err := m.db.QueryRow(`SELECT COUNT(*) FROM room_guests WHERE room_id = ? AND peer_id = ?`,
 		roomID, peerID).Scan(&n)
 	return err == nil && n > 0
+}
+
+// addColumnIfMissing is the whole of a column migration. CREATE TABLE IF NOT
+// EXISTS ignores an existing table, so a column added to the schema above is
+// absent from every database created before it and fails at first query rather
+// than at open.
+func addColumnIfMissing(db *sql.DB, table, column, typ string) error {
+	rows, err := db.Query(`SELECT name FROM pragma_table_info(?)`, table)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	any := false
+	for rows.Next() {
+		var n string
+		if err := rows.Scan(&n); err != nil {
+			return err
+		}
+		any = true
+		if n == column {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if !any {
+		return nil // no such table yet; the schema above will have made it
+	}
+	_, err = db.Exec("ALTER TABLE " + table + " ADD COLUMN " + column + " " + typ)
+	return err
 }
