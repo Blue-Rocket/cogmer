@@ -77,8 +77,17 @@ expected="$(grep -E "[[:space:]]${asset}\$" "$root/checksums.txt" 2>/dev/null | 
 tmp="$(mktemp -d "$home_dir/.install.XXXXXX" 2>/dev/null)" || fail "no temporary directory"
 trap 'rm -rf "$tmp"; rmdir "$lock" 2>/dev/null' EXIT
 
+# Plain HTTP is acceptable here and the checksum is why: the binary is not secret,
+# and integrity comes from the pin rather than from the transport. A tampered
+# response is refused exactly as a tampered file would be. HTTPS would still be
+# better and is what a public release host will give us.
 if [ -n "$expected" ] && command -v curl > /dev/null 2>&1; then
-  url="${CLAUDE_TEAM_RELEASE_URL:-https://github.com/bluerocket/claude-team/releases/download}/v${want}/${asset}"
+  # Where assets live is data, not code, and it travels beside the hashes that
+  # authorise them -- moving hosts is then one commit that changes both together.
+  # An unreachable or wrong host costs a failed download; a hash that did not move
+  # with it would cost a refusal nobody could explain.
+  base="${CLAUDE_TEAM_RELEASE_URL:-$(grep -v '^#' "$root/release-url.txt" 2>/dev/null | head -1 | tr -d '[:space:]')}"
+  url="${base}/v${want}/${asset}"
   say "downloading $url"
   if curl -fsSL --max-time 120 -o "$tmp/bin" "$url"; then
     got="$(shasum -a 256 "$tmp/bin" 2>/dev/null | awk '{print $1}')"
