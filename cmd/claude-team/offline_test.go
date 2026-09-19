@@ -90,10 +90,9 @@ func introduce(t *testing.T, a, b *offlinePeer, roomID string) {
 // exchange, and a single pull each way would hide an event that needs two rounds.
 func settle(t *testing.T, a, b *offlinePeer, room Room) {
 	t.Helper()
-	client := &http.Client{}
 	for round := 0; round < 8; round++ {
-		na, _ := a.d.pullRoom(client, b.addr, room)
-		nb, _ := b.d.pullRoom(client, a.addr, room)
+		na, _ := a.d.pullFrom(b.addr)
+		nb, _ := b.d.pullFrom(a.addr)
 		if na == 0 && nb == 0 {
 			return
 		}
@@ -151,8 +150,7 @@ func TestPeersConvergeAfterAPartition(t *testing.T) {
 	}
 
 	// A pull while partitioned must fail without leaving anything behind.
-	client := &http.Client{}
-	if n, err := a.d.pullRoom(client, b.addr, room); err == nil {
+	if n, err := a.d.pullFrom(b.addr); err == nil {
 		t.Error("a pull from an unreachable peer reported success")
 	} else if n != 0 {
 		t.Errorf("a failed pull claimed to store %d events", n)
@@ -216,9 +214,8 @@ func TestReconnectionIsIdempotent(t *testing.T) {
 	settle(t, a, b, room)
 	before := eventIDs(t, b.store, roomID)
 
-	client := &http.Client{}
 	for i := 0; i < 3; i++ {
-		n, err := b.d.pullRoom(client, a.addr, room)
+		n, err := b.d.pullFrom(a.addr)
 		if err != nil {
 			t.Fatalf("round %d: %v", i, err)
 		}
@@ -328,7 +325,7 @@ func TestOneFailingRoomDoesNotStarveTheOthers(t *testing.T) {
 
 	b.say(t, goodID, "sess-b", EventUserPrompt, "hello")
 
-	n, err := a.d.pullFrom(&http.Client{}, b.addr)
+	n, err := a.d.pullFrom(b.addr)
 	if n != 1 {
 		t.Errorf("received %d events, want 1; the good room was starved by the failing one", n)
 	}

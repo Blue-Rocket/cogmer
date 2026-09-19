@@ -686,7 +686,7 @@ func runInvite(args []string) {
 		// no secret: admission is the guest list entry just made, proved later by
 		// possession of their key (D-026). Interception reveals that a room exists.
 		fmt.Println("give them:")
-		fmt.Printf("  claude-team join %s\n", invitation(r, peerAddr(), self.PeerID))
+		fmt.Printf("  claude-team join %s\n", invitation(r, AdvertisedEndpoint(), self.PeerID))
 	})
 }
 
@@ -762,7 +762,7 @@ func runWhoami() {
 	// send by any means: an identifier is a public key and an address is where a
 	// daemon listens. Neither admits anyone (D-026, D-042).
 	fmt.Printf("\nyour pairing string — send it to a colleague however is convenient:\n  %s\n",
-		pairingString(id.PeerID, peerAddr()))
+		pairingString(id.PeerID, AdvertisedEndpoint()))
 	fmt.Println("\nthey run:  claude-team pair <that string>")
 	fmt.Println("you run:   claude-team pair <theirs>")
 	fmt.Println("both at once, on a call, and you each compare two words.")

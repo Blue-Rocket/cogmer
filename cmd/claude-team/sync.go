@@ -120,11 +120,10 @@ func peerList() []string {
 // peers are expected to be absent, and the next round recovers whatever was
 // missed (§26).
 func (d *Daemon) RunSync(_ []string, every time.Duration) {
-	client := &http.Client{Timeout: 5 * time.Second}
 	for {
 		peers := d.syncTargets() // re-read: a room joined since last round has peers
 		for _, addr := range peers {
-			if n, err := d.pullFrom(client, addr); err != nil {
+			if n, err := d.pullFrom(addr); err != nil {
 				d.markPeerUnreachable(addr, err)
 			} else if n > 0 {
 				log.Printf("sync: received %d event(s) from %s", n, addr)
@@ -134,7 +133,11 @@ func (d *Daemon) RunSync(_ []string, every time.Duration) {
 	}
 }
 
-func (d *Daemon) pullFrom(client *http.Client, addr string) (int, error) {
+func (d *Daemon) pullFrom(addr string) (int, error) {
+	client, err := clientFor(addr, 5*time.Second)
+	if err != nil {
+		return 0, err
+	}
 	rooms, err := d.members.Rooms()
 	if err != nil {
 		return 0, err
@@ -191,6 +194,8 @@ func (d *Daemon) syncTargets() []string {
 }
 
 func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, error) {
+	// addr is carried for reporting and for marking the peer seen. Where the
+	// request actually goes was decided when the client was built.
 	store, err := d.storeFor(room.RoomID)
 	if err != nil {
 		return 0, err
@@ -201,16 +206,16 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 	if err != nil {
 		return 0, err
 	}
-	ts, nonce, sig, err := signRequest(d.id, room.RoomID, peerAddr())
+	ts, nonce, sig, err := signRequest(d.id, room.RoomID, AdvertisedEndpoint())
 	if err != nil {
 		return 0, err
 	}
 	body, _ := json.Marshal(syncRequest{
 		Protocol: wireVersion, RoomID: room.RoomID, Have: have,
 		PeerID: d.id.PeerID, Timestamp: ts, Nonce: nonce, Signature: sig,
-		Endpoint: peerAddr(),
+		Endpoint: AdvertisedEndpoint(),
 	})
-	resp, err := client.Post("http://"+addr+"/sync", "application/json", bytes.NewReader(body))
+	resp, err := client.Post(peerURL("/sync"), "application/json", bytes.NewReader(body))
 	if err != nil {
 		return 0, err
 	}

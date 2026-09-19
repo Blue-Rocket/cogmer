@@ -189,7 +189,6 @@ func (d *Daemon) RunVerification(peerID string, addrs []string) (string, error) 
 	}
 	defer d.endVerify(peerID)
 
-	client := &http.Client{Timeout: 10 * time.Second}
 	deadline := time.Now().Add(verifyTimeout)
 
 	for {
@@ -207,6 +206,11 @@ func (d *Daemon) RunVerification(peerID string, addrs []string) (string, error) 
 		// is a wrong peer, not a wrong address, and verifyStep refuses it.
 		var lastErr error
 		for _, addr := range addrs {
+			client, err := clientFor(addr, 10*time.Second)
+			if err != nil {
+				lastErr = err
+				continue
+			}
 			theirCommit, err := d.verifyStep(client, addr, peerID, "commit", s.commit)
 			if err != nil {
 				lastErr = err
@@ -252,7 +256,7 @@ func (d *Daemon) verifyStep(client *http.Client, addr, expect, step string, payl
 		Payload:   base64.RawURLEncoding.EncodeToString(payload),
 		Signature: base64.RawURLEncoding.EncodeToString(signVerify(d.id.private, step, d.id.PeerID, payload)),
 	})
-	resp, err := client.Post("http://"+addr+"/verify", "application/json", bytes.NewReader(body))
+	resp, err := client.Post(peerURL("/verify"), "application/json", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
