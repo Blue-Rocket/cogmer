@@ -92,7 +92,35 @@ func loadOrCreateKey() (ed25519.PrivateKey, error) {
 // here can never be replayed as one made over something else. The version moved to
 // v2 when the session field was renamed -- a signature covers field values, so
 // changing what a field means changes what was signed.
-func (e *Event) signingBytes() []byte {
+// Signature schemes are kept, never replaced.
+//
+// An event is immutable (§7) and therefore can never be re-signed, and old events
+// do not merely sit in a database: §13 relays them between peers, and D-029 makes
+// refetching a room's history the designed recovery from local loss. So an event
+// signed years ago must still verify under the scheme that signed it, or the
+// recovery path fails -- reporting "signature does not match the peer id", which
+// reads like an attack rather than a version change.
+//
+// Adding a field to an event therefore means adding a scheme here and leaving the
+// old one intact. It does not mean editing signingBytesV2.
+const currentSigVersion = 2
+
+// signingBytes produces the bytes for the scheme an event was signed under, or an
+// error if this build does not know that scheme. Refusing is correct: a signature
+// this code cannot check is not a signature it may accept.
+func (e *Event) signingBytes(version int) ([]byte, error) {
+	switch version {
+	case 0, 2:
+		// 0 means an event stored before the version was recorded. Every such
+		// event was signed under v2, which was the only scheme that existed.
+		return e.signingBytesV2(), nil
+	default:
+		return nil, fmt.Errorf("event %.12s is signed under scheme v%d, which this build does not know; upgrade rather than discard it",
+			e.EventID, version)
+	}
+}
+
+func (e *Event) signingBytesV2() []byte {
 	var b bytes.Buffer
 	put := func(s string) {
 		_ = binary.Write(&b, binary.BigEndian, uint32(len(s)))
@@ -116,7 +144,8 @@ func (e *Event) signingBytes() []byte {
 
 // Sign attaches a signature made by the event's originating peer.
 func (e *Event) Sign(priv ed25519.PrivateKey) {
-	e.Signature = base64.RawURLEncoding.EncodeToString(ed25519.Sign(priv, e.signingBytes()))
+	e.SigVersion = currentSigVersion
+	e.Signature = base64.RawURLEncoding.EncodeToString(ed25519.Sign(priv, e.signingBytesV2()))
 }
 
 var errUnsigned = errors.New("event carries no signature")
@@ -139,7 +168,11 @@ func (e *Event) Verify() error {
 	if err != nil {
 		return fmt.Errorf("signature is not valid base64url: %w", err)
 	}
-	if !ed25519.Verify(pub, e.signingBytes(), sig) {
+	msg, err := e.signingBytes(e.SigVersion)
+	if err != nil {
+		return err
+	}
+	if !ed25519.Verify(pub, msg, sig) {
 		return errors.New("signature does not match the peer id that claims to have made it")
 	}
 	return nil

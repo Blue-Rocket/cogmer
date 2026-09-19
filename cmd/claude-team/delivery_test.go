@@ -252,3 +252,32 @@ func TestSequentialEventsStoreNormally(t *testing.T) {
 		t.Fatalf("want 3 events, got %d", len(evs))
 	}
 }
+
+// Stored and read back: an event whose scheme is not persisted cannot be verified
+// on the way out, which is what a peer refetching a room's history receives.
+func TestStoredEventsKeepTheirScheme(t *testing.T) {
+	s := testStore(t)
+	id := testIdentity(t)
+	ev := Event{
+		EventID: "e1", PeerID: id.PeerID, PeerSequence: 1, RoomID: "r1",
+		Timestamp: "2026-09-18T00:00:00Z", EventType: EventUserPrompt, Content: "hi",
+	}
+	ev.Sign(id.private)
+	if _, err := s.Insert(&ev); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := s.EventsSince("r1", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("stored %d events, want 1", len(got))
+	}
+	if got[0].SigVersion != currentSigVersion {
+		t.Errorf("scheme came back as %d, want %d", got[0].SigVersion, currentSigVersion)
+	}
+	if err := got[0].Verify(); err != nil {
+		t.Errorf("an event read back from storage does not verify: %v", err)
+	}
+}

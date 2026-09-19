@@ -2790,3 +2790,63 @@ A signpost is honest in a way a proxy would not be.
 **Revisit when** B21 is recorded as failing. At that point a session-scoped command
 cannot know its session, and the answer is to refuse rather than to reinstate a
 machine-level current room — which would restore the hazard this removed.
+
+---
+
+## D-058 — Signature schemes are kept, never replaced
+
+**Date:** 2026-09-18 · **Status:** active (implemented)
+
+**Context.** Asked whether anything in the current approach would make backwards
+compatibility hard once a second host type exists. The adapter boundary turned out
+not to be the problem — it is clean, and `behaviors.go` already documents the
+interface. The problem is one layer down and has nothing to do with hosts.
+
+`signingBytes()` hard-coded the tag `claude-team/event/v2` and a fixed field list,
+and `Verify()` always recomputed with **today's** code. Adding a field to an event —
+which a second host would plausibly require — would therefore have stopped every
+historical event verifying.
+
+**Why that is unfixable rather than inconvenient.** Events are immutable (§7), so
+they can never be re-signed. And they do not sit still: §13 relays them between
+peers, and **D-029 makes refetching a room's history the designed recovery from
+local loss**. So after a format change, old events would still move between peers
+and be rejected on arrival — and the message would read `signature does not match
+the peer id that claims to have made it`, which sends someone hunting an attacker
+rather than installing a build.
+
+**Decision.** An event records the scheme it was signed under, and is verified under
+that scheme. Old `signingBytes` implementations are kept rather than edited. Adding
+a field to an event means adding `signingBytesV3` and leaving v2 intact.
+
+Three details that make it work:
+
+- **Zero means v2.** A row written before the column existed, and a peer on an older
+  build that omits the field, both read as the only scheme that existed then. No
+  migration rewrites anything, which matters because rewriting a signed record is
+  the operation §7 forbids.
+- **The version is not covered by the signature.** An attacker who alters it only
+  causes verification to fail. Every scheme is Ed25519 over length-prefixed fields,
+  so there is no weaker scheme to be downgraded to; if one is ever found weak, the
+  answer is to refuse that version rather than to have signed its number.
+- **An unknown scheme is refused as a version problem, not a forgery.** The two
+  demand opposite responses from a person — install a newer build, versus somebody
+  is attacking you — and a test asserts the message says "upgrade" and does not say
+  "does not match the peer id".
+
+**The related hazard, recorded and not fixed.** `wireVersion` is a hard refusal:
+a peer speaking a different version is rejected outright, so there is no rolling
+upgrade. Combined with an event-format change, an upgrade becomes a flag day. That
+is tolerable now, when every peer is on one machine's build, and will not be once
+anyone else uses this. The likely answer is a minimum-compatible version that allows
+reads from older peers.
+
+**What was already right**, and worth not disturbing: `originSessionId` rather than
+`claudeSessionId` (D-043), nothing on the wire naming the agent, host-specific
+values like `promptId` living in free-form `metadata` rather than as columns, and
+`EventType` being an open string whose only consumers test for one specific value —
+so an unknown type renders generically instead of failing.
+
+**Revisit when** a second scheme is actually added. That is the moment the mechanism
+is first exercised, and the test to write then is that an event signed under v2 by
+an older build still verifies against a build that signs v3.

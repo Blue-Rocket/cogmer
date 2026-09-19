@@ -17,24 +17,31 @@ import (
 // Event is the immutable append-only unit defined in spec §7. Once written it
 // is never mutated; peers relay it verbatim (§13).
 type Event struct {
-	EventID         string          `json:"eventId"`
-	PeerID          string          `json:"peerId"`
-	PeerSequence    int64           `json:"peerSequence"`
-	RoomID          string          `json:"roomId"`
-	Timestamp       string          `json:"timestamp"`
-	UserID          string          `json:"userId"`
-	UserDisplayName string          `json:"userDisplayName"`
-	MachineID       string          `json:"machineId"`
+	EventID         string `json:"eventId"`
+	PeerID          string `json:"peerId"`
+	PeerSequence    int64  `json:"peerSequence"`
+	RoomID          string `json:"roomId"`
+	Timestamp       string `json:"timestamp"`
+	UserID          string `json:"userId"`
+	UserDisplayName string `json:"userDisplayName"`
+	MachineID       string `json:"machineId"`
 	// OriginSessionID names the agent session a turn came from. It is opaque:
 	// that it is presently a Claude Code session id is a fact about the adapter
 	// that captured it, not about this record.
-	OriginSessionID string `json:"originSessionId"`
+	OriginSessionID string          `json:"originSessionId"`
 	EventType       string          `json:"eventType"`
 	Content         string          `json:"content"`
 	Metadata        json.RawMessage `json:"metadata,omitempty"`
 	// Signature is made by the originating peer over signingBytes, and is what
 	// distinguishes a relayed event from one the relayer composed (§13).
 	Signature string `json:"signature,omitempty"`
+	// SigVersion names the scheme Signature was made under, so that an event
+	// signed before a field was added still verifies. Zero means "before this was
+	// recorded", which is v2 -- the only scheme that existed then. It is
+	// deliberately NOT covered by the signature: an attacker who alters it only
+	// causes verification to fail, and every scheme is Ed25519 over length-prefixed
+	// fields, so there is no weaker one to be downgraded to.
+	SigVersion int `json:"sigVersion,omitempty"`
 }
 
 const (
@@ -60,6 +67,11 @@ CREATE TABLE IF NOT EXISTS events (
   content           TEXT,
   metadata          TEXT,
   signature         TEXT,
+  -- Which signing scheme the signature column was made under. NULL or 0 means v2,
+  -- the only scheme that existed before this column. An event is immutable and can
+  -- never be re-signed, so this is what lets a field be added later without
+  -- invalidating every event already written (D-058).
+  sig_version       INTEGER,
   UNIQUE(peer_id, peer_sequence)
 );
 CREATE INDEX IF NOT EXISTS idx_events_room ON events(room_id, rowid_alias);
@@ -173,6 +185,7 @@ func migrate(db *sql.DB) error {
 	// whole of what a future migration needs.
 	for _, add := range []struct{ name, ddl string }{
 		{"signature", `ALTER TABLE events ADD COLUMN signature TEXT`},
+		{"sig_version", `ALTER TABLE events ADD COLUMN sig_version INTEGER`},
 	} {
 		if !have[add.name] {
 			if _, err := db.Exec(add.ddl); err != nil {
@@ -321,11 +334,12 @@ func (s *Store) Insert(ev *Event) (InsertResult, error) {
 	if _, err := tx.Exec(`
 		INSERT INTO events
 		  (event_id, peer_id, peer_sequence, room_id, timestamp, user_id,
-		   user_display_name, machine_id, origin_session_id, event_type, content, metadata, signature)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		   user_display_name, machine_id, origin_session_id, event_type, content, metadata,
+		   signature, sig_version)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		ev.EventID, ev.PeerID, ev.PeerSequence, ev.RoomID, ev.Timestamp, ev.UserID,
 		ev.UserDisplayName, ev.MachineID, ev.OriginSessionID, ev.EventType, ev.Content,
-		string(ev.Metadata), ev.Signature); err != nil {
+		string(ev.Metadata), ev.Signature, ev.SigVersion); err != nil {
 		return InsertStored, err
 	}
 	return InsertStored, tx.Commit()
@@ -368,7 +382,8 @@ func scanEvents(rows *sql.Rows) ([]Event, error) {
 		var meta, sig sql.NullString
 		var rowid int64
 		if err := rows.Scan(&rowid, &e.EventID, &e.PeerID, &e.PeerSequence, &e.RoomID, &e.Timestamp,
-			&e.UserID, &e.UserDisplayName, &e.MachineID, &e.OriginSessionID, &e.EventType, &e.Content, &meta, &sig); err != nil {
+			&e.UserID, &e.UserDisplayName, &e.MachineID, &e.OriginSessionID, &e.EventType, &e.Content,
+			&meta, &sig, &e.SigVersion); err != nil {
 			return nil, err
 		}
 		e.Signature = sig.String
@@ -381,7 +396,8 @@ func scanEvents(rows *sql.Rows) ([]Event, error) {
 }
 
 const selectCols = `rowid_alias, event_id, peer_id, peer_sequence, room_id, timestamp,
-	user_id, user_display_name, machine_id, origin_session_id, event_type, content, metadata, signature`
+	user_id, user_display_name, machine_id, origin_session_id, event_type, content, metadata,
+	signature, COALESCE(sig_version, 0)`
 
 // orderBy is the deterministic total order every peer must agree on (review B1).
 //

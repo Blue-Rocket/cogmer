@@ -42,7 +42,7 @@ func TestIdentifierIsTheKey(t *testing.T) {
 	if err := e.Verify(); err != nil {
 		t.Fatalf("a freshly signed event must verify: %v", err)
 	}
-	if !ed25519.Verify(pub, e.signingBytes(), mustDecode(t, e.Signature)) {
+	if !ed25519.Verify(pub, e.signingBytesV2(), mustDecode(t, e.Signature)) {
 		t.Error("signature does not verify against the key its own id names")
 	}
 }
@@ -101,7 +101,7 @@ func TestUnsignedEventIsRejected(t *testing.T) {
 func TestFieldBoundariesCannotBeShifted(t *testing.T) {
 	a := &Event{PeerID: "ed25519:x", EventID: "ab", Content: "cd"}
 	b := &Event{PeerID: "ed25519:x", EventID: "a", Content: "bcd"}
-	if string(a.signingBytes()) == string(b.signingBytes()) {
+	if string(a.signingBytesV2()) == string(b.signingBytesV2()) {
 		t.Error("two different events share signing bytes; a boundary can be moved")
 	}
 }
@@ -136,4 +136,55 @@ func mustDecode(t *testing.T, s string) []byte {
 		t.Fatal(err)
 	}
 	return b
+}
+
+// The upgrade path. An event is immutable (§7) so it can never be re-signed, and
+// old events do not sit still: §13 relays them and D-029 makes refetching a room's
+// history the designed recovery from local loss. An event signed before a field was
+// added must therefore still verify, or that recovery fails.
+func TestAnEventSignedUnderAnOlderSchemeStillVerifies(t *testing.T) {
+	id := testIdentity(t)
+	e := signed(t, id, "written before sigVersion existed")
+
+	// Exactly what a row written by an earlier build looks like when read back:
+	// signature intact, no scheme recorded.
+	e.SigVersion = 0
+	if err := e.Verify(); err != nil {
+		t.Fatalf("an event stored before the version was recorded no longer verifies: %v", err)
+	}
+
+	// And the same event once the version is present.
+	e.SigVersion = 2
+	if err := e.Verify(); err != nil {
+		t.Errorf("an event signed under v2 does not verify as v2: %v", err)
+	}
+}
+
+// A scheme this build does not know must be refused as an UPGRADE problem, not as
+// a forgery. The two require opposite responses from a person: one says install a
+// newer build, the other says somebody is attacking you.
+func TestAnUnknownSchemeIsRefusedAsAVersionProblem(t *testing.T) {
+	id := testIdentity(t)
+	e := signed(t, id, "from the future")
+	e.SigVersion = 99
+
+	err := e.Verify()
+	if err == nil {
+		t.Fatal("an event signed under an unknown scheme verified")
+	}
+	if strings.Contains(err.Error(), "does not match the peer id") {
+		t.Errorf("an unknown scheme is reported as a forgery, which sends someone hunting an attacker: %v", err)
+	}
+	if !strings.Contains(err.Error(), "upgrade") {
+		t.Errorf("the refusal does not say what to do about it: %v", err)
+	}
+}
+
+// Signing stamps the scheme, so nothing relies on the zero value meaning v2 except
+// rows written before the column existed.
+func TestSigningRecordsItsScheme(t *testing.T) {
+	e := signed(t, testIdentity(t), "hi")
+	if e.SigVersion != currentSigVersion {
+		t.Errorf("Sign recorded scheme %d, want %d", e.SigVersion, currentSigVersion)
+	}
 }

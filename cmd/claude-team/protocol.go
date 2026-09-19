@@ -29,6 +29,10 @@ type wireEvent struct {
 	Content         string          `json:"content"`
 	Metadata        json.RawMessage `json:"metadata,omitempty"`
 	Signature       string          `json:"signature,omitempty"`
+	// SigVersion travels with the event because the receiver must know which
+	// scheme to verify under. Omitted means v2 -- the scheme in use before this
+	// field existed, which is what a peer on an older build still sends.
+	SigVersion int `json:"sigVersion,omitempty"`
 }
 
 func toWire(e Event) wireEvent {
@@ -38,6 +42,7 @@ func toWire(e Event) wireEvent {
 		UserDisplayName: e.UserDisplayName, MachineID: e.MachineID,
 		OriginSessionID: e.OriginSessionID, EventType: e.EventType,
 		Content: e.Content, Metadata: e.Metadata, Signature: e.Signature,
+		SigVersion: e.SigVersion,
 	}
 }
 
@@ -48,5 +53,6 @@ func fromWire(w wireEvent) Event {
 		UserDisplayName: w.UserDisplayName, MachineID: w.MachineID,
 		OriginSessionID: w.OriginSessionID, EventType: w.EventType,
 		Content: w.Content, Metadata: w.Metadata, Signature: w.Signature,
+		SigVersion: w.SigVersion,
 	}
 }

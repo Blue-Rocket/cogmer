@@ -371,7 +371,11 @@ signed, because a peer polls that address.
 - **Hooks must never break Claude Code** (§3.1). Every failure path exits 0 with
   empty stdout. A dead daemon means no collaboration, never a broken session.
 - **Events are immutable** (§7). Never rewrite `eventId`, `peerId`, or
-  `peerSequence` — transitive relay (§13) depends on it.
+  `peerSequence` — transitive relay (§13) depends on it. For the same reason
+  **signature schemes are added, never edited** (D-058): an event cannot be
+  re-signed, and D-029 makes refetching history a recovery path, so changing
+  `signingBytesV2` would make every stored event unverifiable. Add
+  `signingBytesV3` and bump `currentSigVersion`.
 - **Durability precedes publication** (§23): commit locally, then transmit.
 - **Never publish `thinking` blocks**, and exclude `isSidechain` records (§3.5).
 - **Injected context is attributed, never disguised as local** (§20).
