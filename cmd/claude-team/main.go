@@ -15,6 +15,11 @@ import (
 	"time"
 )
 
+// version is stamped at build time with -ldflags "-X main.version=...". It is how
+// the plugin decides whether the binary on disk is the one it expects, so a plugin
+// update can replace a stale binary rather than silently keep using it.
+var version = "dev"
+
 const (
 	// defaultAddr carries hooks and the local UI. Loopback, always (§25).
 	defaultAddr = "127.0.0.1:4782"
@@ -41,6 +46,8 @@ func main() {
 		runSeed()
 	case "log":
 		runLog()
+	case "version":
+		fmt.Println(version)
 	case "whoami":
 		runWhoami()
 	case "conflicts":
@@ -99,6 +106,7 @@ func usage() {
   claude-team hook stop       Stop hook (capture assistant turn)
   claude-team seed            Insert a simulated teammate conversation
   claude-team log             Print the room transcript
+  claude-team version         Print the build version
   claude-team whoami          Show this peer's identity and room
   claude-team conflicts       Show quarantined events (sequence conflicts)
 
