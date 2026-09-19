@@ -186,7 +186,9 @@ var Behaviors = []Behavior{
 		Title:    "PostToolUse carries tool_name and tool_response",
 		Reliance: "Tool-activity metadata on stored events.",
 		Tier:     TierSession,
-		Check:    func(p *Probe) error { return p.requireFields("PostToolUse", "tool_name", "tool_response", "tool_use_id") },
+		Check: func(p *Probe) error {
+			return p.requireFields("PostToolUse", "tool_name", "tool_response", "tool_use_id")
+		},
 	},
 	{
 		ID:       "B11",
@@ -234,6 +236,23 @@ var Behaviors = []Behavior{
 				}
 			}
 			return fmt.Errorf("recorded attachment does not match the injected block byte-for-byte; hash matching in ConfirmDelivered will never succeed (got %d block(s))", len(p.ObservedBlocks))
+		},
+	},
+
+	{
+		ID:       "B21",
+		Title:    "CLAUDE_CODE_SESSION_ID is exported into a tool call's environment",
+		Reliance: "Commands run from inside a session knowing which session they are in. A slash command shells out to this binary, and the binary reads this variable to bind a room to the session that asked for it. If the variable disappears, a command invoked from a session cannot tell itself apart from one typed at a terminal, and the safe response -- refusing rather than guessing -- means `/team-create` and `/team-join` stop working. If it is present but reports a DIFFERENT id than the hooks report, the failure is worse and silent: the room binds to a session that does not exist, the real session binds to nothing, and capture stops with no error anywhere.",
+		Tier:     TierSession,
+		Check: func(p *Probe) error {
+			if p.ToolEnvSessionID == "" {
+				return fmt.Errorf("CLAUDE_CODE_SESSION_ID was empty or unset inside a Bash tool call; a command run from a session cannot learn which session it is in")
+			}
+			if p.ToolEnvSessionID != p.SessionID {
+				return fmt.Errorf("a tool call saw session %q but the session is %q; binding would attach a room to the wrong session",
+					p.ToolEnvSessionID, p.SessionID)
+			}
+			return nil
 		},
 	},
 

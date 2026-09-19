@@ -2725,3 +2725,68 @@ carried survives.
 **Revisit when** a case appears for moving a session that has received nothing. It
 would need a way to know that from outside the session which does not depend on a
 flag nobody reads, and the flag is what failed here.
+
+---
+
+## D-057 — A slash command is a thin wrapper over the CLI; the session names itself
+
+**Date:** 2026-09-18 · **Status:** decided; commands not yet built
+
+**Context.** §29 had already split commands between a session and a terminal
+(D-053). What it had not answered is how the in-session ones would be implemented,
+and the assumption underneath was that they would need a second implementation.
+
+Proposed instead: every slash command simply calls the corresponding CLI command.
+One implementation, two entry points, and the CLI remains the surface that can be
+tested without a Claude session at all.
+
+**The objection that had blocked this was wrong.** Binding a room to the session
+that asked for it appeared to require naming a session from outside one, which
+nothing at a terminal can do. Probed rather than assumed, and it is not required:
+**`CLAUDE_CODE_SESSION_ID` is exported into the environment of every Bash tool
+call**, and it equals the id the hooks report. Verified on 2.1.275 by running a
+prompt with a `UserPromptSubmit` hook recording `session_id` while the tool call
+recorded the variable — the two strings were identical.
+
+Recorded as **B21**, because it is undocumented, load-bearing, and has a silent
+failure mode: a variable that is present but names a *different* session would bind
+a room to a session that does not exist while the real one binds to nothing, and
+capture would stop with no error anywhere.
+
+**Decision.** Slash commands shell out. They pass no session id, because the CLI
+reads `CLAUDE_CODE_SESSION_ID` from its own environment.
+
+That yields the property that motivated the question — nobody would ever run
+`create` from a terminal — **by construction rather than by convention**. The
+variable is absent at a terminal, so a session-scoped command run there has no
+session to bind and refuses. It does not guess, and it does not fall back to a
+machine-level setting.
+
+**What it allows us to delete.** The machine-level *current room* exists only
+because a terminal command cannot name a session. Once `create` and `join` bind the
+session that invoked them, a session that has run neither is in no room, which is
+already what §12a wants — *before a room exists, a session is an ordinary Claude
+Code session*. That removes the hazard behind the original question: today a room is
+created, forgotten, and a session started weeks later in an unrelated repository
+silently joins it and begins publishing. Nothing about the directory scopes it,
+because D-015 forbids deriving a room from one.
+
+**Not every command can be wrapped**, and §29 already says which: `pair` and
+`verify` are interactive, block on another person, and must reach a person's eyes
+unaltered. Their slash counterparts print an instruction to run them in a terminal.
+A signpost is honest in a way a proxy would not be.
+
+**Two hazards to implement against.**
+
+- **The model may retry.** A wrapper is a model deciding to run a command, and a
+  model that reads a timeout as a failure may run it twice. `invite`, `join` and
+  `revoke` are idempotent already; `create` is not, and two rooms is a confusing
+  outcome rather than a harmless one. Either make creation idempotent per session —
+  a session that already has a room gets that room back — or have it refuse.
+- **Testing must not require a session.** Session-scoped commands accept an
+  explicit override so tests can pass a synthetic id; the environment variable is
+  the default, not the only source.
+
+**Revisit when** B21 is recorded as failing. At that point a session-scoped command
+cannot know its session, and the answer is to refuse rather than to reinstate a
+machine-level current room — which would restore the hazard this removed.

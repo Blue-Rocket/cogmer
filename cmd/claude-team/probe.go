@@ -18,7 +18,7 @@ type Probe struct {
 	Sentinel  string
 	SessionID string
 
-	Hooks         map[string][]map[string]any
+	Hooks map[string][]map[string]any
 	// Turn1Stop is the Stop payload of the probe turn specifically. In deep
 	// mode later turns append more Stop payloads, and session-tier checks must
 	// not be evaluated against the post-compaction turn.
@@ -34,6 +34,11 @@ type Probe struct {
 	// confirmation depends on these matching.
 	InjectedText   string
 	ObservedBlocks []string
+
+	// ToolEnvSessionID is CLAUDE_CODE_SESSION_ID as seen from inside a Bash tool
+	// call. It is how a command run from within a session learns which session it
+	// is in, and must equal SessionID.
+	ToolEnvSessionID string
 
 	// compaction tier
 	PreCompactBytes      int64
@@ -147,9 +152,14 @@ func quoteCmd(path string, args ...string) string {
 	return strings.Join(all, " ")
 }
 
-const probePrompt = "Do exactly these three things, in order: " +
+// The Bash step does double duty: it forces a tool call between two text blocks,
+// which is what B04 and B05 measure, and it captures the session id Claude Code
+// exports into a tool call's environment, which is what B21 checks.
+const toolEnvFile = "toolenv.txt"
+
+var probePrompt = "Do exactly these three things, in order: " +
 	"(1) reply with the single word ALPHA; " +
-	"(2) use the Bash tool to run: echo mid; " +
+	"(2) use the Bash tool to run exactly: sh -c 'printf %s \"$CLAUDE_CODE_SESSION_ID\" > " + toolEnvFile + "'; " +
 	"(3) finally reply with only the codeword given in the team-conversation block, and nothing else."
 
 // RunProbe drives a real Claude session and captures what the registry needs.
@@ -208,6 +218,12 @@ func RunProbe(deep bool) (*Probe, error) {
 		return nil, fmt.Errorf("probe session failed: %w\n%s", err, out)
 	}
 	p.Final = out
+	// What the tool call saw in its own environment. Absent is a legitimate
+	// reading -- it means the variable is gone -- so the error is discarded and
+	// the empty string is what B21 judges.
+	if b, err := os.ReadFile(filepath.Join(p.Dir, toolEnvFile)); err == nil {
+		p.ToolEnvSessionID = strings.TrimSpace(string(b))
+	}
 	p.freezeSessionEvidence()
 
 	if deep {

@@ -141,3 +141,20 @@ func TestRegistryIsDocumented(t *testing.T) {
 		}
 	}
 }
+
+// B21 must fail when the variable is gone, and when it is present but names a
+// different session -- the second being the silent failure, where a room binds to
+// a session that does not exist and capture stops with no error anywhere.
+func TestB21DetectsSessionIdLoss(t *testing.T) {
+	check := behavior(t, "B21").Check
+
+	if err := check(&Probe{SessionID: "abc", ToolEnvSessionID: "abc"}); err != nil {
+		t.Fatalf("a matching session id was rejected: %v", err)
+	}
+	if err := check(&Probe{SessionID: "abc"}); err == nil {
+		t.Error("an unset CLAUDE_CODE_SESSION_ID passed")
+	}
+	if err := check(&Probe{SessionID: "abc", ToolEnvSessionID: "def"}); err == nil {
+		t.Error("a tool call reporting a different session passed")
+	}
+}

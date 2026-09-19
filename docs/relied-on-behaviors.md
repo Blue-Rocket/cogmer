@@ -62,6 +62,10 @@ re-verifies them against the installed version.
 
 **Relied on for:** Delivery confirmation (D-014). The daemon marks teammate events delivered only once it observes the injected block in the transcript. If this record disappears or changes shape, delivery falls back to trusting that the turn carried it -- degraded, not broken, but the guarantee weakens silently.
 
+### B21 — CLAUDE_CODE_SESSION_ID is exported into a tool call's environment
+
+**Relied on for:** Commands run from inside a session knowing which session they are in. A slash command shells out to this binary, and the binary reads this variable to bind a room to the session that asked for it. If the variable disappears, a command invoked from a session cannot tell itself apart from one typed at a terminal, and the safe response -- refusing rather than guessing -- means `/team-create` and `/team-join` stop working. If it is present but reports a DIFFERENT id than the hooks report, the failure is worse and silent: the room binds to a session that does not exist, the real session binds to nothing, and capture stops with no error anywhere.
+
 ## Tier: compaction
 
 ### B13 — PreCompact fires and reports its trigger
