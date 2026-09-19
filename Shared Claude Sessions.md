@@ -2006,12 +2006,45 @@ Phase numbers are never reused or reassigned, so that references elsewhere conti
 | Phase 7 — Hardening | **complete** — the outbound queue was dissolved by pull rather than built |
 | Phase 11 — Installation | **complete** — plugin, hooks, commands, and a verified binary fetch (D-066, D-067) |
 | Phase 12 — Discovery on a local network | deferred — see D-063; the first pair never share a network |
-| Phase 13 — Somebody else uses it | outstanding, and the untested half of §30 |
+| Phase 13 — Somebody else uses it | **blocked on a permanent name** — see below; and the untested half of §30 |
 | Phase 14 — First contact without a paste | conditional on Phase 13 |
 | Phase 15 — Reaching a peer on another network | **built and working between two machines**; NAT-to-NAT awaits the real peer (D-068) |
 | Phase 8 — The local UI | **complete** |
 | Phase 9 — Peer identity | **complete**; verification added afterwards and gates synchronization |
 | Phase 10 — Pairing | **partial** — pairing, rooms, invitation, joining and admission work; a host approving an unsolicited request does not exist, and whether it should is undecided (§12a) |
+
+## Blocked on a name
+
+`claude-team` is a placeholder. The permanent name is not settled, and one line of
+work cannot proceed without it.
+
+**What is blocked, and the chain it blocks.** A Go module path must match the
+repository URL that serves it, so the repository cannot be created until the name
+exists. Without a repository there is nowhere for a colleague to
+`claude plugin install` from, and the source-build fallback in the installer points
+at a module path that has never resolved. **Phase 13 depends on that chain**: a
+plugin copied by hand, or a binary handed over, measures a first five minutes that
+will never happen again, which is the one thing Phase 13 exists to observe.
+
+**What is deliberately not blocked.** Nothing cryptographic (D-069). Signing
+namespaces use a `protocolNamespace` constant that is arbitrary on purpose and must
+never change, because a tag carrying a product name would make every signature ever
+produced hostage to a naming decision — and by D-058's rule, a rename after real
+events exist would mean carrying the old namespace forever. The slash commands are
+prefixed from the same constant rather than from the product name (D-070), for the
+same reason at lower stakes.
+
+Binary distribution is also unblocked: assets are served from a host recorded in
+`release-url.txt`, and the release path carries the name only as a directory
+component (D-067).
+
+**What changes when the name lands.** Module path, binary name, plugin name, state
+directory, release URL path, and the command prefix if the settled name suggests a
+better one. All of them are a rename plus, for the state directory, a migration.
+None of them is cryptographic, none is on the wire, and none touches stored events.
+
+That separation is the point of doing it in this order: the expensive couplings were
+broken while they were still free, so what remains is only work that is annoying.
 
 The original sequence assumed four things that have since been displaced: a room scoped to a project, Tailscale as the transport, push between peers, and admission by a shared secret. Work proceeded out of order while those assumptions were being tested, which was the right trade during an experiment and is the wrong one now.
 
@@ -2387,6 +2420,10 @@ That is made true rather than intended by serving **one set of routes over both 
 - a developer who did not write this installs it, pairs, joins a room, and works;
 - record what they hit, in the order they hit it.
 
+**Blocked on a permanent name**, for the reason set out under §31's status: a
+plugin needs a repository to be installed from, and a repository needs the name. A
+plugin copied by hand measures a first five minutes that will never happen again.
+
 **This is the untested half of §30.** Every experiment so far has measured whether Claude understands a teammate. None has measured whether a person finds a teammate's Claude worth having, because no person but the author has ever been in a room.
 
 It is a phase rather than an afterthought because it is the only one that can fail in a way the others cannot detect. Everything above can be correct and this can still go badly, and the failure would look like somebody quietly not using it again.
@@ -2417,7 +2454,7 @@ Phase 11   installation                          done
    ↓
 Phase 15   reaching a peer on another network    built; NAT-to-NAT untested
    ↓
-Phase 13   somebody else uses it
+Phase 13   somebody else uses it                 ← blocked on a permanent name
    ↓
 Phase 14   first contact without a paste         only if 13 asks for it
    ↓
