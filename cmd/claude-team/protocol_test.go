@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 )
 
 // The wire format must not mention the agent that produced an event. A session
@@ -96,5 +97,86 @@ func TestAnOlderProtocolIsStillRead(t *testing.T) {
 	// this build would take them to mean.
 	if speaks(wireVersion + 1) {
 		t.Errorf("protocol v%d was accepted by a build that speaks v%d", wireVersion+1, wireVersion)
+	}
+}
+
+// An endpoint carries how to reach it. A bare host:port still means TCP, because
+// that is what every endpoint recorded before the seam existed was, and rewriting
+// stored rows to add a prefix would be a migration that buys nothing.
+func TestEndpointsCarryTheirTransport(t *testing.T) {
+	for _, c := range []struct{ in, scheme, value string }{
+		{"198.51.100.7:4783", schemeTCP, "198.51.100.7:4783"},
+		{"tcp://198.51.100.7:4783", schemeTCP, "198.51.100.7:4783"},
+		{"[2001:db8::1]:4783", schemeTCP, "[2001:db8::1]:4783"},
+		{"tc://tcpGFwWCCcd6msMC", schemeTailcat, "tcpGFwWCCcd6msMC"},
+	} {
+		got, err := ParseEndpoint(c.in)
+		if err != nil {
+			t.Errorf("%q: %v", c.in, err)
+			continue
+		}
+		if got.Scheme != c.scheme || got.Value != c.value {
+			t.Errorf("%q parsed as %s/%s, want %s/%s", c.in, got.Scheme, got.Value, c.scheme, c.value)
+		}
+	}
+
+	// A TCP endpoint round-trips to the bare form, so what is stored stays
+	// readable and a person reading the database sees what they always saw.
+	e, _ := ParseEndpoint("tcp://198.51.100.7:4783")
+	if e.String() != "198.51.100.7:4783" {
+		t.Errorf("tcp endpoint rendered as %q, want the bare form", e.String())
+	}
+	e, _ = ParseEndpoint("tc://abc")
+	if e.String() != "tc://abc" {
+		t.Errorf("tailcat endpoint rendered as %q", e.String())
+	}
+
+	for _, bad := range []string{"", "   ", "carrier-pigeon://somewhere", "tc://"} {
+		if _, err := ParseEndpoint(bad); err == nil {
+			t.Errorf("%q was accepted", bad)
+		}
+	}
+}
+
+// A transport this build cannot reach must be refused by name, not dialled as
+// though it were an address. The failure otherwise is a TCP connection to a
+// two-hundred-character hostname, which reports something unrecognisable.
+func TestAnUnreachableTransportIsRefusedByName(t *testing.T) {
+	saved := dialers
+	dialers = map[string]Dialer{schemeTCP: tcpDialer{}}
+	defer func() { dialers = saved }()
+
+	_, err := clientFor("tc://whatever", time.Second)
+	if err == nil {
+		t.Fatal("a client was built for a transport this build lacks")
+	}
+	if !strings.Contains(err.Error(), schemeTailcat) {
+		t.Errorf("the refusal does not name the transport: %v", err)
+	}
+
+	if _, err := clientFor("198.51.100.7:4783", time.Second); err != nil {
+		t.Errorf("a plain address was refused: %v", err)
+	}
+}
+
+// A tailcat address is 237 characters and appears in every reachability message.
+// Printed whole it pushes what a person is reading off the screen.
+func TestEndpointsAreReadableInLogs(t *testing.T) {
+	long := "tc://" + strings.Repeat("x", 232)
+	short := shortEndpoint(long)
+	if len(short) > 48 {
+		t.Errorf("a logged endpoint is %d characters: %s", len(short), short)
+	}
+	if !strings.Contains(short, "237") {
+		t.Errorf("the short form hides how much was elided: %s", short)
+	}
+	// A plain address is short already and must not be mangled.
+	if got := shortEndpoint("198.51.100.7:4783"); got != "198.51.100.7:4783" {
+		t.Errorf("a plain address was shortened to %q", got)
+	}
+	// Something unparseable is passed through rather than swallowed: a log line
+	// is where a malformed endpoint should be visible, not hidden.
+	if got := shortEndpoint("not an endpoint"); got != "not an endpoint" {
+		t.Errorf("an unparseable endpoint became %q", got)
 	}
 }

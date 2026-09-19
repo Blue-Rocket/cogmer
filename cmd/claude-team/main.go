@@ -267,6 +267,26 @@ func runDaemon() {
 		log.Fatalf("listen (peer): %v", err)
 	}
 
+	// A second way in, for peers on other networks. Optional and best effort: a
+	// daemon that cannot start it still serves TCP, because a peer on the same
+	// network is unaffected and saying nothing would be worse than saying less.
+	advertised := peerAddr()
+	var tcListener net.Listener
+	if tailcatEnabled() {
+		l, endpoint, err := StartTailcat()
+		if err != nil {
+			log.Printf("  tailcat unavailable (%v) — reachable only at %s", err, peerAddr())
+		} else {
+			tcListener, advertised = l, endpoint
+			defer l.Close()
+		}
+	}
+	// Recorded so that `whoami` and `invite` -- separate processes -- publish the
+	// endpoint this daemon is actually listening on rather than the one it binds.
+	if err := recordEndpoint(advertised); err != nil {
+		log.Printf("  could not record the endpoint (%v); invitations may carry the wrong one", err)
+	}
+
 	rooms, _ := members.Rooms()
 	log.Printf("claude-team daemon  peer=%s (%s)  serving %d room(s)",
 		id.UserDisplayName, id.PeerName, len(rooms))
@@ -278,6 +298,9 @@ func runDaemon() {
 	}
 	log.Printf("  hooks and UI  http://%s  (loopback)", addr())
 	log.Printf("  peer sync     http://%s", peerAddr())
+	if tcListener != nil {
+		log.Printf("  reachable at  %s", shortEndpoint(advertised))
+	}
 	if !isLoopback(peerAddr()) {
 		log.Printf("  WARNING: the peer API is reachable from other machines. Requests are")
 		log.Printf("           authenticated and events are signed, and only each room's")
@@ -285,8 +308,19 @@ func runDaemon() {
 	}
 
 	go d.RunSync(peerList(), syncInterval())
+	// One set of routes over both listeners. Every check a request passes is the
+	// same whichever carried it, which is the point of the listener interface
+	// rather than a happy accident.
+	routes := d.PeerRoutes()
+	if tcListener != nil {
+		go func() {
+			if err := http.Serve(tcListener, routes); err != nil && !errors.Is(err, net.ErrClosed) {
+				log.Printf("tailcat server stopped: %v", err)
+			}
+		}()
+	}
 	go func() {
-		if err := http.Serve(peer, d.PeerRoutes()); err != nil {
+		if err := http.Serve(peer, routes); err != nil {
 			log.Fatalf("peer server: %v", err)
 		}
 	}()

@@ -223,7 +223,7 @@ func (d *Daemon) peerStatus() []uiPeer {
 	defer d.peerMu.Unlock()
 	var out []uiPeer
 	for _, addr := range targets {
-		p := uiPeer{Name: addr, Since: "never reached"}
+		p := uiPeer{Name: shortEndpoint(addr), Since: "never reached"}
 		if st, ok := d.peerSeen[addr]; ok && !st.lastSeen.IsZero() {
 			if age := time.Since(st.lastSeen); age < 15*time.Second {
 				p.Online = true
@@ -264,7 +264,7 @@ func (d *Daemon) markPeerSeen(addr string) {
 	d.peerMu.Unlock()
 
 	if wasDown {
-		log.Printf("peer %s is reachable again after %s", addr, outage)
+		log.Printf("peer %s is reachable again after %s", shortEndpoint(addr), outage)
 	}
 }
 
@@ -289,10 +289,10 @@ func (d *Daemon) markPeerUnreachable(addr string, err error) {
 		return
 	}
 	if first {
-		log.Printf("peer %s is unreachable: %v", addr, err)
+		log.Printf("peer %s is unreachable: %v", shortEndpoint(addr), err)
 		return
 	}
-	log.Printf("peer %s still unreachable after %s: %v", addr, time.Since(since).Round(time.Second), err)
+	log.Printf("peer %s still unreachable after %s: %v", shortEndpoint(addr), time.Since(since).Round(time.Second), err)
 }
 
 var _ = sync.Mutex{}

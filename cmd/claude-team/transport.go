@@ -168,3 +168,35 @@ func recordEndpoint(e string) error {
 	}
 	return os.Rename(tmp, filepath.Join(dir, endpointFile))
 }
+
+// Short renders an endpoint for a log line or a status display.
+//
+// A tailcat address is 237 characters, and a peer's address appears in every
+// reachability message. Printed whole it pushes the part a person is reading off
+// the screen, and several of them make a log unreadable -- observed immediately on
+// the first two-machine run.
+//
+// The prefix is enough to tell two peers apart, and anything needing the whole
+// value is machinery rather than a person.
+func (e Endpoint) Short() string {
+	if e.Scheme == schemeTCP {
+		return e.Value
+	}
+	const keep = 12
+	if len(e.Value) <= keep {
+		return e.String()
+	}
+	// The length reported is of the whole endpoint, because that is the string a
+	// person would otherwise be looking at or pasting.
+	return fmt.Sprintf("%s://%s… (%d chars)", e.Scheme, e.Value[:keep], len(e.String()))
+}
+
+// shortEndpoint is Short for an endpoint that has not been parsed, which is how
+// most call sites hold one.
+func shortEndpoint(s string) string {
+	e, err := ParseEndpoint(s)
+	if err != nil {
+		return s
+	}
+	return e.Short()
+}

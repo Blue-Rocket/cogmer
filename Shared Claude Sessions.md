@@ -2004,11 +2004,11 @@ Phase numbers are never reused or reassigned, so that references elsewhere conti
 | Phase 5 — Offline/reconnection | **complete** — verified in-process and across two machines; see `docs/phase5-findings.md` |
 | Phase 6 — Three-peer/transitive | deferred |
 | Phase 7 — Hardening | **complete** — the outbound queue was dissolved by pull rather than built |
-| Phase 11 — Installation | **next** |
+| Phase 11 — Installation | **complete** — plugin, hooks, commands, and a verified binary fetch (D-066, D-067) |
 | Phase 12 — Discovery on a local network | deferred — see D-063; the first pair never share a network |
 | Phase 13 — Somebody else uses it | outstanding, and the untested half of §30 |
 | Phase 14 — First contact without a paste | conditional on Phase 13 |
-| Phase 15 — Reaching a peer on another network | outstanding, and a prerequisite for Phase 13 |
+| Phase 15 — Reaching a peer on another network | **built and working between two machines**; NAT-to-NAT awaits the real peer (D-068) |
 | Phase 8 — The local UI | **complete** |
 | Phase 9 — Peer identity | **complete**; verification added afterwards and gates synchronization |
 | Phase 10 — Pairing | **partial** — pairing, rooms, invitation, joining and admission work; a host approving an unsolicited request does not exist, and whether it should is undecided (§12a) |
@@ -2409,9 +2409,9 @@ prototype; it is everything between a prototype that works and a thing somebody
 else can use.
 
 ```
-Phase 11   installation                          ← next
+Phase 11   installation                          done
    ↓
-Phase 15   reaching a peer on another network
+Phase 15   reaching a peer on another network    built; NAT-to-NAT untested
    ↓
 Phase 13   somebody else uses it
    ↓

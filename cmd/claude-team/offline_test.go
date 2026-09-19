@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -409,4 +411,37 @@ func TestAReservationIsSpentEvenIfNothingIsWritten(t *testing.T) {
 	if second != first+1 {
 		t.Errorf("reservations jumped from %d to %d", first, second)
 	}
+}
+
+// The listener that lets one set of routes serve both transports. Nothing about a
+// request should depend on which carried it, and this is the piece that makes that
+// true rather than merely intended.
+func TestConnListenerServesAndCloses(t *testing.T) {
+	l := &connListener{conns: make(chan net.Conn), closed: make(chan struct{}), addr: tailcatAddr("tc://test")}
+
+	srv, cli := net.Pipe()
+	go func() { l.conns <- srv }()
+
+	got, err := l.Accept()
+	if err != nil {
+		t.Fatalf("Accept: %v", err)
+	}
+	if got != srv {
+		t.Error("Accept returned a connection nobody offered")
+	}
+	cli.Close()
+
+	if l.Addr().Network() != schemeTailcat {
+		t.Errorf("listener reports network %q", l.Addr().Network())
+	}
+
+	// Close must unblock Accept with net.ErrClosed, which is what http.Serve
+	// treats as an orderly shutdown rather than a fault to report.
+	go l.Close()
+	if _, err := l.Accept(); !errors.Is(err, net.ErrClosed) {
+		t.Errorf("Accept after Close gave %v, want net.ErrClosed", err)
+	}
+	// Closing twice must not panic: the daemon closes it in a defer and http.Serve
+	// may have closed it already.
+	l.Close()
 }

@@ -126,7 +126,7 @@ func (d *Daemon) RunSync(_ []string, every time.Duration) {
 			if n, err := d.pullFrom(addr); err != nil {
 				d.markPeerUnreachable(addr, err)
 			} else if n > 0 {
-				log.Printf("sync: received %d event(s) from %s", n, addr)
+				log.Printf("sync: received %d event(s) from %s", n, shortEndpoint(addr))
 			}
 		}
 		time.Sleep(every)
@@ -134,7 +134,11 @@ func (d *Daemon) RunSync(_ []string, every time.Duration) {
 }
 
 func (d *Daemon) pullFrom(addr string) (int, error) {
-	client, err := clientFor(addr, 5*time.Second)
+	// Generous, because first contact with a peer on another network includes
+	// building a tunnel: probing the network, choosing a relay and handshaking.
+	// Later rounds ride the cached client and return in milliseconds, so this
+	// bounds the first attempt rather than the ordinary one.
+	client, err := clientFor(addr, 30*time.Second)
 	if err != nil {
 		return 0, err
 	}
