@@ -3187,22 +3187,51 @@ this phase builds is what makes it small.
 compiled binary, and nothing put it on the machine. Three candidates: ship binaries
 in the plugin repository, fetch them at first run, or build from source.
 
-**What the ecosystem does, which settled it.** Of 53 plugins in the official
-marketplace, **not one ships a binary.** Everything needing an executable either
-launches it through a package-manager runner (`npx`, `uvx`, `bun`, `docker`),
-points at a remote HTTP service, or installs at runtime into a directory of its
-own. Shipping binaries is not a road less travelled here; it is a road nobody
-takes.
+**What the ecosystem does — stated more carefully than it first was.** Of 53
+plugins in the official marketplace, not one ships a binary. That is true and it
+proves much less than it sounds like, because **almost none of them has one**: four
+run `bun run --cwd ${CLAUDE_PLUGIN_ROOT}` over TypeScript sitting in the plugin
+directory, two are npm packages, one is Python, one runs the user's own PHP project.
+The runner there is an interpreter for code already present, not a distribution
+strategy. Eight of nine never faced this problem.
 
-The arithmetic agrees. Five targets at 11 MB stripped is 56 MB, and a git
-repository keeps every version forever — ten releases is half a gigabyte cloned by
-everyone who installs. Tailcat would roughly double it (D-062).
+The signal that does survive is the ninth. `terraform` is the only plugin with a
+genuinely compiled server, and it runs `docker run hashicorp/terraform-mcp-server:0.4.0`
+— a registry, content-addressed and version-pinned, rather than the repository that
+describes it. Where a compiled artifact exists, it comes from somewhere with content
+addressing.
+
+**The arithmetic.** Five targets at 11 MB stripped is 56 MB of binaries. Every
+install would download all of them to obtain the one it can run, because four fifths
+are for platforms that machine is not — against a plugin that is otherwise about
+100 KB of text. Tailcat would roughly double it (D-062).
+
+A git repository also keeps every version of every file forever, and binaries do not
+delta-compress, so ten releases would accumulate half a gigabyte of history. Whether
+an installer pays that depends on clone depth, which was asserted here before it was
+checked and is **not** established: the official marketplace turns out not to be a
+git clone at all — it arrives as a content-addressed archive with a `.gcs-sha` — and
+no git-sourced plugin was installed locally to measure. The 56 MB per install stands
+on its own and needs none of it.
 
 The runner pattern is also unavailable to us, and for a reason already recorded:
 `npx` needs Node, and the README says plainly that Claude Code ships as a native
 binary and a teammate may have none. Choosing Go with pure-Go SQLite was precisely
 to avoid a runtime dependency; reintroducing one as the *delivery* mechanism would
 undo it at the last step.
+
+**What a registry would have given us, and what we gave up.** Version resolution for
+free, the platform matrix handled by somebody else, provenance and revocation, and a
+fetch path corporate networks already proxy. Checksum pinning is a thin hand-rolled
+substitute for the third of those. Set against it: `npx pkg@latest` re-authorises
+whatever the registry serves on every single launch, with no pin at all. The trade
+is not convenience against rigour in one direction — we lost provenance
+infrastructure and gained a pin they do not have.
+
+And the framing that resolves it: GitHub Releases with checksums **is** the Go
+convention, which is what goreleaser exists to do. We follow our language's norm and
+they follow theirs. The divergence is downstream of choosing Go, which was decided
+for a reason that still holds.
 
 **Decision.** Fetch at first run into `~/.claude-team/bin`, and **run nothing that
 cannot be verified**. `plugin/checksums.txt` is committed to the plugin repository
