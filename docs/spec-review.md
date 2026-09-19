@@ -20,9 +20,9 @@ end rather than given a finding number.
 
 Findings are ordered by consequence, not by section number.
 
-**Status, as of the last revision.** Of sixteen findings, nine are resolved (one by
-dissolution rather than repair), one is partly addressed and cannot be verified until
-Phase 5, and six remain open — A1 among them, reopened after being closed on
+**Status, as of the last revision.** Of sixteen findings, ten are resolved (one by
+dissolution rather than repair, and B2 by verification in Phase 5) and six remain
+open — A1 among them, reopened after being closed on
 implementation work rather than specification work.
 
 The six open findings share a shape worth naming: every one of them is the
@@ -296,11 +296,19 @@ must never order anything.
 
 ### B2 — Injection order is unspecified, and arrival order is not chronological
 
-**PARTLY ADDRESSED; UNVERIFIED.** Injection now uses the same deterministic order
-as display rather than arrival order, which is the fix. It could not be verified:
-with a single teammate the injected block contains only that peer's turns, already
-in sequence, so interleaving never arises. This needs three peers, or a peer
-reconnecting with a backlog alongside a live one.
+**RESOLVED — verified in Phase 5, 2026-09-18.** Injection uses the §24 display
+order rather than arrival order, and that is now checked against the state which
+makes the two differ: a peer reconnecting with a backlog alongside a live one.
+
+`TestABacklogIsInjectedInChronologicalOrder` interleaves two origins whose arrival
+order is deliberately not their chronological order, and requires both the query and
+the **rendered block** to come out chronological — the second because ordering the
+query and rendering some other way would look correct in every other test. Confirmed
+to fail when `UndeliveredFor` is switched to arrival order, reporting exactly the
+transposition this finding predicted.
+
+This was the last finding that could not be checked with one live peer, which is why
+it waited for Phase 5 rather than being closed on inspection.
 
 **Medium.** §19 says to inject unseen events; §24 governs *display* ordering.
 Nothing says which order injected context uses.

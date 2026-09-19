@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -133,13 +134,23 @@ func (d *Daemon) pullFrom(client *http.Client, addr string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	// Every room is attempted, even after one fails. Returning on the first error
+	// starves every room after it for as long as the failure lasts, and the
+	// failures that last are exactly the ones worth surviving: a corrupt store, a
+	// peer on another protocol version, a room whose host is down while others are
+	// up. One bad room must not make a peer silent.
 	total := 0
+	var failed []string
 	for _, r := range rooms {
 		n, err := d.pullRoom(client, addr, r)
 		if err != nil {
-			return total, err
+			failed = append(failed, fmt.Sprintf("%s: %v", r.RoomName, err))
+			continue
 		}
 		total += n
+	}
+	if len(failed) > 0 {
+		return total, errors.New(strings.Join(failed, "; "))
 	}
 	return total, nil
 }
