@@ -20,8 +20,12 @@ internet, signed events, signed sync requests, peer identity, pairing with two-w
 verification, rooms with per-room guest lists, and a live browser view.
 
 Offline and reconnection is verified across two machines — see
-[`docs/phase5-findings.md`](docs/phase5-findings.md). Outstanding: hardening and
-recovery from local loss (Phase 7), plugin packaging, and local network discovery. A host approving an
+[`docs/phase5-findings.md`](docs/phase5-findings.md) — and Phase 7's hardening is
+done, including recovery from a lost room database. **Every numbered phase in §31 is
+now complete or deliberately dissolved.**
+
+Outstanding: plugin packaging, local network discovery, and a host approving an
+unsolicited join request (undecided rather than pending). A host approving an
 unsolicited join request is undecided rather than pending.
 
 Earlier findings that the design still rests on:
@@ -128,7 +132,9 @@ Running it:
 
 `CLAUDE_TEAM_ROOM` overrides the current room; `CLAUDE_TEAM_ADDR` the local
 address; `CLAUDE_TEAM_PEER_ADDR` the peer address; `CLAUDE_TEAM_PEERS` extra peer
-addresses; `CLAUDE_TEAM_PREFLIGHT=off` skips behavior checks on new rooms.
+addresses; `CLAUDE_TEAM_PREFLIGHT=off` skips behavior checks on new rooms;
+`CLAUDE_TEAM_MAX_EVENTS`, `CLAUDE_TEAM_MAX_EVENT_CHARS` and
+`CLAUDE_TEAM_MAX_BLOCK_CHARS` bound injected context (§21).
 
 ## Specification review
 
@@ -138,7 +144,7 @@ open ones are collected at the end.
 
 ## Why things are the way they are
 
-[`docs/decisions.md`](docs/decisions.md) — 60 decisions with the alternatives
+[`docs/decisions.md`](docs/decisions.md) — 61 decisions with the alternatives
 rejected and why, each tied to the check that would invalidate it. Read it before
 proposing a simplification; some of the awkwardness is deliberate.
 

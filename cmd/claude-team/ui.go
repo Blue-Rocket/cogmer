@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -20,13 +21,13 @@ var uiPage []byte
 // peer name, never on the self-asserted display name (D-021) -- two peers claimed
 // the same display name during the first two-peer run.
 type uiEvent struct {
-	EventID   string `json:"eventId"`
-	PeerID    string `json:"peerId"`
-	PeerName  string `json:"peerName"`
-	Display   string `json:"userDisplayName"`
-	EventType string `json:"eventType"`
-	Content   string `json:"content"`
-	Clock     string `json:"clock"`
+	EventID   string   `json:"eventId"`
+	PeerID    string   `json:"peerId"`
+	PeerName  string   `json:"peerName"`
+	Display   string   `json:"userDisplayName"`
+	EventType string   `json:"eventType"`
+	Content   string   `json:"content"`
+	Clock     string   `json:"clock"`
 	ToolCalls int      `json:"toolCalls"`
 	Tools     []string `json:"tools"`
 	Mine      bool     `json:"mine"`
@@ -188,23 +189,48 @@ func (d *Daemon) handleStream(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Peer health.
+//
+// A peer that cannot be reached is reported when it STOPS being reachable and when
+// it starts again, not once per poll. Polling is every second, so the old behaviour
+// wrote two lines a second saying the same thing -- observed filling a log through
+// a partition in Phase 5. A message repeated that often is not a signal; it buries
+// the one line that matters, which is the transition.
+
+// peerState is what is known about one address.
+type peerState struct {
+	lastSeen  time.Time
+	downSince time.Time
+	lastErr   string
+	reported  time.Time // when the current outage was last mentioned
+}
+
+// downRepeat is how often a continuing outage is mentioned again. Long enough that
+// it is not noise, short enough that somebody reading a log an hour later learns
+// the peer is still gone rather than only that it once went.
+const downRepeat = 10 * time.Minute
+
 // peerStatus reports reachability for the UI. A peer that has never answered is
 // shown as offline rather than omitted: a teammate who cannot be reached is a
 // fact worth seeing, not an absence.
+//
+// It reports every address this daemon would try, not only those named in the
+// environment -- peers learned by pairing or by joining a room were invisible here
+// until D-061, which is most of them.
 func (d *Daemon) peerStatus() []uiPeer {
+	targets := d.syncTargets()
 	d.peerMu.Lock()
 	defer d.peerMu.Unlock()
 	var out []uiPeer
-	for _, addr := range peerList() {
+	for _, addr := range targets {
 		p := uiPeer{Name: addr, Since: "never reached"}
-		if seen, ok := d.peerSeen[addr]; ok {
-			if age := time.Since(seen); age < 15*time.Second {
+		if st, ok := d.peerSeen[addr]; ok && !st.lastSeen.IsZero() {
+			if age := time.Since(st.lastSeen); age < 15*time.Second {
 				p.Online = true
+			} else if age < time.Minute {
+				p.Since = "just now"
 			} else {
 				p.Since = fmt.Sprintf("%dm ago", int(age.Minutes()))
-				if age < time.Minute {
-					p.Since = "just now"
-				}
 			}
 		}
 		out = append(out, p)
@@ -212,13 +238,61 @@ func (d *Daemon) peerStatus() []uiPeer {
 	return out
 }
 
+func (d *Daemon) peerStateLocked(addr string) *peerState {
+	if d.peerSeen == nil {
+		d.peerSeen = map[string]*peerState{}
+	}
+	st, ok := d.peerSeen[addr]
+	if !ok {
+		st = &peerState{}
+		d.peerSeen[addr] = st
+	}
+	return st
+}
+
+// markPeerSeen records a successful exchange, and says so only if the peer had
+// been reported missing -- coming back is worth a line; still being here is not.
 func (d *Daemon) markPeerSeen(addr string) {
 	d.peerMu.Lock()
-	if d.peerSeen == nil {
-		d.peerSeen = map[string]time.Time{}
-	}
-	d.peerSeen[addr] = time.Now()
+	st := d.peerStateLocked(addr)
+	wasDown := !st.downSince.IsZero()
+	outage := time.Since(st.downSince).Round(time.Second)
+	st.lastSeen = time.Now()
+	st.downSince = time.Time{}
+	st.lastErr = ""
+	st.reported = time.Time{}
 	d.peerMu.Unlock()
+
+	if wasDown {
+		log.Printf("peer %s is reachable again after %s", addr, outage)
+	}
+}
+
+// markPeerUnreachable reports an outage on its transition, then at a slow repeat.
+// It returns whether anything was said, so callers need no logging of their own.
+func (d *Daemon) markPeerUnreachable(addr string, err error) {
+	d.peerMu.Lock()
+	st := d.peerStateLocked(addr)
+	first := st.downSince.IsZero()
+	if first {
+		st.downSince = time.Now()
+	}
+	since := st.downSince
+	due := first || time.Since(st.reported) >= downRepeat
+	if due {
+		st.reported = time.Now()
+	}
+	st.lastErr = err.Error()
+	d.peerMu.Unlock()
+
+	if !due {
+		return
+	}
+	if first {
+		log.Printf("peer %s is unreachable: %v", addr, err)
+		return
+	}
+	log.Printf("peer %s still unreachable after %s: %v", addr, time.Since(since).Round(time.Second), err)
 }
 
 var _ = sync.Mutex{}

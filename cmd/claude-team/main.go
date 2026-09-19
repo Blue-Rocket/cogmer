@@ -128,6 +128,9 @@ Environment:
   CLAUDE_TEAM_PREFLIGHT   set to "off" to skip behavior checks on new rooms
   CLAUDE_TEAM_PEERS       comma-separated peer addresses to synchronize with
   CLAUDE_TEAM_SYNC_MS     poll interval in milliseconds (default 1000)
+  CLAUDE_TEAM_MAX_EVENTS       turns per injected block (default 40)
+  CLAUDE_TEAM_MAX_EVENT_CHARS  characters per turn (default 12000)
+  CLAUDE_TEAM_MAX_BLOCK_CHARS  characters per block (default 60000)
 `)
 }
 

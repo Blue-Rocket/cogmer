@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -285,5 +287,61 @@ func TestStoredEventsKeepTheirScheme(t *testing.T) {
 	}
 	if err := got[0].Verify(); err != nil {
 		t.Errorf("an event read back from storage does not verify: %v", err)
+	}
+}
+
+// §21's limits are a safety valve, and each bounds something different. The block
+// budget is the one that bounds what actually reaches a context window: events that
+// pass both other limits can still render a block nobody would want injected.
+func TestTheInjectedBlockIsBounded(t *testing.T) {
+	t.Setenv("CLAUDE_TEAM_MAX_EVENTS", "100")
+	t.Setenv("CLAUDE_TEAM_MAX_EVENT_CHARS", "11000")
+	t.Setenv("CLAUDE_TEAM_MAX_BLOCK_CHARS", "30000")
+
+	var evs []Event
+	for i := 0; i < 40; i++ {
+		evs = append(evs, Event{
+			PeerID: "ed25519:x", UserDisplayName: "Alice", EventType: EventUserPrompt,
+			Timestamp: "2026-09-18T10:00:00Z",
+			Content:   strings.Repeat("x", 10000) + fmt.Sprintf(" turn-%02d", i),
+		})
+	}
+
+	out := FormatTeamContext(evs, func(string) bool { return true })
+	if len(out) > 40000 {
+		t.Errorf("block is %d characters; the budget was 30000 and every event passed the other two limits", len(out))
+	}
+	if !strings.Contains(out, "CONTEXT_CATCHUP_REQUIRED") {
+		t.Error("turns were dropped without saying so")
+	}
+	// The NEWEST turns are what survive: a referent is most likely to point at
+	// recent conversation.
+	if !strings.Contains(out, "turn-39") {
+		t.Error("the most recent turn was dropped")
+	}
+	if strings.Contains(out, "turn-00") {
+		t.Error("the oldest turn survived a budget that should have dropped it first")
+	}
+}
+
+// Configurable, per §21. A limit nobody can change is one that is wrong for
+// somebody, and the daemon must not need restarting to change it.
+func TestLimitsAreConfigurable(t *testing.T) {
+	if got := limits(); got.events != defaultMaxInjectedEvents || got.block != defaultMaxInjectedBlock {
+		t.Fatalf("defaults not applied: %+v", got)
+	}
+	t.Setenv("CLAUDE_TEAM_MAX_EVENTS", "3")
+	if got := limits().events; got != 3 {
+		t.Errorf("event limit is %d, want 3", got)
+	}
+	// Nonsense is ignored rather than obeyed: a zero limit would inject nothing
+	// and look exactly like a room where nobody is talking.
+	t.Setenv("CLAUDE_TEAM_MAX_EVENTS", "0")
+	if got := limits().events; got != defaultMaxInjectedEvents {
+		t.Errorf("a zero limit was accepted, giving %d", got)
+	}
+	t.Setenv("CLAUDE_TEAM_MAX_EVENTS", "not-a-number")
+	if got := limits().events; got != defaultMaxInjectedEvents {
+		t.Errorf("an unparseable limit was accepted, giving %d", got)
 	}
 }

@@ -1509,9 +1509,16 @@ Because a room lives only as long as its member sessions, the unseen conversatio
 
 Set configurable limits based on:
 
-- event count;  
-- character count;  
-- estimated token count.
+- **event count** — how many turns a model must hold apart;
+- **character count per turn** — so that one enormous turn cannot crowd out every
+  other;
+- **character count for the whole block** — the only one of the three that bounds
+  what actually reaches a context window. The others can all be satisfied by a
+  block nobody would want injected.
+
+An estimated token count should be derived from the character count rather than
+measured. A tokenizer would have to track a model this system does not choose, and
+the figure is wanted for judgement rather than for arithmetic.
 
 Treat these as a safety valve rather than the ordinary path. Under session-scoped rooms, exceeding them indicates an unusually long or unusually busy pairing, not the normal accumulation of history.
 
@@ -1996,7 +2003,7 @@ Phase numbers are never reused or reassigned, so that references elsewhere conti
 | Phase 4 — Cross-Claude context | **complete**, in Phase 0 |
 | Phase 5 — Offline/reconnection | **complete** — verified in-process and across two machines; see `docs/phase5-findings.md` |
 | Phase 6 — Three-peer/transitive | deferred |
-| Phase 7 — Hardening | partial — authentication, authorization, recovery from local loss and diagnostics done; a local outbound queue, peer health and context-size controls outstanding |
+| Phase 7 — Hardening | **complete** — the outbound queue was dissolved by pull rather than built |
 | Phase 8 — The local UI | **complete** |
 | Phase 9 — Peer identity | **complete**; verification added afterwards and gates synchronization |
 | Phase 10 — Pairing | **partial** — pairing, rooms, invitation, joining and admission work; a host approving an unsolicited request does not exist, and whether it should is undecided (§12a) |
@@ -2270,7 +2277,11 @@ Add:
 
 - authentication;  
 - room authorization;  
-- local outbound queue;  
+- ~~local outbound queue~~ — **dissolved**, not deferred. It presupposed push:
+  something must hold what a peer has not yet been told. Synchronization is a pull
+  (§10), so an event is durable the moment it is committed locally, and "what did
+  you miss" is a question asked rather than state anyone keeps. A queue would be a
+  second record of what the event store already holds, and the two would drift.  
 - peer health;  
 - context-size controls;  
 - better reconnection;  
@@ -2324,7 +2335,7 @@ Phase 10   pairing, and room identity            done but for host approval
    ↓
 Phase 5    offline and reconnection              done
    ↓
-Phase 7    hardening, and recovery from local loss   ← in progress
+Phase 7    hardening, and recovery from local loss   done
 ```
 
 Each phase carries one purpose. Where an earlier draft bundled room identity and the membership index alongside the UI, they have been moved to the phases whose purpose they serve — neither blocks the UI, and putting them first would have delayed the only outstanding question this prototype was built to answer.

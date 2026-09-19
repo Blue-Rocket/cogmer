@@ -120,7 +120,7 @@ func (d *Daemon) RunSync(_ []string, every time.Duration) {
 		peers := d.syncTargets() // re-read: a room joined since last round has peers
 		for _, addr := range peers {
 			if n, err := d.pullFrom(client, addr); err != nil {
-				log.Printf("sync: %s unreachable (%v)", addr, err)
+				d.markPeerUnreachable(addr, err)
 			} else if n > 0 {
 				log.Printf("sync: received %d event(s) from %s", n, addr)
 			}
