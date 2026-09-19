@@ -245,8 +245,23 @@ func (m *Membership) Allow(peerID, name string) error {
 // Forget discards an identity entirely, so a later meeting is a first meeting
 // again. Distinct from revoking, which withdraws admission to one room (§12).
 func (m *Membership) Forget(peerID string) error {
-	_, err := m.db.Exec(`DELETE FROM known_peers WHERE peer_id = ?`, peerID)
-	return err
+	// Admission goes with the identity, or "a later meeting is a first meeting"
+	// (§12) is not true. Without this, forgetting a peer and later meeting them
+	// again would readmit them to every room they had ever been in, without the
+	// host inviting them to any of it — and the host would not be asked, because
+	// from the code's point of view they were never un-invited (D-073).
+	tx, err := m.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`DELETE FROM room_guests WHERE peer_id = ?`, peerID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM known_peers WHERE peer_id = ?`, peerID); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // Knows reports whether this machine holds a key for a peer. Verification

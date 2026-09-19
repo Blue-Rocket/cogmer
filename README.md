@@ -103,7 +103,7 @@ Peers — durable, above any room, done once with each colleague:
 | `peers` | Known peers, and whether each is verified |
 | `verify <peer>` | Re-run just the two-word comparison |
 | `allow <id> [name]` | Record a peer **without** verifying (scripts and tests) |
-| `forget <peer>` | Discard a peer entirely |
+| `forget <peer>` | Discard a peer and every admission it held |
 
 Rooms — per room, as often as you like:
 
@@ -144,7 +144,7 @@ open ones are collected at the end.
 
 ## Why things are the way they are
 
-[`docs/decisions.md`](docs/decisions.md) — 72 decisions with the alternatives
+[`docs/decisions.md`](docs/decisions.md) — 73 decisions with the alternatives
 rejected and why, each tied to the check that would invalidate it. Read it before
 proposing a simplification; some of the awkwardness is deliberate.
 

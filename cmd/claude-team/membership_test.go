@@ -570,3 +570,76 @@ func TestARefusedJoinCanBeExplained(t *testing.T) {
 		t.Error("a room name is missing, so the explanation cannot name both rooms")
 	}
 }
+
+// §12: "Forgetting discards the identity itself, so a later meeting is a first
+// meeting again." That was not true — forget deleted the peer and left their room
+// admissions behind, so meeting them again readmitted them to every room they had
+// ever been in, without the host inviting them to any of it (D-073).
+func TestForgettingDiscardsAdmissionToo(t *testing.T) {
+	m := testMembership(t)
+	self, peer := testIdentity(t), testIdentity(t)
+	a, _ := m.CreateRoom(self.PeerID)
+	b, _ := m.CreateRoom(self.PeerID)
+
+	if err := m.Allow(peer.PeerID, "colleague"); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.MarkVerified(peer.PeerID); err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range []Room{a, b} {
+		if err := m.Invite(r.RoomID, peer.PeerID); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := m.Forget(peer.PeerID); err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range []Room{a, b} {
+		if m.IsGuest(r.RoomID, peer.PeerID) {
+			t.Errorf("a forgotten peer is still a guest of %s", r.RoomName)
+		}
+	}
+
+	// A later meeting is a first meeting: known again, unverified again, and
+	// admitted to nothing until a host says so.
+	if err := m.Allow(peer.PeerID, "colleague"); err != nil {
+		t.Fatal(err)
+	}
+	if m.IsVerified(peer.PeerID) {
+		t.Error("meeting again carried the old verification forward")
+	}
+	for _, r := range []Room{a, b} {
+		if m.IsGuest(r.RoomID, peer.PeerID) {
+			t.Errorf("meeting again readmitted them to %s without an invitation", r.RoomName)
+		}
+	}
+}
+
+// And forgetting one peer must not disturb another, including the peer's own
+// membership of its own rooms.
+func TestForgettingIsNarrow(t *testing.T) {
+	m := testMembership(t)
+	self, one, two := testIdentity(t), testIdentity(t), testIdentity(t)
+	room, _ := m.CreateRoom(self.PeerID)
+	for _, p := range []*Identity{one, two} {
+		if err := m.Allow(p.PeerID, ""); err != nil {
+			t.Fatal(err)
+		}
+		if err := m.Invite(room.RoomID, p.PeerID); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := m.Forget(one.PeerID); err != nil {
+		t.Fatal(err)
+	}
+	if !m.Knows(two.PeerID) || !m.IsGuest(room.RoomID, two.PeerID) {
+		t.Error("forgetting one peer disturbed another")
+	}
+	// The room's creator is its first guest and must survive.
+	if !m.IsGuest(room.RoomID, self.PeerID) {
+		t.Error("forgetting a peer removed the room's own creator")
+	}
+}
