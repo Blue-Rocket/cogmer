@@ -64,7 +64,13 @@ CREATE TABLE IF NOT EXISTS room_guests (
 CREATE TABLE IF NOT EXISTS session_rooms (
   session_id TEXT PRIMARY KEY,
   room_id    TEXT NOT NULL,
-  joined_at  TEXT NOT NULL
+  joined_at  TEXT NOT NULL,
+  -- When this session left. The row is kept rather than deleted, because it
+  -- answers two questions that must not share an answer: whether the session is
+  -- in a room now, and which room it has ever been in. Delete it and leaving
+  -- becomes a move to another room with two extra keystrokes, which is the one
+  -- thing §12a forbids (D-071).
+  left_at    TEXT
 );
 
 -- Where a room's other members can be reached. An endpoint is reachability, not
@@ -148,6 +154,7 @@ func migrateMembership(db *sql.DB) error {
 	for _, c := range []struct{ table, column, typ string }{
 		{"known_peers", "verified_at", "TEXT"},
 		{"known_peers", "endpoint", "TEXT"},
+		{"session_rooms", "left_at", "TEXT"},
 	} {
 		if err := addColumnIfMissing(db, c.table, c.column, c.typ); err != nil {
 			return err
@@ -542,10 +549,29 @@ func (m *Membership) RoomByID(roomID string) (Room, bool) {
 // nothing injected, nothing shared (§12a).
 func (m *Membership) RoomForSession(sessionID string) (Room, bool) {
 	var roomID string
-	if err := m.db.QueryRow(`SELECT room_id FROM session_rooms WHERE session_id = ?`, sessionID).Scan(&roomID); err != nil {
+	if err := m.db.QueryRow(`SELECT room_id FROM session_rooms
+		WHERE session_id = ? AND left_at IS NULL`, sessionID).Scan(&roomID); err != nil {
 		return Room{}, false
 	}
 	return m.RoomByID(roomID)
+}
+
+// LeaveSession stops a session participating, without foreclosing its return.
+//
+// Three things it deliberately does not do (D-071): it does not foreclose
+// rejoining the same room, because §12a forbids MOVING to another room and
+// returning to the one you were in is not a move; it does not touch the room's
+// events; and it does not change which room command-line commands or the browser
+// view act on, so the transcript as it accumulated stays exactly as readable as it
+// was a moment earlier.
+func (m *Membership) LeaveSession(sessionID string) (Room, error) {
+	room, ok := m.RoomForSession(sessionID)
+	if !ok {
+		return Room{}, errors.New("this session is not in a room")
+	}
+	_, err := m.db.Exec(`UPDATE session_rooms SET left_at = ? WHERE session_id = ?`,
+		time.Now().UTC().Format(time.RFC3339), sessionID)
+	return room, err
 }
 
 // BindSession puts a session in a room, once and for good. §12a forbids moving it
@@ -555,14 +581,22 @@ func (m *Membership) BindSession(sessionID, roomID string) error {
 	if sessionID == "" {
 		return errors.New("no session to bind")
 	}
-	if existing, ok := m.RoomForSession(sessionID); ok {
-		if existing.RoomID == roomID {
-			return nil
+	// Every room this session has EVER been in, not only the one it is in now. A
+	// session that left is still barred from a different room -- otherwise leaving
+	// would launder the move §12a forbids.
+	var was string
+	err := m.db.QueryRow(`SELECT room_id FROM session_rooms WHERE session_id = ?`, sessionID).Scan(&was)
+	if err == nil {
+		if was != roomID {
+			prior, _ := m.RoomByID(was)
+			return fmt.Errorf("this session has been in %s and cannot join another: what it has been told cannot be withdrawn",
+				prior.RoomName)
 		}
-		return fmt.Errorf("this session is already in %s and cannot be moved: what it has been told cannot be withdrawn",
-			existing.RoomName)
+		// Returning to the room it was in. Not a move, so permitted.
+		_, err := m.db.Exec(`UPDATE session_rooms SET left_at = NULL WHERE session_id = ?`, sessionID)
+		return err
 	}
-	_, err := m.db.Exec(`INSERT INTO session_rooms (session_id, room_id, joined_at) VALUES (?,?,?)`,
+	_, err = m.db.Exec(`INSERT INTO session_rooms (session_id, room_id, joined_at) VALUES (?,?,?)`,
 		sessionID, roomID, time.Now().UTC().Format(time.RFC3339))
 	return err
 }
@@ -571,7 +605,7 @@ func (m *Membership) BindSession(sessionID, roomID string) error {
 // presence is derived from rather than asserted.
 func (m *Membership) SessionsInRoom(roomID string) int {
 	var n int
-	_ = m.db.QueryRow(`SELECT COUNT(*) FROM session_rooms WHERE room_id = ?`, roomID).Scan(&n)
+	_ = m.db.QueryRow(`SELECT COUNT(*) FROM session_rooms WHERE room_id = ? AND left_at IS NULL`, roomID).Scan(&n)
 	return n
 }
 

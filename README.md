@@ -111,7 +111,7 @@ Rooms — per room, as often as you like:
 |---|---|
 | `create` | Create a room and make it current |
 | `join <invitation>` | Enter a room; sessions started afterwards join it |
-| `leave` | Leave the current room |
+| `leave` | Take this session out of its room (it may rejoin) |
 | `invite <peer>` | Admit a known peer, and print their invitation |
 | `revoke <peer>` | Withdraw admission to this room only |
 | `guests` | Who may enter the current room |
@@ -144,7 +144,7 @@ open ones are collected at the end.
 
 ## Why things are the way they are
 
-[`docs/decisions.md`](docs/decisions.md) — 70 decisions with the alternatives
+[`docs/decisions.md`](docs/decisions.md) — 71 decisions with the alternatives
 rejected and why, each tied to the check that would invalidate it. Read it before
 proposing a simplification; some of the awkwardness is deliberate.
 

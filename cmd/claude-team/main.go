@@ -674,18 +674,35 @@ func runJoin(args []string) {
 	})
 }
 
+// runLeave takes THIS session out of its room. Membership is held by a session
+// (§22), so leaving is per-session: a peer with three sessions in a room leaves
+// three times, and that follows from where membership lives rather than being a
+// quirk.
+//
+// It deliberately leaves the current-room pointer alone. Clearing it used to be
+// the whole of leaving, and it blanked the browser view — the accumulated
+// transcript vanished at the moment a person stopped adding to it, which is the
+// opposite of what leaving should mean (D-071).
 func runLeave() {
+	sid := sessionID()
+	if sid == "" {
+		fmt.Println("no Claude Code session to take out of a room — run /room-leave inside")
+		fmt.Println("the session you want to remove. Membership is held by a session, so")
+		fmt.Println("there is nothing at a terminal to leave.")
+		return
+	}
 	withMembership(func(m *Membership, _ *Identity) {
-		cur, ok := m.CurrentRoom()
-		if !ok {
-			fmt.Println("not in a room")
+		room, err := m.LeaveSession(sid)
+		if err != nil {
+			fmt.Printf("%v\n", err)
 			return
 		}
-		if err := m.SetCurrentRoom(""); err != nil {
-			log.Fatalf("leave: %v", err)
-		}
-		fmt.Printf("left %s. New sessions collaborate with nobody until you join a room.\n", cur.RoomName)
+		fmt.Printf("this session has left %s. It stops capturing and stops receiving.\n", room.RoomName)
+		fmt.Println("Nothing is hidden or undone: the room's history is unchanged, still readable")
+		fmt.Printf("with `claude-team log`, and still shown at http://%s.\n", addr())
 		fmt.Println("What you already published stays in the room; leaving does not un-say it.")
+		fmt.Printf("\nThis session may rejoin %s. It may not join a different one — what it has\n", room.RoomName)
+		fmt.Println("been told cannot be withdrawn from its context.")
 	})
 }
 

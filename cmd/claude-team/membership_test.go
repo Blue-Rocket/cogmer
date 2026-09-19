@@ -446,3 +446,96 @@ func TestAForgottenRoomDoesNotCollectSessions(t *testing.T) {
 		}
 	}
 }
+
+// Leaving is a pause, not a door closing behind you (D-071). Three things it must
+// not do, each stated because each was either wrong or nearly wrong.
+func TestLeavingDoesNotForecloseReturn(t *testing.T) {
+	m := testMembership(t)
+	self := testIdentity(t)
+	room, err := m.CreateRoom(self.PeerID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := m.BindSession("s1", room.RoomID); err != nil {
+		t.Fatal(err)
+	}
+
+	left, err := m.LeaveSession("s1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if left.RoomID != room.RoomID {
+		t.Errorf("leave reported %s, want %s", left.RoomName, room.RoomName)
+	}
+	// Stops participating.
+	if got, ok := m.RoomForSession("s1"); ok {
+		t.Errorf("a session that left is still in %s", got.RoomName)
+	}
+	// And is not counted as present.
+	if n := m.SessionsInRoom(room.RoomID); n != 0 {
+		t.Errorf("%d sessions present after the only one left", n)
+	}
+
+	// May return to the SAME room: §12a forbids moving to another, and coming
+	// back to the one you were in is not a move.
+	if err := m.BindSession("s1", room.RoomID); err != nil {
+		t.Fatalf("a session could not rejoin the room it left: %v", err)
+	}
+	if got, ok := m.RoomForSession("s1"); !ok || got.RoomID != room.RoomID {
+		t.Error("rejoining did not restore membership")
+	}
+}
+
+// The trap that makes the tombstone necessary: if leaving deleted the row, then
+// leave-then-join would be the move §12a exists to prevent, with two extra
+// keystrokes. The session still holds the first room's turns in its context.
+func TestLeavingIsNotALaunderedMove(t *testing.T) {
+	m := testMembership(t)
+	self := testIdentity(t)
+	first, _ := m.CreateRoom(self.PeerID)
+	second, _ := m.CreateRoom(self.PeerID)
+
+	if err := m.BindSession("s1", first.RoomID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.LeaveSession("s1"); err != nil {
+		t.Fatal(err)
+	}
+
+	err := m.BindSession("s1", second.RoomID)
+	if err == nil {
+		t.Fatal("a session left one room and joined another; leaving laundered the move")
+	}
+	if !strings.Contains(err.Error(), first.RoomName) {
+		t.Errorf("the refusal does not name the room it had been in: %v", err)
+	}
+	if got, ok := m.RoomForSession("s1"); ok {
+		t.Errorf("the refused join bound the session to %s anyway", got.RoomName)
+	}
+}
+
+// Leaving must not obscure the history, and must not change what the browser view
+// or the command line are looking at. Clearing the current room used to be the
+// whole of leaving, and it blanked the view.
+func TestLeavingLeavesTheRoomVisible(t *testing.T) {
+	m := testMembership(t)
+	self := testIdentity(t)
+	room, _ := m.CreateRoom(self.PeerID)
+	if err := m.SetCurrentRoom(room.RoomID); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.BindSession("s1", room.RoomID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.LeaveSession("s1"); err != nil {
+		t.Fatal(err)
+	}
+
+	cur, ok := m.CurrentRoom()
+	if !ok || cur.RoomID != room.RoomID {
+		t.Error("leaving changed what the view and the command line are looking at")
+	}
+	if _, ok := m.RoomByID(room.RoomID); !ok {
+		t.Error("leaving removed the room")
+	}
+}

@@ -22,6 +22,7 @@ and nothing here replaces or wraps it.
 | `/room-invite <peer>` | admit a peer you have paired with |
 | `/room-status` | which room this session is in, and who may enter |
 | `/room-log` | the room's conversation so far |
+| `/room-leave` | take this session out of its room; it may rejoin |
 | `/room-pair` | your pairing string, and how to pair (done in a terminal) |
 
 Commands are prefixed because a slash command's **invocation** is not namespaced by
