@@ -1996,7 +1996,7 @@ Phase numbers are never reused or reassigned, so that references elsewhere conti
 | Phase 4 — Cross-Claude context | **complete**, in Phase 0 |
 | Phase 5 — Offline/reconnection | **complete** — verified in-process and across two machines; see `docs/phase5-findings.md` |
 | Phase 6 — Three-peer/transitive | deferred |
-| Phase 7 — Hardening | partial, taken early where it was cheap |
+| Phase 7 — Hardening | partial — authentication, authorization, recovery from local loss and diagnostics done; a local outbound queue, peer health and context-size controls outstanding |
 | Phase 8 — The local UI | **complete** |
 | Phase 9 — Peer identity | **complete**; verification added afterwards and gates synchronization |
 | Phase 10 — Pairing | **partial** — pairing, rooms, invitation, joining and admission work; a host approving an unsolicited request does not exist, and whether it should is undecided (§12a) |
@@ -2324,7 +2324,7 @@ Phase 10   pairing, and room identity            done but for host approval
    ↓
 Phase 5    offline and reconnection              done
    ↓
-Phase 7    hardening, and recovery from local loss   ← next
+Phase 7    hardening, and recovery from local loss   ← in progress
 ```
 
 Each phase carries one purpose. Where an earlier draft bundled room identity and the membership index alongside the UI, they have been moved to the phases whose purpose they serve — neither blocks the UI, and putting them first would have delayed the only outstanding question this prototype was built to answer.

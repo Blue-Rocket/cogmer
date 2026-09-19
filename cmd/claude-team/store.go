@@ -197,22 +197,25 @@ func migrate(db *sql.DB) error {
 }
 
 // nextSequence returns this peer's next monotonic sequence number (§8).
-func (s *Store) nextSequence(peerID string) (int64, error) {
+// HighestSequence is the highest sequence this room holds from a peer. It is NOT
+// where the next one comes from: a room that has lost its database reports 0 while
+// the peer has issued hundreds, which is precisely the condition worth detecting
+// rather than papering over (D-029).
+func (s *Store) HighestSequence(peerID string) (int64, error) {
 	var seq sql.NullInt64
 	err := s.db.QueryRow(`SELECT MAX(peer_sequence) FROM events WHERE peer_id = ?`, peerID).Scan(&seq)
 	if err != nil {
 		return 0, err
 	}
-	return seq.Int64 + 1, nil
+	return seq.Int64, nil
 }
 
 // Append durably commits a locally generated event before it is considered
 // published (§23).
-func (s *Store) Append(id *Identity, room, sessionID, eventType, content string, meta map[string]any) (*Event, error) {
-	seq, err := s.nextSequence(id.PeerID)
-	if err != nil {
-		return nil, err
-	}
+// The sequence is passed in rather than derived here, because deriving it from
+// this database is exactly what breaks when this database is lost. It is reserved
+// outside the room first -- see Membership.ReserveSequence and D-029.
+func (s *Store) Append(seq int64, id *Identity, room, sessionID, eventType, content string, meta map[string]any) (*Event, error) {
 	var rawMeta json.RawMessage
 	if meta != nil {
 		if b, err := json.Marshal(meta); err == nil {

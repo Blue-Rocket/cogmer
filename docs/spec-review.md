@@ -582,7 +582,22 @@ specification and carry no finding number; the remedy is code. Numbered in the o
 raised, and listed in that order — several of these were found by running the system
 rather than by reading it, which is the point of keeping them separate.
 
-**C-1. A lost room database is not detected, and recovery does not happen — OPEN.**
+**All ten are now closed.**
+
+**C-1. A lost room database was not detected, and recovery did not happen —
+fixed.** See D-060. Sequences are reserved in `membership.db` before the event that
+uses them, so a lost room resumes above its high-water mark instead of restarting at
+1 and reissuing numbers peers already hold. The loss is reported when the room is
+opened, which is the only moment it can be: a running daemon serves a deleted file
+from its open handle.
+
+Recovery itself needed no new mechanism — anti-entropy already refetches from any
+member still holding the history. What was missing was only that the peer not
+corrupt the room on its way back.
+
+The original finding follows, because the reproduction is worth keeping.
+
+**What was observed —**
 §22 requires a membership index and §8 requires resuming above a recorded sequence.
 Neither exists. Reproduced by deleting a room database:
 
@@ -595,8 +610,7 @@ Neither exists. Reproduced by deleting a room database:
   receiving side, while the peer that caused it is never told.
 
 The experience is that nothing appears wrong. Teammate context stops arriving, the
-peer's own events stop reaching anyone, each side sees the other fall quiet. This is
-Phase 7 work and the only conformance item still open.
+peer's own events stop reaching anyone, each side sees the other fall quiet.
 
 **C-2. Rooms are records with guests — resolved.** `membership.db` holds known
 peers, rooms, and per-room guest lists; `create`, `rooms`, `peers`, `pair`, `allow`,

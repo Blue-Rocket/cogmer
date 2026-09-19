@@ -101,6 +101,16 @@ func settle(t *testing.T, a, b *offlinePeer, room Room) {
 	t.Fatal("peers did not converge in 8 rounds")
 }
 
+// say writes a turn the way the daemon does: reserve a sequence outside the room,
+// then write the event that uses it (D-029). Tests that bypass this would not
+// exercise the path that survives losing a room.
+func (p *offlinePeer) say(t *testing.T, roomID, session, kind, text string) {
+	t.Helper()
+	if _, err := p.d.appendLocal(p.store, Room{RoomID: roomID}, session, kind, text, nil); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func eventIDs(t *testing.T, s *Store, roomID string) []string {
 	t.Helper()
 	evs, err := s.EventsSince(roomID, nil)
@@ -122,12 +132,8 @@ func TestPeersConvergeAfterAPartition(t *testing.T) {
 	room := Room{RoomID: roomID, RoomName: roomName}
 
 	// Connected: one turn each, and they agree.
-	if _, err := a.store.Append(a.d.id, roomID, "sess-a", EventUserPrompt, "before-a", nil); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := b.store.Append(b.d.id, roomID, "sess-b", EventUserPrompt, "before-b", nil); err != nil {
-		t.Fatal(err)
-	}
+	a.say(t, roomID, "sess-a", EventUserPrompt, "before-a")
+	b.say(t, roomID, "sess-b", EventUserPrompt, "before-b")
 	settle(t, a, b, room)
 	if len(eventIDs(t, a.store, roomID)) != 2 {
 		t.Fatalf("before the partition the peers had not converged: %d events", len(eventIDs(t, a.store, roomID)))
@@ -137,15 +143,11 @@ func TestPeersConvergeAfterAPartition(t *testing.T) {
 	// ordinary rather than degraded.
 	b.up.Store(false)
 	a.up.Store(false)
-	for i, text := range []string{"alice-1", "alice-2", "alice-3"} {
-		if _, err := a.store.Append(a.d.id, roomID, "sess-a", EventUserPrompt, text, nil); err != nil {
-			t.Fatalf("event %d: %v", i, err)
-		}
+	for _, text := range []string{"alice-1", "alice-2", "alice-3"} {
+		a.say(t, roomID, "sess-a", EventUserPrompt, text)
 	}
-	for i, text := range []string{"david-1", "david-2"} {
-		if _, err := b.store.Append(b.d.id, roomID, "sess-b", EventAssistantMessage, text, nil); err != nil {
-			t.Fatalf("event %d: %v", i, err)
-		}
+	for _, text := range []string{"david-1", "david-2"} {
+		b.say(t, roomID, "sess-b", EventAssistantMessage, text)
 	}
 
 	// A pull while partitioned must fail without leaving anything behind.
@@ -210,9 +212,7 @@ func TestReconnectionIsIdempotent(t *testing.T) {
 	introduce(t, a, b, roomID)
 	room := Room{RoomID: roomID, RoomName: roomName}
 
-	if _, err := a.store.Append(a.d.id, roomID, "sess-a", EventUserPrompt, "one", nil); err != nil {
-		t.Fatal(err)
-	}
+	a.say(t, roomID, "sess-a", EventUserPrompt, "one")
 	settle(t, a, b, room)
 	before := eventIDs(t, b.store, roomID)
 
@@ -326,9 +326,7 @@ func TestOneFailingRoomDoesNotStarveTheOthers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := b.store.Append(b.d.id, goodID, "sess-b", EventUserPrompt, "hello", nil); err != nil {
-		t.Fatal(err)
-	}
+	b.say(t, goodID, "sess-b", EventUserPrompt, "hello")
 
 	n, err := a.d.pullFrom(&http.Client{}, b.addr)
 	if n != 1 {
@@ -340,5 +338,78 @@ func TestOneFailingRoomDoesNotStarveTheOthers(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "aaa-broken") {
 		t.Errorf("the report does not name the room that failed: %v", err)
+	}
+}
+
+// Review C-1, and D-029's requirement that losing a room be recoverable rather
+// than catastrophic.
+//
+// Deleting a room database used to restart the sequence counter at 1, reissuing
+// numbers that peers already held under different event ids -- the exact condition
+// D-027 quarantines on the receiving side, caused by a peer that is never told.
+func TestLosingARoomDoesNotReissueSequences(t *testing.T) {
+	const roomID = "room-lost"
+	p := newOfflinePeer(t, roomID, "lost-hollow")
+
+	for _, text := range []string{"one", "two", "three"} {
+		p.say(t, roomID, "sess", EventUserPrompt, text)
+	}
+	issued := p.d.members.IssuedSequence(roomID)
+	if issued != 3 {
+		t.Fatalf("issued %d sequences, want 3", issued)
+	}
+
+	// The room is gone. Membership and sequence position are not: they live
+	// beside the identity, precisely so that this is survivable (D-029).
+	fresh, err := OpenStore(roomID + "-replacement")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { fresh.Close() })
+	p.store = fresh
+	p.d.stores[roomID] = fresh
+
+	if held, _ := fresh.HighestSequence(p.d.id.PeerID); held != 0 {
+		t.Fatalf("the replacement room is not empty: holds up to %d", held)
+	}
+	if got := p.d.members.IssuedSequence(roomID); got != 3 {
+		t.Errorf("losing the room lost the sequence position too: %d", got)
+	}
+
+	// The next event must resume ABOVE what was issued, not restart at 1.
+	p.say(t, roomID, "sess", EventUserPrompt, "after the loss")
+	evs, err := fresh.EventsSince(roomID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 {
+		t.Fatalf("expected 1 event in the replacement room, got %d", len(evs))
+	}
+	if evs[0].PeerSequence != 4 {
+		t.Errorf("resumed at sequence %d; want 4, above the 3 already issued", evs[0].PeerSequence)
+	}
+}
+
+// Reserving before publishing means a crash between the two loses a number rather
+// than reissuing one. Losing a number is harmless: the watermark is the highest
+// CONTIGUOUS sequence, so a gap simply means peers wait rather than skip.
+func TestAReservationIsSpentEvenIfNothingIsWritten(t *testing.T) {
+	const roomID = "room-reserve"
+	p := newOfflinePeer(t, roomID, "spent-reach")
+
+	first, err := p.d.members.ReserveSequence(roomID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Nothing is written with `first` -- the crash.
+	second, err := p.d.members.ReserveSequence(roomID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second == first {
+		t.Fatalf("sequence %d was issued twice; a reissued sequence is a different event under an identifier peers already hold", first)
+	}
+	if second != first+1 {
+		t.Errorf("reservations jumped from %d to %d", first, second)
 	}
 }

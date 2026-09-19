@@ -295,6 +295,12 @@ mnemonic for an identity already verified, never an introduction to a stranger.
 
 ## Losing a room database (D-029, supersedes D-028)
 
+**Implemented (D-060).** `Membership.ReserveSequence` issues a sequence and records
+it in `membership.db`; `Store.Append` takes the number rather than deriving one, so
+the path that breaks on loss is absent rather than merely unused. `reportLostState`
+runs when a room is opened, which is the only moment it can — a running daemon
+serves a deleted file from its open handle.
+
 **Membership survives.** The database holds the record, not the value — the session
 already has those turns in context. Ending membership would also strand the session,
 since D-016 forbids it moving to another room.

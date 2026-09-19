@@ -2901,3 +2901,59 @@ delay that makes it ordinary rather than rare.
 
 **Revisit when** a third peer verifies. Nothing here assumes two, but nothing has
 exercised more.
+
+---
+
+## D-060 — A sequence is reserved outside the room before the event that uses it
+
+**Date:** 2026-09-18 · **Status:** active (implemented)
+
+**Context.** Review C-1, the last open conformance item, and Phase 7's stated
+"database recovery". D-029 settled the design a fortnight ago: **lose the room,
+keep the sequence, resume above it and refetch.** None of it was built.
+
+`rooms.issued_sequence` existed in the schema and was written by nobody and read by
+nobody — the third such column found this week, after `injected` (D-056) and the
+verification flag before it. `nextSequence` derived the next sequence from
+`MAX(peer_sequence)` in the room's own database, which is exactly the value that
+goes to zero when that database is lost.
+
+**What that cost.** Delete a room database and the counter restarts at 1, so the
+peer reissues numbers it has already used. A reissued sequence is a *different
+event under an identifier other peers already hold* — the precise condition D-027
+quarantines on the receiving side, caused by a peer that is never told. Reproduced
+during the review: the daemon kept serving from its open file handle after the file
+was deleted, so nothing looked wrong until a restart hours later, and then the room
+simply went quiet.
+
+**Decision.** `Membership.ReserveSequence` issues the number and records it in
+`membership.db`, beside the identity and outside the room. `Store.Append` takes the
+sequence rather than deriving one, so the dangerous path is not merely unused but
+absent.
+
+**Reserve, then publish**, and not the reverse. A crash between the two then loses a
+number instead of reissuing one, and losing one is harmless: the watermark is the
+highest *contiguous* sequence, so a gap makes peers wait rather than skip.
+`TestAReservationIsSpentEvenIfNothingIsWritten` fixes that order.
+
+**The loss is reported, because it is otherwise invisible.** `reportLostState` runs
+when a room is opened — the only moment it can, since a running daemon serves a
+deleted file from its handle. It says what §8 requires: state was lost, membership
+and sequence position are intact, history is being refetched and depends on a
+member being reachable, and teammate turns may be injected a second time.
+
+**Recovery needed no new mechanism.** Anti-entropy already refetches: a store
+holding nothing reports low watermarks, and peers resend. What was missing was only
+that the peer not corrupt the room on its way back.
+
+**Also fixed, from the Phase 5 findings.** `log`, `conflicts` and `seed` resolved a
+room through `config.json`, which D-046 replaced. During a live room holding seven
+events, `claude-team log` printed `ROOM DEFAULT -- 0 events`. They now use the
+current room from `membership.db`. `whoami` deliberately does **not**: who you are
+is answerable in no room at all, and a command reporting your identity must not
+fail for want of one.
+
+**Revisit when** a peer needs to reserve sequences for a room it has not joined, or
+across two machines under one identity. Neither is possible now, and the second
+would need the reservation to be shared rather than local — at which point this
+becomes a distributed counter and the argument changes entirely.

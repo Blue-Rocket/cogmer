@@ -40,8 +40,8 @@ func TestSnapshotDistinguishesPeersClaimingOneName(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, p := range []string{"peer-aaa", "peer-bbb"} {
-		if _, err := store.Append(&Identity{PeerID: p, UserDisplayName: "David"},
+	for i, p := range []string{"peer-aaa", "peer-bbb"} {
+		if _, err := store.Append(int64(i+1), &Identity{PeerID: p, UserDisplayName: "David"},
 			room.RoomID, "s", EventUserPrompt, "hello from "+p, nil); err != nil {
 			t.Fatal(err)
 		}
@@ -72,7 +72,7 @@ func TestSnapshotCarriesContentAsData(t *testing.T) {
 		t.Fatal(err)
 	}
 	hostile := `<script>alert(1)</script>`
-	if _, err := store.Append(d.id, room.RoomID, "s", EventUserPrompt, hostile, nil); err != nil {
+	if _, err := store.Append(1, d.id, room.RoomID, "s", EventUserPrompt, hostile, nil); err != nil {
 		t.Fatal(err)
 	}
 	st, _ := d.snapshot()

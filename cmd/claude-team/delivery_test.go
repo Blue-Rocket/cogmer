@@ -19,9 +19,15 @@ func testStore(t *testing.T) *Store {
 func seedTeammate(t *testing.T, s *Store, n int) []Event {
 	t.Helper()
 	other := &Identity{PeerID: "peer-alice", UserID: "alice", UserDisplayName: "Alice"}
+	// Continue from whatever is already there: a teammate seeded twice is one
+	// teammate speaking twice, not one restarting its sequence.
+	from, err := s.HighestSequence(other.PeerID)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var out []Event
 	for i := 0; i < n; i++ {
-		e, err := s.Append(other, "test", "alice-session", EventUserPrompt, "teammate turn", nil)
+		e, err := s.Append(from+int64(i+1), other, "test", "alice-session", EventUserPrompt, "teammate turn", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -108,7 +114,7 @@ func TestConfirmationIsSelfHealing(t *testing.T) {
 func TestOwnEventsAreNeverOffered(t *testing.T) {
 	s := testStore(t)
 	me := &Identity{PeerID: "peer-me", UserID: "david", UserDisplayName: "David"}
-	if _, err := s.Append(me, "test", "mine", EventUserPrompt, "my own turn", nil); err != nil {
+	if _, err := s.Append(1, me, "test", "mine", EventUserPrompt, "my own turn", nil); err != nil {
 		t.Fatal(err)
 	}
 	if got, _ := s.UndeliveredFor("test", "mine"); len(got) != 0 {

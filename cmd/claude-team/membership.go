@@ -436,6 +436,43 @@ func (m *Membership) AddRoomPeer(roomID, endpoint string) error {
 
 // RoomPeers lists where a room's other members might be. Endpoints go stale, so
 // this is a set of things to try rather than a directory.
+// ReserveSequence issues the next peer sequence for a room and records it HERE,
+// outside the room's own database (D-029).
+//
+// The order is the whole point: reserve, then publish the event that uses the
+// number. The reverse publishes a number with no record of it, so a crash between
+// the two reissues it -- and a reissued sequence is a different event under an
+// identifier a peer already holds, which D-027 quarantines and nobody can repair.
+//
+// It also survives losing the room. The record of what was issued lives with the
+// identity, so a peer that loses a room database resumes above its high-water mark
+// instead of restarting at 1 and colliding with everything it ever sent.
+func (m *Membership) ReserveSequence(roomID string) (int64, error) {
+	tx, err := m.db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+
+	var issued int64
+	if err := tx.QueryRow(`SELECT issued_sequence FROM rooms WHERE room_id = ?`, roomID).Scan(&issued); err != nil {
+		return 0, fmt.Errorf("no record of room %s to reserve a sequence in: %w", roomID, err)
+	}
+	issued++
+	if _, err := tx.Exec(`UPDATE rooms SET issued_sequence = ? WHERE room_id = ?`, issued, roomID); err != nil {
+		return 0, err
+	}
+	return issued, tx.Commit()
+}
+
+// IssuedSequence is the highest sequence this peer has ever issued in a room,
+// whether or not the room still holds the events.
+func (m *Membership) IssuedSequence(roomID string) int64 {
+	var issued int64
+	_ = m.db.QueryRow(`SELECT issued_sequence FROM rooms WHERE room_id = ?`, roomID).Scan(&issued)
+	return issued
+}
+
 func (m *Membership) RoomPeers(roomID string) []string {
 	rows, err := m.db.Query(`SELECT endpoint FROM room_peers WHERE room_id = ?`, roomID)
 	if err != nil {

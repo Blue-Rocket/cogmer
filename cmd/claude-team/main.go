@@ -167,17 +167,28 @@ func syncInterval() time.Duration {
 	return time.Second
 }
 
-func openLocal() (*Store, *Identity, string) {
+// openLocal opens the room a person is working in, which since D-046 is a room in
+// `membership.db` rather than a name in `config.json`. It read the old config for
+// longer than that was true, so `log` reported an empty room called "default"
+// while a live room held seven events -- and an empty room reads as a quiet one,
+// which is why the staleness went unnoticed (Phase 5 findings).
+func openLocal() (*Store, *Identity, Room) {
 	id, err := LoadIdentity()
 	if err != nil {
 		log.Fatalf("identity: %v", err)
 	}
-	cfg := LoadConfig()
-	store, err := OpenStore(cfg.Room)
+	m, err := OpenMembership()
+	if err != nil {
+		log.Fatalf("membership: %v", err)
+	}
+	defer m.Close()
+
+	room := currentRoom(m)
+	store, err := OpenStore(room.RoomID)
 	if err != nil {
 		log.Fatalf("store: %v", err)
 	}
-	return store, id, cfg.Room
+	return store, id, room
 }
 
 func runDaemon() {
@@ -314,23 +325,25 @@ func runSeed() {
 		{EventUserPrompt, "Could idle pool expiration explain the SessionLambda timeout?"},
 		{EventAssistantMessage, "Yes. The OkHttp connection pool holds idle sockets for 300s, but the upstream load balancer silently drops them at 60s. SessionLambda then reuses a dead socket and blocks until the read timeout fires."},
 	}
-	for _, t := range turns {
-		if _, err := store.Append(alice, room, aliceSession, t.kind, t.text, nil); err != nil {
+	// A simulated peer, so its sequence is simulated too: there is no membership
+	// record to reserve from, and none should be invented for a fixture.
+	for i, t := range turns {
+		if _, err := store.Append(int64(i+1), alice, room.RoomID, aliceSession, t.kind, t.text, nil); err != nil {
 			log.Fatalf("seed: %v", err)
 		}
 	}
-	fmt.Printf("seeded %d simulated teammate events into room %q\n", len(turns), room)
+	fmt.Printf("seeded %d simulated teammate events into %s\n", len(turns), room.RoomName)
 }
 
 func runLog() {
 	store, _, room := openLocal()
 	defer store.Close()
 
-	evs, err := store.ListRoom(room)
+	evs, err := store.ListRoom(room.RoomID)
 	if err != nil {
 		log.Fatalf("log: %v", err)
 	}
-	fmt.Printf("ROOM %s -- %d events\n\n", strings.ToUpper(room), len(evs))
+	fmt.Printf("ROOM %s -- %d events\n\n", strings.ToUpper(room.RoomName), len(evs))
 	for _, e := range evs {
 		speaker := e.UserDisplayName
 		if e.EventType == EventAssistantMessage {
@@ -672,10 +685,10 @@ func runConflicts() {
 		log.Fatalf("conflicts: %v", err)
 	}
 	if len(cs) == 0 {
-		fmt.Printf("no sequence conflicts in room %q\n", room)
+		fmt.Printf("no sequence conflicts in %s\n", room.RoomName)
 		return
 	}
-	fmt.Printf("%d sequence conflict(s) in room %q\n\n", len(cs), room)
+	fmt.Printf("%d sequence conflict(s) in %s\n\n", len(cs), room.RoomName)
 	for _, c := range cs {
 		fmt.Printf("  %s  peer %s (%s) sequence %d\n", c.DetectedAt, PeerName(c.PeerID), c.PeerID, c.PeerSequence)
 		fmt.Printf("    held:     %s\n    rejected: %s\n\n", c.HeldEventID, c.IncomingEventID)
@@ -686,8 +699,22 @@ func runConflicts() {
 }
 
 func runWhoami() {
-	store, id, room := openLocal()
-	defer store.Close()
+	// Deliberately not openLocal: who you are is answerable in no room at all,
+	// and a command that reports your identity must not fail for want of one.
+	id, err := LoadIdentity()
+	if err != nil {
+		log.Fatalf("identity: %v", err)
+	}
+	m, err := OpenMembership()
+	if err != nil {
+		log.Fatalf("membership: %v", err)
+	}
+	defer m.Close()
+
+	room := "none"
+	if cur, ok := m.CurrentRoom(); ok {
+		room = cur.RoomName
+	}
 	buf, _ := json.MarshalIndent(map[string]any{
 		"identity": id, "peerName": id.PeerName, "room": room, "addr": addr(),
 	}, "", "  ")

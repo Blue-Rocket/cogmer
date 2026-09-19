@@ -119,6 +119,12 @@ func (d *Daemon) storeFor(roomID string) (*Store, error) {
 		return nil, err
 	}
 	d.stores[roomID] = s
+	// Checked on open, which is the only moment it can be checked: a running
+	// daemon keeps serving a deleted file from its open handle, so the loss is
+	// invisible until a restart that may be hours away (review C-1).
+	if r, ok := d.members.RoomByID(roomID); ok {
+		d.reportLostState(r, s)
+	}
 	return s, nil
 }
 
@@ -164,7 +170,7 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := store.Append(d.id, room.RoomID, req.SessionID, EventUserPrompt, req.Prompt,
+	if _, err := d.appendLocal(store, room, req.SessionID, EventUserPrompt, req.Prompt,
 		map[string]any{"cwd": req.CWD, "promptId": req.PromptID}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -218,7 +224,7 @@ func (d *Daemon) handleStop(w http.ResponseWriter, r *http.Request) {
 	}
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if _, err := store.Append(d.id, room.RoomID, req.SessionID, EventAssistantMessage, turn.Text,
+	if _, err := d.appendLocal(store, room, req.SessionID, EventAssistantMessage, turn.Text,
 		map[string]any{"toolCalls": len(turn.ToolCalls), "tools": turn.ToolCalls}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -387,4 +393,43 @@ func onlyVerified(evs []Event, self string, verified func(string) bool) []Event 
 		}
 	}
 	return out
+}
+
+// appendLocal reserves a sequence outside the room, then writes the event that
+// uses it (D-029, §23). Reserving first is what makes a crash between the two
+// lose a number rather than reissue one.
+func (d *Daemon) appendLocal(store *Store, room Room, sessionID, kind, content string, meta map[string]any) (*Event, error) {
+	seq, err := d.members.ReserveSequence(room.RoomID)
+	if err != nil {
+		return nil, err
+	}
+	return store.Append(seq, d.id, room.RoomID, sessionID, kind, content, meta)
+}
+
+// reportLostState compares what a room holds against what this peer recorded
+// issuing into it, and says so when the room holds less.
+//
+// Losing a room database is recoverable and must not be silent (D-029). It is
+// invisible otherwise: a running daemon keeps serving from its open file handle
+// after the file is deleted, so the loss surfaces at a restart that may be hours
+// away, as a room that has simply gone quiet.
+//
+// Membership survives, and so does the sequence position, because both live here
+// rather than in the room. What is lost is history, and anti-entropy refetches it
+// from any member still holding it.
+func (d *Daemon) reportLostState(room Room, store *Store) {
+	issued := d.members.IssuedSequence(room.RoomID)
+	if issued == 0 {
+		return
+	}
+	held, err := store.HighestSequence(d.id.PeerID)
+	if err != nil || held >= issued {
+		return
+	}
+	log.Printf("ROOM STATE LOST: %s holds your events up to %d, but you issued %d.",
+		room.RoomName, held, issued)
+	log.Printf("  Membership and sequence position are intact — they are kept outside the room.")
+	log.Printf("  New events resume above %d, so nothing you send will collide with what peers hold.", issued)
+	log.Printf("  History is being refetched from other members, and depends on one being reachable.")
+	log.Printf("  Teammate turns already seen may be injected a second time; that is redundant, not harmful.")
 }
