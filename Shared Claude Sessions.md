@@ -1994,7 +1994,7 @@ Phase numbers are never reused or reassigned, so that references elsewhere conti
 | Phase 2 — Two-peer synchronization | **complete**, ahead of Phase 1 and not over Tailscale |
 | Phase 3 — Real-time push | **will not be built** as written; polling is the decided mechanism for peers |
 | Phase 4 — Cross-Claude context | **complete**, in Phase 0 |
-| Phase 5 — Offline/reconnection | **mechanism verified**; the two-machine run is outstanding |
+| Phase 5 — Offline/reconnection | **complete** — verified in-process and across two machines; see `docs/phase5-findings.md` |
 | Phase 6 — Three-peer/transitive | deferred |
 | Phase 7 — Hardening | partial, taken early where it was cheap |
 | Phase 8 — The local UI | **complete** |
@@ -2322,7 +2322,7 @@ Phase 9    peer identity                         done
    ↓
 Phase 10   pairing, and room identity            done but for host approval
    ↓
-Phase 5    offline and reconnection              mechanism done
+Phase 5    offline and reconnection              done
    ↓
 Phase 7    hardening, and recovery from local loss   ← next
 ```

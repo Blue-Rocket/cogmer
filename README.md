@@ -19,8 +19,9 @@ Working: hooks, storage, turn reassembly, two-peer synchronization over the
 internet, signed events, signed sync requests, peer identity, pairing with two-word
 verification, rooms with per-room guest lists, and a live browser view.
 
-Outstanding: offline and reconnection (Phase 5), hardening and recovery from local
-loss (Phase 7), plugin packaging, and local network discovery. A host approving an
+Offline and reconnection is verified across two machines — see
+[`docs/phase5-findings.md`](docs/phase5-findings.md). Outstanding: hardening and
+recovery from local loss (Phase 7), plugin packaging, and local network discovery. A host approving an
 unsolicited join request is undecided rather than pending.
 
 Earlier findings that the design still rests on:
@@ -137,7 +138,7 @@ open ones are collected at the end.
 
 ## Why things are the way they are
 
-[`docs/decisions.md`](docs/decisions.md) — 58 decisions with the alternatives
+[`docs/decisions.md`](docs/decisions.md) — 59 decisions with the alternatives
 rejected and why, each tied to the check that would invalidate it. Read it before
 proposing a simplification; some of the awkwardness is deliberate.
 

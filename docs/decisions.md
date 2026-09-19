@@ -2450,8 +2450,11 @@ that can be trained away, and no path by which a stranger causes anything to app
 on a host's screen. The question of unsolicited requests stays open in §12a and is
 not reached here.
 
-**The exchange is symmetric.** Each side sends its commitment and receives the
-other's as the reply, so there is no initiator to elect and no race to resolve. The
+**The exchange is symmetric** — true of a single round, and **not** of the session
+around it, which D-059 had to correct after a two-machine run: the side that
+finished first tore its session down and stranded the other. Each side sends its
+commitment and receives the other's as the reply, so there is no initiator to elect
+within a round. The
 address is discovered by trying each peer address this machine knows and keeping the
 one that answers **signed by the identity asked for** — a reply from a different
 peer is a wrong peer, not a wrong address, and is refused.
@@ -2850,3 +2853,51 @@ so an unknown type renders generically instead of failing.
 **Revisit when** a second scheme is actually added. That is the moment the mechanism
 is first exercised, and the test to write then is that an event signed under v2 by
 an older build still verifies against a build that signs v3.
+
+---
+
+## D-059 — Only one side drives a verification; the other completes from inbound
+
+**Date:** 2026-09-18 · **Status:** active (implemented)
+
+**Context.** Phase 5's two-machine run. Pairing failed twice before it worked, in
+two different ways, and neither was reachable from one machine.
+
+**First: whoever typed first lost.** The droplet sent its commitment four seconds
+before the Mac had recorded it, so `handleVerify` answered `401 Unauthorized` —
+an unknown peer. `RunVerification` retried only on 409 and treated 401 as final.
+The earlier caller failed at once; the later one waited ninety seconds and timed
+out. Both people fail, and the one who followed the instruction promptly fails
+faster.
+
+Fixed by answering **409 for "I do not know you yet"**, a state the other person
+resolves by typing. 401 now means only that a signature did not verify, which is
+the one answer here that waiting cannot fix.
+
+**Second, and deeper: the side that finished stranded the other.** Both sides drove
+their own exchange. The one that completed tore its session down in a `defer`, so
+the other's commitment arrived to nothing and waited out the timeout. It reads as
+symmetric and is not: it fails whenever two people type a few seconds apart.
+
+D-052 described the exchange as symmetric — "each side sends its commitment and
+receives the other's as the reply, so there is no initiator to elect and no race to
+resolve." That was true of a single round and false of the session around it.
+
+**Decision.** Either side may complete from **inbound**. A peer whose own session
+already holds the other's revealed nonce has everything the SAS needs and stops
+driving. Only one side has to run the exchange; both learn the words. The loop now
+checks inbound first, then attempts a round outbound, so the two orderings and the
+simultaneous case all converge.
+
+**The security argument is untouched.** Commit-commit-reveal-reveal still holds,
+because the inbound path only reads a nonce that arrived through `handleVerify`,
+which refuses a reveal without a commitment and refuses a reveal that does not open
+it. What changed is who runs the loop, not what the loop requires.
+
+**Why a test did not catch it.** `TestTwoDaemonsReachTheSameWords` starts both
+sides in goroutines with no delay, so neither finishes before the other begins —
+the one arrangement in which the bug cannot occur. The new test introduces the
+delay that makes it ordinary rather than rare.
+
+**Revisit when** a third peer verifies. Nothing here assumes two, but nothing has
+exercised more.

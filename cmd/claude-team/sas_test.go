@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func nonce(t *testing.T) []byte {
@@ -179,10 +180,13 @@ func TestAnUnknownPeerCannotVerify(t *testing.T) {
 	if _, err := d.startVerify(stranger.PeerID); err != nil {
 		t.Fatal(err)
 	}
+	// 409, not 401: the two people pair within seconds of each other, so whoever
+	// types first arrives before the other has recorded them. A hard failure there
+	// means the first to type always loses.
 	w := postVerify(t, d, stranger, "commit", sasCommitment(stranger.PeerID, nonce(t)))
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("a peer this machine does not know was answered %d, want %d",
-			w.Code, http.StatusUnauthorized)
+	if w.Code != http.StatusConflict {
+		t.Errorf("a peer not yet known was answered %d, want %d (retriable)",
+			w.Code, http.StatusConflict)
 	}
 }
 
@@ -321,5 +325,46 @@ func TestPairingStringRoundTrips(t *testing.T) {
 		if peer != id.PeerID || addr != endpoint {
 			t.Errorf("%q@%q round-tripped to %q@%q", id.PeerID, endpoint, peer, addr)
 		}
+	}
+}
+
+// Whoever types first must not lose. The far side answers "not yet" until its own
+// user runs the command, and the exchange completes when they do.
+func TestTheFirstToTypeWaitsForTheOther(t *testing.T) {
+	a, aAddr := verifiableDaemon(t)
+	b, bAddr := verifiableDaemon(t)
+
+	// A knows B and starts immediately. B does not know A yet -- its user has not
+	// typed anything.
+	if err := a.members.Allow(b.id.PeerID, "b"); err != nil {
+		t.Fatal(err)
+	}
+
+	type result struct {
+		words string
+		err   error
+	}
+	done := make(chan result, 2)
+	go func() {
+		w, err := a.RunVerification(b.id.PeerID, []string{bAddr})
+		done <- result{w, err}
+	}()
+
+	// B's user types a moment later, which is the ordinary case.
+	time.Sleep(1500 * time.Millisecond)
+	if err := b.members.Allow(a.id.PeerID, "a"); err != nil {
+		t.Fatal(err)
+	}
+	go func() {
+		w, err := b.RunVerification(a.id.PeerID, []string{aAddr})
+		done <- result{w, err}
+	}()
+
+	first, second := <-done, <-done
+	if first.err != nil || second.err != nil {
+		t.Fatalf("the earlier caller did not wait: %v / %v", first.err, second.err)
+	}
+	if first.words != second.words {
+		t.Errorf("the two sides saw different words: %q and %q", first.words, second.words)
 	}
 }

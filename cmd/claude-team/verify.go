@@ -110,14 +110,22 @@ func (d *Daemon) handleVerify(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "signature does not match the peer id presenting it", http.StatusUnauthorized)
 		return
 	}
+	// Two ways of not being ready, and both are ordinary rather than wrong.
+	//
+	// 409 rather than 401 for "I do not know you": two people pair within seconds
+	// of each other, so whoever types first always arrives before the other has
+	// recorded them. Answering 401 made that a hard failure, which meant the first
+	// person to type always lost. Found on a two-machine run, where the ordering is
+	// real rather than arranged.
+	//
+	// 401 is now reserved for a signature that does not verify, which is the only
+	// answer here that waiting cannot fix.
 	if !d.members.Knows(msg.PeerID) {
-		http.Error(w, "not a peer this machine knows", http.StatusUnauthorized)
+		http.Error(w, "not a peer this machine knows yet", http.StatusConflict)
 		return
 	}
 	s, ok := d.verifySessionFor(msg.PeerID)
 	if !ok {
-		// Not an error. The other person has simply not run the command yet, and
-		// saying so is what lets the caller wait rather than fail.
 		http.Error(w, "not expecting a verification", http.StatusConflict)
 		return
 	}
@@ -160,10 +168,20 @@ func reply(w http.ResponseWriter, d *Daemon, s *verifySession, step string, payl
 // Commit, commit, reveal, reveal -- in that order, and the order IS the security.
 // Both nonces are fixed before either is known, so a relaying attacker must choose
 // what he shows each side while blind to what the other will show.
-// Both sides run this at once. Neither is the initiator: each sends its commitment
-// and receives the other's as the reply, so the exchange is symmetric and there is
-// no election to get wrong. A daemon whose user has not started a session answers
-// 409, which is why the commit step waits rather than fails.
+// Both sides run this at once, and only ONE of them needs to drive.
+//
+// Each side starts a session and then does two things in the same loop: tries to
+// drive the exchange outward, and watches whether the other side has already
+// driven it inward. Whichever completes first yields the words.
+//
+// Driving from both ends looks symmetric and is not: the side that finishes tears
+// its session down, so a peer that started a moment later finds nothing to talk to
+// and waits until it times out. That is not a rare race -- it is what happens
+// whenever two people type a few seconds apart, which is always.
+//
+// Commit, commit, reveal, reveal -- in that order, and the order IS the security.
+// Both nonces are fixed before either is known, so a relaying attacker must choose
+// what he shows each side while blind to what the other will show.
 func (d *Daemon) RunVerification(peerID string, addrs []string) (string, error) {
 	s, err := d.startVerify(peerID)
 	if err != nil {
@@ -174,49 +192,49 @@ func (d *Daemon) RunVerification(peerID string, addrs []string) (string, error) 
 	client := &http.Client{Timeout: 10 * time.Second}
 	deadline := time.Now().Add(verifyTimeout)
 
-	// Commit. Retried while the other side has not started, because the ordinary
-	// case is two people typing a command a few seconds apart.
-	// The address is discovered rather than configured: try each peer this machine
-	// knows of and keep the one that answers signed by the identity we asked for.
-	// A reply from some other peer is not a wrong address, it is a wrong peer, and
-	// verifyStep refuses it.
-	var theirCommit []byte
-	var addr string
-	for theirCommit == nil {
-		var lastErr error
-		for _, candidate := range addrs {
-			got, err := d.verifyStep(client, candidate, peerID, "commit", s.commit)
-			if err == nil {
-				theirCommit, addr = got, candidate
-				break
-			}
-			lastErr = err
+	for {
+		// Inbound: the other side ran the whole exchange against this session, so
+		// the nonce it revealed is already here and nothing further is needed.
+		s.mu.Lock()
+		theirs := s.theirNonce
+		s.mu.Unlock()
+		if theirs != nil {
+			return SAS(d.id.PeerID, s.nonce, peerID, theirs), nil
 		}
-		if theirCommit != nil {
-			break
+
+		// Outbound: one round against each address we know of, keeping the one that
+		// answers signed by the identity we asked for. A reply from a different peer
+		// is a wrong peer, not a wrong address, and verifyStep refuses it.
+		var lastErr error
+		for _, addr := range addrs {
+			theirCommit, err := d.verifyStep(client, addr, peerID, "commit", s.commit)
+			if err != nil {
+				lastErr = err
+				continue
+			}
+			theirNonce, err := d.verifyStep(client, addr, peerID, "reveal", s.nonce)
+			if err != nil {
+				return "", err
+			}
+			if !sasOpens(theirCommit, peerID, theirNonce) {
+				// The peer revealed something other than what it committed to.
+				// That is not a mismatch to read aloud -- it is a protocol
+				// violation, and the only thing that does it is an attempt to
+				// choose a nonce after seeing ours.
+				return "", errors.New("the peer's revealed nonce does not match what it committed to; " +
+					"this is not a network fault and must not be retried")
+			}
+			return SAS(d.id.PeerID, s.nonce, peerID, theirNonce), nil
 		}
 		if lastErr != nil && !errors.Is(lastErr, errPeerNotReady) && !isReachErr(lastErr) {
 			return "", lastErr
 		}
 		if time.Now().After(deadline) {
-			return "", fmt.Errorf("%s did not run `claude-team verify` within %s",
+			return "", fmt.Errorf("%s did not run `claude-team pair` or `claude-team verify` within %s",
 				PeerName(peerID), verifyTimeout)
 		}
 		time.Sleep(time.Second)
 	}
-
-	theirNonce, err := d.verifyStep(client, addr, peerID, "reveal", s.nonce)
-	if err != nil {
-		return "", err
-	}
-	if !sasOpens(theirCommit, peerID, theirNonce) {
-		// The peer revealed something other than what it committed to. That is not
-		// a mismatch to read aloud -- it is a protocol violation, and the only
-		// thing that does it is an attempt to choose a nonce after seeing ours.
-		return "", errors.New("the peer's revealed nonce does not match what it committed to; " +
-			"this is not a network fault and must not be retried")
-	}
-	return SAS(d.id.PeerID, s.nonce, peerID, theirNonce), nil
 }
 
 var errPeerNotReady = errors.New("peer is not expecting a verification")
