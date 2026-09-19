@@ -196,7 +196,7 @@ func sessionID() string { return os.Getenv("CLAUDE_CODE_SESSION_ID") }
 func bindInvokingSession(m *Membership, r Room) {
 	sid := sessionID()
 	if sid == "" {
-		fmt.Printf("no Claude Code session to put in %s — run /team-create or /team-join\n", r.RoomName)
+		fmt.Printf("no Claude Code session to put in %s — run /room-create or /room-join\n", r.RoomName)
 		fmt.Println("inside a session to put that session in a room. `claude-team` commands")
 		fmt.Printf("typed here will act on %s.\n", r.RoomName)
 		return

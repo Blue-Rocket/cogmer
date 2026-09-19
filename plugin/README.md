@@ -17,12 +17,17 @@ and nothing here replaces or wraps it.
 
 | Command | |
 |---|---|
-| `/team-create` | create a room and put this session in it |
-| `/team-join <invitation>` | join a room you were invited to |
-| `/team-invite <peer>` | admit a peer you have paired with |
-| `/team-room` | which room this session is in, and who may enter |
-| `/team-log` | the room's conversation so far |
-| `/team-pair` | your pairing string, and how to pair (done in a terminal) |
+| `/room-create` | create a room and put this session in it |
+| `/room-join <invitation>` | join a room you were invited to |
+| `/room-invite <peer>` | admit a peer you have paired with |
+| `/room-status` | which room this session is in, and who may enter |
+| `/room-log` | the room's conversation so far |
+| `/room-pair` | your pairing string, and how to pair (done in a terminal) |
+
+Commands are prefixed because a slash command's **invocation** is not namespaced by
+the plugin that supplies it — a subdirectory changes how a command is displayed,
+not what you type. Two plugins in the official marketplace already both define
+`/help`. The prefix is the only thing that keeps these apart.
 
 ## The binary
 
@@ -36,7 +41,7 @@ means no collaboration, never a broken session.
 **Pairing and verification happen in a terminal.** Both are interactive, both block
 on another person, and the two words you compare must reach your eyes without
 passing through a model that is reading room content from unverified peers.
-`/team-pair` prints your pairing string and tells you what to run; it does not
+`/room-pair` prints your pairing string and tells you what to run; it does not
 attempt the ceremony.
 
 **Nothing synchronizes with an unverified peer.** Admission says a key may enter;
