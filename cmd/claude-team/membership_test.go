@@ -539,3 +539,34 @@ func TestLeavingLeavesTheRoomVisible(t *testing.T) {
 		t.Error("leaving removed the room")
 	}
 }
+
+// The refusal has to be explainable, so it is a typed error carrying both rooms
+// rather than a formatted string. A caller that cannot name the room a person was
+// trying to reach cannot tell them what to do instead (D-072).
+func TestARefusedJoinCanBeExplained(t *testing.T) {
+	m := testMembership(t)
+	self := testIdentity(t)
+	first, _ := m.CreateRoom(self.PeerID)
+	second, _ := m.CreateRoom(self.PeerID)
+
+	if err := m.BindSession("s1", first.RoomID); err != nil {
+		t.Fatal(err)
+	}
+	err := m.BindSession("s1", second.RoomID)
+
+	var bound *BoundElsewhereError
+	if !errors.As(err, &bound) {
+		t.Fatalf("refusal is not distinguishable from any other failure: %v", err)
+	}
+	if bound.Was.RoomID != first.RoomID {
+		t.Errorf("the error names %s as the prior room, want %s", bound.Was.RoomName, first.RoomName)
+	}
+	if bound.Wanted.RoomID != second.RoomID {
+		t.Errorf("the error names %s as the wanted room, want %s", bound.Wanted.RoomName, second.RoomName)
+	}
+	// Both names are what let the explanation say "start a second session to work
+	// in X" and "this one can still rejoin Y".
+	if bound.Was.RoomName == "" || bound.Wanted.RoomName == "" {
+		t.Error("a room name is missing, so the explanation cannot name both rooms")
+	}
+}

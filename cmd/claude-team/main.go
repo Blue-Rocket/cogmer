@@ -216,6 +216,22 @@ func bindInvokingSession(m *Membership, r Room) {
 		return
 	}
 	if err := m.BindSession(sid, r.RoomID); err != nil {
+		// Explained rather than merely refused. A person meeting this has done
+		// nothing wrong, cannot undo what happened, and needs the way forward more
+		// than they need the rule (D-072).
+		var bound *BoundElsewhereError
+		if errors.As(err, &bound) {
+			fmt.Printf("This session cannot join %s.\n\n", bound.Wanted.RoomName)
+			fmt.Printf("It has been in %s, and it still holds that room's conversation in its\n", bound.Was.RoomName)
+			fmt.Println("context. Joining a second room would carry the first room's conversation into")
+			fmt.Println("it — not by copying anything, but by way of what this session says next,")
+			fmt.Println("which may be shaped by everything it has read. That would be invisible to")
+			fmt.Println("both rooms' members and impossible to take back, because a context window")
+			fmt.Println("cannot be un-read. Refusing now is the only moment that prevents it.")
+			fmt.Printf("\nTo work in %s, start a second Claude Code session and join from there.\n", bound.Wanted.RoomName)
+			fmt.Printf("This session can still rejoin %s.\n", bound.Was.RoomName)
+			os.Exit(1)
+		}
 		log.Fatalf("%v", err)
 	}
 	fmt.Printf("this session is now in %s.\n", r.RoomName)

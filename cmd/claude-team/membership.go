@@ -574,6 +574,21 @@ func (m *Membership) LeaveSession(sessionID string) (Room, error) {
 	return room, err
 }
 
+// BoundElsewhereError is a session being refused a second room.
+//
+// A typed error rather than a formatted string, because the refusal needs
+// explaining and the explanation belongs where it is shown to a person, not
+// inside an error value that tests compare and logs prefix with a timestamp
+// (D-072). Both rooms are carried so the explanation can name them.
+type BoundElsewhereError struct {
+	Was    Room
+	Wanted Room
+}
+
+func (e *BoundElsewhereError) Error() string {
+	return fmt.Sprintf("this session has been in %s and cannot join %s", e.Was.RoomName, e.Wanted.RoomName)
+}
+
 // BindSession puts a session in a room, once and for good. §12a forbids moving it
 // afterwards, because injected context cannot be withdrawn from a context window,
 // so a second call for a session already bound is refused rather than obeyed.
@@ -589,8 +604,8 @@ func (m *Membership) BindSession(sessionID, roomID string) error {
 	if err == nil {
 		if was != roomID {
 			prior, _ := m.RoomByID(was)
-			return fmt.Errorf("this session has been in %s and cannot join another: what it has been told cannot be withdrawn",
-				prior.RoomName)
+			wanted, _ := m.RoomByID(roomID)
+			return &BoundElsewhereError{Was: prior, Wanted: wanted}
 		}
 		// Returning to the room it was in. Not a move, so permitted.
 		_, err := m.db.Exec(`UPDATE session_rooms SET left_at = NULL WHERE session_id = ?`, sessionID)
