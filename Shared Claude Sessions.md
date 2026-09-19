@@ -2372,9 +2372,13 @@ The second item is not a refinement of the first, it is the defect that makes tu
 
 **This is the case that actually exists.** The first pair are colleagues at one company, both working from home, pairing daily. Local discovery (Phase 12) answers the same-network case and cannot answer this one. Every cross-network run so far has used an SSH tunnel — Phase 2's and Phase 5's both — which is a person doing NAT traversal by hand, and is not something a colleague can be asked to do twice a day.
 
-This is where the endpoint defect belongs if Phase 12 has not already taken it. `peerAddr()` is both what the daemon binds and what it tells peers to use, and those are the same string only when nothing sits between them.
+The endpoint defect belongs here and has been taken: `peerAddr()` was both what the daemon binds and what it tells peers to use, and those are the same string only when nothing sits between them. Binding and advertising are now separate, and an endpoint carries the transport that understands it.
 
 **Whatever is adopted must sit under everything** (D-019). A transport carries bytes. It does not decide who may speak: a sync request is still signed (D-044), still refused unless its peer is a guest (D-045), and still refused unless that peer has been verified by a person (D-054). A connection that reaches the door is not admission, and a peer identity is an Ed25519 key (D-020) whatever key a transport happens to use for its own tunnel.
+
+That is made true rather than intended by serving **one set of routes over both listeners**. A request arriving through a tunnel reaches the same handler as one arriving over TCP, so it cannot pass a check the other would fail; there is no second path on which a rule might be forgotten.
+
+**Connectivity and directness are different questions.** Any router permits outbound connections, which is all a relay needs, so a working path is near-certain and its floor is relay latency. Whether that path upgrades to direct is a question about latency rather than correctness, and for turns of about a kilobyte it is unlikely to matter. Do not report a relayed path as a failure.
 
 ---
 
