@@ -556,7 +556,10 @@ descriptor rather than an address.
 
 ## D-019 — No network provider is required; local discovery is the zero-configuration path
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active as to the **requirement** — no provider is
+part of room identity, membership or replication, and none may be a prerequisite.
+Its **build order** is superseded by D-063: the first real pair works from home and
+will never share a network, so local discovery is not the first transport to build.
 
 **Context.** The specification was written for an internal experiment, where
 assuming Tailscale was free. For a public release it is not: "install this" and
@@ -580,6 +583,12 @@ The architectural seam already existed: §4 said the protocol must not depend on
 Tailscale and §33 already had `PeerSyncTransport`. What changed is the **priority**.
 Local discovery moved from "later possibility" to the first transport built, and
 the independence became a stated requirement rather than an aspiration.
+
+**That priority was wrong, and D-063 corrects it.** It rested on "two developers on
+the same network is the simplest case" — true, and irrelevant, because the first
+pair who need this work from home and will never be on one. The *requirement* above
+is unaffected: no provider may be required, and the same-network case must still
+cost nothing when it arises. What changed is which case gets built first.
 
 **Where this conflicted with earlier decisions, and how it was resolved.** The
 appealing version of zero-configuration joining is `claude-team join misty-canyon`
@@ -3025,7 +3034,10 @@ practice as D-015 assumes, which is worth knowing.
 
 ## D-062 — Tailcat evaluated for Phase 15: a good fit, adopted behind an interface if at all
 
-**Date:** 2026-09-18 · **Status:** investigated; **not adopted**. Revisit at Phase 15.
+**Date:** 2026-09-18 · **Status:** investigated; **not yet adopted**, but now the
+likely answer rather than a contingency — D-063 established that the first pair are
+remote, so this is the only case that matters. Its costs are prices to be paid, not
+risks to be weighed.
 
 **Context.** Phase 15 needs two peers behind different NATs to find a direct path.
 Every cross-network run so far — Phase 2's and Phase 5's — used an SSH tunnel,
@@ -3097,9 +3109,70 @@ double. For something a colleague installs, both are real.
 - **Public relays are rate-limited with no SLA.** Room traffic is text and small, so
   throughput is unlikely to bind; availability might.
 
-**What would make it the answer.** If Phase 13's first outside user is remote.
-If they are on the same network, Phase 12 suffices and this waits — which is why
-Phase 15's position in the order is conditional rather than fixed.
+**What would make it the answer** was whether Phase 13's first outside user is
+remote. **They are** (D-063): colleagues at one company, both working from home,
+pairing daily. So Phase 15 is a prerequisite rather than a detour, and the
+alternatives are all worse here — a company VPN cannot be assumed, a public bind is
+not available from a home connection, and an SSH tunnel is a person performing NAT
+traversal by hand twice a day.
+
+The DERP objection also weakens for this pair specifically, which matters because it
+was the strongest one. The relay is for rendezvous and can be self-hosted; a droplet
+already exists and has carried both cross-machine runs. A relay this pair controls,
+used to meet and as fallback with the working path still direct, is a different
+thing from depending on a third party — and from the central server §3.3 rejects.
 
 **Revisit when** Phase 15 begins, or if tailcat reaches a stable API. Re-measure the
 binary then: a figure from a hello-world is a floor, not the number that matters.
+
+---
+
+## D-063 — The first pair is remote, so cross-network reach comes before local discovery
+
+**Date:** 2026-09-18 · **Status:** active (ordering)
+
+**Context.** The phase order placed local discovery (Phase 12) before cross-network
+reach (Phase 15), with 15's position marked conditional on "whether the first person
+who is not the author sits on the same network". That fact is now known: the first
+real peer is a colleague at the same company, both working from home. **They will
+never share a network.**
+
+**What that invalidates.** D-019 made local discovery the first transport to build,
+reasoning that "two developers on the same network is the simplest case and must be
+the easiest". The claim is true and it is not about anybody who will use this. A
+zero-configuration path that serves nobody is not a zero-configuration path; it is
+an unused feature with a good argument behind it.
+
+D-019's *requirement* is untouched and should not be read as weakened: no provider
+belongs in room identity, membership or replication, and none may be a prerequisite.
+The same-network case must still cost nothing when it arises. Only the build order
+changes.
+
+**Decision.** Phase 15 moves ahead of Phase 12 and becomes a prerequisite for Phase
+13 rather than a conditional detour. Local discovery is not cancelled — it is the
+right answer for a case that will arrive, and it is cheap once the transport seam
+exists. It is simply no longer first.
+
+**What this does to the tailcat evaluation (D-062).** It moves from "a good fit for
+a case that may not arise" to the likely answer for the only case that matters, and
+its costs move with it: 526 dependencies and a roughly doubled binary are now prices
+being paid rather than risks being weighed. The offsetting fact is that every
+alternative is worse here. A company VPN cannot be assumed. A public bind is not
+available from a home connection. An SSH tunnel is what Phases 2 and 5 used and is a
+person performing NAT traversal by hand, twice a day, forever.
+
+**The DERP objection weakens for this specific pair**, which is worth recording
+because it was the strongest one. Tailcat's relay dependency is for *rendezvous*,
+and the relay can be self-hosted. A droplet already exists and has hosted both
+cross-machine runs. Self-hosting DERP is a relay this pair controls, used to meet
+and as fallback, with the working path still direct peer-to-peer — which is a
+materially different thing from depending on a third party's infrastructure, and
+from the central server §3.3 rejects.
+
+**What has not changed.** A transport still decides nothing (D-019, D-062): a sync
+request is signed, refused unless its peer is a guest, and refused unless a person
+verified that peer. Reaching the door is not admission.
+
+**Revisit when** a second pair appears who do share a network, or when the same-
+network case becomes the common one. Phase 12 is then worth its cost, and the seam
+this phase builds is what makes it small.

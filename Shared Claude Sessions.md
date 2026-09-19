@@ -2005,10 +2005,10 @@ Phase numbers are never reused or reassigned, so that references elsewhere conti
 | Phase 6 — Three-peer/transitive | deferred |
 | Phase 7 — Hardening | **complete** — the outbound queue was dissolved by pull rather than built |
 | Phase 11 — Installation | **next** |
-| Phase 12 — Discovery on a local network | outstanding |
+| Phase 12 — Discovery on a local network | deferred — see D-063; the first pair never share a network |
 | Phase 13 — Somebody else uses it | outstanding, and the untested half of §30 |
 | Phase 14 — First contact without a paste | conditional on Phase 13 |
-| Phase 15 — Reaching a peer on another network | outstanding; before Phase 13 if the first other person is remote |
+| Phase 15 — Reaching a peer on another network | outstanding, and a prerequisite for Phase 13 |
 | Phase 8 — The local UI | **complete** |
 | Phase 9 — Peer identity | **complete**; verification added afterwards and gates synchronization |
 | Phase 10 — Pairing | **partial** — pairing, rooms, invitation, joining and admission work; a host approving an unsolicited request does not exist, and whether it should is undecided (§12a) |
@@ -2354,7 +2354,9 @@ That is what lets **`create` and `join` bind a session**, and that is what lets 
 - a peer advertises an address it need not bind;
 - an invitation may carry more than one endpoint.
 
-Discovery is what makes installation true rather than merely one line. A colleague who installs the plugin still cannot reach anybody until somebody types an address at them, and the addresses are the part neither person can be expected to know.
+**Deferred, and not because it is hard.** Discovery answers the same-network case, and the pair this is being built for work from home and will never share a network (D-063). It remains the right answer for a case that will arrive, and it is cheap once Phase 15 has built the seam a transport plugs into. It is simply not first, which is a reversal of D-019's priority and not of its requirement.
+
+What it is for: a colleague who installs the plugin cannot reach anybody until somebody types an address at them, and the addresses are the part neither person can be expected to know.
 
 The second item is not a refinement of the first, it is the defect that makes tunnels and NAT impossible to express: `peerAddr()` is both what the daemon binds and what it tells other peers to use, and those are the same string only when nothing sits in between. Observed in Phase 5 — an invitation advertised the host's own loopback, and the bad address then propagated to the other peer, which retried it once a second for the length of the run.
 
@@ -2368,7 +2370,7 @@ The second item is not a refinement of the first, it is the defect that makes tu
 - the transport is one provider among several, and none is required;
 - an endpoint is whatever that transport can reach, and is never assumed to be an address the daemon binds.
 
-Local discovery (Phase 12) answers the same-network case and cannot answer this one. Every cross-network run so far has used an SSH tunnel — Phase 2's and Phase 5's both — which is a person doing NAT traversal by hand, and is not something a colleague can be asked to do.
+**This is the case that actually exists.** The first pair are colleagues at one company, both working from home, pairing daily. Local discovery (Phase 12) answers the same-network case and cannot answer this one. Every cross-network run so far has used an SSH tunnel — Phase 2's and Phase 5's both — which is a person doing NAT traversal by hand, and is not something a colleague can be asked to do twice a day.
 
 This is where the endpoint defect belongs if Phase 12 has not already taken it. `peerAddr()` is both what the daemon binds and what it tells peers to use, and those are the same string only when nothing sits between them.
 
@@ -2409,26 +2411,32 @@ else can use.
 ```
 Phase 11   installation                          ← next
    ↓
-Phase 12   discovery on a local network
-   ↓
-Phase 15   reaching a peer on another network    if the first other person is remote
+Phase 15   reaching a peer on another network
    ↓
 Phase 13   somebody else uses it
    ↓
 Phase 14   first contact without a paste         only if 13 asks for it
+   ↓
+Phase 12   discovery on a local network          when a pair who share one appears
 ```
 
 **The order is by dependency, and the dependency is a person's first five
-minutes.** They install (11); they cannot reach anybody until an address is found
-rather than typed (12, or 15 if they are not on the same network); and only then is
-there anything to observe (13). Phase 14 is last because Phase 13 is what decides
-whether it should happen at all.
+minutes.** They install (11); they cannot reach anybody until the two machines can
+find a path (15); and only then is there anything to observe (13). Phase 14 is last
+because Phase 13 is what decides whether it should happen at all.
 
-Phase 15's position is the one thing here that depends on a fact nobody has
-established: whether the first person who is not the author sits on the same
-network. If they do, Phase 12 is enough and 15 can wait. If they do not, 15 is a
-prerequisite for 13 and every cross-network run so far has substituted an SSH
-tunnel, which is a person performing NAT traversal by hand.
+**Local discovery is last, and that reverses D-019.** It made local discovery the
+first transport to build, reasoning that two developers on the same network is the
+simplest case. The reasoning is sound and the case is not the one that exists: the
+first pair who need this are colleagues at one company who both work from home and
+will never share a network. A zero-configuration path that serves nobody is not a
+zero-configuration path. D-019's *requirement* is unchanged — no provider may be
+required, and the same-network case must cost nothing when it arises — but it is no
+longer what gets built first (D-063).
+
+Every cross-network run so far has substituted an SSH tunnel, which is a person
+performing NAT traversal by hand. For a pair who pair daily, that is the whole
+product failing at the first step.
 
 Installation comes before discovery even though discovery is what makes
 installation true, because packaging decides where commands live and what a
