@@ -103,7 +103,20 @@ func loadOrCreateKey() (ed25519.PrivateKey, error) {
 //
 // Adding a field to an event therefore means adding a scheme here and leaving the
 // old one intact. It does not mean editing signingBytesV2.
-const currentSigVersion = 2
+// protocolNamespace separates these signatures from any other use of the same
+// keys. It is a NAMESPACE, not a name: it says which protocol a signature was
+// made for, and nothing about what the software is called.
+//
+// It was the product name until the product name turned out not to be settled,
+// which made every signature ever produced hostage to a naming decision — and by
+// the rule below, a rename would then mean carrying the old namespace forever for
+// a name nobody uses. Domain separation needs stability and uniqueness; it does
+// not need meaning.
+//
+// **Never change this.** It is arbitrary on purpose, so there is never a reason to.
+const protocolNamespace = "peer-room"
+
+const currentSigVersion = 3
 
 // signingBytes produces the bytes for the scheme an event was signed under, or an
 // error if this build does not know that scheme. Refusing is correct: a signature
@@ -114,19 +127,32 @@ func (e *Event) signingBytes(version int) ([]byte, error) {
 		// 0 means an event stored before the version was recorded. Every such
 		// event was signed under v2, which was the only scheme that existed.
 		return e.signingBytesV2(), nil
+	case 3:
+		return e.signingBytesV3(), nil
 	default:
 		return nil, fmt.Errorf("event %.12s is signed under scheme v%d, which this build does not know; upgrade rather than discard it",
 			e.EventID, version)
 	}
 }
 
+// signingBytesV3 is v2 with the namespace no longer carrying a product name.
+// v2 is kept below, untouched, which is the rule this file states and the first
+// occasion to follow it.
+func (e *Event) signingBytesV3() []byte {
+	return e.eventBytes(protocolNamespace + "/event/v3")
+}
+
 func (e *Event) signingBytesV2() []byte {
+	return e.eventBytes("claude-team/event/v2")
+}
+
+func (e *Event) eventBytes(tag string) []byte {
 	var b bytes.Buffer
 	put := func(s string) {
 		_ = binary.Write(&b, binary.BigEndian, uint32(len(s)))
 		b.WriteString(s)
 	}
-	put("claude-team/event/v2")
+	put(tag)
 	put(e.EventID)
 	put(e.PeerID)
 	_ = binary.Write(&b, binary.BigEndian, uint64(e.PeerSequence))
@@ -145,7 +171,7 @@ func (e *Event) signingBytesV2() []byte {
 // Sign attaches a signature made by the event's originating peer.
 func (e *Event) Sign(priv ed25519.PrivateKey) {
 	e.SigVersion = currentSigVersion
-	e.Signature = base64.RawURLEncoding.EncodeToString(ed25519.Sign(priv, e.signingBytesV2()))
+	e.Signature = base64.RawURLEncoding.EncodeToString(ed25519.Sign(priv, e.signingBytesV3()))
 }
 
 var errUnsigned = errors.New("event carries no signature")

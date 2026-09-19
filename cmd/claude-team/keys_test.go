@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/ed25519"
+	"encoding/base64"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -42,7 +43,7 @@ func TestIdentifierIsTheKey(t *testing.T) {
 	if err := e.Verify(); err != nil {
 		t.Fatalf("a freshly signed event must verify: %v", err)
 	}
-	if !ed25519.Verify(pub, e.signingBytesV2(), mustDecode(t, e.Signature)) {
+	if !ed25519.Verify(pub, e.signingBytesV3(), mustDecode(t, e.Signature)) {
 		t.Error("signature does not verify against the key its own id names")
 	}
 }
@@ -101,7 +102,7 @@ func TestUnsignedEventIsRejected(t *testing.T) {
 func TestFieldBoundariesCannotBeShifted(t *testing.T) {
 	a := &Event{PeerID: "ed25519:x", EventID: "ab", Content: "cd"}
 	b := &Event{PeerID: "ed25519:x", EventID: "a", Content: "bcd"}
-	if string(a.signingBytesV2()) == string(b.signingBytesV2()) {
+	if string(a.signingBytesV3()) == string(b.signingBytesV3()) {
 		t.Error("two different events share signing bytes; a boundary can be moved")
 	}
 }
@@ -144,19 +145,33 @@ func mustDecode(t *testing.T, s string) []byte {
 // added must therefore still verify, or that recovery fails.
 func TestAnEventSignedUnderAnOlderSchemeStillVerifies(t *testing.T) {
 	id := testIdentity(t)
-	e := signed(t, id, "written before sigVersion existed")
 
-	// Exactly what a row written by an earlier build looks like when read back:
-	// signature intact, no scheme recorded.
+	// Signed the way an earlier build signed: under v2, whose namespace carried
+	// the product name. Not merely relabelled -- these are the bytes that build
+	// actually produced, which is the only thing worth asserting about.
+	e := &Event{EventID: "old", PeerID: id.PeerID, PeerSequence: 1, RoomID: "r",
+		Timestamp: "2026-09-01T00:00:00Z", EventType: EventUserPrompt, Content: "from an older build"}
+	e.Signature = base64.RawURLEncoding.EncodeToString(ed25519.Sign(id.private, e.signingBytesV2()))
+
+	// A row written before the version was recorded reads back as 0.
 	e.SigVersion = 0
 	if err := e.Verify(); err != nil {
 		t.Fatalf("an event stored before the version was recorded no longer verifies: %v", err)
 	}
-
-	// And the same event once the version is present.
 	e.SigVersion = 2
 	if err := e.Verify(); err != nil {
 		t.Errorf("an event signed under v2 does not verify as v2: %v", err)
+	}
+
+	// And a current signature does not verify as v2, which is what makes the
+	// version meaningful rather than decorative.
+	now := signed(t, id, "from this build")
+	if now.SigVersion != currentSigVersion {
+		t.Errorf("Sign recorded scheme %d, want %d", now.SigVersion, currentSigVersion)
+	}
+	now.SigVersion = 2
+	if err := now.Verify(); err == nil {
+		t.Error("a v3 signature verified as v2; the schemes are not actually distinct")
 	}
 }
 
@@ -186,5 +201,53 @@ func TestSigningRecordsItsScheme(t *testing.T) {
 	e := signed(t, testIdentity(t), "hi")
 	if e.SigVersion != currentSigVersion {
 		t.Errorf("Sign recorded scheme %d, want %d", e.SigVersion, currentSigVersion)
+	}
+}
+
+// The state directory is where the product name reaches the filesystem, and the
+// installer already honoured this variable while the binary ignored it -- so a
+// person who set it got a binary in one place and its state in another, silently.
+func TestStateDirectoryIsOverridable(t *testing.T) {
+	t.Setenv("CLAUDE_TEAM_HOME", "/tmp/somewhere-else")
+	if got := homeDir(); got != "/tmp/somewhere-else" {
+		t.Errorf("homeDir() = %q, want the override", got)
+	}
+	t.Setenv("CLAUDE_TEAM_HOME", "   ")
+	if got := homeDir(); !strings.HasSuffix(got, stateDirName) {
+		t.Errorf("a blank override was honoured, giving %q", got)
+	}
+}
+
+// Domain separation must not depend on what the product is called. A rename that
+// changed these would, by the rule in keys.go, mean carrying the old namespace
+// forever for a name nobody uses.
+func TestSigningNamespacesCarryNoProductName(t *testing.T) {
+	// The tags that are hashed rather than signed in the clear are asserted as
+	// constants, because a digest cannot be inspected for the string that made it.
+	for name, tag := range map[string]string{
+		"sync-request": authTag,
+		"sas":          sasTag,
+		"sas-commit":   sasCommit,
+	} {
+		if strings.Contains(tag, "claude-team") {
+			t.Errorf("the %s tag still carries the product name: %s", name, tag)
+		}
+		if !strings.HasPrefix(tag, protocolNamespace+"/") {
+			t.Errorf("the %s tag is not in the protocol namespace: %s", name, tag)
+		}
+	}
+
+	// And the ones signed in the clear are asserted on the bytes themselves.
+	e := &Event{EventID: "e", PeerID: "ed25519:x", Content: "c"}
+	if got := string(e.signingBytesV3()); strings.Contains(got, "claude-team") {
+		t.Error("the event namespace still carries the product name")
+	} else if !strings.Contains(got, protocolNamespace) {
+		t.Error("the event namespace is not separated at all")
+	}
+
+	// v2 is the exception and must keep its original namespace: editing a scheme
+	// is what D-058 forbids, and this is the scheme it exists to protect.
+	if !strings.Contains(string(e.signingBytesV2()), "claude-team/event/v2") {
+		t.Error("signingBytesV2 was edited; events signed by older builds will not verify")
 	}
 }

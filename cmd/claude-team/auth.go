@@ -29,7 +29,7 @@ import (
 
 const (
 	authTolerance = 2 * time.Minute
-	authTag       = "claude-team/sync-request/v3"
+	authTag       = protocolNamespace + "/sync-request/v4"
 )
 
 // signRequest produces the credentials a peer presents when asking to sync.

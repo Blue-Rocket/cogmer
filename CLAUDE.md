@@ -376,6 +376,10 @@ signed, because a peer polls that address.
 
 - **Hooks must never break Claude Code** (§3.1). Every failure path exits 0 with
   empty stdout. A dead daemon means no collaboration, never a broken session.
+- **The name is not settled.** `claude-team` is a placeholder. Nothing
+  cryptographic depends on it (D-069): signing namespaces use `protocolNamespace`,
+  which is arbitrary on purpose and must never change. Keep it that way — a tag
+  that carries the product name makes every signature hostage to a naming decision.
 - **Events are immutable** (§7). Never rewrite `eventId`, `peerId`, or
   `peerSequence` — transitive relay (§13) depends on it. For the same reason
   **signature schemes are added, never edited** (D-058): an event cannot be

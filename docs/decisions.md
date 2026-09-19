@@ -3411,3 +3411,57 @@ same handler.
 
 **Revisit when** the real peer test runs. What to watch: whether the path goes
 direct or stays on the relay, and what a relayed round trip costs a turn.
+
+---
+
+## D-069 — Signing namespaces and the state directory are decoupled from the name
+
+**Date:** 2026-09-19 · **Status:** active (implemented)
+
+**Context.** Asked to push the repository, which meant choosing a name — and the
+name is not settled. Mapping where `claude-team` is load-bearing turned up two
+couplings that are free to break today and permanent after the first real room.
+
+**The signing namespaces.** Every signature covered a domain-separation string with
+the product name inside it: `claude-team/event/v2`, `claude-team/sync-request/v3`,
+and the SAS and verify tags. D-058 settled what a change to those costs — schemes
+are **added, never edited**, because an event is immutable and can never be
+re-signed and D-029 makes refetching history a recovery path. So a rename after
+real events exist would mean carrying the old namespace forever, for a name nobody
+uses.
+
+They should never have carried a product name. Domain separation needs **stability
+and uniqueness**; it does not need meaning. `protocolNamespace` is now `peer-room`,
+documented as arbitrary on purpose so there is never a reason to change it.
+
+**D-058's mechanism got its first real use, which is the point of having built it.**
+`signingBytesV3` carries the new namespace; `signingBytesV2` is untouched and still
+serves every event signed by an older build; `currentSigVersion` is 3. The test that
+covers this was improved in the process: it used to sign under the current scheme
+and relabel the result, which asserted nothing about the old one. It now signs the
+bytes an older build actually produced, and separately requires that a current
+signature does **not** verify as v2 — without which the version is decorative.
+
+The other three tags moved outright rather than gaining a version. They protect a
+live exchange — a sync request, a verification — and nothing signed under them
+outlives it, so there is no history to keep faith with.
+
+**The state directory.** `~/.claude-team` is where the name reaches the filesystem.
+It is now a single constant, so a rename is one line plus a migration rather than a
+search.
+
+**And a latent bug found by looking.** `install.sh` honoured `CLAUDE_TEAM_HOME`
+while the binary ignored it, so anyone setting it got a binary in one place and its
+state in another, with nothing saying so. It was invisible because the only thing
+that set it was my own testing, which set `HOME` as well and so never noticed.
+
+**What is deliberately not done.** The module path still says
+`github.com/bluerocket/claude-team`, and the organisation is actually
+`Blue-Rocket` — a path that has never resolved, which is why `go install` failed in
+D-066's test. It is left alone because a module path must match the repository URL,
+and that needs the name. Nothing external imports it, so it costs nothing to wait.
+
+**Revisit when** the name is settled. What changes then: module path, binary name,
+plugin name, state directory, release URL path, and the `/team-*` commands only if
+the prefix is wanted differently — they carry no product name already. What does
+**not** change, by construction, is anything cryptographic.

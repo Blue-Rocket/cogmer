@@ -40,8 +40,8 @@ import (
 // the other is how a person compares the wrong thing.
 
 const (
-	sasTag    = "claude-team/sas/v1"
-	sasCommit = "claude-team/sas-commit/v1"
+	sasTag    = protocolNamespace + "/sas/v1"
+	sasCommit = protocolNamespace + "/sas-commit/v1"
 	// sasWords is how many words are compared, one byte each.
 	sasWords = 2
 )
@@ -246,7 +246,7 @@ func writeField(h interface{ Write([]byte) (int, error) }, s string) {
 // binds the identities, the signature shows each side holds the one it named.
 func verifyBytes(step, peerID string, payload []byte) []byte {
 	h := sha256.New()
-	writeField(h, "claude-team/verify/v1")
+	writeField(h, protocolNamespace+"/verify/v1")
 	writeField(h, step)
 	writeField(h, peerID)
 	h.Write(payload)

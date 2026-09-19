@@ -20,17 +20,17 @@ import (
 // and would carry a third name on a tailnet. Reachability is a transport
 // property, discovered rather than derived (§4).
 type Identity struct {
-	PeerID          string `json:"peerId"`
+	PeerID string `json:"peerId"`
 	// PeerName is derived from PeerID, never stored as an independent value --
 	// a persisted name could drift from the identity it claims to represent.
-	PeerName        string `json:"-"`
+	PeerName string `json:"-"`
 	// private never appears in identity.json and is never marshalled: whoami
 	// prints this struct, and an identity you cannot hand to a colleague without
 	// checking what else is in it is not much of an identity.
-	private ed25519.PrivateKey `json:"-"`
-	UserID          string `json:"userId"`
-	UserDisplayName string `json:"userDisplayName"`
-	MachineID       string `json:"machineId"`
+	private         ed25519.PrivateKey `json:"-"`
+	UserID          string             `json:"userId"`
+	UserDisplayName string             `json:"userDisplayName"`
+	MachineID       string             `json:"machineId"`
 }
 
 // Config separates room membership (shareable) from identity (personal), per §28.
@@ -38,12 +38,25 @@ type Config struct {
 	Room string `json:"room"`
 }
 
+// stateDirName is the one place the product name reaches the filesystem. Renaming
+// the product is then a one-line change plus a migration, rather than a search.
+const stateDirName = ".claude-team"
+
+// homeDir is where identity, membership, rooms and the fetched binary live.
+//
+// CLAUDE_TEAM_HOME overrides it. That is not only for tests: the plugin's
+// installer already honoured the variable while the binary ignored it, so a
+// person who set it got a binary in one place and its state in another, and
+// nothing said so.
 func homeDir() string {
+	if v := strings.TrimSpace(os.Getenv("CLAUDE_TEAM_HOME")); v != "" {
+		return v
+	}
 	h, err := os.UserHomeDir()
 	if err != nil {
 		return "."
 	}
-	return filepath.Join(h, ".claude-team")
+	return filepath.Join(h, stateDirName)
 }
 
 func randomID() string {
