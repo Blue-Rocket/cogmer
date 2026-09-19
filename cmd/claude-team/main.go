@@ -48,6 +48,8 @@ func main() {
 		runLog()
 	case "version":
 		fmt.Println(version)
+	case "where":
+		fmt.Println(watchLine())
 	case "whoami":
 		runWhoami()
 	case "conflicts":
@@ -107,6 +109,7 @@ func usage() {
   claude-team seed            Insert a simulated teammate conversation
   claude-team log             Print the room transcript
   claude-team version         Print the build version
+  claude-team where           Print the address to watch the room at
   claude-team whoami          Show this peer's identity and room
   claude-team conflicts       Show quarantined events (sequence conflicts)
 
@@ -193,6 +196,17 @@ func sessionID() string { return os.Getenv("CLAUDE_CODE_SESSION_ID") }
 // bindInvokingSession puts the calling session in a room, and says what happened.
 // Run at a terminal there is no session to bind, which is not a failure: the room
 // exists and command-line commands will act on it.
+// watchLine tells a person where to watch the room.
+//
+// The daemon logs this address once, at startup, into a file — which was fine
+// while a person started the daemon themselves and read its output. Since the
+// session-start hook began starting it detached, nobody sees that line, so the
+// view existed and was unfindable. It is said here instead: at the moments a room
+// begins, which is when there is something to watch.
+func watchLine() string {
+	return fmt.Sprintf("watch this room at http://%s", addr())
+}
+
 func bindInvokingSession(m *Membership, r Room) {
 	sid := sessionID()
 	if sid == "" {
@@ -554,6 +568,7 @@ func runCreateRoom() {
 		}
 		fmt.Printf("created %s\n  %s\n", r.RoomName, r.RoomID)
 		bindInvokingSession(m, r)
+		fmt.Printf("%s\n", watchLine())
 		fmt.Println("\ninvite someone you have paired with:")
 		fmt.Println("  claude-team invite <name>")
 	})
@@ -643,7 +658,7 @@ func runJoin(args []string) {
 		if err := m.SetCurrentRoom(r.RoomID); err != nil {
 			log.Fatalf("join: %v", err)
 		}
-		fmt.Printf("joined %s.\n", r.RoomName)
+		fmt.Printf("joined %s. %s\n", r.RoomName, watchLine())
 		if host != "" {
 			fmt.Printf("admitted %s, who invited you.\n", PeerName(host))
 			if !m.IsVerified(host) {
