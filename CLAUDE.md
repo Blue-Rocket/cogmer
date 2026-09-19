@@ -286,7 +286,10 @@ satisfies it. `Fingerprint` is a display for the mismatch alarm and marks nothin
 
 **Pairing is machine scope; inviting is room scope** (D-053). Pairing happens once
 with a colleague and outlasts every room; `revoke` withdraws one room's admission
-and leaves it intact; `forget` discards the identity. `allow` records without
+and leaves the identity intact; `forget` discards the identity **and every
+admission it held** (D-073) — §12 promises a later meeting is a first meeting, and
+leaving the guest rows behind readmitted a forgotten peer to every room the moment
+they were verified again. `allow` records without
 verifying and exists for scripts and tests.
 
 Peer names (`quiet-otter`) are **derived** from `peerId`, never chosen or stored. A
