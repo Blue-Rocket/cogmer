@@ -2004,6 +2004,11 @@ Phase numbers are never reused or reassigned, so that references elsewhere conti
 | Phase 5 — Offline/reconnection | **complete** — verified in-process and across two machines; see `docs/phase5-findings.md` |
 | Phase 6 — Three-peer/transitive | deferred |
 | Phase 7 — Hardening | **complete** — the outbound queue was dissolved by pull rather than built |
+| Phase 11 — Installation | **next** |
+| Phase 12 — Discovery on a local network | outstanding |
+| Phase 13 — Somebody else uses it | outstanding, and the untested half of §30 |
+| Phase 14 — First contact without a paste | conditional on Phase 13 |
+| Phase 15 — Reaching a peer on another network | outstanding; before Phase 13 if the first other person is remote |
 | Phase 8 — The local UI | **complete** |
 | Phase 9 — Peer identity | **complete**; verification added afterwards and gates synchronization |
 | Phase 10 — Pairing | **partial** — pairing, rooms, invitation, joining and admission work; a host approving an unsolicited request does not exist, and whether it should is undecided (§12a) |
@@ -2324,19 +2329,116 @@ Nothing in this phase should be built before Phase 9. Its correctness rests enti
 
 ---
 
+## Phase 11 — Installation
+
+- ship as a Claude Code plugin, carrying the hooks;
+- the session-start hook starts the daemon;
+- slash commands for the room operations, each calling the corresponding CLI command;
+- `create` and `join` bind the session that invoked them;
+- delete the machine-level current room;
+- accept an older protocol version for reads, so an upgrade is not a flag day.
+
+Installation is the wall everything else is behind: nobody but the author has run this, and the reason is that running it takes a build, a hand-edited settings file, and a daemon started by hand. §29 says what the result must be — `claude plugin install claude-team`, and nothing about how Claude Code starts changes.
+
+A slash command is a **thin wrapper**, never a reimplementation (D-057). It shells out to the same binary a terminal would, so the CLI remains the surface that can be tested without a Claude session, and there is one implementation of each operation rather than two that drift. `CLAUDE_CODE_SESSION_ID` is in the environment of every tool call and equals the id the hooks report (B21), so a command run from a session knows which session it is in without being told.
+
+That is what lets **`create` and `join` bind a session**, and that is what lets the machine-level current room be deleted. The current room exists only because a terminal command cannot name a session. It is also a hazard: a room created and forgotten is silently joined weeks later by a session in an unrelated repository, because nothing derives a room from a directory and nothing expires the setting.
+
+**Pairing and verification stay at a terminal** (§29). Each is interactive, each blocks on another person, and the two words must reach a person's eyes without passing through a model that reads room content from unverified peers.
+
+---
+
+## Phase 12 — Discovery on a local network
+
+- find peers on a shared network without an address being typed;
+- a peer advertises an address it need not bind;
+- an invitation may carry more than one endpoint.
+
+Discovery is what makes installation true rather than merely one line. A colleague who installs the plugin still cannot reach anybody until somebody types an address at them, and the addresses are the part neither person can be expected to know.
+
+The second item is not a refinement of the first, it is the defect that makes tunnels and NAT impossible to express: `peerAddr()` is both what the daemon binds and what it tells other peers to use, and those are the same string only when nothing sits in between. Observed in Phase 5 — an invitation advertised the host's own loopback, and the bad address then propagated to the other peer, which retried it once a second for the length of the run.
+
+**Discovery locates; it never admits** (D-024). A peer found on a network is a peer whose identifier is now known, and knowing an identifier grants nothing. Admission remains the guest list, and no transport is ever a prerequisite (D-019).
+
+---
+
+## Phase 15 — Reaching a peer on another network
+
+- two peers behind different NATs establish a direct path;
+- the transport is one provider among several, and none is required;
+- an endpoint is whatever that transport can reach, and is never assumed to be an address the daemon binds.
+
+Local discovery (Phase 12) answers the same-network case and cannot answer this one. Every cross-network run so far has used an SSH tunnel — Phase 2's and Phase 5's both — which is a person doing NAT traversal by hand, and is not something a colleague can be asked to do.
+
+This is where the endpoint defect belongs if Phase 12 has not already taken it. `peerAddr()` is both what the daemon binds and what it tells peers to use, and those are the same string only when nothing sits between them.
+
+**Whatever is adopted must sit under everything** (D-019). A transport carries bytes. It does not decide who may speak: a sync request is still signed (D-044), still refused unless its peer is a guest (D-045), and still refused unless that peer has been verified by a person (D-054). A connection that reaches the door is not admission, and a peer identity is an Ed25519 key (D-020) whatever key a transport happens to use for its own tunnel.
+
+---
+
+## Phase 13 — Somebody else uses it
+
+- a developer who did not write this installs it, pairs, joins a room, and works;
+- record what they hit, in the order they hit it.
+
+**This is the untested half of §30.** Every experiment so far has measured whether Claude understands a teammate. None has measured whether a person finds a teammate's Claude worth having, because no person but the author has ever been in a room.
+
+It is a phase rather than an afterthought because it is the only one that can fail in a way the others cannot detect. Everything above can be correct and this can still go badly, and the failure would look like somebody quietly not using it again.
+
+Two things to watch for specifically, because both have been argued about without evidence: whether the two-word comparison is performed or skipped, and whether the browser view is consulted or forgotten.
+
+---
+
+## Phase 14 — First contact without a paste, if Phase 13 says so
+
+- a host is told that a peer asked to enter, and may approve it;
+- requests arrive only while the host has said they are expecting someone.
+
+Conditional, and deliberately last. Its only value is removing one manual step — sending an identifier out of band — between people who already know each other. Whether that step is worth removing is a question about how it feels to do, and Phase 13 is where that is answered rather than guessed.
+
+Two things are already settled about it and should not be reopened by building it. Pairing with someone unknown is **not a supported case** (D-051): §25's verification requires a channel on which the other party can be recognised, and strangers have none, so the ceremony would run and establish nothing about whose key it is. And whether an unsolicited request may arrive at all is **open** (§12a): a request that anyone reachable can cause is a prompt people learn to dismiss, which is a poor place for a decision that matters.
+
+---
+
 ## Order of remaining work
 
+Phases 0 through 10 are complete or dissolved. What remains is not more of the
+prototype; it is everything between a prototype that works and a thing somebody
+else can use.
+
 ```
-Phase 8    the local UI                          done
+Phase 11   installation                          ← next
    ↓
-Phase 9    peer identity                         done
+Phase 12   discovery on a local network
    ↓
-Phase 10   pairing, and room identity            done but for host approval
+Phase 15   reaching a peer on another network    if the first other person is remote
    ↓
-Phase 5    offline and reconnection              done
+Phase 13   somebody else uses it
    ↓
-Phase 7    hardening, and recovery from local loss   done
+Phase 14   first contact without a paste         only if 13 asks for it
 ```
+
+**The order is by dependency, and the dependency is a person's first five
+minutes.** They install (11); they cannot reach anybody until an address is found
+rather than typed (12, or 15 if they are not on the same network); and only then is
+there anything to observe (13). Phase 14 is last because Phase 13 is what decides
+whether it should happen at all.
+
+Phase 15's position is the one thing here that depends on a fact nobody has
+established: whether the first person who is not the author sits on the same
+network. If they do, Phase 12 is enough and 15 can wait. If they do not, 15 is a
+prerequisite for 13 and every cross-network run so far has substituted an SSH
+tunnel, which is a person performing NAT traversal by hand.
+
+Installation comes before discovery even though discovery is what makes
+installation true, because packaging decides where commands live and what a
+session can name — and discovery has to expose itself through whatever that turns
+out to be. Building discovery first would mean designing against a surface that is
+about to change.
+
+Phase 13 is deliberately a phase and not a milestone. It is the only remaining work
+that can fail in a way none of the others detect, and its failure looks like
+somebody quietly not using this again.
 
 Each phase carries one purpose. Where an earlier draft bundled room identity and the membership index alongside the UI, they have been moved to the phases whose purpose they serve — neither blocks the UI, and putting them first would have delayed the only outstanding question this prototype was built to answer.
 
