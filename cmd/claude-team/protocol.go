@@ -15,6 +15,26 @@ import "encoding/json"
 // Code session is a fact about the adapter, not about the protocol.
 const wireVersion = 2
 
+// minWireVersion is the oldest a peer may speak and still be read.
+//
+// A hard equality check makes every protocol change a flag day: both people must
+// upgrade at the same moment or the room goes silent, and the failure names a
+// version rather than saying what to do. That is tolerable while one person builds
+// both sides and intolerable the moment somebody else runs this (D-065).
+//
+// Raise this only when an older version can no longer be understood — which is a
+// statement about the events on the wire, not about tidiness.
+const minWireVersion = 1
+
+// speaks reports whether a version is one this build can read. Zero means a peer
+// that predates the field, which spoke v1.
+func speaks(v int) bool {
+	if v == 0 {
+		v = 1
+	}
+	return v >= minWireVersion && v <= wireVersion
+}
+
 type wireEvent struct {
 	EventID         string          `json:"eventId"`
 	PeerID          string          `json:"peerId"`

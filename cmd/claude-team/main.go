@@ -175,6 +175,30 @@ func syncInterval() time.Duration {
 // longer than that was true, so `log` reported an empty room called "default"
 // while a live room held seven events -- and an empty room reads as a quiet one,
 // which is why the staleness went unnoticed (Phase 5 findings).
+// sessionID is the Claude Code session a command was invoked from, empty at a
+// terminal. Claude Code exports it into every tool call's environment and it is
+// the same id the hooks report (B21), so a slash command that shells out needs to
+// pass nothing -- which is what lets `create` and `join` put THIS session in a room
+// rather than leaving a machine-level setting for some later session to adopt.
+func sessionID() string { return os.Getenv("CLAUDE_CODE_SESSION_ID") }
+
+// bindInvokingSession puts the calling session in a room, and says what happened.
+// Run at a terminal there is no session to bind, which is not a failure: the room
+// exists and command-line commands will act on it.
+func bindInvokingSession(m *Membership, r Room) {
+	sid := sessionID()
+	if sid == "" {
+		fmt.Printf("no Claude Code session to put in %s — run /team-create or /team-join\n", r.RoomName)
+		fmt.Println("inside a session to put that session in a room. `claude-team` commands")
+		fmt.Printf("typed here will act on %s.\n", r.RoomName)
+		return
+	}
+	if err := m.BindSession(sid, r.RoomID); err != nil {
+		log.Fatalf("%v", err)
+	}
+	fmt.Printf("this session is now in %s.\n", r.RoomName)
+}
+
 func openLocal() (*Store, *Identity, Room) {
 	id, err := LoadIdentity()
 	if err != nil {
@@ -486,10 +510,10 @@ func runCreateRoom() {
 		if err := m.SetCurrentRoom(r.RoomID); err != nil {
 			log.Fatalf("create: %v", err)
 		}
-		fmt.Printf("created %s and made it current\n  %s\n\n", r.RoomName, r.RoomID)
-		fmt.Println("invite someone with:")
-		fmt.Println("  claude-team allow <their identifier> <name>")
-		fmt.Printf("  claude-team invite <name>\n")
+		fmt.Printf("created %s\n  %s\n", r.RoomName, r.RoomID)
+		bindInvokingSession(m, r)
+		fmt.Println("\ninvite someone you have paired with:")
+		fmt.Println("  claude-team invite <name>")
 	})
 }
 
@@ -570,10 +594,14 @@ func runJoin(args []string) {
 		if err != nil {
 			log.Fatal(err)
 		}
+		// The session is bound BEFORE anything claims success. A session already
+		// in another room cannot be moved (§12a), and printing "joined" and then
+		// refusing reads as a half-completed join rather than a refused one.
+		bindInvokingSession(m, r)
 		if err := m.SetCurrentRoom(r.RoomID); err != nil {
 			log.Fatalf("join: %v", err)
 		}
-		fmt.Printf("now in %s. Sessions started from here join it.\n", r.RoomName)
+		fmt.Printf("joined %s.\n", r.RoomName)
 		if host != "" {
 			fmt.Printf("admitted %s, who invited you.\n", PeerName(host))
 			if !m.IsVerified(host) {
@@ -584,8 +612,8 @@ func runJoin(args []string) {
 		if peers := m.RoomPeers(r.RoomID); len(peers) > 0 {
 			fmt.Printf("reaching its members at: %s\n", strings.Join(peers, ", "))
 		}
-		fmt.Println("Sessions already running stay where they are: a session cannot be moved once")
-		fmt.Println("it has been told something, because what it was told cannot be withdrawn.")
+		fmt.Println("Other sessions are unaffected: a session is in a room because someone put")
+		fmt.Println("it there, and cannot be moved once it has been told something.")
 	})
 }
 

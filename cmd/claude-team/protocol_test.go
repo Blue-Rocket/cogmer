@@ -78,3 +78,23 @@ func TestSigVersionSurvivesTheRoundTrip(t *testing.T) {
 		t.Errorf("an omitted sigVersion became %d; it must stay 0 so it reads as v2", got)
 	}
 }
+
+// Upgrading must not be a flag day. Two people pair daily; requiring both to
+// upgrade in the same moment means the room goes silent until they do, and the
+// failure names a version rather than saying what to do.
+func TestAnOlderProtocolIsStillRead(t *testing.T) {
+	for _, v := range []int{0, minWireVersion, wireVersion} {
+		if !speaks(v) {
+			t.Errorf("protocol v%d is refused; this build reads v%d to v%d", v, minWireVersion, wireVersion)
+		}
+	}
+	// Zero means a peer predating the field, which spoke v1.
+	if minWireVersion > 1 && speaks(0) {
+		t.Error("an absent version was read as current rather than as v1")
+	}
+	// A version from the future is refused, because its events may not mean what
+	// this build would take them to mean.
+	if speaks(wireVersion + 1) {
+		t.Errorf("protocol v%d was accepted by a build that speaks v%d", wireVersion+1, wireVersion)
+	}
+}

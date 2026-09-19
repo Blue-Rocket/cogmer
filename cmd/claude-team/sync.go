@@ -62,6 +62,11 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 	// and inferring one was how a single-room daemon avoided asking. It is looked
 	// up by id alone: FindRoom also accepts a name, and accepting one here would
 	// let a caller address a room by an identifier that is not unique.
+	if !speaks(req.Protocol) {
+		http.Error(w, fmt.Sprintf("this daemon reads protocol v%d to v%d, not v%d",
+			minWireVersion, wireVersion, req.Protocol), http.StatusBadRequest)
+		return
+	}
 	room, ok := d.members.RoomByID(req.RoomID)
 	if !ok {
 		// Do not distinguish "no such room" from "not a guest": both answers are
@@ -220,11 +225,13 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return 0, err
 	}
-	// A peer speaking a protocol we do not is a condition to report, not to
-	// guess at. Silently accepting unknown-shaped events is how a field means
-	// two things.
-	if out.Protocol != 0 && out.Protocol != wireVersion {
-		return 0, fmt.Errorf("peer speaks protocol v%d, this daemon speaks v%d", out.Protocol, wireVersion)
+	// A peer speaking a protocol we cannot read is a condition to report, not to
+	// guess at. Silently accepting unknown-shaped events is how a field means two
+	// things. But an OLDER version we still understand is read, so that upgrading
+	// is not a flag day for everyone at once (D-065).
+	if !speaks(out.Protocol) {
+		return 0, fmt.Errorf("peer speaks protocol v%d; this daemon reads v%d to v%d — upgrade the older side",
+			out.Protocol, minWireVersion, wireVersion)
 	}
 
 	d.markPeerSeen(addr)

@@ -493,6 +493,9 @@ func (m *Membership) RoomPeers(roomID string) []string {
 // rather than per-terminal: a developer works in one room at a time, and asking
 // every session which room it wants would mean asking at a moment when nobody is
 // there to answer.
+// SetCurrentRoom records which room COMMAND-LINE commands act on when none is
+// named. Sessions never consult it (D-064) -- it is a convenience for `invite` and
+// `guests`, not a thing anything joins.
 func (m *Membership) SetCurrentRoom(roomID string) error {
 	if roomID == "" {
 		_, err := m.db.Exec(`DELETE FROM settings WHERE key = 'current_room'`)
@@ -526,31 +529,42 @@ func (m *Membership) RoomByID(roomID string) (Room, bool) {
 	return r, err == nil
 }
 
-// RoomForSession binds a session to a room on first sight and keeps it there.
+// RoomForSession reports the room a session was put in, and never puts it in one.
 //
-// This is the whole of §12a's constraint and the only thing that enforces it. A
-// session's room is fixed from the first prompt it submits: the row is written once
-// and read thereafter, so `join` changing the current room affects only sessions
-// that start afterwards.
+// A session joins a room because somebody ran /team-create or /team-join inside it
+// (D-064). It does not join one by being started while a machine-level setting
+// happened to point somewhere: a room created and forgotten would otherwise be
+// silently joined weeks later by a session in an unrelated repository, capturing
+// and publishing without anyone doing anything. Nothing derives a room from a
+// directory (D-015), so nothing else would have caught it either.
 //
-// Stricter than §12a's letter, which forbids moving a session once teammate context
-// has been injected and so permits moving one that has had none. That distinction
-// was tracked in an `injected` column that nothing ever read, and the looser rule it
-// allowed serves no case anyone has wanted -- a session that has joined but not yet
-// taken a turn. Simplicity won (D-056).
+// A session in no room is an ordinary Claude Code session: nothing captured,
+// nothing injected, nothing shared (§12a).
 func (m *Membership) RoomForSession(sessionID string) (Room, bool) {
 	var roomID string
-	err := m.db.QueryRow(`SELECT room_id FROM session_rooms WHERE session_id = ?`, sessionID).Scan(&roomID)
-	if err == nil {
-		return m.RoomByID(roomID)
+	if err := m.db.QueryRow(`SELECT room_id FROM session_rooms WHERE session_id = ?`, sessionID).Scan(&roomID); err != nil {
+		return Room{}, false
 	}
-	cur, ok := m.CurrentRoom()
-	if !ok {
-		return Room{}, false // no room joined; this session collaborates with nobody
+	return m.RoomByID(roomID)
+}
+
+// BindSession puts a session in a room, once and for good. §12a forbids moving it
+// afterwards, because injected context cannot be withdrawn from a context window,
+// so a second call for a session already bound is refused rather than obeyed.
+func (m *Membership) BindSession(sessionID, roomID string) error {
+	if sessionID == "" {
+		return errors.New("no session to bind")
 	}
-	_, _ = m.db.Exec(`INSERT OR IGNORE INTO session_rooms (session_id, room_id, joined_at) VALUES (?,?,?)`,
-		sessionID, cur.RoomID, time.Now().UTC().Format(time.RFC3339))
-	return cur, true
+	if existing, ok := m.RoomForSession(sessionID); ok {
+		if existing.RoomID == roomID {
+			return nil
+		}
+		return fmt.Errorf("this session is already in %s and cannot be moved: what it has been told cannot be withdrawn",
+			existing.RoomName)
+	}
+	_, err := m.db.Exec(`INSERT INTO session_rooms (session_id, room_id, joined_at) VALUES (?,?,?)`,
+		sessionID, roomID, time.Now().UTC().Format(time.RFC3339))
+	return err
 }
 
 // SessionsInRoom reports how many sessions are bound to a room, which is what

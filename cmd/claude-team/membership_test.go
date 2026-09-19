@@ -316,44 +316,68 @@ func TestAPairedPeerIsReachableWithoutARoom(t *testing.T) {
 	}
 }
 
-// A session's room is fixed from first sight, and that is the only thing enforcing
-// §12a. An earlier design tracked "has this session been injected into?" in a
-// column nothing read; the rule below is what actually held, so it is what is
-// tested.
-func TestASessionsRoomNeverChanges(t *testing.T) {
+// A session is in a room because somebody put it there, and never because a
+// machine-level setting happened to point somewhere when it started (D-064).
+//
+// The behaviour this replaces bound any session on its first prompt to whatever
+// room was last created or joined. A room created and forgotten was therefore
+// silently joined weeks later by a session in an unrelated repository, which began
+// capturing and publishing without anyone doing anything — and nothing derives a
+// room from a directory (D-015), so nothing else would have caught it.
+func TestASessionJoinsARoomOnlyWhenPutInOne(t *testing.T) {
 	m := testMembership(t)
 	self := testIdentity(t)
-	first, err := m.CreateRoom(self.PeerID)
+	room, err := m.CreateRoom(self.PeerID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := m.SetCurrentRoom(first.RoomID); err != nil {
+	// Current room is set, as `create` sets it for command-line convenience.
+	if err := m.SetCurrentRoom(room.RoomID); err != nil {
 		t.Fatal(err)
 	}
 
-	got, ok := m.RoomForSession("session-a")
-	if !ok || got.RoomID != first.RoomID {
-		t.Fatalf("session did not bind to the current room: %+v", got)
+	if got, ok := m.RoomForSession("session-a"); ok {
+		t.Errorf("a session nobody put in a room is in %s", got.RoomName)
 	}
 
-	// Join a different room. A session already bound stays where it is, whether or
-	// not anything has been injected into it.
-	second, err := m.CreateRoom(self.PeerID)
-	if err != nil {
+	if err := m.BindSession("session-a", room.RoomID); err != nil {
 		t.Fatal(err)
 	}
-	if err := m.SetCurrentRoom(second.RoomID); err != nil {
+	if got, ok := m.RoomForSession("session-a"); !ok || got.RoomID != room.RoomID {
+		t.Fatalf("a session that was put in a room is not in it: %+v", got)
+	}
+	// Still nothing happens to a session nobody touched.
+	if _, ok := m.RoomForSession("session-b"); ok {
+		t.Error("binding one session bound another")
+	}
+}
+
+// §12a forbids moving a session once it has been told something, and what it was
+// told cannot be withdrawn — so the refusal is the mechanism, not a warning.
+func TestABoundSessionCannotBeMoved(t *testing.T) {
+	m := testMembership(t)
+	self := testIdentity(t)
+	first, _ := m.CreateRoom(self.PeerID)
+	second, _ := m.CreateRoom(self.PeerID)
+
+	if err := m.BindSession("session-a", first.RoomID); err != nil {
 		t.Fatal(err)
+	}
+	// Binding it to the same room again is not a move, and must not be an error:
+	// running /team-join twice in one session is an ordinary thing to do.
+	if err := m.BindSession("session-a", first.RoomID); err != nil {
+		t.Errorf("rebinding a session to the room it is already in failed: %v", err)
 	}
 
-	got, ok = m.RoomForSession("session-a")
-	if !ok || got.RoomID != first.RoomID {
-		t.Errorf("an existing session moved to %s; it must stay in %s", got.RoomID, first.RoomID)
+	err := m.BindSession("session-a", second.RoomID)
+	if err == nil {
+		t.Fatal("a session was moved to a second room")
 	}
-	// A session starting afterwards gets the new room, which is the point of
-	// changing it at all.
-	if got, ok = m.RoomForSession("session-b"); !ok || got.RoomID != second.RoomID {
-		t.Errorf("a new session bound to %s, want %s", got.RoomID, second.RoomID)
+	if !strings.Contains(err.Error(), first.RoomName) {
+		t.Errorf("the refusal does not say which room it is in: %v", err)
+	}
+	if got, _ := m.RoomForSession("session-a"); got.RoomID != first.RoomID {
+		t.Error("a refused move changed the binding anyway")
 	}
 }
 
@@ -399,5 +423,26 @@ func TestMigrationDropsTheInjectedColumn(t *testing.T) {
 	}
 	if room != "r1" {
 		t.Errorf("binding became %q, want r1", room)
+	}
+}
+
+// The hazard D-064 removes, stated as a test so it cannot come back: a room that
+// was created and forgotten must not collect sessions.
+func TestAForgottenRoomDoesNotCollectSessions(t *testing.T) {
+	m := testMembership(t)
+	self := testIdentity(t)
+	old, err := m.CreateRoom(self.PeerID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := m.SetCurrentRoom(old.RoomID); err != nil {
+		t.Fatal(err)
+	}
+
+	// Weeks pass. A session starts in an unrelated repository and submits prompts.
+	for _, s := range []string{"much-later-1", "much-later-2", "much-later-3"} {
+		if got, ok := m.RoomForSession(s); ok {
+			t.Fatalf("session %s was silently put in %s and would begin publishing", s, got.RoomName)
+		}
 	}
 }

@@ -1,0 +1,8 @@
+{
+  "name": "claude-team",
+  "version": "0.1.0",
+  "description": "Work in a shared Claude Code conversation with a colleague. Local-first and peer-to-peer: your turns and theirs replicate directly between your machines, with no server in between.",
+  "author": {
+    "name": "David Green"
+  }
+}
