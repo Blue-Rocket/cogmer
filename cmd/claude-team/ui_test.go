@@ -17,17 +17,81 @@ func uiDaemon(t *testing.T) *Daemon {
 // would hand the room to anyone who can reach the sync port (§25, D-030).
 func TestUIIsNotServedToPeers(t *testing.T) {
 	d := uiDaemon(t)
-	for _, path := range []string{"/", "/stream"} {
+	for _, path := range []string{"/", "/stream", "/room/anything", "/events"} {
 		rec := httptest.NewRecorder()
 		d.PeerRoutes().ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
 		if rec.Code != 404 {
 			t.Errorf("peer listener serves %s (status %d)", path, rec.Code)
 		}
 	}
+}
+
+// Each room has its own URL, so the address handed over at `create` is a stable
+// link to that room rather than a window that can change identity (D-077).
+func TestEachRoomHasItsOwnURL(t *testing.T) {
+	d, room := testDaemon(t)
+
 	rec := httptest.NewRecorder()
-	d.LocalRoutes().ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
+	d.LocalRoutes().ServeHTTP(rec, httptest.NewRequest("GET", "/room/"+room.RoomName, nil))
 	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "claude-team") {
-		t.Errorf("local listener does not serve the page (status %d)", rec.Code)
+		t.Errorf("a room's own URL does not serve the page (status %d)", rec.Code)
+	}
+
+	// A room nobody has does not resolve to somebody else's room.
+	rec = httptest.NewRecorder()
+	d.LocalRoutes().ServeHTTP(rec, httptest.NewRequest("GET", "/room/no-such-room", nil))
+	if rec.Code != 404 {
+		t.Errorf("an unknown room answered %d rather than 404", rec.Code)
+	}
+
+	// With one room, the index goes straight there rather than making somebody
+	// choose from a list of one.
+	rec = httptest.NewRecorder()
+	d.LocalRoutes().ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
+	if rec.Code != 302 || rec.Header().Get("Location") != "/room/"+room.RoomName {
+		t.Errorf("the index gave %d → %q", rec.Code, rec.Header().Get("Location"))
+	}
+
+	// With two, it lists them and chooses nothing.
+	if _, err := d.members.CreateRoom(d.id.PeerID); err != nil {
+		t.Fatal(err)
+	}
+	rec = httptest.NewRecorder()
+	d.LocalRoutes().ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
+	if rec.Code != 200 {
+		t.Fatalf("with two rooms the index gave %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), room.RoomName) {
+		t.Error("the index does not list the rooms it is meant to be listing")
+	}
+}
+
+// The events endpoint serves the room it was asked for, and does not fall back to
+// one when the question is unanswerable.
+func TestEventsServeTheRoomAsked(t *testing.T) {
+	d, room := testDaemon(t)
+	store, err := d.storeFor(room.RoomID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := testIdentity(t)
+	ev := Event{EventID: "e1", PeerID: id.PeerID, PeerSequence: 1, RoomID: room.RoomID,
+		Timestamp: "2026-09-20T00:00:00Z", EventType: EventUserPrompt, Content: "hello"}
+	ev.Sign(id.private)
+	if _, err := store.Insert(&ev); err != nil {
+		t.Fatal(err)
+	}
+
+	rec := httptest.NewRecorder()
+	d.LocalRoutes().ServeHTTP(rec, httptest.NewRequest("GET", "/events?room="+room.RoomName, nil))
+	if !strings.Contains(rec.Body.String(), "hello") {
+		t.Errorf("the named room's events are missing: %s", rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	d.LocalRoutes().ServeHTTP(rec, httptest.NewRequest("GET", "/events", nil))
+	if strings.Contains(rec.Body.String(), "hello") {
+		t.Error("with no room named, events were served from a room nobody asked for")
 	}
 }
 
@@ -46,7 +110,7 @@ func TestSnapshotDistinguishesPeersClaimingOneName(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	st, err := d.snapshot()
+	st, err := d.snapshot(room)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +139,7 @@ func TestSnapshotCarriesContentAsData(t *testing.T) {
 	if _, err := store.Append(1, d.id, room.RoomID, "s", EventUserPrompt, hostile, nil); err != nil {
 		t.Fatal(err)
 	}
-	st, _ := d.snapshot()
+	st, _ := d.snapshot(room)
 	if len(st.Events) == 0 || st.Events[0].Content != hostile {
 		t.Errorf("content was altered in transit: %q", st.Events[0].Content)
 	}

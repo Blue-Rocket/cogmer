@@ -130,7 +130,7 @@ Running it:
 | `doctor [--deep]` | Verify relied-on Claude Code behaviors against the installed version |
 | `behaviors` | List those behaviors (`--markdown` regenerates the doc) |
 
-`CLAUDE_TEAM_ROOM` overrides the current room; `CLAUDE_TEAM_ADDR` the local
+`CLAUDE_TEAM_ADDR` sets the local
 address; `CLAUDE_TEAM_PEER_ADDR` the peer address; `CLAUDE_TEAM_PEERS` extra peer
 addresses; `CLAUDE_TEAM_PREFLIGHT=off` skips behavior checks on new rooms;
 `CLAUDE_TEAM_MAX_EVENTS`, `CLAUDE_TEAM_MAX_EVENT_CHARS` and
@@ -144,7 +144,7 @@ open ones are collected at the end.
 
 ## Why things are the way they are
 
-[`docs/decisions.md`](docs/decisions.md) — 75 decisions with the alternatives
+[`docs/decisions.md`](docs/decisions.md) — 77 decisions with the alternatives
 rejected and why, each tied to the check that would invalidate it. Read it before
 proposing a simplification; some of the awkwardness is deliberate.
 

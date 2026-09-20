@@ -56,6 +56,7 @@
 </header>
 <main id="feed"><div class="empty">Waiting for the room…</div></main>
 <script>
+const ROOM = decodeURIComponent(location.pathname.replace(/^\/room\//, ''));
 (function(){
   const feed=document.getElementById('feed');
   let lastKey='';
@@ -126,7 +127,7 @@
 
   let es;
   function connect(){
-    es=new EventSource('/stream');
+    es=new EventSource('/stream?room=' + encodeURIComponent(ROOM));
     es.onopen=()=>{document.getElementById('connDot').className='dot live';
                    document.getElementById('connText').textContent='live';};
     es.onmessage=ev=>{const s=JSON.parse(ev.data); draw(s); peers(s.peers);};

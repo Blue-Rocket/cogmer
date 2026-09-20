@@ -330,8 +330,11 @@ func (d *Daemon) confirmDelivery(store *Store, req stopReq) {
 	}
 }
 
+// handleEvents serves one named room, given as ?room=<name>. It does not choose
+// one: choosing is what the machine-level pointer did, and it chose wrong as soon
+// as there were two rooms (D-077).
 func (d *Daemon) handleEvents(w http.ResponseWriter, r *http.Request) {
-	cur, ok := d.members.CurrentRoom()
+	cur, ok := d.roomFromPath("/room/" + r.URL.Query().Get("room"))
 	if !ok {
 		writeJSON(w, map[string]any{"room": "", "events": []Event{}})
 		return

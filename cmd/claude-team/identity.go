@@ -123,20 +123,3 @@ func LoadIdentity() (*Identity, error) {
 	id.PeerName = PeerName(id.PeerID)
 	return id, nil
 }
-
-// LoadConfig resolves the active room. CLAUDE_TEAM_ROOM wins so a single
-// machine can drive several rooms during testing.
-func LoadConfig() *Config {
-	cfg := &Config{Room: "default"}
-	path := filepath.Join(homeDir(), "config.json")
-	if data, err := os.ReadFile(path); err == nil {
-		_ = json.Unmarshal(data, cfg)
-	}
-	if r := os.Getenv("CLAUDE_TEAM_ROOM"); r != "" {
-		cfg.Room = r
-	}
-	if cfg.Room == "" {
-		cfg.Room = "default"
-	}
-	return cfg
-}

@@ -738,3 +738,27 @@ func TestASessionsOwnRoomWinsOverThePointer(t *testing.T) {
 		t.Errorf("a session in no room resolved to %s", r.RoomName)
 	}
 }
+
+// An environment variable is ambient: exported once in a profile, or inherited by
+// every session a machine starts, it answers for sessions that are in other rooms.
+// CLAUDE_TEAM_ROOM was consulted ahead of the session's own room, which quietly
+// reinstated the failure D-064 removed, at higher precedence (D-077).
+func TestNoAmbientRoomOverride(t *testing.T) {
+	src, err := os.ReadFile("main.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// It may be named in a comment explaining its absence; it may not be read.
+	if strings.Contains(string(src), `os.Getenv("CLAUDE_TEAM_ROOM")`) {
+		t.Error("CLAUDE_TEAM_ROOM is read again; an ambient value must not decide which room a command acts on")
+	}
+	for _, f := range []string{"identity.go", "daemon.go", "sync.go"} {
+		src, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(src), `os.Getenv("CLAUDE_TEAM_ROOM")`) {
+			t.Errorf("%s reads CLAUDE_TEAM_ROOM", f)
+		}
+	}
+}

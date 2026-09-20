@@ -133,7 +133,6 @@ Rooms — per room, repeated as often as you like:
   claude-team behaviors       List those behaviors (--markdown to render docs)
 
 Environment:
-  CLAUDE_TEAM_ROOM        override the active room
   CLAUDE_TEAM_ADDR        hooks and UI address (loopback only, default 127.0.0.1:4782)
   CLAUDE_TEAM_PEER_ADDR   peer sync address (default 127.0.0.1:4783)
   CLAUDE_TEAM_PREFLIGHT   set to "off" to skip behavior checks on new rooms
@@ -209,9 +208,11 @@ func sessionID() string { return os.Getenv("CLAUDE_CODE_SESSION_ID") }
 // the one line whose job is to send somebody somewhere.
 func watchLine(room string) string {
 	if room == "" {
-		return fmt.Sprintf("the room view is at http://%s — it will show a room once you create or join one", addr())
+		return fmt.Sprintf("the room view is at http://%s — it will list rooms once you create or join one", addr())
 	}
-	return fmt.Sprintf("watch %s at http://%s", room, addr())
+	// The room's own URL, so what is handed over is a stable link to THAT room
+	// rather than a window whose contents can change identity (D-077).
+	return fmt.Sprintf("watch %s at http://%s/room/%s", room, addr(), room)
 }
 
 // runWhere prints where to watch, naming the room this session is in if it is in
@@ -305,21 +306,6 @@ func runDaemon() {
 	members, err := OpenMembership()
 	if err != nil {
 		log.Fatalf("membership: %v", err)
-	}
-
-	// CLAUDE_TEAM_ROOM is a convenience for choosing the current room, not a
-	// statement about what this daemon serves: it serves every room this peer
-	// belongs to, and a session says which one it is in (§5).
-	if name := os.Getenv("CLAUDE_TEAM_ROOM"); name != "" {
-		r, err := members.FindRoom(name)
-		switch {
-		case err == nil:
-			_ = members.SetCurrentRoom(r.RoomID)
-		case errors.Is(err, errNoSuchRoom):
-			log.Printf("no room named %q; `claude-team rooms` lists them, `create` makes one", name)
-		default:
-			log.Printf("CLAUDE_TEAM_ROOM: %v", err)
-		}
 	}
 
 	d := &Daemon{id: id, members: members, claudeVersion: ClaudeVersion()}
@@ -685,19 +671,12 @@ func runCreateRoom() {
 // That is all it was ever for; consulting it ahead of the session is what made it
 // look like a second answer to the same question.
 func currentRoom(m *Membership) Room {
-	// An explicit name beats any inference, including the session's own room:
-	// somebody who names a room means it.
-	if name := os.Getenv("CLAUDE_TEAM_ROOM"); name != "" {
-		r, err := m.FindRoom(name)
-		if err == nil {
-			return r
-		}
-		if errors.Is(err, errNoSuchRoom) {
-			log.Fatalf("no room named %q; `claude-team rooms` lists them", name)
-		}
-		log.Fatal(err)
-	}
-
+	// CLAUDE_TEAM_ROOM is deliberately NOT consulted here, and used to be consulted
+	// first. An environment variable is ambient: exported once in a profile, or
+	// inherited by every session a machine starts, it silently answers for sessions
+	// that are in other rooms — which is the failure D-064 removed and this had
+	// quietly reintroduced at higher precedence. A room is named per invocation or
+	// it is the session's (D-077).
 	if sid := sessionID(); sid != "" {
 		if r, ok := m.RoomForSession(sid); ok {
 			return r

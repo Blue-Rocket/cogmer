@@ -4,8 +4,10 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -78,11 +80,17 @@ func (d *Daemon) notify() {
 	}
 }
 
-func (d *Daemon) snapshot() (uiState, error) {
-	cur, ok := d.members.CurrentRoom()
-	if !ok {
-		// No room joined. Showing an empty feed would imply a quiet room rather
-		// than no room, which are different things to a person looking at it.
+// snapshot renders one named room.
+//
+// The room is a parameter rather than something looked up, because the view used
+// to follow the machine-level pointer and so showed whichever room was created
+// last — right by luck with one room, silently wrong with two. A window whose
+// contents can change identity underneath a reader is worse than one that shows
+// nothing (D-077).
+func (d *Daemon) snapshot(cur Room) (uiState, error) {
+	if cur.RoomID == "" {
+		// No room. Showing an empty feed would imply a quiet room rather than no
+		// room, which are different things to a person looking at it.
 		return uiState{SelfPeerID: d.id.PeerID}, nil
 	}
 	store, err := d.storeFor(cur.RoomID)
@@ -124,13 +132,62 @@ func (d *Daemon) snapshot() (uiState, error) {
 	return st, nil
 }
 
+// roomFromPath resolves /room/<name> to a room, and "/" to nothing.
+//
+// A room's own URL is what makes the address handed over at `create` a stable
+// link: two rooms are two tabs, each showing what it says it shows.
+func (d *Daemon) roomFromPath(path string) (Room, bool) {
+	name := strings.TrimPrefix(path, "/room/")
+	if name == path || name == "" {
+		return Room{}, false
+	}
+	r, err := d.members.FindRoom(name)
+	if err != nil {
+		return Room{}, false
+	}
+	return r, true
+}
+
 func (d *Daemon) handleUI(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
+	switch {
+	case r.URL.Path == "/":
+		// The index lists rooms rather than picking one. Picking is what the
+		// pointer did.
+		rooms, _ := d.members.Rooms()
+		if len(rooms) == 1 {
+			http.Redirect(w, r, "/room/"+rooms[0].RoomName, http.StatusFound)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(roomIndex(rooms))
+		return
+	case strings.HasPrefix(r.URL.Path, "/room/"):
+		if _, ok := d.roomFromPath(r.URL.Path); !ok {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(uiPage)
 		return
 	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write(uiPage)
+	http.NotFound(w, r)
+}
+
+// roomIndex is the page shown when the daemon serves more than one room. It is
+// deliberately plain: it exists so that no room is chosen on a reader's behalf.
+func roomIndex(rooms []Room) []byte {
+	var b strings.Builder
+	b.WriteString("<!doctype html><meta charset=utf-8><title>rooms</title>")
+	b.WriteString("<style>body{font:16px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;max-width:40rem;margin:4rem auto;padding:0 1.5rem}")
+	b.WriteString("a{display:block;padding:.6rem 0;border-bottom:1px solid #8883}h1{font-size:1rem;letter-spacing:.1em;text-transform:uppercase;opacity:.6}</style>")
+	b.WriteString("<h1>rooms on this machine</h1>")
+	if len(rooms) == 0 {
+		b.WriteString("<p>None yet. <code>/room-create</code> in a Claude Code session makes one.</p>")
+	}
+	for _, r := range rooms {
+		fmt.Fprintf(&b, "<a href=\"/room/%s\">%s</a>", template.HTMLEscapeString(r.RoomName), template.HTMLEscapeString(r.RoomName))
+	}
+	return []byte(b.String())
 }
 
 // handleStream pushes the room over server-sent events.
@@ -150,11 +207,19 @@ func (d *Daemon) handleStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
+	// The room comes from the request, so two tabs stream two rooms and neither
+	// changes identity when somebody creates a third.
+	room, ok := d.roomFromPath("/room/" + r.URL.Query().Get("room"))
+	if !ok {
+		http.Error(w, "no such room", http.StatusNotFound)
+		return
+	}
+
 	ch := d.subscribe()
 	defer d.unsubscribe(ch)
 
 	send := func() bool {
-		st, err := d.snapshot()
+		st, err := d.snapshot(room)
 		if err != nil {
 			return false
 		}
