@@ -56,3 +56,40 @@ start_daemon_if_needed() {
   disown 2>/dev/null
   return 0
 }
+
+# --- what the install is doing, as a fact rather than an inference ---
+#
+# Absence of the binary used to mean three different things, and every reader
+# guessed the same one: never started, arriving now, or failed an hour ago and
+# waiting out a cooldown. Telling a person "it may still be arriving" when nothing
+# is arriving sends them to wait for something that will not happen (D-075).
+#
+# One file, three readers: the installer sets it and honours the cooldown, the
+# command wrapper explains it, and the session-start hook passes it to the model so
+# an answer to "why isn't this working" is true rather than invented.
+
+install_state_file() { printf '%s' "${CLAUDE_TEAM_HOME:-$HOME/.claude-team}/install-state"; }
+
+# set_install_state <installing|failed> <detail>
+set_install_state() {
+  local f; f="$(install_state_file)"
+  mkdir -p "$(dirname "$f")" 2>/dev/null
+  printf '%s\t%s\t%s\n' "$1" "$(date +%s)" "${2:-}" > "$f" 2>/dev/null
+}
+
+clear_install_state() { rm -f "$(install_state_file)" 2>/dev/null; }
+
+# install_state prints "<state> <age-seconds> <detail>".
+#
+# An `installing` mark older than staleAfter is reported as `stalled`: a crash
+# between setting the mark and clearing it would otherwise leave the file saying
+# a download is in progress forever, which is the one answer worse than silence.
+install_state() {
+  local f line state when detail age
+  f="$(install_state_file)"
+  [ -f "$f" ] || { printf 'none 0 '; return 0; }
+  IFS=$'\t' read -r state when detail < "$f" || { printf 'none 0 '; return 0; }
+  age=$(( $(date +%s) - ${when:-0} ))
+  if [ "$state" = installing ] && [ "$age" -gt 300 ]; then state=stalled; fi
+  printf '%s %s %s' "$state" "$age" "$detail"
+}

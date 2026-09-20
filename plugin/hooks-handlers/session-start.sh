@@ -28,4 +28,22 @@ disown 2>/dev/null
 # installer starts it when the download lands, so the two together cover both the
 # first session and every one after.
 start_daemon_if_needed
+
+# If there is still no binary, tell the MODEL what is happening, because there is
+# no other channel: everything that reaches a person arrives by way of what the
+# model says (D-033, D-036). This is the difference between a session that answers
+# "it is still installing" and one that invents a reason.
+#
+# Emitted only while the binary is absent, so an ordinary session carries nothing.
+if ! claude_team_binary > /dev/null 2>&1; then
+  read -r state age detail <<< "$(install_state)"
+  case "$state" in
+    installing) note="claude-team is downloading in the background (started ${age}s ago). Room commands will not work until it finishes, which is usually seconds." ;;
+    failed)     note="claude-team failed to install: ${detail}. It retries about an hour after a failure. Room commands will not work until it succeeds." ;;
+    stalled)    note="A claude-team install started ${age}s ago and did not finish. Starting a new session will try again." ;;
+    *)          note="claude-team is installed as a plugin but its binary has not been fetched yet. It is fetched in the background when a session starts." ;;
+  esac
+  printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s Do not speculate about other causes; this is the reason."}}\n' "$note"
+fi
+
 exit 0

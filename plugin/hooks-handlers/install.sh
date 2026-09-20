@@ -31,7 +31,6 @@ bin_dir="$home_dir/bin"
 target="$bin_dir/claude-team"
 log="$home_dir/install.log"
 lock="$home_dir/.install.lock"
-cooldown_file="$home_dir/.install-failed"
 cooldown_seconds=3600
 
 mkdir -p "$bin_dir" 2>/dev/null || exit 0
@@ -45,11 +44,11 @@ if [ -x "$target" ] && [ "$("$target" version 2>/dev/null)" = "$want" ]; then
   exit 0
 fi
 
-# Recent failure: leave it alone until the cooldown expires.
-if [ -f "$cooldown_file" ]; then
-  last=$(cat "$cooldown_file" 2>/dev/null || echo 0)
-  now=$(date +%s)
-  if [ $((now - last)) -lt "$cooldown_seconds" ]; then exit 0; fi
+# Recent failure: leave it alone until the cooldown expires. A person asking why
+# is answered by the same mark, so the wait is explicable rather than mysterious.
+read -r prior_state prior_age _ <<< "$(install_state)"
+if [ "$prior_state" = failed ] && [ "$prior_age" -lt "$cooldown_seconds" ]; then
+  exit 0
 fi
 
 # mkdir is atomic on every platform that matters, which is why it is the lock.
@@ -58,7 +57,7 @@ if ! mkdir "$lock" 2>/dev/null; then
 fi
 trap 'rmdir "$lock" 2>/dev/null' EXIT
 
-fail() { say "FAILED: $*"; date +%s > "$cooldown_file" 2>/dev/null; exit 0; }
+fail() { say "FAILED: $*"; set_install_state failed "$*"; exit 0; }
 
 case "$(uname -s)" in
   Darwin) os=darwin ;;
@@ -72,6 +71,7 @@ case "$(uname -m)" in
   *) fail "unsupported architecture $(uname -m)" ;;
 esac
 
+set_install_state installing "fetching v${want}"
 asset="claude-team_${want}_${os}_${arch}"
 [ "$os" = windows ] && asset="$asset.exe"
 expected="$(grep -E "[[:space:]]${asset}\$" "$root/checksums.txt" 2>/dev/null | awk '{print $1}' | head -1)"
@@ -97,6 +97,7 @@ if [ -n "$expected" ] && command -v curl > /dev/null 2>&1; then
     if [ "$got" = "$expected" ]; then
       if chmod +x "$tmp/bin" && mv -f "$tmp/bin" "$target"; then
         say "installed $want from release"
+        clear_install_state
         # The session that triggered this looked for a binary that was still
         # downloading and found none, so nothing is running yet. Start it here
         # rather than leaving the first session inert and the second one useful.
@@ -121,6 +122,7 @@ if command -v go > /dev/null 2>&1; then
         "github.com/bluerocket/claude-team/cmd/claude-team@v${want}" > "$tmp/build.log" 2>&1); then
     if [ -x "$tmp/claude-team" ] && mv -f "$tmp/claude-team" "$target"; then
       say "installed $want from source"
+      clear_install_state
       start_daemon_if_needed
       exit 0
     fi
