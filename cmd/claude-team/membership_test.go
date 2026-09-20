@@ -684,3 +684,21 @@ func TestANameMeansOneKey(t *testing.T) {
 		t.Errorf("the name was not freed by forgetting: %v", err)
 	}
 }
+
+// The watch line names a room or admits there is none. "Watch this room" was
+// printed on a machine with no rooms at all — an invented fact in the one line
+// whose job is to send somebody somewhere.
+func TestTheWatchLineDoesNotInventARoom(t *testing.T) {
+	none := watchLine("")
+	if strings.Contains(none, "this room") {
+		t.Errorf("with no room, the line still refers to one: %s", none)
+	}
+	if !strings.Contains(none, "http://") {
+		t.Errorf("the address is missing, which is the only part that matters: %s", none)
+	}
+
+	named := watchLine("misty-canyon")
+	if !strings.Contains(named, "misty-canyon") {
+		t.Errorf("a named room is not named: %s", named)
+	}
+}

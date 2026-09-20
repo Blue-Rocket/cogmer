@@ -49,7 +49,7 @@ func main() {
 	case "version":
 		fmt.Println(version)
 	case "where":
-		fmt.Println(watchLine())
+		runWhere()
 	case "whoami":
 		runWhoami()
 	case "conflicts":
@@ -203,8 +203,49 @@ func sessionID() string { return os.Getenv("CLAUDE_CODE_SESSION_ID") }
 // session-start hook began starting it detached, nobody sees that line, so the
 // view existed and was unfindable. It is said here instead: at the moments a room
 // begins, which is when there is something to watch.
-func watchLine() string {
-	return fmt.Sprintf("watch this room at http://%s", addr())
+// watchLine names the room when there is one. "This room" is true where a room was
+// just created or joined and false where the command stands alone: `where` said
+// "watch this room" on a machine with no rooms at all, which is an invented fact in
+// the one line whose job is to send somebody somewhere.
+func watchLine(room string) string {
+	if room == "" {
+		return fmt.Sprintf("the room view is at http://%s — it will show a room once you create or join one", addr())
+	}
+	return fmt.Sprintf("watch %s at http://%s", room, addr())
+}
+
+// runWhere prints where to watch, naming the room this session is in if it is in
+// one. Like whoami, it must answer in no room at all, so it does not use
+// currentRoom, which exits.
+func runWhere() {
+	m, err := OpenMembership()
+	if err != nil {
+		fmt.Println(watchLine(""))
+		return
+	}
+	defer m.Close()
+
+	// Inside a session, the only room that means anything is the one that session
+	// is in. Falling back to the current room here would tell a session with no
+	// room to go and watch somebody else's — which is the conflation D-064 exists
+	// to prevent: that pointer says what the COMMAND LINE acts on.
+	if sid := sessionID(); sid != "" {
+		if r, ok := m.RoomForSession(sid); ok {
+			fmt.Println(watchLine(r.RoomName))
+			return
+		}
+		fmt.Printf("this session is not in a room. /room-create or /room-join puts it in one.\n")
+		fmt.Printf("%s\n", watchLine(""))
+		return
+	}
+
+	// At a terminal there is no session, so the current room is the right answer:
+	// it is what the other command-line commands act on.
+	if cur, ok := m.CurrentRoom(); ok {
+		fmt.Println(watchLine(cur.RoomName))
+		return
+	}
+	fmt.Println(watchLine(""))
 }
 
 func bindInvokingSession(m *Membership, r Room) {
@@ -623,7 +664,7 @@ func runCreateRoom() {
 		}
 		fmt.Printf("created %s\n  %s\n", r.RoomName, r.RoomID)
 		bindInvokingSession(m, r)
-		fmt.Printf("%s\n", watchLine())
+		fmt.Printf("%s\n", watchLine(r.RoomName))
 		fmt.Println("\ninvite someone you have paired with:")
 		fmt.Println("  claude-team invite <name>")
 	})
@@ -713,7 +754,7 @@ func runJoin(args []string) {
 		if err := m.SetCurrentRoom(r.RoomID); err != nil {
 			log.Fatalf("join: %v", err)
 		}
-		fmt.Printf("joined %s. %s\n", r.RoomName, watchLine())
+		fmt.Printf("joined %s. %s\n", r.RoomName, watchLine(r.RoomName))
 		if host != "" {
 			fmt.Printf("admitted %s, who invited you.\n", PeerName(host))
 			if !m.IsVerified(host) {
