@@ -1,11 +1,11 @@
 ---
 description: How to pair with a colleague (runs in a terminal, not here)
-allowed-tools: Bash(claude-team whoami:*)
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" whoami:*)
 ---
 
 ## This session's pairing string
 
-!`claude-team whoami`
+!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" whoami`
 
 ## Your task
 

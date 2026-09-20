@@ -1,19 +1,19 @@
 ---
 description: Show the room this session is in, and who is in it
-allowed-tools: Bash(claude-team rooms:*), Bash(claude-team guests:*), Bash(claude-team where:*)
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" rooms:*), Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" guests:*), Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" where:*)
 ---
 
 ## Rooms
 
-!`claude-team rooms`
+!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" rooms`
 
 ## Guests of the current room
 
-!`claude-team guests`
+!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" guests`
 
 ## Where to watch it
 
-!`claude-team where`
+!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" where`
 
 ## Your task
 

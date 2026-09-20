@@ -1,11 +1,11 @@
 ---
 description: Create a room and put this session in it
-allowed-tools: Bash(claude-team create:*)
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" create:*)
 ---
 
 ## What happened
 
-!`claude-team create`
+!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" create`
 
 ## Your task
 

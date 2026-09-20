@@ -1,11 +1,11 @@
 ---
 description: Show the room's conversation so far
-allowed-tools: Bash(claude-team log:*)
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" log:*)
 ---
 
 ## The room
 
-!`claude-team log`
+!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" log`
 
 ## Your task
 

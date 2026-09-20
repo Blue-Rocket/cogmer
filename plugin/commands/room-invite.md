@@ -1,12 +1,12 @@
 ---
 description: Admit a peer you have paired with to this room
 argument-hint: <peer>
-allowed-tools: Bash(claude-team invite:*)
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" invite:*)
 ---
 
 ## What happened
 
-!`claude-team invite $ARGUMENTS`
+!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" invite $ARGUMENTS`
 
 ## Your task
 

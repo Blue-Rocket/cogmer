@@ -1,11 +1,11 @@
 ---
 description: Take this session out of its room
-allowed-tools: Bash(claude-team leave:*)
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" leave:*)
 ---
 
 ## What happened
 
-!`claude-team leave`
+!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" leave`
 
 ## Your task
 

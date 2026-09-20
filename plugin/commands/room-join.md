@@ -1,12 +1,12 @@
 ---
 description: Join a room you were invited to
 argument-hint: <invitation>
-allowed-tools: Bash(claude-team join:*)
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" join:*)
 ---
 
 ## What happened
 
-!`claude-team join $ARGUMENTS`
+!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" join $ARGUMENTS`
 
 ## Your task
 

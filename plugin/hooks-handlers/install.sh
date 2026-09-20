@@ -23,6 +23,7 @@
 #   verified, building from source is the only remaining path, and having no binary
 #   is the correct outcome when neither works.
 set -u
+. "$(dirname "$0")/common.sh"
 
 root="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 home_dir="${CLAUDE_TEAM_HOME:-$HOME/.claude-team}"
@@ -40,6 +41,7 @@ want="$(cat "$root/VERSION" 2>/dev/null || echo unknown)"
 
 # Already the version this plugin expects.
 if [ -x "$target" ] && [ "$("$target" version 2>/dev/null)" = "$want" ]; then
+  start_daemon_if_needed
   exit 0
 fi
 
@@ -93,7 +95,14 @@ if [ -n "$expected" ] && command -v curl > /dev/null 2>&1; then
     got="$(shasum -a 256 "$tmp/bin" 2>/dev/null | awk '{print $1}')"
     [ -z "$got" ] && got="$(sha256sum "$tmp/bin" 2>/dev/null | awk '{print $1}')"
     if [ "$got" = "$expected" ]; then
-      chmod +x "$tmp/bin" && mv -f "$tmp/bin" "$target" && say "installed $want from release" && exit 0
+      if chmod +x "$tmp/bin" && mv -f "$tmp/bin" "$target"; then
+        say "installed $want from release"
+        # The session that triggered this looked for a binary that was still
+        # downloading and found none, so nothing is running yet. Start it here
+        # rather than leaving the first session inert and the second one useful.
+        start_daemon_if_needed
+        exit 0
+      fi
     fi
     # The hash is the authorisation. Without a match there is nothing to weigh.
     say "REFUSED: $asset hashed $got, expected $expected — deleted, not run"
@@ -110,8 +119,10 @@ if command -v go > /dev/null 2>&1; then
   say "building from source"
   if (cd "$tmp" && GOBIN="$tmp" go install -ldflags "-X main.version=$want" \
         "github.com/bluerocket/claude-team/cmd/claude-team@v${want}" > "$tmp/build.log" 2>&1); then
-    if [ -x "$tmp/claude-team" ]; then
-      mv -f "$tmp/claude-team" "$target" && say "installed $want from source" && exit 0
+    if [ -x "$tmp/claude-team" ] && mv -f "$tmp/claude-team" "$target"; then
+      say "installed $want from source"
+      start_daemon_if_needed
+      exit 0
     fi
   fi
   say "build failed: $(tail -3 "$tmp/build.log" 2>/dev/null | tr '\n' ' ')"
