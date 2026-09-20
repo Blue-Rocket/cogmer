@@ -144,13 +144,13 @@ open ones are collected at the end.
 
 ## Why things are the way they are
 
-[`docs/decisions.md`](docs/decisions.md) — 80 decisions with the alternatives
+[`docs/decisions.md`](docs/decisions.md) — 81 decisions with the alternatives
 rejected and why, each tied to the check that would invalidate it. Read it before
 proposing a simplification; some of the awkwardness is deliberate.
 
 ## Behavior checks
 
-This project depends on 21 **undocumented** Claude Code behaviors — how hooks
+This project depends on 22 **undocumented** Claude Code behaviors — how hooks
 report a turn, what the transcript contains, what compaction preserves. None are
 contractual, and several fail silently: the room keeps accepting events while
 recording the wrong thing.
@@ -160,7 +160,7 @@ from the registry in `cmd/claude-team/behaviors.go` so it cannot drift from what
 is actually checked.
 
 ```sh
-claude-team doctor          # 14 session checks, one Claude turn, ~5s
+claude-team doctor          # 15 session checks, one Claude turn, ~5s
 claude-team doctor --deep   # adds 7 compaction checks, drives a real compaction, ~40s
 ```
 

@@ -66,6 +66,10 @@ re-verifies them against the installed version.
 
 **Relied on for:** Commands run from inside a session knowing which session they are in. A slash command shells out to this binary, and the binary reads this variable to bind a room to the session that asked for it. If the variable disappears, a command invoked from a session cannot tell itself apart from one typed at a terminal, and the safe response -- refusing rather than guessing -- means `/team-create` and `/team-join` stop working. If it is present but reports a DIFFERENT id than the hooks report, the failure is worse and silent: the room binds to a session that does not exist, the real session binds to nothing, and capture stops with no error anywhere.
 
+### B22 — Injected hook output is positioned as data, not as the session's own instruction
+
+**Relied on for:** The whole defence against a hostile teammate turn. Room content is injected as hook stdout, and every word framing that content as data rather than instruction travels in the same blob as the content itself. Anthropic's guidance says instructions placed alongside untrusted content may be discounted, because a model is right to be sceptical of that position -- so if this attachment is treated as tool-result-like, our framing is discounted with the payload it frames. Measured to hold on 2.1.275: a session given a turn claiming SYSTEM OVERRIDE quoted it, named it an injection attempt, refused it, and told its user, including refusing the instruction not to mention it. If that stops holding, the room becomes a channel for one peer to steer another's session, and nothing in the protocol would show it.
+
 ## Tier: compaction
 
 ### B13 — PreCompact fires and reports its trigger

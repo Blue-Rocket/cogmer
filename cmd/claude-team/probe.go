@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // Probe holds everything one preflight run captured, for the registry to assert
@@ -181,8 +182,17 @@ func RunProbe(deep bool) (*Probe, error) {
 	p := &Probe{Dir: dir, Sentinel: sentinel(), Hooks: map[string][]map[string]any{}}
 	p.SessionID = uuidV4()
 
-	inject := fmt.Sprintf("<team-conversation>\n<message speaker=%q>\nThe codeword for this check is %s.\n</message>\n</team-conversation>",
-		"Alice", p.Sentinel)
+	// The block the probe injects is the block the daemon injects, built by the
+	// same function. A check that measured a hand-written approximation would
+	// verify a format nothing ships (B22): the framing and the JSON encoding ARE
+	// the defence, so they are what has to reach the model.
+	inject := FormatTeamContext([]Event{{
+		PeerID:          "ed25519:probe",
+		UserDisplayName: "Alice",
+		EventType:       EventUserPrompt,
+		Timestamp:       time.Now().UTC().Format(time.RFC3339),
+		Content:         fmt.Sprintf("The codeword for this check is %s.", p.Sentinel),
+	}}, func(string) bool { return true })
 	if err := os.WriteFile(filepath.Join(dir, "inject.txt"), []byte(inject), 0o600); err != nil {
 		return nil, err
 	}
