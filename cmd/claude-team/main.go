@@ -127,8 +127,8 @@ Rooms — per room, repeated as often as you like:
   claude-team join <room>     Make a room current, so new sessions join it
   claude-team leave           Leave the current room
   claude-team guests          List who may enter the current room
-  claude-team invite <peer>   Admit a known peer  (--room <name> outside a session)
-  claude-team revoke <peer>   Withdraw admission  (--room <name> outside a session)
+  claude-team invite <peer>   Admit a known peer   (inside the room's session)
+  claude-team revoke <peer>   Withdraw admission   (inside the room's session)
   claude-team doctor [--deep] Verify relied-on Claude Code behaviors
   claude-team behaviors       List those behaviors (--markdown to render docs)
 
@@ -670,41 +670,28 @@ func runCreateRoom() {
 // The pointer is the fallback for a terminal, where there is no session to ask.
 // That is all it was ever for; consulting it ahead of the session is what made it
 // look like a second answer to the same question.
-// takeRoomFlag pulls `--room <name>` out of a command's arguments and returns it
-// with the flag removed, so every command accepts it without each parsing it.
-func takeRoomFlag(args []string) (string, []string) {
-	for i, a := range args {
-		if a == "--room" && i+1 < len(args) {
-			return args[i+1], append(append([]string{}, args[:i]...), args[i+2:]...)
-		}
-		if name, ok := strings.CutPrefix(a, "--room="); ok {
-			return name, append(append([]string{}, args[:i]...), args[i+1:]...)
-		}
-	}
-	return "", args
-}
-
-// roomToChange is the room for a command that alters who can see what.
+// roomToChange is the room for a command that alters who can see what, and it is
+// always the invoking session's room.
 //
-// It does not guess. `invite` grants access, and granting it in the wrong room
-// means a person reads a conversation nobody invited them to — which `revoke`
-// cannot undo, because it stops future reading and does not un-read. A stored
-// pointer set weeks ago and never shown to anybody is not a good enough answer to
-// a question with that consequence (D-078).
-func roomToChange(m *Membership, named string) Room {
-	if named != "" {
-		return findRoomOrExit(m, named)
+// Not "the room you name" — the room you are IN. §22 puts membership in a session,
+// so a room's guest list is its members' concern, and at a terminal there are no
+// members to be one of. Naming a room there would be reaching into a room that
+// belongs to a session you are not in, which is a different act from choosing
+// between rooms you are in (D-079).
+//
+// A `--room` flag was added first and was the wrong answer to the right question:
+// it made the choice explicit and left the standing unexamined.
+func roomToChange(m *Membership) Room {
+	sid := sessionID()
+	if sid == "" {
+		log.Fatal("this changes who can read a room, and only a session that is in one can do it.\n" +
+			"Run /room-invite or /room-revoke inside the Claude Code session that is in the room.")
 	}
-	if sid := sessionID(); sid != "" {
-		if r, ok := m.RoomForSession(sid); ok {
-			return r
-		}
+	r, ok := m.RoomForSession(sid)
+	if !ok {
 		log.Fatal("this session is not in a room. /room-create makes one, /room-join enters one")
 	}
-	log.Fatalf("name the room: this changes who can read it, so it will not guess.\n" +
-		"  claude-team <command> --room <name>\n" +
-		"`claude-team rooms` lists them. Run it from inside a session and it uses that session's room.")
-	return Room{}
+	return r
 }
 
 // roomToShow is the room for a command that only displays something.
@@ -712,24 +699,7 @@ func roomToChange(m *Membership, named string) Room {
 // This one may fall back, because being wrong is visible and harmless: you see a
 // room you did not mean, on your own screen, and every such command names the room
 // it is showing.
-func roomToShow(m *Membership, named string) Room {
-	if named != "" {
-		return findRoomOrExit(m, named)
-	}
-	return currentRoom(m)
-}
-
-func findRoomOrExit(m *Membership, name string) Room {
-	r, err := m.FindRoom(name)
-	if err == nil {
-		return r
-	}
-	if errors.Is(err, errNoSuchRoom) {
-		log.Fatalf("no room named %q; `claude-team rooms` lists them", name)
-	}
-	log.Fatal(err)
-	return Room{}
-}
+func roomToShow(m *Membership) Room { return currentRoom(m) }
 
 func currentRoom(m *Membership) Room {
 	// CLAUDE_TEAM_ROOM is deliberately NOT consulted here, and used to be consulted
@@ -868,7 +838,7 @@ func runLeave() {
 
 func runGuests() {
 	withMembership(func(m *Membership, id *Identity) {
-		r := roomToShow(m, "")
+		r := roomToShow(m)
 		g, err := m.Guests(r.RoomID)
 		if err != nil {
 			log.Fatalf("guests: %v", err)
@@ -885,12 +855,11 @@ func runGuests() {
 }
 
 func runInvite(args []string) {
-	named, args := takeRoomFlag(args)
 	if len(args) == 0 {
-		log.Fatal("usage: claude-team invite <peer> [--room <name>]")
+		log.Fatal("usage: claude-team invite <peer>   (from inside the session that is in the room)")
 	}
 	withMembership(func(m *Membership, self *Identity) {
-		r := roomToChange(m, named)
+		r := roomToChange(m)
 		pid, err := resolvePeer(m, args[0])
 		if err != nil {
 			log.Fatal(err)
@@ -918,12 +887,11 @@ func runInvite(args []string) {
 }
 
 func runRevoke(args []string) {
-	named, args := takeRoomFlag(args)
 	if len(args) == 0 {
-		log.Fatal("usage: claude-team revoke <peer> [--room <name>]")
+		log.Fatal("usage: claude-team revoke <peer>   (from inside the session that is in the room)")
 	}
 	withMembership(func(m *Membership, _ *Identity) {
-		r := roomToChange(m, named)
+		r := roomToChange(m)
 		pid, err := resolvePeer(m, args[0])
 		if err != nil {
 			log.Fatal(err)

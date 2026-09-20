@@ -763,30 +763,37 @@ func TestNoAmbientRoomOverride(t *testing.T) {
 	}
 }
 
-// A command that changes who can read a room does not guess which room.
+// Standing, not choice. A room's guest list is its members' concern, and §22 puts
+// membership in a session — so a terminal has no room to admit anybody to, and
+// naming one would be reaching into a room that belongs to a session you are not
+// in (D-079).
 //
-// invite grants access, and granting it in the wrong room means somebody reads a
-// conversation nobody invited them to — which revoke cannot undo, because it stops
-// future reading and does not un-read. A command that only displays something may
-// guess, because being wrong is visible on your own screen and costs nothing
-// (D-078).
-func TestTheRoomFlagIsParsedAnywhereInTheArguments(t *testing.T) {
-	for _, c := range []struct {
-		in   []string
-		room string
-		rest string
-	}{
-		{[]string{"alice"}, "", "alice"},
-		{[]string{"alice", "--room", "misty-canyon"}, "misty-canyon", "alice"},
-		{[]string{"--room", "misty-canyon", "alice"}, "misty-canyon", "alice"},
-		{[]string{"--room=misty-canyon", "alice"}, "misty-canyon", "alice"},
-		// A trailing --room with nothing after it is not a room name, and must not
-		// silently consume the peer.
-		{[]string{"alice", "--room"}, "", "alice --room"},
-	} {
-		room, rest := takeRoomFlag(c.in)
-		if room != c.room || strings.Join(rest, " ") != c.rest {
-			t.Errorf("%v gave room=%q rest=%v; want room=%q rest=%q", c.in, room, rest, c.room, c.rest)
-		}
+// roomToChange exits rather than returning an error, so the rule is asserted on
+// what it depends on: a session id, and that session being in a room.
+func TestOnlyASessionInTheRoomCanChangeIt(t *testing.T) {
+	m := testMembership(t)
+	self := testIdentity(t)
+	room, err := m.CreateRoom(self.PeerID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := m.SetCurrentRoom(room.RoomID); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.BindSession("in-the-room", room.RoomID); err != nil {
+		t.Fatal(err)
+	}
+
+	// The session that is in it has standing.
+	if got, ok := m.RoomForSession("in-the-room"); !ok || got.RoomID != room.RoomID {
+		t.Fatalf("the room's own session cannot resolve it: %+v", got)
+	}
+	// A session that is not in it has none, and the pointer must not lend it any.
+	if got, ok := m.RoomForSession("elsewhere"); ok {
+		t.Errorf("a session in no room resolved to %s", got.RoomName)
+	}
+	// The pointer still answers for read-only commands, which is all it is for.
+	if cur, ok := m.CurrentRoom(); !ok || cur.RoomID != room.RoomID {
+		t.Error("the read-only fallback stopped working")
 	}
 }
