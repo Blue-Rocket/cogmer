@@ -197,6 +197,23 @@ func migrateMembership(db *sql.DB) error {
 
 func (m *Membership) Close() error { return m.db.Close() }
 
+// NameTakenError is a name already held by a different key.
+//
+// It is the only place a key change can surface. A peerId IS a key (D-042), so
+// "the same person with a new key" is not expressible — to this machine it is
+// simply a peer it has never seen. The one moment the two can be connected is
+// when somebody records the new key under a name they already use, and that is
+// what this catches (D-074).
+type NameTakenError struct {
+	Name     string
+	Existing string // the key already known by that name
+	Offered  string // the key being recorded
+}
+
+func (e *NameTakenError) Error() string {
+	return fmt.Sprintf("you already know a different key as %q", e.Name)
+}
+
 // Allow records a peer this machine knows. The identifier is a public key, so
 // receiving one requires no confidentiality and creates no exposure (§25).
 // SetPeerEndpoint records where a peer was last known to listen. It is a hint and
@@ -235,7 +252,18 @@ func (m *Membership) Allow(peerID, name string) error {
 	if name == "" {
 		name = PeerName(peerID)
 	}
-	_, err := m.db.Exec(`
+	// A name must mean one key. Without this, recording a substituted key under a
+	// colleague's name produced a second row and nothing said so — and `invite
+	// alice` would then admit whichever came back first, which is the failure the
+	// whole verification apparatus exists to prevent (D-074).
+	var existing string
+	err := m.db.QueryRow(`SELECT peer_id FROM known_peers WHERE name = ? AND peer_id <> ?`,
+		name, peerID).Scan(&existing)
+	if err == nil {
+		return &NameTakenError{Name: name, Existing: existing, Offered: peerID}
+	}
+
+	_, err = m.db.Exec(`
 		INSERT INTO known_peers (peer_id, name, added_at) VALUES (?,?,?)
 		ON CONFLICT(peer_id) DO UPDATE SET name = excluded.name`,
 		peerID, name, time.Now().UTC().Format(time.RFC3339))

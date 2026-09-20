@@ -465,6 +465,29 @@ func runLog() {
 // routine, and it is invisible unless asked for.
 // resolvePeer accepts an identifier or a name this machine already knows, so a
 // person need not paste a key to refer to a colleague they have met.
+// resolvePeer turns what a person typed into a key.
+//
+// It refuses an ambiguous name rather than choosing. Recording two keys under one
+// name is now prevented (D-074), but a database written before that could hold
+// one, and picking between them would admit a peer nobody named.
+// explainNameTaken says what a name collision means, because it is the one place a
+// key change can surface and it looks like a naming mistake.
+func explainNameTaken(err error) {
+	var taken *NameTakenError
+	if !errors.As(err, &taken) {
+		return
+	}
+	fmt.Printf("\nYou already know a different key as %q.\n\n", taken.Name)
+	fmt.Printf("  already known:  %s\n", taken.Existing)
+	fmt.Printf("  offered now:    %s\n\n", taken.Offered)
+	fmt.Println("If you expected these to be the same person, their key has changed — and a")
+	fmt.Println("changed key is indistinguishable from somebody else's key sent in their name.")
+	fmt.Println("That is what an interception looks like after the fact, so check with them on")
+	fmt.Println("a call before recording it.")
+	fmt.Println("\nIf they really do have a new key, `claude-team forget` the old one first.")
+	fmt.Printf("That discards its admissions too, so you will invite them again deliberately.\n\n")
+}
+
 func resolvePeer(m *Membership, arg string) (string, error) {
 	if _, err := PublicFromPeerID(arg); err == nil {
 		return arg, nil
@@ -473,12 +496,27 @@ func resolvePeer(m *Membership, arg string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	var matches []string
 	for _, p := range known {
 		if p.Name == arg || PeerName(p.PeerID) == arg {
-			return p.PeerID, nil
+			matches = append(matches, p.PeerID)
 		}
 	}
-	return "", fmt.Errorf("no peer known as %q; pass its identifier, or run `claude-team peers`", arg)
+	switch len(matches) {
+	case 1:
+		return matches[0], nil
+	case 0:
+		return "", fmt.Errorf("no peer known as %q; pass its identifier, or run `claude-team peers`", arg)
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "%q names %d different keys, so it names nobody. Say which:", arg, len(matches))
+	for _, k := range matches {
+		fmt.Fprintf(&b, "\n  %s", k)
+	}
+	b.WriteString("\n\nTwo keys under one name is what a substituted key looks like once it has been")
+	b.WriteString("\nrecorded. If you did not knowingly record both, ask the person which is theirs")
+	b.WriteString("\nover a channel you can recognise them on, and `claude-team forget` the other.")
+	return "", errors.New(b.String())
 }
 
 func withMembership(fn func(*Membership, *Identity)) {
@@ -525,6 +563,7 @@ func runAllow(args []string) {
 	}
 	withMembership(func(m *Membership, _ *Identity) {
 		if err := m.Allow(args[0], name); err != nil {
+			explainNameTaken(err)
 			log.Fatalf("allow: %v", err)
 		}
 		fmt.Printf("recorded %s as %s — UNVERIFIED.\n", PeerName(args[0]), firstNonEmpty(name, PeerName(args[0])))
@@ -944,6 +983,7 @@ func runPair(args []string) {
 	var mine string
 	withMembership(func(m *Membership, id *Identity) {
 		if err := m.Allow(peerID, name); err != nil {
+			explainNameTaken(err)
 			log.Fatalf("pair: %v", err)
 		}
 		if err := m.SetPeerEndpoint(peerID, endpoint); err != nil {

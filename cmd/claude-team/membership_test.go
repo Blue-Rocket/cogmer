@@ -643,3 +643,44 @@ func TestForgettingIsNarrow(t *testing.T) {
 		t.Error("forgetting a peer removed the room's own creator")
 	}
 }
+
+// A peerId IS a key (D-042), so "the same person with a new key" is not
+// expressible — to this machine it is a peer it has never seen. The one moment the
+// two can be connected is when somebody records the new key under a name they
+// already use, which is exactly what a substitution looks like from the host's
+// side (D-074).
+func TestANameMeansOneKey(t *testing.T) {
+	m := testMembership(t)
+	alice, impostor := testIdentity(t), testIdentity(t)
+
+	if err := m.Allow(alice.PeerID, "alice"); err != nil {
+		t.Fatal(err)
+	}
+
+	err := m.Allow(impostor.PeerID, "alice")
+	var taken *NameTakenError
+	if !errors.As(err, &taken) {
+		t.Fatalf("a second key was recorded under a name already in use: %v", err)
+	}
+	// Both keys, because the explanation has to show what changed.
+	if taken.Existing != alice.PeerID || taken.Offered != impostor.PeerID {
+		t.Errorf("the error does not carry both keys: %+v", taken)
+	}
+	// And nothing was written.
+	if m.Knows(impostor.PeerID) {
+		t.Error("the refused key was recorded anyway")
+	}
+
+	// Renaming the peer already known is not a collision with itself.
+	if err := m.Allow(alice.PeerID, "alice"); err != nil {
+		t.Errorf("re-recording the same peer under its own name failed: %v", err)
+	}
+	// And forgetting frees the name, which is the documented way to accept a
+	// genuinely new key.
+	if err := m.Forget(alice.PeerID); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Allow(impostor.PeerID, "alice"); err != nil {
+		t.Errorf("the name was not freed by forgetting: %v", err)
+	}
+}
