@@ -1,29 +1,34 @@
 ---
-description: Your pairing string, and how to pair (done in a terminal)
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" whoami:*)
+description: Pair with a colleague — shows your string, or starts the two-word check
+argument-hint: [their pairing string]
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" pair:*)
 ---
 
-## This session's pairing string
+## What happened
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" whoami`
+!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" pair $ARGUMENTS`
 
 ## Your task
 
-Pairing cannot be done from here, and this command does not attempt it. Tell the
-user to run it in a terminal, on a call with their colleague, **at the same time as
-each other**:
+This command does one of two things and the output says which.
 
-```
-claude-team pair <their pairing string>
-```
+**If it printed a pairing string**, they ran it with nothing. Give them the string
+exactly as it appears, and say it is safe to send by any means — it is a public key
+and an address, and holding it admits nobody. Say what comes back: their colleague
+sends one too, and `/peer-pair <that string>` is the next step.
 
-Both of them will see two words. They say them aloud and confirm they match. Explain
-why it must be a call rather than a message: the check is that the voice is the
-colleague, and a second written channel proves nothing that the first did not.
+**If it says a page was opened**, the two-word check is now in their browser. Say so
+in one line and stop — the instructions are on the page and repeating them here just
+competes with it. The one thing worth adding: their colleague has to do this at the
+same time, on a call, so if they have not called them yet that is the next move.
 
-Give them the pairing string from the output above to send to their colleague. It is
-safe to send by any means — it is a public key and an address, and holding it admits
-nobody.
+Do not tell them to open a terminal. Pairing happens in the browser, and the command
+above already did the terminal part.
 
-If the output warns that the address is loopback, say that their colleague cannot
-reach them until that is changed.
+**If it says the daemon is not answering, or fell back to the terminal**, relay that
+plainly. A fallback is not a failure — it is what happens on a machine with no
+browser — but they need to know the words will appear in their terminal instead.
+
+Never summarise, invent, or repeat two words yourself. The comparison is between two
+people on a call; anything that looks like it came from you undermines the only check
+that makes it mean anything.

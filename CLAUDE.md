@@ -73,6 +73,49 @@ presentation is best effort. A view *outside* the session is fine — it is a se
 program, not a change to how Claude Code starts. For ambient awareness prefer an OS
 notification from the daemon: no Claude Code involvement, nothing to break.
 
+## Pairing happens in the view, not at a terminal (D-088)
+
+The two-word ceremony (D-055) is **unchanged** — live exchange, aloud, on a call,
+both at once, no fallback. Only the surface moved. A terminal was never the
+ceremony; it was the one thing available that was not the model, and the view is the
+other one.
+
+**Every pairing gets its own URL.** Not tidiness: a page from an earlier attempt must
+never quietly become a different pairing, because the whole property is that the
+person knows which key they vouched for. It is also what makes a second pairing
+visible instead of rewriting a tab nobody is watching.
+
+The page names a *pairing*, never a peer — `/verify/*` take a `pairId` the daemon
+resolves — so a page cannot start an exchange for an identifier of its choosing.
+
+The 90-second window starts when somebody presses Start, not when the tab loads.
+Spending it on however long two people take to get on a call is spending it on the
+exact thing it exists to bound.
+
+The terminal path is **not legacy**: it is the automatic fallback where no browser
+can be opened, which is why `openInBrowser` returns an error instead of failing
+quietly.
+
+## The local API is not reachable from a web page (D-087)
+
+Loopback keeps other machines out. It does nothing about a page in *this* machine's
+browser, which reaches `127.0.0.1` like any other address — and the local API can
+mark a peer verified (D-054's gate) and publish into a room. A page on another local
+port did exactly that, with one POST, before this existed.
+
+State-changing routes require `X-Claude-Team: 1`, which a browser cannot send to
+another origin without a preflight we never answer. The rule is **require, not
+refuse**: that is what makes it fail closed, and why it needs no argument about which
+headers a browser can be made to omit. `Origin` is a second layer, not the check.
+
+`Referer` was tested and is useless here — a page suppresses its own with one `<meta>`
+tag, and we must allow absent because the CLI and hooks send none. A server redirect
+does not launder it either. **Do not add either back.**
+
+Reads (`/healthz`, `/events`, `/stream`, the page) are deliberately unguarded: CORS
+already withholds their responses from a cross-origin script, and guarding them would
+break the view.
+
 ## Rooms are session-scoped (D-015)
 
 A room is a set of linked Claude Code sessions, entered by invitation, closed when
@@ -136,7 +179,8 @@ with identical event ordering — see `docs/phase2-experiment.md`, which is also
 
 Not built: plugin packaging (D-041), local network discovery (D-019's
 zero-configuration path), and detection of a lost room database (review C-1, Phase 7).
-The `claude-team` binary is tracked in git and re-commits on every build.
+The `claude-team` binary is **not** tracked — `bin/` is ignored, because it is 17MB
+per commit and `go build` reproduces it.
 
 ## Before proposing a change to how any of this works
 

@@ -29,12 +29,21 @@ root="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 home_dir="${CLAUDE_TEAM_HOME:-$HOME/.claude-team}"
 bin_dir="$home_dir/bin"
 target="$bin_dir/claude-team"
-log="$home_dir/install.log"
 lock="$home_dir/.install.lock"
 cooldown_seconds=3600
 
-mkdir -p "$bin_dir" 2>/dev/null || exit 0
-say() { printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >> "$log" 2>/dev/null; }
+# Delegates to the shared logger, which creates the directory first -- otherwise
+# the message reporting that a directory could not be made would itself need that
+# directory to exist.
+say() { ct_say install.log "$*"; }
+
+# Defined BEFORE this, so that failing to create the install directory is not the
+# one step that exits without saying anything. It is load-bearing -- nothing is
+# installed without it -- and it used to be the quietest line in the file (D-084).
+if ! mkdir -p "$bin_dir" 2>/dev/null; then
+  say "cannot create $bin_dir; nothing can be installed"
+  exit 0
+fi
 
 want="$(cat "$root/VERSION" 2>/dev/null || echo unknown)"
 

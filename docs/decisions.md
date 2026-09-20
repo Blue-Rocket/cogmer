@@ -4033,3 +4033,447 @@ not be falsifiable from outside.
 call per injection, and a remote event causing inference in an interactive session is
 what §3.7 forbids. A separate run is the deliberately undecided area, and either way
 it would spend the user's own quota on every teammate turn.
+
+## D-082 — The daemon can reach a person directly; there is no setsid hazard
+
+**Date:** 2026-09-20 · **Status:** active (measured; supersedes an earlier false finding)
+
+**Context.** Discovery of the browser view was blocked on a question nobody had
+answered: how a first-time user, who cannot be told a loopback address, ever arrives
+at it. Two candidate channels were investigated — writing to the terminal directly,
+and OS notifications — along with auto-opening the view.
+
+**Auto-open works, and takes focus.** A process started the way the session-start
+hook starts the daemon (`nohup … &`, no controlling terminal) can call `open` and the
+browser becomes frontmost. Measured end to end: a detached, daemon-shaped process
+that waits six seconds and then opens the view brought Chrome to the front and opened
+the tab. This is the mechanism discovery now rests on, and it is recorded as **B23**.
+
+**An earlier finding said the opposite, and was wrong.** A test reported that a
+detached `open` never took focus, and it was attributed to macOS focus-stealing
+prevention. The test ran `setsid nohup open …`, and **macOS ships no `setsid`** —
+`command -v setsid` returns 1, there is no binary anywhere. The command failed, its
+error went to `/dev/null`, and `&` backgrounded the failure. Nothing was ever
+launched. The browser did not open a background tab; it did not open at all.
+
+**So the setsid branch in `start_daemon_if_needed` is not a hazard.** It was briefly
+believed to be one — that a machine with Homebrew's `util-linux` on PATH would flip
+the branch and silently strand the daemon outside the GUI session. That was tested
+directly, using Go's `SysProcAttr{Setsid: true}`, which performs the real `setsid(2)`
+on darwin even though the binary is absent:
+
+| | POSIX session inherited | new POSIX session |
+|---|---|---|
+| `launchctl managername` | `Aqua` | `Aqua` |
+| `open <url>` | opens, takes focus | opens, takes focus |
+
+The Mach bootstrap namespace is inherited separately from the POSIX session, so
+detaching costs nothing. **No code change was made**, and a comment now records why,
+because the wrong inference is an easy one to repeat.
+
+**Terminal writes: possible, rejected.** A hook cannot inherit a tty — `/dev/tty` is
+`ENXIO` inside a tool call — but it can walk its parent chain to the `claude` process
+and read the tty from `ps`, and the daemon can then write to `/dev/ttysNNN`. Only OSC
+sequences are safe, since they set terminal chrome rather than grid cells. Rejected
+anyway on three counts: the title is contended with Claude Code, which overwrites it;
+a `write(2)` can splice into the middle of a sequence Claude Code is emitting, because
+a tty offers no `PIPE_BUF` atomicity guarantee, so the failure mode is intermittent
+corruption of somebody's live working session; and nothing there can carry something
+clickable. A channel that can only say "something happened" is not worth that risk.
+
+**Notifications: kept, with a stated limit.** `osascript -e 'display notification'`
+delivers reliably and persists in Notification Center — a banner missed at the time
+was found there afterwards. But it posts under Script Editor's identity, and clicking
+it does nothing. More importantly the delivery is **unobservable**: the notification
+database is unreadable and the Focus state is TCC-protected, so the daemon cannot
+learn whether a notification was shown, suppressed, or dismissed unseen. Against
+D-014 that settles its role — fit for announcing, unfit for anything that must be
+known to have landed.
+
+**Not adopted: an `.app` bundle.** It was built and tested. It would buy a proper
+notification identity, a click that opens the view, and a Spotlight-findable icon.
+None of that is needed once plain `open` is known to work, and a bundle would have to
+be created at install time and registered with LaunchServices. Revisit if a
+notification ever needs to be clickable, or if macOS withholds focus from background
+processes — which is exactly what B23 watches for.
+
+**Revisit when:** B23 fails, or a notification needs to carry an action.
+
+## D-083 — The view is opened at a first pairing, not at room creation
+
+**Date:** 2026-09-20 · **Status:** active (sequencing decision; not yet implemented)
+
+**Context.** With auto-open shown to work (D-082), the remaining question was *when*
+to spend it. The obvious answer was the first `create` or `join` — the moment a room
+first exists and therefore first has something to show.
+
+**That is the wrong moment, because it is not the first one.** Pairing precedes room
+formation in the user's experience, and it precedes it by design: D-053 separates the
+two scopes, pairing happens once with a colleague and outlasts every room, and D-054
+makes verification a **gate** — an unverified peer is refused sync before any room
+content moves at all. A person therefore meets this system at pairing, not at a room.
+Opening the view at room creation would leave the very first unfamiliar step — a
+two-word comparison read aloud on a call (D-055) — happening with nothing on screen,
+and would then open a window for the second step, which is the more familiar one.
+
+**So the first open belongs at the first pairing.** It is also the step that most
+needs a surface: the two words have to be read by both people at once, and a terminal
+is the wrong place to put something a non-developer must find and compare under time
+pressure.
+
+**Not settled here:** whether pairing and verification are *driven* from the view or
+merely displayed in it, and whether an open recurs on later pairings or happens only
+once ever. Both were raised and neither is answered; do not build either on
+speculation.
+
+**Revisit when:** the pairing ceremony gets a surface, or D-055's ceremony changes.
+
+## D-084 — Silent to the developer is not silent to the log
+
+**Date:** 2026-09-20 · **Status:** active (implemented)
+
+**Context.** A test reported that a detached `open` never brought a browser forward,
+and the conclusion stood for an hour before it turned out that macOS ships no
+`setsid` — the command had never run. Asked why detection took so long, and whether
+logging practice should change.
+
+**Four things stacked, and each alone was survivable.** The error was discarded at
+source: `setsid nohup open … >/dev/null 2>&1 &` closes both channels that would have
+said the command did not exist — stderr to `/dev/null`, exit status to the
+background. The observable was **negative**: "is the browser frontmost" cannot
+distinguish *ran and did not focus* from *never ran*. A plausible mechanism was
+available — macOS focus-stealing prevention is real and fit the data — so having an
+explanation is what ended the inquiry. And the code taught the wrong thing:
+`if command -v setsid` reads as "setsid is the preferred path" when it encodes "we do
+not know whether this exists."
+
+What broke it was a **positive** observable — counting browser tabs. Zero tabs is not
+explicable by a focus theory. One measurement the prevailing story could not
+accommodate did what five consistent ones could not.
+
+**§3.1 requires silence toward the developer, not toward the log,** and the code had
+been conflating the two. `install.sh` kept a record of its decisions; `common.sh` and
+`session-start.sh` kept none, so the four load-bearing choices in
+`start_daemon_if_needed` — which binary won the search, whether the daemon answered,
+which detach branch ran, whether a child started — were decided and recorded nowhere.
+"The daemon is not running" had no next question.
+
+**The rule adopted: redirect to the log by default; use `/dev/null` only when you can
+say what the discarded output would have said.** Output that is *noise by
+construction* may be dropped — an exit status is all that is wanted, stdin is being
+drained, a `mkdir` whose failure the next line catches. Output that is merely
+*usually empty* must not be, and that distinction is the whole lesson: the setsid
+line was usually empty, which is exactly why the one time it had something to say it
+looked normal.
+
+**Never to stdout, in any of this.** A hook's stdout is injected into the user's
+turn, so a stray line there does not produce a worse message, it corrupts a prompt.
+`json_safe` was added for the same reason: details assembled from error text reach a
+JSON string literal, and an unescaped quote makes a hook emit malformed JSON.
+
+**What changed.** A shared `ct_say`; the four decisions above recorded; "curl said no"
+separated from "there is no curl", which were the same answer and start a daemon on
+every session; `install.sh` output to `install.log` rather than `/dev/null`, since its
+own logger cannot record what goes wrong before it is defined; and its `mkdir`
+failure — the quietest line in the file, and a load-bearing one — made audible.
+
+**A busy port is two different events and now says which.** `net.Listen` failing was
+`log.Fatalf` for both. Several sessions starting at once race to start a daemon and
+exactly one wins: that is the ordinary outcome (§29), and it now exits quietly after
+confirming via `/healthz` that the holder is one of ours. Anything else holding the
+port is a real fault, and it now writes `daemon-state`, which the session-start hook
+relays to the model — the same mechanism D-075 built for a half-finished install, and
+the only route from a detached daemon to a person (D-033, D-036).
+
+**Revisit when:** the logs grow enough to be worth rotating, or a failure is found
+that none of these three channels — daemon.log, install.log, the state files —
+would have caught.
+
+## D-085 — A line telling somebody to run `claude-team` is a line that fails
+
+**Date:** 2026-09-20 · **Status:** active (implemented)
+
+**Context.** Reviewing documentation for the assumption that every user is a
+developer. The tone was the smaller problem.
+
+**The instructions did not work.** `/peer-pair` told people to run
+`claude-team pair <string>` in a terminal; `/room-join` told them to run
+`claude-team verify`. The installer puts the binary in `~/.claude-team/bin`, which is
+deliberately not on PATH — §29 forbids editing a shell profile to put it there, and
+`cli.sh` exists precisely because slash commands hit this. So those lines produce
+`command not found` for **every plugin-installed user**: not an edge case, but the
+default install, and the people least equipped to diagnose it.
+
+**The binary prints its own invocation.** `invocation()` resolves `os.Executable()`,
+spells `$HOME` as `~`, and is used wherever a person is told to go and type
+something. A path the binary reports about itself cannot go stale, and it is
+correct for a from-source install and a plugin install alike.
+
+**The command docs now relay rather than restate.** They are told explicitly not to
+shorten it, and `/peer-pair` walks through opening a terminal, pasting, and pressing
+return — because somebody being asked to compare two spoken words with a colleague
+may never have opened one.
+
+**Not done: making pairing work from a slash command.** It was raised, and it needs
+the view to have somewhere to show the words. That belongs with D-083, not here.
+
+**Revisit when:** the install location changes, or pairing gains a surface that is
+not a terminal.
+
+## D-086 — The terminal is not a user experience; the view is the surface
+
+**Date:** 2026-09-20 · **Status:** active (direction; amends D-080, does not alter D-055)
+
+**Context.** Stated intent to stop treating "run it in a terminal" as a valid thing
+to ask a user to do. Claude Code is the first host; Claude CoWork is wanted as a fast
+follow.
+
+**What actually depends on a terminal today: one bit.** Every room-scoped and
+peer-scoped operation already has a slash command. `pair` and `verify` are the sole
+exceptions, and the dependency is a single `fmt.Scanln` — the y/N answer to "did they
+say the same two words?". The ceremony itself is already daemon-side and already
+spoken over HTTP: `/verify/start` returns the words, `/verify/confirm` records the
+answer, and the CLI is nothing but a client of those two endpoints.
+
+So moving off the terminal is a **user-interface change, not an architectural one**.
+There is no protocol to redesign and no logic to relocate.
+
+**D-080's first reason is amended, not withdrawn.** It held that `pair` and `verify`
+"cannot pass through a model" — interactive, blocking on another person, and the
+words must reach a person's eyes unaltered. That is still true and still important.
+What no longer follows is the conclusion that they must therefore be typed at a
+terminal: *not passing through a model* and *being a terminal* are different
+properties, and the browser view has the first without the second. D-080 could not
+see that option because discovery was unsettled; D-082 settled it, and D-083 already
+placed the first opening of the view at a first pairing. The three now agree.
+
+**D-055 is untouched.** Two words, derived from a live commit/reveal exchange,
+compared aloud on a call, by both people at once, with no fallback. Moving the
+display from a terminal to a view changes the surface and nothing about the
+ceremony. A view that offered a way to skip the call would violate D-055 no matter
+how convenient; the gate is only as strong as the weakest ceremony that satisfies it.
+
+**D-043 still holds: no adapter machinery, and naming a second host does not change
+that.** CoWork is wanted, not present. Its extension model is not something to design
+against on assumption. The argument in D-043 was that capture generalises and
+injection does not, and that every hard problem so far has been host-specific — none
+of which a second host being *anticipated* falsifies.
+
+**But this direction and that constraint point the same way.** The daemon and its
+view are host-independent by construction: they are a local service and a web page,
+not an extension of anything. Every piece of experience that lives there is a piece a
+second host does not have to reimplement, and it gets there without a `source` column,
+an adapter interface, or a speculative abstraction. Reducing what a second host must
+supply is the opposite of building for one. That is the cheapest possible preparation
+and it is justified on today's host alone.
+
+**What the terminal keeps** (D-080's other four reasons, all intact): diagnostics that
+must work when the plugin path is broken, the daemon's own lifecycle, machine-scope
+identity, and testing. None of those is a user experience, which is the point — they
+are an operator surface, and it is legitimate for an operator surface to be a CLI.
+
+**Interim state, deliberately not marked in the files.** `/peer-pair` currently walks
+a person through opening a terminal, and that is the truth today, so it stays correct
+until the view can take the ceremony. It is not annotated as provisional in
+`plugin/commands/peer-pair.md` because that file is a **prompt**, not documentation:
+meta-commentary about the roadmap would be read by the model as instruction. The
+record belongs here instead.
+
+**Next, and not yet built:** the pairing ceremony in the view, driven by the two
+endpoints that already exist. Open questions from D-083 remain open — whether later
+pairings re-open the view, and whether the view drives or merely displays.
+
+**Revisit when:** CoWork's extension model is known, or the view takes the ceremony
+and `verifyWith`'s `Scanln` stops being the only interactive path.
+
+## D-087 — The local API requires a header a web page cannot send
+
+**Date:** 2026-09-20 · **Status:** active (implemented and demonstrated)
+
+**Context.** D-086 makes the browser view the place people *do* things rather than
+only read them. Checking what that would expose found that no handler on the local
+HTTP server checked `r.Method` or `Origin` — not one.
+
+**It was exploitable, and was demonstrated rather than argued.** A page served from
+another port marked an unverified peer **verified** with a single POST: no ceremony,
+no two words, no call. Loopback binding keeps other machines out and does nothing
+about a page in this machine's browser, which reaches 127.0.0.1 like any address.
+`json.Decode` ignores `Content-Type`, so `text/plain` makes it a "simple request"
+that is sent without the browser asking permission first. The response is unreadable
+cross-origin — and irrelevant, because the side effect has already landed.
+
+That bypasses D-054, the gate every other guarantee depends on. `/hook/prompt` and
+`/hook/stop` are the same class and arguably worse: what is published there reaches
+teammates' context windows.
+
+**The rule is REQUIRE, not refuse.** A request must positively present
+`X-Claude-Team: 1`. A browser cannot send a custom header to another origin without
+a preflight, and we answer preflights with nothing, so the real request is never
+sent. Measured: the `OPTIONS` arrived carrying
+`Access-Control-Request-Headers: x-claude-team`, and **no POST followed**.
+
+Requiring presence is what makes it fail **closed**. The alternative first
+considered — refuse a mismatched `Origin` — is fail-open on absent, and would have
+needed a standing argument that no browser can ever produce a header-less
+cross-origin POST. Requiring a header needs no such argument: anything that cannot
+present it is refused, whatever it is. `Origin` is kept as a second layer because it
+costs three lines and fails the request earlier.
+
+**Rejected: `Referer`, and rejected on measurement.** Proposed as a way to require
+presence. A page suppresses its own referrer with one `<meta name="referrer">` tag —
+measured: `Referer` absent, `Origin` still present — and an absent `Referer` must be
+treated as allowed, because the CLI and hooks send none. The check would pass exactly
+when it needed to fail. In the realistic case it is worse: a hostile page is on
+`https://` and we are on `http://`, and the default `strict-origin-when-cross-origin`
+policy drops `Referer` on that downgrade without the attacker trying.
+
+**Rejected: a redirect to control the referrer.** Also measured. A 307 through our
+own origin left `Referer` as the attacker's page, because the referrer is the
+*initiating document* and survives the redirect. A **client-side** redirect would
+have worked — a document we serve that navigates onward does become the referrer —
+and that is sound. It was still not taken: `Referer` is a header third parties are
+entitled to strip. Our own view's `Referrer-Policy`, a privacy extension, or a
+corporate proxy would remove it from our **own** requests and break the view, with a
+failure that reads as a bug rather than a policy. Nothing strips a header it has
+never heard of.
+
+**Also fixed:** state-changing routes require POST, so no navigation or `<img src>`
+variant reaches a handler that reads a body.
+
+**Not guarded, deliberately:** `/healthz`, `/events`, `/stream`, and the page itself.
+These are reads, and a cross-origin page cannot read their responses — we send no
+CORS headers, so the browser withholds the response from the script. Guarding them
+would break the view, which fetches them as ordinary GETs.
+
+**What this does not defend against:** a malicious program running as this user. It
+can set any header, and could edit `membership.db` directly in any case. The threat
+closed here is a web page, which is the one the browser enforces a boundary for.
+
+**Revisit when:** the view stops being loopback-only, at which point a secret in the
+URL (D-077's per-room addresses are the natural carrier) replaces this rather than
+supplementing it.
+
+## D-088 — The pairing ceremony lives in the view, and every pairing gets its own URL
+
+**Date:** 2026-09-20 · **Status:** active (implemented and verified end to end)
+
+**Context.** D-086 established that the terminal is not a user experience and that
+the only thing still requiring one was a single `fmt.Scanln` — the y/N answer in
+`verifyWith`. D-087 gave the view an origin boundary, which was the prerequisite for
+letting it do anything rather than only show things.
+
+**D-055 is unchanged, and that is the point.** Two words, from a live commit/reveal
+exchange, compared aloud on a call, by both people at once, no fallback. What moved
+is the surface. A terminal was never the ceremony — it was the only thing available
+that was not the model (D-080), and the view is the other one.
+
+**Every pairing gets its own URL**, and this is load-bearing rather than tidy:
+
+- A pairing page is a live ceremony with a deadline, not a dashboard. Two must never
+  share a page, and a page left open from an earlier attempt must never quietly
+  become a different one — the entire security property is that the person knows
+  *which key* they are vouching for.
+- It is what makes a second pairing visible. A fixed address whose contents we
+  rewrote would, at best, change a tab nobody is looking at.
+
+The id is 128 random bits, because it is the capability: holding it is what lets a
+page start that exchange.
+
+**Measured, and it refined the premise.** `open` creates a **new tab every time**,
+even for an identical URL — tab count climbed 2→3→4→5 across repeated opens — and
+focus was taken in all six trials, same-URL and unique-URL alike. So in Chrome the
+silent-background-rewrite case does not arise from `open` itself. Unique URLs are
+still right: they do not depend on that behaviour, and the correctness argument above
+stands on its own.
+
+**The page names a pairing, never a peer.** `/verify/start` and `/verify/confirm`
+grew an optional `pairId`, and the daemon resolves it. So even a page that reached
+the endpoint could not begin an exchange for an arbitrary identifier, and an expired
+link fails as a link rather than silently starting something new.
+
+**The 90-second window starts when the person is ready, not when the tab loads.**
+The first build ran the exchange on load, which spends the deadline on however long
+it takes two people to get on a call — exactly the coordination the deadline exists
+to bound. The page now opens in a *ready* state with a Start button, and a timeout
+returns there rather than to an immediate retry.
+
+**The terminal path is kept, and is not legacy.** `--terminal` forces it, and it is
+also the automatic fallback when no browser can be opened — a machine reached over
+SSH, a container, a server. `openInBrowser` returns an error rather than failing
+quietly, precisely so the caller can choose that branch.
+
+**Verified end to end**, not only by unit test: two real daemons on one machine, a
+genuine commit/reveal between them, matching words rendered in both browser pages,
+and both sides recording `verified` only after a human clicked. Nothing was recorded
+before the click.
+
+**Also settled from D-083's open list:** later pairings do re-open the view, because
+each one is a new URL and therefore a new tab. Whether the view *drives* or merely
+*displays* is now answered — it drives, since the confirmation is the one bit that
+was keeping a terminal in the path.
+
+**Revisit when:** the ceremony gains a step that a page cannot host, or the view
+stops being loopback-only (which would make the pairing id a bearer token over a
+network rather than a local one).
+
+## D-089 — The reachability warning asked the wrong question, and fired always
+
+**Date:** 2026-09-20 · **Status:** active (implemented)
+
+**Context.** Asked whether a loopback address in a pairing string was simply "the
+daemon wasn't running", and whether enough was done to avoid it. Reading the code to
+answer found three defects, one of which made the existing warning worthless.
+
+**The warning tested the bind address, not the advertised one.**
+
+```go
+if isLoopback(peerAddr()) {          // the address this daemon BINDS
+```
+
+`peerAddr()` is `127.0.0.1:4783` by default and stays loopback even when tailcat has
+negotiated a perfectly routable `tc://` endpoint — which is the **ordinary** case,
+since tailcat is on unless switched off. So the warning fired on every pairing string
+ever printed, including all the working ones. Observed directly: `whoami` printing a
+`tc://` string with "nobody else can reach it" underneath it. A warning that is
+always on is not a warning; it trains somebody to ignore the real case.
+
+It now asks about `AdvertisedEndpoint()` and treats a negotiated tailcat endpoint as
+routable by construction.
+
+**It was attached to a command rather than to the string.** Three commands print a
+pairing string — `whoami`, `pair` with no arguments, and `peers` when empty — and
+only `whoami` warned. The check moved into `printPairingInvitation`, so it travels
+with the thing it is about.
+
+**The two causes need different answers, and got one.** "No daemon has ever run, so
+this address is a guess" is fixed by starting a session. "A daemon ran and negotiated
+no route out" is fixed by setting `CLAUDE_TEAM_PEER_ADDR`. Sending somebody to the
+second when the first is true wastes their time on a setting that is not the problem.
+`endpointRecorded()` distinguishes them.
+
+**A fallback that needed the thing that had just failed.** `beginCeremony` fell back
+to the terminal when `/pair/new` failed — but the terminal ceremony posts to
+`/verify/start`, so with the daemon down it failed too, one message later. Two
+failures reading as two problems. It now checks `daemonAlreadyServing` up front and
+says the one true thing. The terminal fallback remains for what it is actually for:
+a machine that cannot open a browser.
+
+**Found by a test, immediately:** `ParseEndpoint` accepts anything without a scheme
+as a TCP endpoint, and `isLoopback` answers `false` for what it cannot parse — so a
+malformed address read as "not loopback" and therefore as fine. A bare TCP endpoint
+must now parse as host and port.
+
+**Have we done everything to avoid a loopback endpoint?** Nearly. Tailcat is on by
+default and supplies a routable endpoint without configuration, which is why the
+false warning mattered so much — it was obscuring that the ordinary path works. What
+remains is the case where tailcat cannot negotiate: the string is then genuinely
+unusable and we now say so precisely.
+
+**Not taken: advertising the machine's LAN address as a fallback.** It is easy to
+detect and it is right only for peers on the same network — which D-019 names as the
+zero-configuration path and which is not built. Advertising an address that works for
+some colleagues and silently not others is worse than an address that visibly works
+for none. This belongs with local discovery, not ahead of it.
+
+**Revisit when:** local network discovery lands, or tailcat stops being on by
+default.

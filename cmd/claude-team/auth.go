@@ -145,7 +145,7 @@ func (d *Daemon) verifyRequest(req syncRequest, roomID string) error {
 	// actionable or the refusal looks like a fault.
 	if roomID != "" && !d.members.IsVerified(req.PeerID) {
 		return fmt.Errorf("%s is a guest but is UNVERIFIED — nothing has confirmed this key is theirs; "+
-			"both of you run `claude-team verify`", PeerName(req.PeerID))
+			"both of you run `"+invocation()+" verify`", PeerName(req.PeerID))
 	}
 	return nil
 }

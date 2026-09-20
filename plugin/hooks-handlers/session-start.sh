@@ -16,10 +16,17 @@
 # Obtain or update the binary, detached, so nothing here waits on a download.
 # It decides for itself whether there is anything to do, and does nothing in the
 # overwhelmingly common case where the right version is already installed.
+# Its output goes to the install log, not to /dev/null. install.sh keeps its own
+# record once it is running, but anything that goes wrong BEFORE that -- an
+# unreadable common.sh, a bash that cannot find the file -- used to disappear
+# completely, which is the same failure that cost an hour over a missing setsid
+# (D-084). Never to stdout: stdout here is injected into the user's turn.
+ct_install_log="${CLAUDE_TEAM_HOME:-$HOME/.claude-team}/install.log"
+mkdir -p "$(dirname "$ct_install_log")" 2>/dev/null
 if command -v setsid > /dev/null 2>&1; then
-  setsid nohup bash "$(dirname "$0")/install.sh" > /dev/null 2>&1 < /dev/null &
+  setsid nohup bash "$(dirname "$0")/install.sh" >> "$ct_install_log" 2>&1 < /dev/null &
 else
-  nohup bash "$(dirname "$0")/install.sh" > /dev/null 2>&1 < /dev/null &
+  nohup bash "$(dirname "$0")/install.sh" >> "$ct_install_log" 2>&1 < /dev/null &
 fi
 disown 2>/dev/null
 
@@ -59,7 +66,19 @@ if ! claude_team_binary > /dev/null 2>&1; then
     stalled)    note="A claude-team install started ${age}s ago and did not finish. Starting a new session will try again." ;;
     *)          note="claude-team is installed as a plugin but its binary has not been fetched yet. It is fetched in the background when a session starts." ;;
   esac
-  printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s Do not speculate about other causes; this is the reason."}}\n' "$note"
+  printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s Do not speculate about other causes; this is the reason."}}\n' "$(json_safe "$note")"
+fi
+
+# A daemon that could not bind reports why, because nothing else will.
+#
+# Only stated when the daemon is genuinely not answering: the mark is cleared when
+# a daemon next serves successfully, but a machine that never ran one again would
+# otherwise keep repeating a fault that has since been fixed by hand.
+read -r dstate dage ddetail <<< "$(daemon_state)"
+if [ "$dstate" = blocked ] \
+   && ! curl -s -m 1 "http://${CLAUDE_TEAM_ADDR:-127.0.0.1:4782}/healthz" > /dev/null 2>&1; then
+  printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"claude-team is installed but its daemon could not start %ss ago: %s. Nothing is being captured or shared in any room until that address is free. Do not speculate about other causes; this is the reason."}}\n' \
+    "$dage" "$(json_safe "$ddetail")"
 fi
 
 exit 0

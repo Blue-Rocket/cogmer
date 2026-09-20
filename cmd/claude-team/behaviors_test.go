@@ -178,3 +178,11 @@ func TestB22DetectsLostFraming(t *testing.T) {
 		t.Error("a block that never reached the model passed")
 	}
 }
+
+func TestB23DetectsLossOfGUISession(t *testing.T) {
+	// The regression is silent by construction: nothing reports it, so the only
+	// evidence is the session manager a detached process finds itself in.
+	mustDetect(t, "B23", &Probe{DetachedSessionManager: "Background"}, "the daemon losing the GUI session")
+	mustDetect(t, "B23", &Probe{DetachedSessionManager: "StandardIO"}, "the daemon running outside the login session")
+	mustPass(t, "B23", &Probe{DetachedSessionManager: "Aqua"})
+}

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -40,6 +41,12 @@ type Probe struct {
 	// call. It is how a command run from within a session learns which session it
 	// is in, and must equal SessionID.
 	ToolEnvSessionID string
+
+	// DetachedSessionManager is the GUI session manager a detached process
+	// reports -- "Aqua" on a logged-in macOS desktop. Empty means the question
+	// was not asked: another platform, or no launchctl. The check fills it in
+	// itself; it is settable so the check can be exercised against a regression.
+	DetachedSessionManager string
 
 	// compaction tier
 	PreCompactBytes      int64
@@ -353,4 +360,40 @@ func uuidV4() string {
 	b[6] = (b[6] & 0x0f) | 0x40
 	b[8] = (b[8] & 0x3f) | 0x80
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
+}
+
+// --- B23: whether the daemon can put anything in front of a person ---
+//
+// Everything a person ever sees of a room outside their own session is done by
+// the daemon: it opens the room view when a first pairing needs looking at, and
+// posts notifications after that. Claude Code cannot do either -- every
+// extension point it offers delivers to the MODEL (D-033, D-036).
+//
+// That rests on a background-launched process still belonging to the logged-in
+// GUI session. Measured on Darwin 25.6: it does. `launchctl managername` reports
+// Aqua, `open` reaches the window server, and the browser is brought to the
+// front. Placing the child in a NEW POSIX session changes none of it -- the Mach
+// bootstrap namespace is inherited separately from the POSIX session -- so a
+// plain child is a faithful stand-in, and this needs no syscall and no build tag.
+func measureDetachedSessionManager() string {
+	if runtime.GOOS != "darwin" {
+		return ""
+	}
+	out, err := exec.Command("launchctl", "managername").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
+
+// assertGUISession reports whether a process launched the way the daemon is can
+// still reach the window server. An unasked question is not a failure.
+func assertGUISession(manager string) error {
+	switch manager {
+	case "", "Aqua":
+		return nil
+	}
+	return fmt.Errorf("a detached process reports the %q session manager rather than \"Aqua\": "+
+		"the daemon can no longer open the room view or raise a notification, and nothing anywhere will say so",
+		manager)
 }

@@ -24,9 +24,13 @@ Offline and reconnection is verified across two machines — see
 done, including recovery from a lost room database. **Every numbered phase in §31 is
 now complete or deliberately dissolved.**
 
-Outstanding: plugin packaging, local network discovery, and a host approving an
-unsolicited join request (undecided rather than pending). A host approving an
-unsolicited join request is undecided rather than pending.
+Outstanding: local network discovery, and a host approving an unsolicited join
+request — the latter undecided rather than pending.
+
+**Blocked on the name.** The plugin is built and the install is one line by design
+(D-041), but a Go module path must match its repository URL, so until the name is
+settled there is no repository and nowhere for a colleague to install from. That is
+what stands between this and somebody else using it.
 
 Earlier findings that the design still rests on:
 [`docs/phase0-findings.md`](docs/phase0-findings.md) (integration spike, including
@@ -36,9 +40,24 @@ teammate context survives it, so the delivery watermark is unchanged).
 
 ## Getting two people talking
 
+Installed as a plugin, this is meant to be invisible: the session-start hook fetches
+the binary and starts the daemon, and nothing below needs doing by hand. That path
+is blocked on the name (see Status), so today it is built from source.
+
 ```sh
 go build -o bin/claude-team ./cmd/claude-team
 claude-team daemon                       # hooks and UI on 127.0.0.1:4782
+```
+
+**One thing to know before reading any command here.** A plugin install puts the
+binary in `~/.claude-team/bin`, which is deliberately not on PATH — §29 forbids
+editing a shell profile to put it there. So `claude-team pair` resolves only if you
+installed it yourself. Every command below is written short for readability; the
+binary prints its own path in the lines it asks you to type, and those are the ones
+to trust:
+
+```sh
+~/.claude-team/bin/claude-team whoami
 ```
 
 Register the hooks (`--settings` keeps this out of your real config):
@@ -53,22 +72,27 @@ Register the hooks (`--settings` keeps this out of your real config):
 Set `CLAUDE_TEAM_PEER_ADDR` to an address your colleague can reach — it defaults to
 loopback, so nobody can reach you until you do.
 
-**Pair, once, at a terminal, on a call with them.** Each of you runs `whoami` and
-sends the other the string it prints; then both run `pair` at the same time and
-compare two words out loud.
+**Pair, once, on a call with them.** Each of you sends the other your pairing
+string; then both run `/peer-pair` with the other's, at the same time. A page opens
+in each of your browsers showing two words, which you read to each other.
 
 ```sh
-claude-team whoami
-#   ed25519:M7Kd…4Fq2@198.51.100.7:4783
-
-claude-team pair ed25519:GoR7…IWPU@203.0.113.9:4783 david
-#         ribcage tambourine
-#   did they say the same two words? [y/N] y
+/peer-pair                                   # prints your string — send it to them
+/peer-pair ed25519:GoR7…IWPU@203.0.113.9:4783
+#   Opened the pairing page:
+#     http://127.0.0.1:4782/pair/mX_ky1Cyk1_TpgQjcTJHqA
 ```
 
-Nothing synchronizes until that says yes — verification is a gate, not a label.
-The words are worth understanding rather than clicking through: §25 explains why
-two of them are enough, and why a mismatch must never be retried.
+Every pairing gets its own address, so a second one opens a new tab rather than
+rewriting a page nobody is looking at — and a page from an earlier attempt can never
+quietly become a different pairing (D-088).
+
+Nothing synchronizes until both people confirm the words matched — verification is a
+gate, not a label. They are worth understanding rather than clicking through: §25
+explains why two words are enough, and why a mismatch must never be retried.
+
+On a machine with no browser — over SSH, in a container — the same ceremony happens
+in the terminal instead. `--terminal` forces it; otherwise it is automatic.
 
 **Then make a room and invite them.**
 
@@ -144,14 +168,15 @@ open ones are collected at the end.
 
 ## Why things are the way they are
 
-[`docs/decisions.md`](docs/decisions.md) — 81 decisions with the alternatives
+[`docs/decisions.md`](docs/decisions.md) — decisions numbered to D-089, with the alternatives
 rejected and why, each tied to the check that would invalidate it. Read it before
 proposing a simplification; some of the awkwardness is deliberate.
 
 ## Behavior checks
 
-This project depends on 22 **undocumented** Claude Code behaviors — how hooks
-report a turn, what the transcript contains, what compaction preserves. None are
+This project depends on 23 **undocumented** behaviors — how hooks report a turn,
+what the transcript contains, what compaction preserves, and whether a detached
+daemon can still put a window in front of a person. None are
 contractual, and several fail silently: the room keeps accepting events while
 recording the wrong thing.
 
@@ -160,7 +185,7 @@ from the registry in `cmd/claude-team/behaviors.go` so it cannot drift from what
 is actually checked.
 
 ```sh
-claude-team doctor          # 15 session checks, one Claude turn, ~5s
+claude-team doctor          # 16 checks, one Claude turn, ~5s
 claude-team doctor --deep   # adds 7 compaction checks, drives a real compaction, ~40s
 ```
 

@@ -19,6 +19,10 @@ starting a second session works, and that this one can still rejoin the room it 
 in. A one-line "cannot join" leaves them stuck with a rule and no route.
 
 If it says the inviting peer is unverified, say so plainly and say that **nothing
-will synchronize until both people run `claude-team verify` in a terminal, on a
-call with each other**. That is not a warning to soften: an unverified peer is
-refused, so the room will look empty and silent rather than broken.
+will synchronize until both people verify each other, in a terminal, on a call
+with each other**. That is not a warning to soften: an unverified peer is refused,
+so the room will look empty and silent rather than broken.
+
+Do not invent the command for that. `/peer-pair` prints it with the correct path
+filled in; point them there rather than writing `claude-team verify`, which will not
+resolve for anybody who installed this as a plugin.

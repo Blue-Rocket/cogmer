@@ -81,6 +81,9 @@ type Daemon struct {
 	verifying map[string]*verifySession
 	verifyMu  sync.Mutex
 
+	// Pairings awaiting their ceremony, one per opened page (D-088).
+	pairs pairRegistry
+
 	subs     map[chan struct{}]bool
 	subsMu   sync.Mutex
 	peerSeen map[string]*peerState
@@ -113,13 +116,23 @@ type stopReq struct {
 func (d *Daemon) LocalRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", d.health)
-	mux.HandleFunc("/hook/prompt", d.handlePrompt)
-	mux.HandleFunc("/hook/stop", d.handleStop)
+	// Guarded: these change state. /hook/* publishes into a room, which reaches
+	// teammates' context windows; /verify/* decides whose events are accepted at
+	// all (D-087).
+	mux.HandleFunc("/hook/prompt", guardLocal(d.handlePrompt))
+	mux.HandleFunc("/hook/stop", guardLocal(d.handleStop))
 	mux.HandleFunc("/events", d.handleEvents)
 	mux.HandleFunc("/", d.handleUI)
 	mux.HandleFunc("/stream", d.handleStream)
-	mux.HandleFunc("/verify/start", d.handleVerifyStart)
-	mux.HandleFunc("/verify/confirm", d.handleVerifyConfirm)
+	mux.HandleFunc("/pair/new", guardLocal(d.handlePairNew))
+	// The ceremony page itself is a GET somebody navigated to.
+	mux.HandleFunc("/pair/", d.handlePairPage)
+	mux.HandleFunc("/verify/start", guardLocal(d.handleVerifyStart))
+	mux.HandleFunc("/verify/confirm", guardLocal(d.handleVerifyConfirm))
+	// Deliberately NOT guarded: /healthz, /events, /stream and the page itself are
+	// reads. A cross-origin page cannot read their responses, because we send no
+	// CORS headers and the browser withholds an opaque response from the script.
+	// Guarding them would break the view, which fetches them as ordinary GETs.
 	return mux
 }
 

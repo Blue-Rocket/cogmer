@@ -1,0 +1,146 @@
+<!-- Served from the binary; no external requests.
+     The peer name here is DERIVED from a public key (D-042), not asserted by the
+     peer, so it cannot be chosen to impersonate. It is still escaped, because the
+     rule in this view is that nothing is trusted enough to skip escaping. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pairing with {{.PeerName}}</title>
+<style>
+  :root {
+    --bg:#faf9f7; --fg:#1c1b19; --dim:#6b6660; --line:#e3e0db;
+    --card:#fff; --code:#f2f0ec; --ok:#2f6f4f; --warn:#a3521f; --stop:#9b2226;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --bg:#16150f; --fg:#e8e4dc; --dim:#8f8a82; --line:#2b2924;
+           --card:#1d1c16; --code:#23211b; --ok:#7fc0a0; --warn:#d99a5e; --stop:#e06c75; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:15px/1.6 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{border-bottom:1px solid var(--line);padding:14px 20px}
+  h1{margin:0;font-size:15px;font-weight:600;letter-spacing:.14em;text-transform:uppercase}
+  main{max-width:640px;margin:0 auto;padding:40px 20px 80px}
+  .who{color:var(--dim);font-size:13px;margin-bottom:6px}
+  .who b{color:var(--fg);font-weight:600}
+  .lead{font-size:17px;margin:0 0 28px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:26px 24px;margin:0 0 24px}
+  .words{font:600 34px/1.25 ui-monospace,SFMono-Regular,Menlo,monospace;
+         letter-spacing:.02em;text-align:center;padding:14px 0 18px;overflow-wrap:anywhere}
+  .hint{color:var(--dim);font-size:13px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+  button{font:inherit;font-weight:600;padding:11px 18px;border-radius:7px;cursor:pointer;
+         border:1px solid var(--line);background:var(--card);color:var(--fg)}
+  button:hover{border-color:var(--dim)}
+  button.yes{background:var(--ok);border-color:var(--ok);color:var(--bg)}
+  button.no{background:var(--card);border-color:var(--stop);color:var(--stop)}
+  button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+  .spin{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--dim);
+        margin-right:9px;animation:p 1.1s ease-in-out infinite}
+  @keyframes p{0%,100%{opacity:.25}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){.spin{animation:none;opacity:.6}}
+  .stop{border-color:var(--stop)}
+  .stop h2{color:var(--stop);margin:0 0 10px;font-size:16px;letter-spacing:.08em;text-transform:uppercase}
+  .ok h2{color:var(--ok);margin:0 0 10px;font-size:16px;letter-spacing:.08em;text-transform:uppercase}
+  code{background:var(--code);padding:2px 6px;border-radius:4px;
+       font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
+  .fp{display:block;padding:10px 12px;margin:12px 0}
+</style>
+<header><h1>pairing</h1></header>
+<main>
+  <div class="who">with <b>{{.PeerName}}</b></div>
+  <div id="stage"></div>
+</main>
+<script>
+const PAIR_ID = {{.PairID}};
+const PEER_NAME = {{.PeerName}};
+const stage = document.getElementById('stage');
+
+function esc(s){ const d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML; }
+function show(html){ stage.innerHTML = html; }
+
+// Every request to our own daemon carries this; a page from anywhere else cannot
+// send it, which is what keeps this endpoint out of reach of other sites (D-087).
+async function post(path, body){
+  const r = await fetch(path, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-Claude-Team':'1'},
+    body: JSON.stringify(body)
+  });
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+function ready(){
+  show(`<p class="lead">Get on a call with ${esc(PEER_NAME)} first.</p>
+    <div class="card"><p style="margin:0 0 10px">You both press Start at roughly the same time.
+    The check runs for 90 seconds and then gives up, so pressing it before they are
+    there just means doing it twice.</p>
+    <div class="row"><button class="yes" id="go">Start</button></div></div>`);
+  document.getElementById('go').onclick = start;
+}
+
+function waiting(){
+  show(`<p class="lead"><span class="spin"></span>Waiting for ${esc(PEER_NAME)} to start their side.</p>
+    <div class="card"><p style="margin:0 0 10px">Both of you have to run this <b>at the same time</b>,
+    on a call with each other.</p>
+    <p class="hint" style="margin:0">If they haven't started within 90 seconds this gives up, and you can try again.</p></div>`);
+}
+
+function compare(words){
+  show(`<p class="lead">Say these two words out loud.</p>
+    <div class="card"><div class="words">${esc(words)}</div>
+      <p class="hint">Ask ${esc(PEER_NAME)} to read theirs back to you. It has to be a call —
+      the point of the check is that you recognise their voice.</p>
+      <div class="row">
+        <button class="yes" id="same">They said the same two words</button>
+        <button class="no" id="diff">They said something different</button>
+      </div>
+    </div>`);
+  document.getElementById('same').onclick = () => confirmWords(true);
+  document.getElementById('diff').onclick = () => confirmWords(false);
+}
+
+async function confirmWords(matched){
+  show(`<p class="lead"><span class="spin"></span>Recording…</p>`);
+  try {
+    const res = await post('/verify/confirm', {pairId: PAIR_ID, matched});
+    matched ? paired() : mismatch(res.fingerprint);
+  } catch(e){ failed(e.message); }
+}
+
+function paired(){
+  show(`<div class="card ok"><h2>Paired</h2>
+    <p style="margin:0 0 10px">You and ${esc(PEER_NAME)} are verified. This holds for every room you
+    ever share, and you will not be asked again.</p>
+    <p class="hint" style="margin:0">If their key ever changes, that is an alarm — not a new first meeting.</p>
+    </div><p class="hint">You can close this tab.</p>`);
+}
+
+function mismatch(fingerprint){
+  show(`<div class="card stop"><h2>Stop</h2>
+    <p style="margin:0 0 10px"><b>Different words mean you are not connected to each other.</b>
+    Something is relaying this exchange and showing each of you a different key.</p>
+    <p style="margin:0 0 4px">The key you were given for ${esc(PEER_NAME)}:</p>
+    <code class="fp">${esc(fingerprint||'unavailable')}</code>
+    <p style="margin:0 0 10px">This is not a transient error, and running it again will not clear it.</p>
+    <p class="hint" style="margin:0">Tell the person on the call what you saw. This is the only place
+    it becomes visible.</p></div>`);
+}
+
+function failed(msg, retry){
+  show(`<div class="card"><p style="margin:0 0 12px">${esc(msg)}</p>
+    ${retry ? '<div class="row"><button id="again">Try again</button></div>' : ''}</div>`);
+  if(retry) document.getElementById('again').onclick = ready;
+}
+
+async function start(){
+  waiting();
+  try {
+    const res = await post('/verify/start', {pairId: PAIR_ID});
+    if(res.error){ failed(res.error, true); return; }
+    compare(res.words);
+  } catch(e){ failed(e.message, true); }
+}
+
+ready();
+</script>

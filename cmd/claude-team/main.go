@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -352,12 +353,29 @@ func runDaemon() {
 	}
 	local, err := net.Listen("tcp", addr())
 	if err != nil {
-		log.Fatalf("listen: %v", err)
+		// A busy port means one of two very different things, and dying with the
+		// same message for both is what made this failure invisible. Several
+		// sessions routinely start at once and race to start a daemon: exactly one
+		// wins and the rest find the port taken. That is the ORDINARY outcome, not
+		// an error (§29). Anything else holding the port is a real fault -- and one
+		// nobody would otherwise see, because a hook starts this detached into a log
+		// that is not read.
+		if daemonAlreadyServing(addr()) {
+			clearDaemonState()
+			log.Printf("a claude-team daemon is already serving %s; leaving it to it", addr())
+			return
+		}
+		reportDaemonBlocked("hooks and the local view", addr(), err)
+		return
 	}
 	peer, err := net.Listen("tcp", peerAddr())
 	if err != nil {
-		log.Fatalf("listen (peer): %v", err)
+		local.Close()
+		reportDaemonBlocked("peer sync", peerAddr(), err)
+		return
 	}
+	// Serving, so anything recorded about a previous failure to serve is stale.
+	clearDaemonState()
 
 	// A second way in, for peers on other networks. Optional and best effort: a
 	// daemon that cannot start it still serves TCP, because a peer on the same
@@ -451,7 +469,7 @@ func runHook(kind string) {
 
 	body, _ := json.Marshal(payload)
 	client := &http.Client{Timeout: 3 * time.Second}
-	resp, err := client.Post("http://"+addr()+endpoint, "application/json", bytes.NewReader(body))
+	resp, err := localPost(client, "http://"+addr()+endpoint, body)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "claude-team: daemon unreachable (%v); continuing without collaboration\n", err)
 		os.Exit(0)
@@ -604,8 +622,14 @@ func runPeers() {
 			log.Fatalf("peers: %v", err)
 		}
 		if len(known) == 0 {
-			fmt.Println("no known peers. `claude-team allow <identifier>` records one.")
-			fmt.Printf("\nyours, to give to a colleague — safe to send anywhere:\n  %s\n", id.PeerID)
+			// The first thing a new user sees, so it has to point at the ordinary
+			// path. It used to name `allow`, which D-053 reserves for scripts and
+			// tests: it records a peer WITHOUT verifying, which lands somebody in
+			// exactly the state D-054 refuses to sync, with no hint why. It also
+			// printed a bare key rather than the pairing string, so the colleague
+			// received no address and could not reach them.
+			fmt.Println("No peers yet — pairing is how somebody becomes one.")
+			printPairingInvitation(id)
 			return
 		}
 		for _, p := range known {
@@ -633,8 +657,8 @@ func runAllow(args []string) {
 		}
 		fmt.Printf("recorded %s as %s — UNVERIFIED.\n", PeerName(args[0]), firstNonEmpty(name, PeerName(args[0])))
 		fmt.Println("nothing yet says this key is theirs rather than someone who intercepted it.")
-		fmt.Printf("finish with:  claude-team verify %s\n", firstNonEmpty(name, PeerName(args[0])))
-		fmt.Println("(`claude-team pair` does both at once, and is the ordinary way.)")
+		fmt.Printf("finish with:  %s verify %s\n", invocation(), firstNonEmpty(name, PeerName(args[0])))
+		fmt.Println("(/peer-pair does both at once, in a browser, and is the ordinary way.)")
 	})
 }
 
@@ -662,7 +686,7 @@ func runRooms() {
 			log.Fatalf("rooms: %v", err)
 		}
 		if len(rooms) == 0 {
-			fmt.Println("no rooms. `claude-team create` makes one.")
+			fmt.Println("no rooms. /room-create in a Claude Code session makes one.")
 			return
 		}
 		for _, r := range rooms {
@@ -756,8 +780,8 @@ func runJoin(args []string) {
 		if host != "" {
 			fmt.Printf("admitted %s, who invited you.\n", PeerName(host))
 			if !m.IsVerified(host) {
-				fmt.Printf("their key is UNVERIFIED, so nothing will sync yet. On a call with them,\n")
-				fmt.Printf("both run:\n  claude-team verify %s\n", PeerName(host))
+				fmt.Printf("their key is UNVERIFIED, so nothing will sync yet. On a call with\n")
+				fmt.Printf("them, both run /peer-pair — it opens the two-word check in a browser.\n")
 			}
 		}
 		if peers := m.RoomPeers(r.RoomID); len(peers) > 0 {
@@ -838,15 +862,15 @@ func runInvite(args []string) {
 			// its own, so say so plainly: a room that looks empty for a reason
 			// nobody stated is worse than a refusal.
 			fmt.Printf("\nNOTE: %s is UNVERIFIED, so no transcript will pass in either\n", PeerName(pid))
-			fmt.Printf("      direction until it is. On a call with them, both run:\n")
-			fmt.Printf("        claude-team verify %s\n", PeerName(pid))
+			fmt.Printf("      direction until it is. On a call with them, both run\n")
+			fmt.Printf("      /peer-pair, which opens the two-word check in a browser.\n")
 		}
 		fmt.Println()
 		// An invitation carries a room's identity and where to reach it. It carries
 		// no secret: admission is the guest list entry just made, proved later by
 		// possession of their key (D-026). Interception reveals that a room exists.
-		fmt.Println("give them:")
-		fmt.Printf("  claude-team join %s\n", invitation(r, AdvertisedEndpoint(), self.PeerID))
+		fmt.Println("give them, to run in a Claude Code session:")
+		fmt.Printf("  /room-join %s\n", invitation(r, AdvertisedEndpoint(), self.PeerID))
 	})
 }
 
@@ -951,18 +975,7 @@ func runWhoami() {
 		"identity": id, "peerName": id.PeerName, "room": room, "addr": addr(),
 	}, "", "  ")
 	fmt.Println(string(buf))
-	// The pairing string is what a colleague actually needs, and it is safe to
-	// send by any means: an identifier is a public key and an address is where a
-	// daemon listens. Neither admits anyone (D-026, D-042).
-	fmt.Printf("\nyour pairing string — send it to a colleague however is convenient:\n  %s\n",
-		pairingString(id.PeerID, AdvertisedEndpoint()))
-	fmt.Println("\nthey run:  claude-team pair <that string>")
-	fmt.Println("you run:   claude-team pair <theirs>")
-	fmt.Println("both at once, on a call, and you each compare two words.")
-	if isLoopback(peerAddr()) {
-		fmt.Println("\nNOTE: that address is loopback, so nobody else can reach it. Set")
-		fmt.Println("CLAUDE_TEAM_PEER_ADDR to an address they can, and restart the daemon.")
-	}
+	printPairingInvitation(id)
 }
 
 // runVerify is the two-word check (D-048). Both people run it, at the same time,
@@ -972,8 +985,9 @@ func runWhoami() {
 // sides hold the keys they named, and only a person can say that the voice saying
 // the words is the colleague rather than somebody in their place (§25).
 func runVerify(args []string) {
+	args, terminal := takeFlag(args, "--terminal")
 	if len(args) == 0 {
-		log.Fatal("usage: claude-team verify <peer>   (both of you, on a call, at the same time)")
+		log.Fatalf("usage: %s verify <peer> [--terminal]   (both of you, on a call, at the same time)", invocation())
 	}
 	var peerID, name, mine string
 	withMembership(func(m *Membership, id *Identity) {
@@ -984,9 +998,7 @@ func runVerify(args []string) {
 		peerID, name, mine = pid, PeerName(pid), id.PeerName
 	})
 
-	fmt.Printf("verifying %s. ask them to run `claude-team verify %s` now — this waits %s.\n\n",
-		name, mine, verifyTimeout)
-	verifyWith(peerID, name)
+	beginCeremony(peerID, name, mine, terminal)
 }
 
 func postLocal(path string, body, out any) error {
@@ -997,7 +1009,7 @@ func postLocal(path string, body, out any) error {
 	// The exchange waits up to verifyTimeout for the other person to type the
 	// command, so the client must outlast it.
 	client := &http.Client{Timeout: verifyTimeout + 30*time.Second}
-	resp, err := client.Post("http://"+addr()+path, "application/json", bytes.NewReader(raw))
+	resp, err := localPost(client, "http://"+addr()+path, raw)
 	if err != nil {
 		return err
 	}
@@ -1042,9 +1054,13 @@ func parsePairing(s string) (peerID, endpoint string) {
 // reach your eyes without passing through a model that reads room content from
 // unverified peers.
 func runPair(args []string) {
+	args, terminal := takeFlag(args, "--terminal")
 	if len(args) == 0 {
-		log.Fatal("usage: claude-team pair <identifier>[@address] [name]\n" +
-			"  both of you run it, at the same time, on a call")
+		// Not an error. Pairing has two halves -- sending yours and receiving
+		// theirs -- and somebody who runs this with nothing is at the first one.
+		// Failing with a usage line would answer a question they did not ask.
+		withMembership(func(_ *Membership, id *Identity) { printPairingInvitation(id) })
+		return
 	}
 	peerID, endpoint := parsePairing(args[0])
 	name := ""
@@ -1070,10 +1086,62 @@ func runPair(args []string) {
 		fmt.Println("whole pairing string — `claude-team whoami` prints it — and run this again.")
 		return
 	}
-	fmt.Printf("now confirming the key is theirs. ask them to run `claude-team pair %s@…` now.\n\n",
-		mine)
+	beginCeremony(peerID, PeerName(peerID), mine, terminal)
+}
 
-	verifyWith(peerID, PeerName(peerID))
+// takeFlag removes a flag from args and reports whether it was there.
+func takeFlag(args []string, flag string) ([]string, bool) {
+	out := args[:0:0]
+	found := false
+	for _, a := range args {
+		if a == flag {
+			found = true
+			continue
+		}
+		out = append(out, a)
+	}
+	return out, found
+}
+
+// beginCeremony puts the two-word comparison somewhere a person can do it.
+//
+// The view first (D-086): a terminal is an operator surface, and asking somebody to
+// open one to meet a colleague was never a user experience. The terminal path is
+// kept and is not a legacy -- it is what happens on a machine with no browser, and
+// on one reached over SSH, where the view cannot be shown at all.
+//
+// Opening the view does NOT wait. The exchange blocks for up to verifyTimeout while
+// the other person starts their side, and that wait belongs in the page, not in a
+// command a slash command is holding open.
+func beginCeremony(peerID, name, mine string, preferTerminal bool) {
+	// BOTH paths need the daemon: the terminal one posts to /verify/start just as
+	// the page does. Falling back to it when the daemon is down produced a second
+	// failure with a different message, which reads as two problems rather than
+	// one. Say the one true thing instead.
+	if !daemonAlreadyServing(addr()) {
+		log.Fatalf("the claude-team daemon is not running, and pairing needs it.\n"+
+			"  It starts with a Claude Code session. If one is open, %s doctor says what is wrong.",
+			invocation())
+	}
+	if !preferTerminal {
+		var res pairNewResponse
+		if err := postLocal("/pair/new", pairNewRequest{Peer: peerID}, &res); err != nil {
+			fmt.Printf("could not open a pairing page (%v), so this is happening here instead.\n\n", err)
+		} else if res.Error != "" {
+			fmt.Printf("%s\n\n", res.Error)
+		} else if err := openInBrowser(res.URL); err != nil {
+			// A machine with no browser. Say so once, then do the thing that works.
+			fmt.Printf("%v, so this is happening here instead.\n\n", err)
+		} else {
+			fmt.Printf("Opened the pairing page:\n  %s\n\n", res.URL)
+			fmt.Printf("Compare the two words there, on a call with %s.\n", name)
+			fmt.Printf("They must do the same at the same time — on their machine you are %s.\n", mine)
+			return
+		}
+	}
+	fmt.Printf("ask %s to run their side now (on their machine you are %s) — this waits %s.\n\n",
+		name, mine, verifyTimeout)
+	verifyWith(peerID, name)
 }
 
 // verifyWith drives the ceremony and records the answer. Shared by `pair` and
@@ -1115,4 +1183,159 @@ func verifyWith(peerID, name string) {
 	fmt.Println("tell the person on the call what you saw — it is evidence, and it is the")
 	fmt.Println("only place this becomes visible.")
 	os.Exit(1)
+}
+
+// --- a daemon that cannot serve says so where somebody will find it ---
+//
+// The daemon is started detached by a hook, with its output appended to a log
+// nobody reads. So a failure to bind used to be perfectly silent: no daemon, no
+// capture, no injection, and no statement anywhere about why. The room simply
+// looked like a room where nobody was talking.
+//
+// This writes the reason to a file the session-start hook reads and hands to the
+// model, which is the only route from here to a person (D-033, D-036). It is the
+// same mechanism D-075 built for a half-finished install, for the same reason:
+// absence meant several things and every reader guessed the same one.
+
+func daemonStateFile() string { return filepath.Join(homeDir(), "daemon-state") }
+
+// daemonAlreadyServing reports whether the thing holding an address is one of our
+// own daemons. /healthz names the peer it belongs to, so this distinguishes "a
+// colleague of mine is already running" from "something unrelated has the port".
+func daemonAlreadyServing(address string) bool {
+	c := &http.Client{Timeout: 700 * time.Millisecond}
+	resp, err := c.Get("http://" + address + "/healthz")
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return false
+	}
+	var body struct {
+		OK     bool   `json:"ok"`
+		PeerID string `json:"peerId"`
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<16)).Decode(&body); err != nil {
+		return false
+	}
+	return body.OK && body.PeerID != ""
+}
+
+func reportDaemonBlocked(what, address string, cause error) {
+	detail := fmt.Sprintf("%s cannot be served: %s is held by something that is not a claude-team daemon (%v)", what, address, cause)
+	recordDaemonState("blocked", detail)
+	log.Printf("%s", detail)
+	log.Printf("  Nothing is captured or shared until that address is free.")
+	log.Printf("  Find what holds it:  lsof -nP -iTCP:%s -sTCP:LISTEN", portOf(address))
+	log.Printf("  Or move this daemon: CLAUDE_TEAM_ADDR=127.0.0.1:<port> (hooks and view), CLAUDE_TEAM_PEER_ADDR (peer sync)")
+}
+
+// recordDaemonState mirrors the install-state format -- state, when, detail -- so
+// the shell side has one shape to read rather than two.
+func recordDaemonState(state, detail string) {
+	_ = os.MkdirAll(homeDir(), 0o700)
+	line := fmt.Sprintf("%s\t%d\t%s\n", state, time.Now().Unix(), strings.ReplaceAll(detail, "\t", " "))
+	_ = os.WriteFile(daemonStateFile(), []byte(line), 0o600)
+}
+
+func clearDaemonState() { _ = os.Remove(daemonStateFile()) }
+
+func portOf(address string) string {
+	if _, port, err := net.SplitHostPort(address); err == nil {
+		return port
+	}
+	return address
+}
+
+// invocation is what a PERSON should type to run this binary again.
+//
+// Not the bare word "claude-team". The plugin installs into ~/.claude-team/bin,
+// which is on nobody's PATH, and §29 forbids editing a shell profile to put it
+// there. So every line of ours that said "run claude-team pair" was a line that
+// fails with "command not found" for every plugin-installed user -- which is most
+// of them, and precisely the ones least equipped to work out why. The binary knows
+// where it is; a path it prints about itself cannot go stale.
+//
+// $HOME is spelled ~ because that is what a person recognises, and it pastes into
+// any shell unchanged.
+func invocation() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return "claude-team"
+	}
+	if resolved, rerr := filepath.EvalSymlinks(exe); rerr == nil {
+		exe = resolved
+	}
+	if home, herr := os.UserHomeDir(); herr == nil {
+		if strings.HasPrefix(exe, home+string(os.PathSeparator)) {
+			return "~" + exe[len(home):]
+		}
+	}
+	return exe
+}
+
+// printPairingInvitation says what to send a colleague, and what happens next.
+//
+// The string is safe to send by any means: an identifier is a public key and an
+// address is where a daemon listens, and neither admits anybody (D-026, D-042).
+// What admits somebody is the two-word comparison, which happens in a browser
+// (D-088) rather than at a terminal, because meeting a colleague was never an
+// operator task.
+func printPairingInvitation(id *Identity) {
+	endpoint := AdvertisedEndpoint()
+	fmt.Printf("\nSend your colleague this — any channel will do, it is not a secret:\n\n  %s\n",
+		pairingString(id.PeerID, endpoint))
+	// Attached to the string rather than to a command: three commands print it,
+	// and only one of them used to warn.
+	if ok, why := pairingReachable(endpoint); !ok {
+		fmt.Printf("\nNOTE: %s\n", why)
+	}
+	fmt.Printf("\nWhen they send you theirs, run /peer-pair with it. A page opens in your\n")
+	fmt.Printf("browser showing two words. Get on a call, both of you do this at the same\n")
+	fmt.Printf("time, and read the words to each other. They must match.\n")
+}
+
+// pairingReachable reports whether a pairing string is usable by the person who
+// receives it, and says why when it is not.
+//
+// The check this replaces asked isLoopback(peerAddr()) -- the address this daemon
+// BINDS. That is loopback by default and stays loopback even when tailcat has
+// negotiated a perfectly routable endpoint, so the warning fired on every pairing
+// string ever printed, including all the ones that worked. A warning that is always
+// on is not a warning; it is noise that trains somebody to ignore the real case.
+func pairingReachable(endpoint string) (bool, string) {
+	e, err := ParseEndpoint(endpoint)
+	if err != nil {
+		return false, "that address cannot be read, so nobody can reach you at it."
+	}
+	if e.Scheme == schemeTailcat {
+		// Negotiated through DERP and routable by construction. This is the
+		// ordinary case and must not warn.
+		return true, ""
+	}
+	// A bare TCP endpoint has to be a host and a port. ParseEndpoint accepts
+	// anything without a scheme as TCP, and isLoopback answers "false" for what it
+	// cannot parse -- so without this, a malformed address reads as "not loopback"
+	// and therefore as fine.
+	if _, _, err := net.SplitHostPort(e.Value); err != nil {
+		return false, "that address is not a host and port, so nobody can reach you at it."
+	}
+	if isLoopback(e.Value) {
+		if !endpointRecorded() {
+			return false, "no daemon has published an address yet, so that one is a guess.\n" +
+				"      The daemon records a real one when it starts, which happens when a\n" +
+				"      Claude Code session starts. Start one and run this again."
+		}
+		return false, "that address is loopback, so nobody else can reach it. No route out\n" +
+			"      was negotiated; set CLAUDE_TEAM_PEER_ADDR to an address they can reach\n" +
+			"      and restart the daemon."
+	}
+	return true, ""
+}
+
+// endpointRecorded distinguishes "a daemon published this" from "we guessed".
+func endpointRecorded() bool {
+	_, err := os.Stat(filepath.Join(homeDir(), endpointFile))
+	return err == nil
 }

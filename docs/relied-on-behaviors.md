@@ -12,6 +12,10 @@ re-verifies them against the installed version.
 
 **Relied on for:** The guarantee that Claude Code keeps working when collaboration is down. A non-zero exit or stray stdout here would corrupt every prompt.
 
+### B23 — A process the daemon's shape keeps the GUI session, so it can open the view and notify
+
+**Relied on for:** How a person ever sees a room at all. The daemon is started detached by the session-start hook and is the only component that can put something in front of somebody: it opens the room view when a first pairing needs looking at, and raises a notification afterwards. Claude Code cannot do either, because every extension point it offers delivers to the model rather than to the person (D-033, D-036). This works only while a background-launched process still belongs to the logged-in GUI session -- measured on Darwin 25.6, where such a process reports the Aqua session manager, opens a URL, and takes focus, whether or not it was placed in a new POSIX session. If macOS ever withholds GUI-session access from background processes, there is no error path back to the daemon: it will go on believing it showed somebody the view while nothing at all appeared on screen, and a first-time user is left holding a loopback address nobody ever told them.
+
 ## Tier: session
 
 ### B01 — UserPromptSubmit carries prompt, session_id, transcript_path, prompt_id

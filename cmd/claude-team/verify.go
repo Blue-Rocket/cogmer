@@ -292,6 +292,10 @@ func (d *Daemon) verifyStep(client *http.Client, addr, expect, step string, payl
 
 type verifyStartRequest struct {
 	Peer string `json:"peer"`
+	// PairID lets the view name a pairing rather than a peer. The page never
+	// carries an identifier it could start an exchange with on its own: it holds a
+	// link, and the daemon decides what that link means (D-088).
+	PairID string `json:"pairId,omitempty"`
 }
 
 type verifyStartResponse struct {
@@ -303,7 +307,17 @@ type verifyStartResponse struct {
 
 type verifyConfirmRequest struct {
 	Peer    string `json:"peer"`
+	PairID  string `json:"pairId,omitempty"`
 	Matched bool   `json:"matched"`
+}
+
+// peerFromRequest resolves whichever of the two a caller used. The CLI names a
+// peer; the view names a pairing.
+func (d *Daemon) peerFromRequest(peer, pairID string) (string, bool) {
+	if pairID != "" {
+		return d.peerForPairing(pairID)
+	}
+	return peer, peer != ""
 }
 
 // handleVerifyStart runs the exchange for a peer named by this machine's own user.
@@ -315,6 +329,12 @@ func (d *Daemon) handleVerifyStart(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+	peer, ok := d.peerFromRequest(req.Peer, req.PairID)
+	if !ok {
+		writeJSON(w, verifyStartResponse{Error: "this pairing link has expired. Start a new one with /peer-pair."})
+		return
+	}
+	req.Peer = peer
 	if !d.members.Knows(req.Peer) {
 		writeJSON(w, verifyStartResponse{Error: fmt.Sprintf(
 			"%s is not a peer this machine knows; `claude-team allow <identifier>` records one first",
@@ -341,8 +361,20 @@ func (d *Daemon) handleVerifyConfirm(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+	peer, ok := d.peerFromRequest(req.Peer, req.PairID)
+	if !ok {
+		http.Error(w, "this pairing link has expired", http.StatusBadRequest)
+		return
+	}
+	req.Peer = peer
 	if !req.Matched {
-		writeJSON(w, map[string]string{"status": "not recorded"})
+		// The fingerprint travels with the refusal because the view has to show it:
+		// a mismatch is evidence to be read out on the call, and this is the only
+		// place it becomes visible (§25). It marks nothing on its own (D-055).
+		writeJSON(w, map[string]string{
+			"status":      "not recorded",
+			"fingerprint": Fingerprint(req.Peer),
+		})
 		return
 	}
 	if err := d.members.MarkVerified(req.Peer); err != nil {

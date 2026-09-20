@@ -27,6 +27,27 @@ claude_team_binary() {
   return 1
 }
 
+# ct_say appends one timestamped line to a log under the state directory.
+#
+# §3.1 requires failure to be silent TO THE DEVELOPER. It does not require silence
+# to the log, and conflating the two is how a broken start became indistinguishable
+# from a working one. Nothing here ever writes to stdout: stdout is injected into
+# the user's turn, so a stray line there would corrupt every prompt.
+ct_say() {
+  local f
+  f="${CLAUDE_TEAM_HOME:-$HOME/.claude-team}/$1"; shift
+  mkdir -p "$(dirname "$f")" 2>/dev/null
+  printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >> "$f" 2>/dev/null
+}
+
+# json_safe strips what would break a JSON string literal.
+#
+# These details are assembled from error text -- a path, an OS message -- and land
+# in the one line of stdout a hook is allowed to write. A stray quote there does not
+# produce a worse message, it produces malformed JSON, and §3.1 says a hook must
+# never do that to a session.
+json_safe() { printf '%s' "$*" | tr -d '\\"' | tr '\r\n\t' '   '; }
+
 # start_daemon_if_needed starts the daemon unless it is already answering.
 #
 # Called from the session-start hook and again from the installer when it has just
@@ -35,11 +56,24 @@ claude_team_binary() {
 # downloading — a two-session warm-up nobody would guess at.
 start_daemon_if_needed() {
   local bin addr log
-  bin="$(claude_team_binary)" || return 0
+  if ! bin="$(claude_team_binary)"; then
+    # Ordinary on a first session -- the binary is still downloading -- and a real
+    # fault on any later one. install-state tells those apart (D-075); this records
+    # that the start was attempted and found nothing, which is the half that used
+    # to be missing.
+    ct_say daemon.log "hook: no binary yet (searched CLAUDE_TEAM_BIN, ${CLAUDE_TEAM_HOME:-$HOME/.claude-team}/bin, plugin bin, PATH); not starting"
+    return 0
+  fi
 
   addr="${CLAUDE_TEAM_ADDR:-127.0.0.1:4782}"
-  if curl -s -m 1 "http://${addr}/healthz" > /dev/null 2>&1; then
-    return 0   # already running, which is the ordinary outcome, not an error
+  if command -v curl > /dev/null 2>&1; then
+    if curl -s -m 1 "http://${addr}/healthz" > /dev/null 2>&1; then
+      return 0   # already running, which is the ordinary outcome, not an error
+    fi
+  else
+    # "curl said no" and "there is no curl" are not the same answer, and reading the
+    # second as the first starts a daemon on every single session. Say which it was.
+    ct_say daemon.log "hook: no curl, so whether a daemon already answers on ${addr} is unknown; starting one, which exits harmlessly if the port is already ours"
   fi
 
   log="${CLAUDE_TEAM_HOME:-$HOME/.claude-team}/daemon.log"
@@ -48,13 +82,39 @@ start_daemon_if_needed() {
   # Detached, so the daemon outlives the session that started it: a room may have
   # members in several sessions, and starting it repeatedly is worse than leaving
   # it running.
+  #
+  # Both branches are correct, and neither costs the daemon its GUI session --
+  # which matters, because opening the room view and raising a notification are
+  # the only two ways this design ever reaches a person (B23). macOS ships no
+  # setsid at all, so it always takes the second branch; and a new POSIX session
+  # was measured not to change anything anyway, since the Mach bootstrap
+  # namespace is inherited separately. Do not collapse these to one branch on the
+  # theory that setsid strands the daemon somewhere it cannot open a window. It
+  # does not. That was tested, and the test that appeared to show otherwise was
+  # measuring a `setsid` that did not exist.
   if command -v setsid > /dev/null 2>&1; then
     setsid nohup "$bin" daemon >> "$log" 2>&1 < /dev/null &
   else
     nohup "$bin" daemon >> "$log" 2>&1 < /dev/null &
   fi
+  # Which binary, which branch, which process. All three were decided here and
+  # recorded nowhere, so "the daemon is not running" had no next question.
+  ct_say daemon.log "hook: starting $bin on ${addr} (pid $!)"
   disown 2>/dev/null
   return 0
+}
+
+# daemon_state prints "<state> <age-seconds> <detail>", mirroring install_state.
+#
+# Written by the daemon itself when it cannot bind. A busy port used to kill it
+# silently: no daemon, no capture, no injection, and nothing anywhere saying why.
+daemon_state() {
+  local f line state when detail age
+  f="${CLAUDE_TEAM_HOME:-$HOME/.claude-team}/daemon-state"
+  [ -f "$f" ] || { printf 'none 0 '; return 0; }
+  IFS=$'\t' read -r state when detail < "$f" || { printf 'none 0 '; return 0; }
+  age=$(( $(date +%s) - ${when:-0} ))
+  printf '%s %s %s' "$state" "$age" "$detail"
 }
 
 # --- what the install is doing, as a fact rather than an inference ---

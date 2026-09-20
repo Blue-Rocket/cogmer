@@ -279,6 +279,20 @@ var Behaviors = []Behavior{
 		},
 	},
 
+	{
+		ID:       "B23",
+		Title:    "A process the daemon's shape keeps the GUI session, so it can open the view and notify",
+		Reliance: "How a person ever sees a room at all. The daemon is started detached by the session-start hook and is the only component that can put something in front of somebody: it opens the room view when a first pairing needs looking at, and raises a notification afterwards. Claude Code cannot do either, because every extension point it offers delivers to the model rather than to the person (D-033, D-036). This works only while a background-launched process still belongs to the logged-in GUI session -- measured on Darwin 25.6, where such a process reports the Aqua session manager, opens a URL, and takes focus, whether or not it was placed in a new POSIX session. If macOS ever withholds GUI-session access from background processes, there is no error path back to the daemon: it will go on believing it showed somebody the view while nothing at all appeared on screen, and a first-time user is left holding a loopback address nobody ever told them.",
+		Tier:     TierOffline,
+		Check: func(p *Probe) error {
+			mgr := p.DetachedSessionManager
+			if mgr == "" {
+				mgr = measureDetachedSessionManager()
+			}
+			return assertGUISession(mgr)
+		},
+	},
+
 	// ---- compaction tier ----
 	{
 		ID:       "B13",
