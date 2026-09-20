@@ -762,3 +762,31 @@ func TestNoAmbientRoomOverride(t *testing.T) {
 		}
 	}
 }
+
+// A command that changes who can read a room does not guess which room.
+//
+// invite grants access, and granting it in the wrong room means somebody reads a
+// conversation nobody invited them to — which revoke cannot undo, because it stops
+// future reading and does not un-read. A command that only displays something may
+// guess, because being wrong is visible on your own screen and costs nothing
+// (D-078).
+func TestTheRoomFlagIsParsedAnywhereInTheArguments(t *testing.T) {
+	for _, c := range []struct {
+		in   []string
+		room string
+		rest string
+	}{
+		{[]string{"alice"}, "", "alice"},
+		{[]string{"alice", "--room", "misty-canyon"}, "misty-canyon", "alice"},
+		{[]string{"--room", "misty-canyon", "alice"}, "misty-canyon", "alice"},
+		{[]string{"--room=misty-canyon", "alice"}, "misty-canyon", "alice"},
+		// A trailing --room with nothing after it is not a room name, and must not
+		// silently consume the peer.
+		{[]string{"alice", "--room"}, "", "alice --room"},
+	} {
+		room, rest := takeRoomFlag(c.in)
+		if room != c.room || strings.Join(rest, " ") != c.rest {
+			t.Errorf("%v gave room=%q rest=%v; want room=%q rest=%q", c.in, room, rest, c.room, c.rest)
+		}
+	}
+}

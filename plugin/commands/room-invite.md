@@ -10,6 +10,11 @@ allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" invite:*)
 
 ## Your task
 
+No room is named above and none is needed: this runs inside a session, and a
+command from inside a session acts on that session's room. At a terminal the same
+command requires `--room <name>`, because granting access is not a thing to guess
+at.
+
 Give the user the exact invitation line from the output, unaltered, so they can
 send it to their colleague. Do not rewrite it or explain its parts unless asked —
 it is a string to be copied.

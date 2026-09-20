@@ -127,8 +127,8 @@ Rooms — per room, repeated as often as you like:
   claude-team join <room>     Make a room current, so new sessions join it
   claude-team leave           Leave the current room
   claude-team guests          List who may enter the current room
-  claude-team invite <peer>   Admit a known peer to the current room
-  claude-team revoke <peer>   Withdraw admission
+  claude-team invite <peer>   Admit a known peer  (--room <name> outside a session)
+  claude-team revoke <peer>   Withdraw admission  (--room <name> outside a session)
   claude-team doctor [--deep] Verify relied-on Claude Code behaviors
   claude-team behaviors       List those behaviors (--markdown to render docs)
 
@@ -670,6 +670,67 @@ func runCreateRoom() {
 // The pointer is the fallback for a terminal, where there is no session to ask.
 // That is all it was ever for; consulting it ahead of the session is what made it
 // look like a second answer to the same question.
+// takeRoomFlag pulls `--room <name>` out of a command's arguments and returns it
+// with the flag removed, so every command accepts it without each parsing it.
+func takeRoomFlag(args []string) (string, []string) {
+	for i, a := range args {
+		if a == "--room" && i+1 < len(args) {
+			return args[i+1], append(append([]string{}, args[:i]...), args[i+2:]...)
+		}
+		if name, ok := strings.CutPrefix(a, "--room="); ok {
+			return name, append(append([]string{}, args[:i]...), args[i+1:]...)
+		}
+	}
+	return "", args
+}
+
+// roomToChange is the room for a command that alters who can see what.
+//
+// It does not guess. `invite` grants access, and granting it in the wrong room
+// means a person reads a conversation nobody invited them to — which `revoke`
+// cannot undo, because it stops future reading and does not un-read. A stored
+// pointer set weeks ago and never shown to anybody is not a good enough answer to
+// a question with that consequence (D-078).
+func roomToChange(m *Membership, named string) Room {
+	if named != "" {
+		return findRoomOrExit(m, named)
+	}
+	if sid := sessionID(); sid != "" {
+		if r, ok := m.RoomForSession(sid); ok {
+			return r
+		}
+		log.Fatal("this session is not in a room. /room-create makes one, /room-join enters one")
+	}
+	log.Fatalf("name the room: this changes who can read it, so it will not guess.\n" +
+		"  claude-team <command> --room <name>\n" +
+		"`claude-team rooms` lists them. Run it from inside a session and it uses that session's room.")
+	return Room{}
+}
+
+// roomToShow is the room for a command that only displays something.
+//
+// This one may fall back, because being wrong is visible and harmless: you see a
+// room you did not mean, on your own screen, and every such command names the room
+// it is showing.
+func roomToShow(m *Membership, named string) Room {
+	if named != "" {
+		return findRoomOrExit(m, named)
+	}
+	return currentRoom(m)
+}
+
+func findRoomOrExit(m *Membership, name string) Room {
+	r, err := m.FindRoom(name)
+	if err == nil {
+		return r
+	}
+	if errors.Is(err, errNoSuchRoom) {
+		log.Fatalf("no room named %q; `claude-team rooms` lists them", name)
+	}
+	log.Fatal(err)
+	return Room{}
+}
+
 func currentRoom(m *Membership) Room {
 	// CLAUDE_TEAM_ROOM is deliberately NOT consulted here, and used to be consulted
 	// first. An environment variable is ambient: exported once in a profile, or
@@ -807,7 +868,7 @@ func runLeave() {
 
 func runGuests() {
 	withMembership(func(m *Membership, id *Identity) {
-		r := currentRoom(m)
+		r := roomToShow(m, "")
 		g, err := m.Guests(r.RoomID)
 		if err != nil {
 			log.Fatalf("guests: %v", err)
@@ -824,11 +885,12 @@ func runGuests() {
 }
 
 func runInvite(args []string) {
+	named, args := takeRoomFlag(args)
 	if len(args) == 0 {
-		log.Fatal("usage: claude-team invite <peer>")
+		log.Fatal("usage: claude-team invite <peer> [--room <name>]")
 	}
 	withMembership(func(m *Membership, self *Identity) {
-		r := currentRoom(m)
+		r := roomToChange(m, named)
 		pid, err := resolvePeer(m, args[0])
 		if err != nil {
 			log.Fatal(err)
@@ -856,11 +918,12 @@ func runInvite(args []string) {
 }
 
 func runRevoke(args []string) {
+	named, args := takeRoomFlag(args)
 	if len(args) == 0 {
-		log.Fatal("usage: claude-team revoke <peer>")
+		log.Fatal("usage: claude-team revoke <peer> [--room <name>]")
 	}
 	withMembership(func(m *Membership, _ *Identity) {
-		r := currentRoom(m)
+		r := roomToChange(m, named)
 		pid, err := resolvePeer(m, args[0])
 		if err != nil {
 			log.Fatal(err)
