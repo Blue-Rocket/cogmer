@@ -702,3 +702,39 @@ func TestTheWatchLineDoesNotInventARoom(t *testing.T) {
 		t.Errorf("a named room is not named: %s", named)
 	}
 }
+
+// A command run from inside a session acts on that session's room, before
+// anything else is consulted. currentRoom went straight to the machine-level
+// pointer, so /room-invite inside a session in one room admitted people to
+// whichever room was last created — silently, and to the wrong people (D-076).
+//
+// currentRoom exits on failure, so the rule is asserted on the resolution it
+// depends on rather than by calling it.
+func TestASessionsOwnRoomWinsOverThePointer(t *testing.T) {
+	m := testMembership(t)
+	self := testIdentity(t)
+	mine, _ := m.CreateRoom(self.PeerID)
+	other, _ := m.CreateRoom(self.PeerID)
+
+	if err := m.BindSession("sess-A", mine.RoomID); err != nil {
+		t.Fatal(err)
+	}
+	// The pointer moves on, as `create` at a terminal would move it.
+	if err := m.SetCurrentRoom(other.RoomID); err != nil {
+		t.Fatal(err)
+	}
+
+	got, ok := m.RoomForSession("sess-A")
+	if !ok || got.RoomID != mine.RoomID {
+		t.Fatalf("the session's room resolved to %+v, want %s", got, mine.RoomName)
+	}
+	// And the pointer still answers for a terminal, which is all it is for.
+	cur, ok := m.CurrentRoom()
+	if !ok || cur.RoomID != other.RoomID {
+		t.Errorf("the terminal fallback resolved to %+v, want %s", cur, other.RoomName)
+	}
+	// A session in no room has no room. The pointer must not answer for it.
+	if r, ok := m.RoomForSession("sess-Z"); ok {
+		t.Errorf("a session in no room resolved to %s", r.RoomName)
+	}
+}

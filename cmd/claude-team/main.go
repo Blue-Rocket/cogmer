@@ -672,7 +672,21 @@ func runCreateRoom() {
 
 // currentRoom is the room a developer is working in. Commands act on it so that
 // nobody has to name a room they are already inside.
+// currentRoom is the room a command acts on, in the order a person would expect.
+//
+// A command run from inside a session acts on THAT SESSION'S room. Always, and
+// before anything else is consulted. This is the rule the whole design rests on
+// and it was the one thing this function did not do: it went straight to the
+// machine-level pointer, so `/room-invite alice` inside a session in one room
+// would admit her to whichever room was last created — silently, and to the wrong
+// people.
+//
+// The pointer is the fallback for a terminal, where there is no session to ask.
+// That is all it was ever for; consulting it ahead of the session is what made it
+// look like a second answer to the same question.
 func currentRoom(m *Membership) Room {
+	// An explicit name beats any inference, including the session's own room:
+	// somebody who names a room means it.
 	if name := os.Getenv("CLAUDE_TEAM_ROOM"); name != "" {
 		r, err := m.FindRoom(name)
 		if err == nil {
@@ -683,6 +697,16 @@ func currentRoom(m *Membership) Room {
 		}
 		log.Fatal(err)
 	}
+
+	if sid := sessionID(); sid != "" {
+		if r, ok := m.RoomForSession(sid); ok {
+			return r
+		}
+		// In a session, and that session is in no room. The pointer would answer,
+		// and answering with somebody else's room is worse than saying so.
+		log.Fatal("this session is not in a room. /room-create makes one, /room-join enters one")
+	}
+
 	r, ok := m.CurrentRoom()
 	if !ok {
 		log.Fatal("not in a room. `claude-team create` makes one, `claude-team join <room>` enters one")
