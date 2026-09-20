@@ -137,12 +137,11 @@ func (d *Daemon) PeerRoutes() *http.ServeMux {
 }
 
 func (d *Daemon) health(w http.ResponseWriter, r *http.Request) {
-	cur, ok := d.members.CurrentRoom()
-	room := ""
-	if ok {
-		room = cur.RoomName
-	}
-	writeJSON(w, map[string]any{"ok": true, "room": room, "peerId": d.id.PeerID})
+	// Health reports how many rooms are served, not which one is "current": there
+	// is no current room, and a daemon serving several has no business naming one
+	// (D-080).
+	rooms, _ := d.members.Rooms()
+	writeJSON(w, map[string]any{"ok": true, "rooms": len(rooms), "peerId": d.id.PeerID})
 }
 
 // storeFor opens a room's database on demand and keeps it. A daemon that served

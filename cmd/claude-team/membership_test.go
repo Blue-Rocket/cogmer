@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -17,9 +18,6 @@ func testDaemon(t *testing.T) (*Daemon, Room) {
 	id := testIdentity(t)
 	room, err := m.CreateRoom(id.PeerID)
 	if err != nil {
-		t.Fatal(err)
-	}
-	if err := m.SetCurrentRoom(room.RoomID); err != nil {
 		t.Fatal(err)
 	}
 	d := &Daemon{id: id, members: m}
@@ -332,9 +330,6 @@ func TestASessionJoinsARoomOnlyWhenPutInOne(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Current room is set, as `create` sets it for command-line convenience.
-	if err := m.SetCurrentRoom(room.RoomID); err != nil {
-		t.Fatal(err)
-	}
 
 	if got, ok := m.RoomForSession("session-a"); ok {
 		t.Errorf("a session nobody put in a room is in %s", got.RoomName)
@@ -431,15 +426,13 @@ func TestMigrationDropsTheInjectedColumn(t *testing.T) {
 func TestAForgottenRoomDoesNotCollectSessions(t *testing.T) {
 	m := testMembership(t)
 	self := testIdentity(t)
-	old, err := m.CreateRoom(self.PeerID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := m.SetCurrentRoom(old.RoomID); err != nil {
+	if _, err := m.CreateRoom(self.PeerID); err != nil {
 		t.Fatal(err)
 	}
 
 	// Weeks pass. A session starts in an unrelated repository and submits prompts.
+	// Nothing can put it in a room now that the pointer is gone (D-080), which is
+	// the same guarantee D-064 made by refusing to consult one.
 	for _, s := range []string{"much-later-1", "much-later-2", "much-later-3"} {
 		if got, ok := m.RoomForSession(s); ok {
 			t.Fatalf("session %s was silently put in %s and would begin publishing", s, got.RoomName)
@@ -521,9 +514,6 @@ func TestLeavingLeavesTheRoomVisible(t *testing.T) {
 	m := testMembership(t)
 	self := testIdentity(t)
 	room, _ := m.CreateRoom(self.PeerID)
-	if err := m.SetCurrentRoom(room.RoomID); err != nil {
-		t.Fatal(err)
-	}
 	if err := m.BindSession("s1", room.RoomID); err != nil {
 		t.Fatal(err)
 	}
@@ -531,10 +521,8 @@ func TestLeavingLeavesTheRoomVisible(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cur, ok := m.CurrentRoom()
-	if !ok || cur.RoomID != room.RoomID {
-		t.Error("leaving changed what the view and the command line are looking at")
-	}
+	// Leaving must not remove the room or its history; there is no longer a
+	// pointer to disturb, which is the simpler form of the same guarantee.
 	if _, ok := m.RoomByID(room.RoomID); !ok {
 		t.Error("leaving removed the room")
 	}
@@ -708,32 +696,28 @@ func TestTheWatchLineDoesNotInventARoom(t *testing.T) {
 // pointer, so /room-invite inside a session in one room admitted people to
 // whichever room was last created — silently, and to the wrong people (D-076).
 //
-// currentRoom exits on failure, so the rule is asserted on the resolution it
-// depends on rather than by calling it.
-func TestASessionsOwnRoomWinsOverThePointer(t *testing.T) {
+// A room-scoped command resolves one way: the room the invoking session is in.
+// There is nowhere else to look since D-080 removed the machine-level pointer,
+// which is what answered with the wrong room three separate times.
+//
+// The resolvers exit on failure, so the rule is asserted on what they depend on.
+func TestARoomResolvesOnlyThroughTheSession(t *testing.T) {
 	m := testMembership(t)
 	self := testIdentity(t)
 	mine, _ := m.CreateRoom(self.PeerID)
-	other, _ := m.CreateRoom(self.PeerID)
+	if _, err := m.CreateRoom(self.PeerID); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := m.BindSession("sess-A", mine.RoomID); err != nil {
 		t.Fatal(err)
 	}
-	// The pointer moves on, as `create` at a terminal would move it.
-	if err := m.SetCurrentRoom(other.RoomID); err != nil {
-		t.Fatal(err)
-	}
-
 	got, ok := m.RoomForSession("sess-A")
 	if !ok || got.RoomID != mine.RoomID {
 		t.Fatalf("the session's room resolved to %+v, want %s", got, mine.RoomName)
 	}
-	// And the pointer still answers for a terminal, which is all it is for.
-	cur, ok := m.CurrentRoom()
-	if !ok || cur.RoomID != other.RoomID {
-		t.Errorf("the terminal fallback resolved to %+v, want %s", cur, other.RoomName)
-	}
-	// A session in no room has no room. The pointer must not answer for it.
+
+	// A session in no room has no room, however many rooms the machine holds.
 	if r, ok := m.RoomForSession("sess-Z"); ok {
 		t.Errorf("a session in no room resolved to %s", r.RoomName)
 	}
@@ -777,9 +761,6 @@ func TestOnlyASessionInTheRoomCanChangeIt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := m.SetCurrentRoom(room.RoomID); err != nil {
-		t.Fatal(err)
-	}
 	if err := m.BindSession("in-the-room", room.RoomID); err != nil {
 		t.Fatal(err)
 	}
@@ -792,8 +773,38 @@ func TestOnlyASessionInTheRoomCanChangeIt(t *testing.T) {
 	if got, ok := m.RoomForSession("elsewhere"); ok {
 		t.Errorf("a session in no room resolved to %s", got.RoomName)
 	}
-	// The pointer still answers for read-only commands, which is all it is for.
-	if cur, ok := m.CurrentRoom(); !ok || cur.RoomID != room.RoomID {
-		t.Error("the read-only fallback stopped working")
+}
+
+// Every room-scoped slash command must map to a subcommand that exists, and every
+// subcommand a person could want must be reachable from a session.
+//
+// The plugin and the binary version together (D-075), so a command file naming a
+// subcommand the binary lacks is a release that half works — which is exactly what
+// v0.2.0 shipped, where /room-status called `where` and got usage back.
+func TestEverySlashCommandNamesARealSubcommand(t *testing.T) {
+	files, err := filepath.Glob("../../plugin/commands/*.md")
+	if err != nil || len(files) == 0 {
+		t.Skipf("plugin commands not found from here: %v", err)
+	}
+	known := map[string]bool{}
+	src, err := os.ReadFile("main.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range regexp.MustCompile(`case "([a-z-]+)":`).FindAllStringSubmatch(string(src), -1) {
+		known[m[1]] = true
+	}
+
+	sub := regexp.MustCompile(`cli\.sh" ([a-z]+)`)
+	for _, f := range files {
+		body, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, m := range sub.FindAllStringSubmatch(string(body), -1) {
+			if !known[m[1]] {
+				t.Errorf("%s invokes %q, which is not a subcommand", filepath.Base(f), m[1])
+			}
+		}
 	}
 }

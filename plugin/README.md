@@ -19,11 +19,23 @@ and nothing here replaces or wraps it.
 |---|---|
 | `/room-create` | create a room and put this session in it |
 | `/room-join <invitation>` | join a room you were invited to |
+| `/room-leave` | take this session out of its room; it may rejoin |
 | `/room-invite <peer>` | admit a peer you have paired with |
+| `/room-revoke <peer>` | withdraw a peer's admission to this room |
 | `/room-status` | which room this session is in, and who may enter |
 | `/room-log` | the room's conversation so far |
-| `/room-leave` | take this session out of its room; it may rejoin |
-| `/room-pair` | your pairing string, and how to pair (done in a terminal) |
+| `/room-conflicts` | quarantined events, if a peer's sequence went backwards |
+| `/peer-list` | peers this machine knows, and whether each is verified |
+| `/peer-forget <peer>` | discard a peer and every admission it held |
+| `/peer-pair` | your pairing string, and how to pair (done in a terminal) |
+
+Two prefixes because there are two scopes (§12): `room-` acts on one room,
+`peer-` on this machine's relationships, which outlast every room.
+
+Commands are prefixed at all because a slash command's **invocation** is not
+namespaced by the plugin that supplies it — a subdirectory changes how a command is
+displayed, not what you type. Two plugins in the official marketplace already both
+define `/help`.
 
 Commands are prefixed because a slash command's **invocation** is not namespaced by
 the plugin that supplies it — a subdirectory changes how a command is displayed,
@@ -42,7 +54,7 @@ means no collaboration, never a broken session.
 **Pairing and verification happen in a terminal.** Both are interactive, both block
 on another person, and the two words you compare must reach your eyes without
 passing through a model that is reading room content from unverified peers.
-`/room-pair` prints your pairing string and tells you what to run; it does not
+`/peer-pair` prints your pairing string and tells you what to run; it does not
 attempt the ceremony.
 
 **Nothing synchronizes with an unverified peer.** Admission says a key may enter;

@@ -53,7 +53,7 @@ func main() {
 	case "whoami":
 		runWhoami()
 	case "conflicts":
-		runConflicts()
+		runConflicts(os.Args[2:])
 	case "peers":
 		runPeers()
 	case "pair":
@@ -111,7 +111,7 @@ func usage() {
   claude-team version         Print the build version
   claude-team where           Print the address to watch the room at
   claude-team whoami          Show this peer's identity and room
-  claude-team conflicts       Show quarantined events (sequence conflicts)
+  claude-team conflicts [room] Show quarantined events (sequence conflicts)
 
 Peers — durable, above any room. Done once with each colleague:
   claude-team pair <string>   Record a peer AND verify it, on a call with them
@@ -180,6 +180,46 @@ func syncInterval() time.Duration {
 	return time.Second
 }
 
+// Room-scoped commands resolve one way, and only one way: the room the invoking
+// session is in.
+//
+// There is nowhere else to look, by design. Every room-scoped command exists to
+// fulfil a slash command, and a slash command always runs inside a session — so a
+// terminal that wants one emulates a session, which is what every test here already
+// does. The machine-level pointer that used to answer this is gone (D-080): it had
+// no user left once the browser view took per-room URLs, and while it existed it
+// answered three times with the wrong room.
+
+// roomToChange is for a command that alters who can see what. §22 puts membership
+// in a session, so a terminal has no room to admit anybody to (D-079).
+func roomToChange(m *Membership) Room {
+	sid := sessionID()
+	if sid == "" {
+		log.Fatal("this changes who can read a room, and only a session that is in one can do it.\n" +
+			"Run the matching slash command inside the Claude Code session that is in the room.")
+	}
+	r, ok := m.RoomForSession(sid)
+	if !ok {
+		log.Fatal("this session is not in a room. /room-create makes one, /room-join enters one")
+	}
+	return r
+}
+
+// sessionRoom is for a command that only shows something. Same rule, without the
+// standing: showing you a room is not an exercise of membership.
+func sessionRoom(m *Membership) Room {
+	sid := sessionID()
+	if sid == "" {
+		log.Fatal("no session, so no room. Run the matching slash command inside a Claude Code\n" +
+			"session, or set CLAUDE_CODE_SESSION_ID to emulate one.")
+	}
+	r, ok := m.RoomForSession(sid)
+	if !ok {
+		log.Fatal("this session is not in a room. /room-create makes one, /room-join enters one")
+	}
+	return r
+}
+
 // openLocal opens the room a person is working in, which since D-046 is a room in
 // `membership.db` rather than a name in `config.json`. It read the old config for
 // longer than that was true, so `log` reported an empty room called "default"
@@ -240,12 +280,7 @@ func runWhere() {
 		return
 	}
 
-	// At a terminal there is no session, so the current room is the right answer:
-	// it is what the other command-line commands act on.
-	if cur, ok := m.CurrentRoom(); ok {
-		fmt.Println(watchLine(cur.RoomName))
-		return
-	}
+	// At a terminal there is no session and so no room. The index lists them.
 	fmt.Println(watchLine(""))
 }
 
@@ -290,7 +325,7 @@ func openLocal() (*Store, *Identity, Room) {
 	}
 	defer m.Close()
 
-	room := currentRoom(m)
+	room := sessionRoom(m)
 	store, err := OpenStore(room.RoomID)
 	if err != nil {
 		log.Fatalf("store: %v", err)
@@ -347,9 +382,12 @@ func runDaemon() {
 	rooms, _ := members.Rooms()
 	log.Printf("claude-team daemon  peer=%s (%s)  serving %d room(s)",
 		id.UserDisplayName, id.PeerName, len(rooms))
-	if cur, ok := members.CurrentRoom(); ok {
-		g, _ := members.Guests(cur.RoomID)
-		log.Printf("  current room  %s (%d guest(s))", cur.RoomName, len(g))
+	if len(rooms) > 0 {
+		for _, r := range rooms {
+			g, _ := members.Guests(r.RoomID)
+			log.Printf("  room          %s (%d guest(s), %d session(s))",
+				r.RoomName, len(g), members.SessionsInRoom(r.RoomID))
+		}
 	} else {
 		log.Printf("  current room  none — `claude-team create` or `claude-team join <room>`")
 	}
@@ -618,7 +656,7 @@ func runForget(args []string) {
 
 func runRooms() {
 	withMembership(func(m *Membership, _ *Identity) {
-		cur, hasCur := m.CurrentRoom()
+		cur, hasCur := m.RoomForSession(sessionID())
 		rooms, err := m.Rooms()
 		if err != nil {
 			log.Fatalf("rooms: %v", err)
@@ -645,83 +683,12 @@ func runCreateRoom() {
 		if err != nil {
 			log.Fatalf("create: %v", err)
 		}
-		if err := m.SetCurrentRoom(r.RoomID); err != nil {
-			log.Fatalf("create: %v", err)
-		}
 		fmt.Printf("created %s\n  %s\n", r.RoomName, r.RoomID)
 		bindInvokingSession(m, r)
 		fmt.Printf("%s\n", watchLine(r.RoomName))
 		fmt.Println("\ninvite someone you have paired with:")
 		fmt.Println("  claude-team invite <name>")
 	})
-}
-
-// currentRoom is the room a developer is working in. Commands act on it so that
-// nobody has to name a room they are already inside.
-// currentRoom is the room a command acts on, in the order a person would expect.
-//
-// A command run from inside a session acts on THAT SESSION'S room. Always, and
-// before anything else is consulted. This is the rule the whole design rests on
-// and it was the one thing this function did not do: it went straight to the
-// machine-level pointer, so `/room-invite alice` inside a session in one room
-// would admit her to whichever room was last created — silently, and to the wrong
-// people.
-//
-// The pointer is the fallback for a terminal, where there is no session to ask.
-// That is all it was ever for; consulting it ahead of the session is what made it
-// look like a second answer to the same question.
-// roomToChange is the room for a command that alters who can see what, and it is
-// always the invoking session's room.
-//
-// Not "the room you name" — the room you are IN. §22 puts membership in a session,
-// so a room's guest list is its members' concern, and at a terminal there are no
-// members to be one of. Naming a room there would be reaching into a room that
-// belongs to a session you are not in, which is a different act from choosing
-// between rooms you are in (D-079).
-//
-// A `--room` flag was added first and was the wrong answer to the right question:
-// it made the choice explicit and left the standing unexamined.
-func roomToChange(m *Membership) Room {
-	sid := sessionID()
-	if sid == "" {
-		log.Fatal("this changes who can read a room, and only a session that is in one can do it.\n" +
-			"Run /room-invite or /room-revoke inside the Claude Code session that is in the room.")
-	}
-	r, ok := m.RoomForSession(sid)
-	if !ok {
-		log.Fatal("this session is not in a room. /room-create makes one, /room-join enters one")
-	}
-	return r
-}
-
-// roomToShow is the room for a command that only displays something.
-//
-// This one may fall back, because being wrong is visible and harmless: you see a
-// room you did not mean, on your own screen, and every such command names the room
-// it is showing.
-func roomToShow(m *Membership) Room { return currentRoom(m) }
-
-func currentRoom(m *Membership) Room {
-	// CLAUDE_TEAM_ROOM is deliberately NOT consulted here, and used to be consulted
-	// first. An environment variable is ambient: exported once in a profile, or
-	// inherited by every session a machine starts, it silently answers for sessions
-	// that are in other rooms — which is the failure D-064 removed and this had
-	// quietly reintroduced at higher precedence. A room is named per invocation or
-	// it is the session's (D-077).
-	if sid := sessionID(); sid != "" {
-		if r, ok := m.RoomForSession(sid); ok {
-			return r
-		}
-		// In a session, and that session is in no room. The pointer would answer,
-		// and answering with somebody else's room is worse than saying so.
-		log.Fatal("this session is not in a room. /room-create makes one, /room-join enters one")
-	}
-
-	r, ok := m.CurrentRoom()
-	if !ok {
-		log.Fatal("not in a room. `claude-team create` makes one, `claude-team join <room>` enters one")
-	}
-	return r
 }
 
 // invitation renders what a guest needs: which room, and somewhere to start
@@ -785,9 +752,6 @@ func runJoin(args []string) {
 		// in another room cannot be moved (§12a), and printing "joined" and then
 		// refusing reads as a half-completed join rather than a refused one.
 		bindInvokingSession(m, r)
-		if err := m.SetCurrentRoom(r.RoomID); err != nil {
-			log.Fatalf("join: %v", err)
-		}
 		fmt.Printf("joined %s. %s\n", r.RoomName, watchLine(r.RoomName))
 		if host != "" {
 			fmt.Printf("admitted %s, who invited you.\n", PeerName(host))
@@ -838,7 +802,7 @@ func runLeave() {
 
 func runGuests() {
 	withMembership(func(m *Membership, id *Identity) {
-		r := roomToShow(m)
+		r := sessionRoom(m)
 		g, err := m.Guests(r.RoomID)
 		if err != nil {
 			log.Fatalf("guests: %v", err)
@@ -911,10 +875,13 @@ func firstNonEmpty(a, b string) string {
 	return b
 }
 
-func runConflicts() {
-	store, _, room := openLocal()
-	defer store.Close()
-
+// runConflicts is the one room-scoped command that may be run without a session.
+//
+// It is a diagnostic, and a diagnostic wanted precisely when a room is misbehaving
+// — possibly with no healthy session to ask. Naming a room to READ it is not an
+// exercise of standing, which is why this is safe here and not in `invite`
+// (D-078, D-080).
+func reportConflicts(store *Store, room Room) {
 	cs, err := store.ListConflicts()
 	if err != nil {
 		log.Fatalf("conflicts: %v", err)
@@ -933,6 +900,36 @@ func runConflicts() {
 	fmt.Println("since then have not been stored, and anti-entropy cannot recover them.")
 }
 
+// runConflicts is the one room-scoped command that may be run without a session.
+//
+// It is a diagnostic, and one wanted precisely when a room is misbehaving —
+// possibly with no healthy session to ask. Naming a room in order to READ it is not
+// an exercise of standing, which is why this is safe here and not in `invite`
+// (D-078, D-080).
+func runConflicts(args []string) {
+	if len(args) > 0 {
+		m, err := OpenMembership()
+		if err != nil {
+			log.Fatalf("membership: %v", err)
+		}
+		defer m.Close()
+		r, ferr := m.FindRoom(args[0])
+		if ferr != nil {
+			log.Fatal(ferr)
+		}
+		store, serr := OpenStore(r.RoomID)
+		if serr != nil {
+			log.Fatalf("store: %v", serr)
+		}
+		defer store.Close()
+		reportConflicts(store, r)
+		return
+	}
+	store, _, room := openLocal()
+	defer store.Close()
+	reportConflicts(store, room)
+}
+
 func runWhoami() {
 	// Deliberately not openLocal: who you are is answerable in no room at all,
 	// and a command that reports your identity must not fail for want of one.
@@ -947,7 +944,7 @@ func runWhoami() {
 	defer m.Close()
 
 	room := "none"
-	if cur, ok := m.CurrentRoom(); ok {
+	if cur, ok := m.RoomForSession(sessionID()); ok {
 		room = cur.RoomName
 	}
 	buf, _ := json.MarshalIndent(map[string]any{

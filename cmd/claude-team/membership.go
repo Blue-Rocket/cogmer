@@ -539,32 +539,6 @@ func (m *Membership) RoomPeers(roomID string) []string {
 	return out
 }
 
-// SetCurrentRoom names the room new sessions join. It is deliberately machine-level
-// rather than per-terminal: a developer works in one room at a time, and asking
-// every session which room it wants would mean asking at a moment when nobody is
-// there to answer.
-// SetCurrentRoom records which room COMMAND-LINE commands act on when none is
-// named. Sessions never consult it (D-064) -- it is a convenience for `invite` and
-// `guests`, not a thing anything joins.
-func (m *Membership) SetCurrentRoom(roomID string) error {
-	if roomID == "" {
-		_, err := m.db.Exec(`DELETE FROM settings WHERE key = 'current_room'`)
-		return err
-	}
-	_, err := m.db.Exec(`
-		INSERT INTO settings (key, value) VALUES ('current_room', ?)
-		ON CONFLICT(key) DO UPDATE SET value = excluded.value`, roomID)
-	return err
-}
-
-func (m *Membership) CurrentRoom() (Room, bool) {
-	var roomID string
-	if err := m.db.QueryRow(`SELECT value FROM settings WHERE key = 'current_room'`).Scan(&roomID); err != nil {
-		return Room{}, false
-	}
-	return m.RoomByID(roomID)
-}
-
 // RoomByID resolves a room by its identity alone. FindRoom also accepts a name,
 // which is right at a command line and wrong on the wire: room names collide by
 // design (D-017), so a request naming one can address a room its sender did not

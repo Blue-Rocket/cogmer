@@ -1,5 +1,5 @@
 ---
-description: How to pair with a colleague (runs in a terminal, not here)
+description: Your pairing string, and how to pair (done in a terminal)
 allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" whoami:*)
 ---
 
