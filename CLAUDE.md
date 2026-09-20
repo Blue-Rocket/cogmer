@@ -4,6 +4,16 @@ Prototype from `Shared Claude Sessions.md` — a local-first P2P daemon replicat
 Claude Code conversations between developers. Read that spec before changing
 architecture; section numbers (§7, §19, …) are referenced throughout the code.
 
+## Numbered references carry a short description
+
+This project refers to numbered things constantly — `§` sections of the spec,
+`D-NNN` decisions, `B-NN` behaviors. A bare number is meaningless to anybody who
+does not have the document open in front of them, which includes the person you are
+talking to.
+
+Give each one a few words: "D-054 (verification gates sync)", not "D-054". This
+applies to **what you say in conversation**, not only to what you write into files.
+
 ## MCP does not display anything (D-036)
 
 Tested: a server declaring `logging` and emitting `notifications/message` — idle and

@@ -29,5 +29,3 @@ does not need a header.
 
 State things plainly and move on. Do not restate the point in a closing
 sentence.
-
-When referencing numbered items from the documentation include a short parenthetical description
