@@ -955,6 +955,14 @@ and nothing is sent, because a guest who joins before verification gets a room t
 is silent by design (§25). The host is told to finish verifying, and the invitation
 is delivered when they do.
 
+Inviting somebody unverified is permitted rather than refused, and the reason is
+about people rather than states. Verification is a chore whose payoff is invisible
+until it is needed, and trying to start a room is the moment it stops being
+invisible. Refusing at that moment would block somebody exactly when they are
+willing. So the invitation is accepted, held, and completed by the step the host is
+already being asked to take — which the output must present as one step remaining,
+never as a refusal.
+
 This is the intended shape: **a name locates a room, a guest list admits a peer.**
 
 The joining peer receives the room's `roomId` on admission and uses it from then on.

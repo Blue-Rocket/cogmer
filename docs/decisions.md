@@ -5502,6 +5502,23 @@ peer still writes the guest-list row, immediately. Whom to admit remains the hos
 judgement and §25's separation of the two questions is untouched. What waits is the
 *delivery of a notification*, and it waits only as long as it would be useless.
 
+**Why the gate stays open at all, which is the load-bearing half.** Refusing to
+invite an unverified peer would be simpler — one fewer state for a pair to be in,
+and no queue to flush. It is declined because **wanting to start a room is what
+makes somebody willing to verify**. Verification is a chore whose payoff is
+invisible until it is needed, and attempting a room is the moment it acquires one.
+A refusal blocks a person exactly when they are motivated and sends them off to do
+an errand; a queued invitation meets them there. Expect the simplification to be
+proposed on the grounds of fewer combinations, and that is the answer: the extra
+state is one pending offer with one flush point, bought with the only moment this
+system gets somebody's attention for free.
+
+**Which decides the wording, not only the behaviour.** The difference between a
+block and a path is whether the invitation succeeded and is waiting. It must read as
+admitted, queued, and one step from done — with that step offered where it is
+stated, since the two-word check opens in a browser from the same place (D-088). An
+invite that reports a refusal throws away the advantage this entry exists to keep.
+
 **Verification gains an effect: it flushes what was waiting.** When two peers
 complete the two-word comparison, offers already recorded for that peer are
 delivered. So the sequence a host expects — invite, then verify — produces the room
