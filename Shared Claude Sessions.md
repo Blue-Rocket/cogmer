@@ -913,7 +913,7 @@ A request is not a queue. If the host is absent the request fails. It does not w
 
 ## Pairing with someone you do not know is not a supported case
 
-An earlier draft called that the ordinary use of the path above. It is not, and it contradicted §12, which says correctly that colleagues pairing repeatedly is the ordinary case.
+The ordinary case is colleagues pairing repeatedly (§12), and this is not that.
 
 It is excluded on the specification's own terms rather than on taste. §25 requires verification over a channel where the other party can be **recognised**, and records that two people who have never met have no such channel. A pairing between strangers would therefore run the ceremony and take nothing from it: the words would be compared, they would match, and the match would establish that two parties hold the same key while saying nothing about whose. Every other pairing gets a real assurance from that step. This one would get its appearance, which is worse than omitting it, because the appearance is what people act on.
 
@@ -1831,11 +1831,11 @@ this specification passes just as well for a key substituted in transit, because
 the substituted key is a real key, held by whoever substituted it. Only the
 comparison over a recognising channel distinguishes them.
 
-An earlier draft made verification a marker on injected text. That is necessary and
-insufficient. The whole chain here is exact and automatic and rests on one human
-step, and a step that is optional, skippable, and costs nothing to skip is a step
-that will be skipped — after which nothing looks wrong, which is precisely the
-failure the marker was meant to warn about.
+Marking an unverified peer on injected text is necessary and insufficient. The whole
+chain here is exact and automatic and rests on one human step, and a step that is
+optional, skippable, and costs nothing to skip is a step that will be skipped —
+after which nothing looks wrong, which is precisely the failure a marker warns
+about. So verification is a gate.
 
 Three consequences follow, and all three are load-bearing:
 
@@ -2585,7 +2585,7 @@ Phase 13 is deliberately a phase and not a milestone. It is the only remaining w
 that can fail in a way none of the others detect, and its failure looks like
 somebody quietly not using this again.
 
-Each phase carries one purpose. Where an earlier draft bundled room identity and the membership index alongside the UI, they have been moved to the phases whose purpose they serve — neither blocks the UI, and putting them first would have delayed the only outstanding question this prototype was built to answer.
+Each phase carries one purpose. Room identity and the membership index belong to the phases they serve; neither blocks the UI.
 
 Pairs are the target throughout. A third peer adds noise to a working session and is unlikely to invalidate anything, so Phase 6 waits for evidence that anyone wants it.
 
