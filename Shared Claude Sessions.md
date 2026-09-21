@@ -927,13 +927,28 @@ One peer creates a room and produces an invitation. Every other participant pres
 Where the people involved already know one another — which is the ordinary case, since colleagues pair repeatedly — an invitation **names a guest** rather than issuing a token:
 
 ```
-David:   claude-team invite quiet-otter
-         → misty-canyon
+David:   /room-invite alice
+         → invited alice to misty-canyon
 
-Alice:   claude-team join misty-canyon
+Alice:   → misty-canyon is offered to you by david
+         /room-join misty-canyon
 ```
 
-David's daemon records that the peer he knows as `quiet-otter` may enter `misty-canyon`. Alice's daemon locates the room and proves possession of the key David holds for her. Nothing secret is typed, spoken, or transmitted, and the room name — guessable by design — grants nothing to whoever guesses it.
+David's daemon records that the peer he knows as `alice` may enter `misty-canyon`,
+and tells her daemon so over the channel the two established when they paired. Hers
+holds the offer until she accepts it. Nothing secret is typed, spoken, or
+transmitted, and the room name — guessable by design — grants nothing to whoever
+guesses it.
+
+**Delivering an offer is not admitting anybody.** The admission is the guest-list
+entry on the host's side, and it is the host's judgement to make. The offer only
+says that entry exists. Joining stays the guest's own act, and reading the room
+still waits on verification (§25).
+
+**When the host cannot reach the guest**, inviting says so at the time and produces
+a line for the guest to be sent by any means, which they present instead of a room
+name. That is the fallback rather than the ordinary path, and a host learns
+immediately which one they are on.
 
 This is the intended shape: **a name locates a room, a guest list admits a peer.**
 
