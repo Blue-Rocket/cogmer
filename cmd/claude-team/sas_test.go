@@ -395,7 +395,7 @@ func verifiableDaemon(t *testing.T) (*Daemon, string) {
 func TestPairingStringRoundTrips(t *testing.T) {
 	id := testIdentity(t)
 	for _, endpoint := range []string{"198.51.100.7:4783", "[2001:db8::1]:4783", ""} {
-		peer, addr := parsePairing(pairingString(id.PeerID, endpoint))
+		peer, addr, _ := parsePairing(pairingString(id.PeerID, endpoint, ""))
 		if peer != id.PeerID || addr != endpoint {
 			t.Errorf("%q@%q round-tripped to %q@%q", id.PeerID, endpoint, peer, addr)
 		}
@@ -440,5 +440,86 @@ func TestTheFirstToTypeWaitsForTheOther(t *testing.T) {
 	}
 	if first.words != second.words {
 		t.Errorf("the two sides saw different words: %q and %q", first.words, second.words)
+	}
+}
+
+// The string carries a name so the receiver has a default for the label they must
+// supply, rather than being asked to invent one for somebody whose name they can
+// see. A GUESSED name is never carried (D-097).
+func TestAPairingStringCarriesAChosenNameOnly(t *testing.T) {
+	t.Setenv("CLAUDE_TEAM_HOME", t.TempDir())
+	id, err := LoadIdentity()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Nothing chose this name, so it must not travel: "Ec2-user" arriving as
+	// though somebody picked it is worse than the derived name, which is at least
+	// honest about being machine-made.
+	if got := pairingString(id.PeerID, "h:1", chosenName(id)); strings.Contains(got, "#") {
+		t.Errorf("a guessed name was published: %q", got)
+	}
+
+	if _, err := SetDisplayName("Alice"); err != nil {
+		t.Fatal(err)
+	}
+	id, _ = LoadIdentity()
+	s := pairingString(id.PeerID, "h:1", chosenName(id))
+	peer, addr, name := parsePairing(s)
+	if peer != id.PeerID || addr != "h:1" || name != "Alice" {
+		t.Fatalf("round trip lost something: %q -> %q / %q / %q", s, peer, addr, name)
+	}
+}
+
+// Older strings carry no name, and an endpoint may itself contain colons and
+// slashes. Absence is ordinary, not an error.
+func TestPairingStringsWithoutANameStillParse(t *testing.T) {
+	for _, in := range []string{
+		"ed25519:abc",
+		"ed25519:abc@127.0.0.1:4783",
+		"ed25519:abc@tc://tcpLONGVALUE",
+	} {
+		peer, _, name := parsePairing(in)
+		if peer != "ed25519:abc" {
+			t.Errorf("%q yielded peer %q", in, peer)
+		}
+		if name != "" {
+			t.Errorf("%q yielded a name %q from nowhere", in, name)
+		}
+	}
+	// And the endpoint survives a name being appended to it.
+	_, addr, name := parsePairing("ed25519:abc@tc://tcpLONGVALUE#Alice")
+	if addr != "tc://tcpLONGVALUE" || name != "Alice" {
+		t.Errorf("got addr %q name %q", addr, name)
+	}
+}
+
+// The name arrives from another machine and becomes a unique key and an argument to
+// resolvePeer, so it is reduced to something that cannot break the format, span
+// lines, or be invisible.
+func TestANameFromAnotherMachineIsReduced(t *testing.T) {
+	cases := map[string]string{
+		"  Alice  ":              "Alice",
+		"Alice\nBob":             "AliceBob",
+		"Alice\x00\x07":          "Alice",
+		"Ali#ce@home":            "Alicehome",
+		"Alice   Smith":          "Alice Smith",
+		strings.Repeat("x", 100): strings.Repeat("x", 32),
+		"":                       "",
+		"\t\n ":                  "",
+	}
+	for in, want := range cases {
+		if got := sanitizeName(in); got != want {
+			t.Errorf("sanitizeName(%q) = %q, want %q", in, got, want)
+		}
+	}
+	// Whatever it does, the result must survive a round trip: a name that broke
+	// the format would take the endpoint with it.
+	for in := range cases {
+		s := pairingString("ed25519:abc", "h:1", in)
+		peer, addr, _ := parsePairing(s)
+		if peer != "ed25519:abc" || addr != "h:1" {
+			t.Errorf("name %q corrupted the string: %q", in, s)
+		}
 	}
 }

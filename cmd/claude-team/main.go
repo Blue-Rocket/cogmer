@@ -1037,18 +1037,69 @@ func postLocal(path string, body, out any) error {
 // and a bootstrap address, and it is not a secret: an identifier is a public key,
 // and an address is where a daemon listens. Interception yields both and admits
 // nobody (D-042, D-026).
-func pairingString(peerID, endpoint string) string {
-	if endpoint == "" {
-		return peerID
+// pairingString is what one person sends another, once, ever.
+//
+// It carries the sender's chosen name when there is one, so the receiver has a
+// sensible default for the label they must supply (D-093) rather than being asked
+// to invent one for somebody whose name they obviously know. A GUESSED name is
+// never carried: `Ec2-user` travelling as though somebody picked it is worse than
+// carrying nothing, because the derived name is at least honest about being
+// machine-made (D-095).
+//
+// The name is a claim by whoever sent the string, and a substituted string carries
+// a substituted name. That is safe here only because the label is written after the
+// two words match (D-093), by which point the string came from the person on the
+// call. Do not move the write earlier.
+func pairingString(peerID, endpoint, name string) string {
+	out := peerID
+	if endpoint != "" {
+		out += "@" + endpoint
 	}
-	return peerID + "@" + endpoint
+	if n := sanitizeName(name); n != "" {
+		out += "#" + n
+	}
+	return out
 }
 
-func parsePairing(s string) (peerID, endpoint string) {
-	if at := strings.LastIndex(s, "@"); at > 0 {
-		return s[:at], s[at+1:]
+// sanitizeName reduces a name to something usable as a local label.
+//
+// It becomes a unique key and an argument to `resolvePeer`, and it arrives from
+// another machine, so it is trimmed of anything that would break parsing, span
+// lines, or be invisible. Length is capped because a label is read in a list.
+func sanitizeName(s string) string {
+	var b strings.Builder
+	space := false
+	for _, r := range s {
+		switch {
+		case r == '#' || r == '@' || r < 0x20 || r == 0x7f:
+			continue // would break the format, or is not printable
+		case r == ' ' || r == '\t':
+			space = true
+		default:
+			if space && b.Len() > 0 {
+				b.WriteRune(' ')
+			}
+			space = false
+			b.WriteRune(r)
+		}
+		if b.Len() >= 32 {
+			break
+		}
 	}
-	return s, ""
+	return strings.TrimSpace(b.String())
+}
+
+// parsePairing splits a pairing string. The name is optional and older strings do
+// not carry one, so its absence is ordinary rather than an error.
+func parsePairing(s string) (peerID, endpoint, name string) {
+	if hash := strings.Index(s, "#"); hash >= 0 {
+		name = sanitizeName(s[hash+1:])
+		s = s[:hash]
+	}
+	if at := strings.LastIndex(s, "@"); at > 0 {
+		return s[:at], s[at+1:], name
+	}
+	return s, "", name
 }
 
 // runPair is peer onboarding, and it is deliberately not a room operation.
@@ -1077,19 +1128,33 @@ func runPair(args []string) {
 		fmt.Println("Your own string — the one you send THEM — is in /self-status.")
 		return
 	}
-	peerID, endpoint := parsePairing(args[0])
-	if len(args) < 2 || strings.TrimSpace(args[1]) == "" {
-		// Asked for up front rather than after the words match, because a flow
-		// with two completion points has to answer what an unfinished second one
-		// means, and every answer was worse than asking now (D-093).
+	peerID, endpoint, theirName := parsePairing(args[0])
+
+	// What to call them: what this person said, else what THEY said they are
+	// called, else ask. Resolved before anything happens, because a flow with two
+	// completion points has to answer what an unfinished second one means, and
+	// every answer was worse than asking now (D-093).
+	name := ""
+	if len(args) > 1 {
+		name = sanitizeName(args[1])
+	}
+	switch {
+	case name != "":
+	case theirName != "":
+		// They said what they are called, so asking again would be asking
+		// somebody to invent a name for a person whose name they can see.
+		name = theirName
+		fmt.Printf("Calling them %s, which is the name they gave.\n", name)
+		fmt.Printf("Add a name of your own if you would rather:  /peer-pair <their string> <name>\n\n")
+	default:
 		fmt.Printf("This needs a name for them as well — what you will call %s in your own\n",
 			PeerName(peerID))
 		fmt.Printf("room and peer list:\n\n  /peer-pair %s <name>\n\n", args[0])
 		fmt.Println("The derived name above is computed from their key. It identifies them")
 		fmt.Println("exactly, and it will mean nothing to you in three weeks.")
+		fmt.Println("They did not include a name of their own in what they sent you.")
 		return
 	}
-	name := strings.TrimSpace(args[1])
 
 	var mine string
 	withMembership(func(_ *Membership, id *Identity) { mine = id.PeerName })
@@ -1318,7 +1383,7 @@ func printPairingInvitation(id *Identity) {
 	}
 	endpoint := AdvertisedEndpoint()
 	fmt.Printf("\nSend your colleague this — any channel will do, it is not a secret:\n\n  %s\n",
-		pairingString(id.PeerID, endpoint))
+		pairingString(id.PeerID, endpoint, chosenName(id)))
 	// Attached to the string rather than to a command: three commands print it,
 	// and only one of them used to warn.
 	if ok, why := pairingReachable(endpoint); !ok {
@@ -1410,4 +1475,12 @@ func runName(args []string) {
 	fmt.Printf("Other people will see you as %s.\n", id.UserDisplayName)
 	fmt.Println("Turns you have already sent keep the name they were sent with, and a")
 	fmt.Println("colleague who gave you a name of their own still sees theirs.")
+}
+
+// chosenName is the name to publish: none at all while it is only a guess.
+func chosenName(id *Identity) string {
+	if !id.NameChosen {
+		return ""
+	}
+	return id.UserDisplayName
 }
