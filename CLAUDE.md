@@ -32,15 +32,14 @@ applies to **what you say in conversation**, not only to what you write into fil
 
 ## MCP does not display anything (D-036)
 
-Tested: a server declaring `logging` and emitting `notifications/message` — idle and
-mid-`tools/call` — surfaces nowhere. Not in `stream-json`, `--debug`, `--debug-file`
-(34 KB, zero hits), or `~/.claude/debug`. Claude Code's capability record tracks
-tools/prompts/resources and **not logging**, though the server declared it.
+MCP carries capability *to the model* and never anything *to the person*. A server's
+notifications surface nowhere a person looks — tested exhaustively, and recorded with
+the places checked in D-036. **Do not re-attempt it as a display channel.**
 
-MCP carries capability *to the model*, never anything *to the person*. Do not
-re-attempt it as a display channel. If an MCP server is ever shipped here for another
-reason, it must not expose *sampling* — that would let a peer cause inference in an
-interactive session, violating §3.7.
+Nothing can check this, which is why it is stated here: it is an absence, and an
+absence has no assertion. If an MCP server is ever shipped for some other reason it
+must not expose *sampling*, which would let a peer cause inference in an interactive
+session, violating §3.7.
 
 ## No false affordances in the view
 
@@ -245,11 +244,11 @@ the old text said or why it changed. That belongs in `decisions.md`, where track
 alternatives is the job. These documents are hard enough to read without carrying
 every way the system might have worked and does not.
 
-**This file is the exception, deliberately.** The sections below that recite
-findings duplicate the behaviour registry on purpose: this is the document that
-loads itself every session, and a warning nobody reads is not a warning. Each one
-names the behaviour that checks it. Do not delete them for duplicating the
-registry; do keep them pointing at it.
+**What earns a place in this file is what no check covers.** It loads itself every
+session, so it is where a prohibition, a judgement call or a residual risk belongs —
+the things no assertion can hold. Where `doctor` already checks a fact, point at the
+behaviour and state the rule that depends on it; do not recite the fact, because the
+copy here is the one that goes quietly wrong.
 
 ## Before proposing a change to how any of this works
 
@@ -290,46 +289,31 @@ Note B09 and B05 report *improvements* (assistant records gaining `promptId`, th
 flush race disappearing), not just breakage. Those would let us simplify, and we
 would otherwise never notice.
 
-## Two findings the code depends on
+## Reassembly unions two sources, and `mergeTail` is not an append
 
-These were established empirically against Claude Code 2.1.273 and are easy to
-regress if the reassembly logic is "simplified":
+`ReassembleLastTurn` unions `Stop.last_assistant_message` with the transcript
+because neither is complete alone (B04, B05). Turn segmentation is **positional** —
+assistant records following the last `promptSource`-bearing user record — because
+assistant records carry no `promptId` (B09).
 
-1. **`Stop.last_assistant_message` holds only the turn's FINAL text block** — text
-   emitted before a tool call is dropped. (Checked by B04.)
-2. **The transcript at Stop time is missing exactly that final block** — Stop fires
-   before it is flushed. (Checked by B05.)
-
-`ReassembleLastTurn` unions both via `mergeTail`. Neither source alone is correct.
-Verified by exact string match against a real 2,582-char response.
-
-`mergeTail` deliberately tolerates #1 being *fixed* upstream: if
+`mergeTail` detects the superset case rather than assuming it. If
 `last_assistant_message` ever widens to the whole turn, blind appending would
-duplicate every pre-tool block and silently corrupt the room. It detects the
-superset case instead of assuming. Do not "simplify" it back to an append.
+duplicate every pre-tool block and silently corrupt the room. **Do not simplify it
+back to an append**, and do not treat that widening as a break: B04 reports it as
+the improvement it would be.
 
-Also: assistant records carry no `promptId` and the `parentUuid` chain has gaps,
-so turn segmentation is **positional** — assistant records following the last
-`promptSource`-bearing user record.
+## What compaction costs, and the part nothing can check
 
-## Compaction behavior these rely on
+The delivery watermark is keyed on session ID, the reassembly anchor skips the
+compaction summary, and the `isSidechain` filter keeps the summarizer's output out
+of the room. Each rests on a compaction-tier behaviour, and `claude-team doctor
+--deep` runs them. Do not add a compaction rewind or a re-injection floor: both were
+evaluated and rejected as duplicate injection for no benefit.
 
-Verified in Phase 0a, and load-bearing:
-
-- `claudeSessionId` and `transcript_path` **survive compaction**; the transcript
-  is append-only and is never rewritten. The watermark is keyed on session ID, so
-  a changed ID would silently re-inject the entire room.
-- The compaction summary is a user record with **no `promptSource`**, so the
-  reassembly anchor correctly skips it.
-- Compaction runs as a **subagent**; the `isSidechain` filter is what keeps the
-  summarizer's output out of the room.
-- Slash commands do **not** reach `UserPromptSubmit`, so `/compact` never becomes
-  a room event.
-- Compaction never fires mid-turn (verified to 378k tokens against a 100k
-  threshold), so reassembly cannot be split across a boundary.
-
-Residual risk: context survival is summarizer judgment, not a format guarantee.
-Re-run Test B from the findings when the model or Claude Code version changes.
+**Nothing checks the part that matters most.** Whether injected context survives a
+compaction is the summarizer's judgement rather than a format guarantee, so no
+assertion can cover it. Re-run Test B from `docs/phase0a-findings.md` when the model
+or the Claude Code version changes.
 
 ## Delivery is confirmed, never assumed
 

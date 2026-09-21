@@ -5025,10 +5025,23 @@ sentences are false the moment the defects are fixed, and they take the surround
 entry down with them. A decision states the rule and may say once that the code does
 not implement it; the defects are work, and work dies when it is done.
 
-**`CLAUDE.md` is a deliberate exception.** Its recitals of findings duplicate the
-behaviour registry, and should: it is the document that loads itself every session,
-and a warning nobody reads is not a warning. Each recital names the behaviour that
-checks it, which is what keeps the duplicate honest.
+**`CLAUDE.md` is not an exception, though it was first written as one.** The
+argument for exempting it — that it loads itself every session, so a duplicate there
+is a warning where warnings work — justifies any duplicate anywhere, and its only
+real support was that the recitals already existed.
+
+The rule that actually holds is sharper: **what earns a place in an always-loaded
+file is what no check covers.** A prohibition, a judgement call, a residual risk.
+Where `doctor` already checks a fact, point at the behaviour and state the rule that
+depends on it, because the unchecked copy is the one that goes quietly wrong.
+
+Applying it removed fifteen lines and left the file more useful. Two sections
+reciting `Stop` and compaction behaviour became statements of what the code does and
+why, pointing at B04, B05, B09 and the compaction tier. What survived unchanged is
+the one part nothing can assert — that context surviving a compaction is the
+summarizer's judgement rather than a format guarantee. The MCP section survived for
+the same reason: it records an **absence**, and an absence has no assertion, so the
+claim has nowhere else to live.
 
 **Revisit when:** a fifth kind of document appears, at which point the question to
 ask of it is which question it answers that none of the others do.
