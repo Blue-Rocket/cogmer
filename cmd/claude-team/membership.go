@@ -898,3 +898,17 @@ func (m *Membership) RoomsAdmitting(peerID string) []Room {
 	}
 	return out
 }
+
+// WithheldFor counts the rooms a peer has been admitted to but cannot be told
+// about, because the two have not verified each other (D-106). It is what turns
+// "unverified" from a state into a reason.
+func (m *Membership) WithheldFor(peerID string) int {
+	if m.IsVerified(peerID) {
+		return 0
+	}
+	var n int
+	if err := m.db.QueryRow(`SELECT COUNT(*) FROM room_guests WHERE peer_id = ?`, peerID).Scan(&n); err != nil {
+		return 0
+	}
+	return n
+}

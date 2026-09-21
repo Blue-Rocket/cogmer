@@ -5540,5 +5540,16 @@ offer that arrives when it works needs no warning at all.
 any check of "is this guest verified" must exclude self rather than conclude that
 the creator is unverified and withhold from them.
 
+**Where the two waiting things surface, since they point in opposite directions.**
+An offer waiting to be accepted is a room, and belongs with rooms — it is listed
+apart from the rooms already joined, because accepting is the act that has not
+happened. An invitation withheld for want of a verification is not visible to the
+person it is for and is entirely visible to the person who can release it, so it
+belongs beside that peer: "unverified" is a state, "unverified, one invitation
+waiting on this" is a reason. Naming what is blocked is the difference between a
+prompt somebody acts on and a reproach they learn to skip, and the count must
+disappear when the verification happens rather than persist as a record of work
+already done.
+
 **Revisit when:** admission and verification stop being separable — if a future
 change makes one imply the other, withholding has nothing left to sequence.

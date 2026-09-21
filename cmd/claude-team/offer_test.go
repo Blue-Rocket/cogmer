@@ -135,3 +135,39 @@ func TestVerifyingDeliversWhatWasWaiting(t *testing.T) {
 		}
 	}
 }
+
+// An unverified peer is a state; one holding up an invitation is a reason. The
+// count is what lets /peer-list say what verifying would release (D-106).
+func TestWithheldInvitationsAreCounted(t *testing.T) {
+	m := testMembership(t)
+	self := testIdentity(t)
+	peer := testIdentity(t).PeerID
+	if err := m.Allow(peer, "alice"); err != nil {
+		t.Fatal(err)
+	}
+	if n := m.WithheldFor(peer); n != 0 {
+		t.Fatalf("nothing admitted yet and %d withheld", n)
+	}
+
+	for i := 0; i < 2; i++ {
+		r, err := m.CreateRoom(self.PeerID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := m.Invite(r.RoomID, peer); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if n := m.WithheldFor(peer); n != 2 {
+		t.Errorf("withheld = %d, want 2", n)
+	}
+
+	// Verifying releases them, so there is nothing left to report. A count that
+	// survived verification would be a standing reproach for work already done.
+	if err := m.MarkVerified(peer); err != nil {
+		t.Fatal(err)
+	}
+	if n := m.WithheldFor(peer); n != 0 {
+		t.Errorf("withheld = %d after verifying, want 0", n)
+	}
+}

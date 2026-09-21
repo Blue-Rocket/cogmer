@@ -657,12 +657,24 @@ func runPeers() {
 			fmt.Println("Your own string, to send them, is in /self-status.")
 			return
 		}
+		withheld := 0
 		for _, p := range known {
 			state := "unverified"
 			if p.VerifiedAt != "" {
 				state = "verified " + p.VerifiedAt[:10]
 			}
-			fmt.Printf("  %-22s %-14s %s\n", p.Name, state, p.PeerID)
+			// An unverified peer is a state; an unverified peer holding up an
+			// invitation is a reason. Naming what is blocked is what makes this
+			// worth acting on rather than a standing reproach (D-106).
+			note := ""
+			if n := m.WithheldFor(p.PeerID); n > 0 {
+				withheld += n
+				note = fmt.Sprintf("  — %d invitation(s) waiting on this", n)
+			}
+			fmt.Printf("  %-22s %-14s %s%s\n", p.Name, state, p.PeerID, note)
+		}
+		if withheld > 0 {
+			fmt.Printf("\nVerifying releases them: /peer-pair <name>, two words on a call.\n")
 		}
 	})
 }
@@ -711,8 +723,10 @@ func runRooms() {
 			log.Fatalf("rooms: %v", err)
 		}
 		if len(rooms) == 0 {
-			fmt.Println("no rooms. /room-create in a Claude Code session makes one.")
-			return
+			if len(m.Offers()) == 0 {
+				fmt.Println("no rooms. /room-create in a Claude Code session makes one.")
+				return
+			}
 		}
 		for _, r := range rooms {
 			g, _ := m.Guests(r.RoomID)
@@ -722,6 +736,17 @@ func runRooms() {
 			}
 			fmt.Printf("%s %-24s %-8s %d guest(s)  %d session(s)\n",
 				mark, r.RoomName, r.State, len(g), m.SessionsInRoom(r.RoomID))
+		}
+		// Rooms somebody has admitted you to and told you about. Listed here
+		// rather than anywhere else because they are rooms, and kept apart from
+		// the ones above because an offer is a thing to accept rather than a room
+		// you are in (D-105).
+		if offers := m.Offers(); len(offers) > 0 {
+			fmt.Println("\nwaiting for you to accept:")
+			for _, o := range offers {
+				fmt.Printf("  %-24s from %-20s  /room-join %s\n",
+					o.RoomName, firstNonEmpty(m.Label(o.Host), PeerName(o.Host)), o.RoomName)
+			}
 		}
 	})
 }
