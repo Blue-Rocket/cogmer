@@ -5294,7 +5294,7 @@ window.
 
 ## D-103 — An address belongs to a peer, and is stored in one place
 
-**Date:** 2026-09-21 · **Status:** decided, not implemented
+**Date:** 2026-09-21 · **Status:** active (implemented)
 
 **Context.** Asked why a newer address would not update both stores, and then more
 pointedly why an address is stored in more than one place at all. Following that
@@ -5360,7 +5360,7 @@ model the tables could not hold.
 
 ## D-104 — The overlay address is public and stable; admission moves to a list
 
-**Date:** 2026-09-21 · **Status:** decided, not implemented
+**Date:** 2026-09-21 · **Status:** active (implemented)
 
 **Context.** Somebody prints their pairing string at a coffee shop, is interrupted,
 and sends it from home two hours later. Is the address still good? Following that
@@ -5432,7 +5432,7 @@ pre-shared key.
 
 ## D-105 — An invitation travels over the channel pairing already established
 
-**Date:** 2026-09-21 · **Status:** decided, not implemented
+**Date:** 2026-09-21 · **Status:** active (implemented)
 
 **Context.** While tracing how a peer recovers from an address change, the
 hand-carried invitation was defended on the grounds that it survives one-way
@@ -5484,7 +5484,7 @@ which point pull costs nothing extra and is the better shape.
 
 ## D-106 — An offer is delivered when it can work, not when it is made
 
-**Date:** 2026-09-21 · **Status:** decided, not implemented · **Refines** D-105
+**Date:** 2026-09-21 · **Status:** active (implemented) · **Refines** D-105
 
 **Context.** D-105 makes an invitation an offer pushed over the paired channel.
 Inviting an unverified peer is permitted and inert (§25), so the two together would

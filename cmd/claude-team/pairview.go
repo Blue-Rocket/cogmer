@@ -163,6 +163,9 @@ func (d *Daemon) handlePairNew(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, pairNewResponse{Error: err.Error()})
 		return
 	}
+	// Let them through the tunnel now, so that their side can reach us for the
+	// exchange rather than being refused by silence (D-104).
+	d.permitTunnel(req.Endpoint)
 	id := d.newPairing(req.Peer, req.Name, createdPeer)
 	if id == "" {
 		writeJSON(w, pairNewResponse{Error: "could not generate a pairing link"})

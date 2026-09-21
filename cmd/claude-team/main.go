@@ -387,11 +387,14 @@ func runDaemon() {
 	advertised := peerAddr()
 	var tcListener net.Listener
 	if tailcatEnabled() {
-		l, endpoint, err := StartTailcat()
+		// Built from the peers this machine has recorded. A peer not on it cannot
+		// open a tunnel at all, which puts admission a layer below the TLS pin and
+		// needs no secret in the published address (D-104).
+		l, endpoint, srv, err := StartTailcat(d.tunnelPeers())
 		if err != nil {
 			log.Printf("  tailcat unavailable (%v) — reachable only at %s", err, peerAddr())
 		} else {
-			tcListener, advertised = l, endpoint
+			tcListener, advertised, d.tunnel = l, endpoint, srv
 			defer l.Close()
 		}
 	}
@@ -764,21 +767,34 @@ func runJoin(args []string) {
 	}
 	withMembership(func(m *Membership, id *Identity) {
 		name, roomID, endpoint, host, full := parseInvitation(args[0])
+		// A name on its own may be an offer already delivered over the channel
+		// (D-105), in which case the four facts an invitation line carries are
+		// already here and the person types only what they were shown.
+		if !full {
+			if o, ok := m.FindOffer(name); ok {
+				name, roomID, endpoint, host, full = o.RoomName, o.RoomID, o.Endpoint, o.Host, true
+				defer func() { _ = m.DropOffer(o.RoomID) }()
+			}
+		}
 		if full {
 			// A room learned from an invitation: the guest did not create it, so
 			// its identity comes from the invitation rather than being invented.
 			if err := m.RecordRoom(roomID, name); err != nil {
 				log.Fatalf("join: %v", err)
 			}
-			if err := m.AddRoomPeer(roomID, endpoint); err != nil {
-				log.Fatalf("join: %v", err)
-			}
 			// Admit whoever offered the invitation. Synchronisation is a pull in
 			// both directions, so a guest that records the room and not its host
 			// can read that room and never be read -- which looks like one-way
 			// collaboration and is really a one-sided guest list.
+			//
+			// The address is recorded against the host and after Allow, because
+			// SetPeerEndpoint is an UPDATE: run before the row exists it matches
+			// nothing and the only address anybody had is lost (D-103).
 			if host != "" {
 				if err := m.Allow(host, ""); err != nil {
+					log.Fatalf("join: %v", err)
+				}
+				if err := m.SetPeerEndpoint(host, endpoint); err != nil {
 					log.Fatalf("join: %v", err)
 				}
 				if err := m.Invite(roomID, host); err != nil {
@@ -788,6 +804,14 @@ func runJoin(args []string) {
 		}
 		r, err := m.FindRoom(name)
 		if errors.Is(err, errNoSuchRoom) {
+			if offers := m.Offers(); len(offers) > 0 {
+				fmt.Printf("No room named %q. Waiting for you:\n", name)
+				for _, o := range offers {
+					fmt.Printf("  %-20s from %s\n", o.RoomName,
+						firstNonEmpty(m.Label(o.Host), PeerName(o.Host)))
+				}
+				return
+			}
 			log.Fatalf("no room named %q. Ask its host for an invitation; yours to give them is:\n  %s",
 				name, id.PeerID)
 		}
@@ -806,7 +830,7 @@ func runJoin(args []string) {
 				fmt.Printf("them, both run /peer-pair — it opens the two-word check in a browser.\n")
 			}
 		}
-		if peers := m.RoomPeers(r.RoomID); len(peers) > 0 {
+		if peers := m.RoomPeers(r.RoomID, id.PeerID); len(peers) > 0 {
 			fmt.Printf("reaching its members at: %s\n", strings.Join(peers, ", "))
 		}
 		fmt.Println("Other sessions are unaffected: a session is in a room because someone put")
@@ -877,21 +901,32 @@ func runInvite(args []string) {
 		if err := m.Invite(r.RoomID, pid); err != nil {
 			log.Fatalf("invite: %v", err)
 		}
-		fmt.Printf("%s may now enter %s\n", PeerName(pid), r.RoomName)
+		fmt.Printf("%s may now enter %s.\n", PeerName(pid), r.RoomName)
+
+		// Admitted, queued, one step from done — and never a refusal. Wanting to
+		// start a room is what makes somebody willing to verify, so this is the
+		// moment the check finally has a visible purpose, and blocking here would
+		// send them away to do an errand instead of finishing (D-106).
 		if !m.IsVerified(pid) {
-			// Admission and verification are separate gates and BOTH are required
-			// (D-054). Inviting an unverified peer is allowed and does nothing on
-			// its own, so say so plainly: a room that looks empty for a reason
-			// nobody stated is worse than a refusal.
-			fmt.Printf("\nNOTE: %s is UNVERIFIED, so no transcript will pass in either\n", PeerName(pid))
-			fmt.Printf("      direction until it is. On a call with them, both run\n")
-			fmt.Printf("      /peer-pair, which opens the two-word check in a browser.\n")
+			fmt.Printf("\nThey have not been told yet: you and %s have not verified each other,\n",
+				firstNonEmpty(m.Label(pid), PeerName(pid)))
+			fmt.Printf("and until you do, nothing would pass between you in either direction.\n\n")
+			fmt.Printf("  /peer-pair %s\n\n", firstNonEmpty(m.Label(pid), PeerName(pid)))
+			fmt.Printf("Two words, on a call, both at once. The invitation goes when you finish.\n")
+			return
 		}
-		fmt.Println()
-		// An invitation carries a room's identity and where to reach it. It carries
-		// no secret: admission is the guest list entry just made, proved later by
-		// possession of their key (D-026). Interception reveals that a room exists.
-		fmt.Println("give them, to run in a Claude Code session:")
+
+		var res sendOfferResponse
+		if err := postLocal("/offer/send", sendOfferRequest{Peer: pid, RoomID: r.RoomID}, &res); err == nil && res.Delivered {
+			fmt.Printf("Told them. They accept with:  /room-join %s\n", r.RoomName)
+			return
+		} else if err == nil && res.Error != "" {
+			fmt.Printf("\nCould not reach them (%s), so send this instead:\n", res.Error)
+		} else {
+			fmt.Printf("\nCould not reach them, so send this instead:\n")
+		}
+		// The fallback carries the same four facts by hand. The address in it is
+		// the HOST's, so it is unaffected by whatever made the guest unreachable.
 		fmt.Printf("  /room-join %s\n", invitation(r, AdvertisedEndpoint(), self.PeerID))
 	})
 }

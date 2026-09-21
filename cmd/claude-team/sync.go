@@ -81,8 +81,14 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 	}
 	// A guest that tells us where it listens becomes reachable, which is what
 	// makes the exchange mutual rather than one peer reading another.
+	//
+	// Recorded against the peer, not the room. verifyRequest has just established
+	// req.PeerID cryptographically and the signature covers the endpoint, so this
+	// is an authenticated claim by the only party entitled to make it — and it is
+	// the sole way a peer that moved teaches anybody where it went (D-103).
 	if req.Endpoint != "" {
-		_ = d.members.AddRoomPeer(room.RoomID, req.Endpoint)
+		_ = d.members.SetPeerEndpoint(req.PeerID, req.Endpoint)
+		d.permitTunnel(req.Endpoint)
 	}
 
 	store, err := d.storeFor(room.RoomID)
@@ -196,7 +202,7 @@ func (d *Daemon) syncTargets() []string {
 	}
 	if rooms, err := d.members.Rooms(); err == nil {
 		for _, r := range rooms {
-			for _, a := range d.members.RoomPeers(r.RoomID) {
+			for _, a := range d.members.RoomPeers(r.RoomID, d.id.PeerID) {
 				add(a)
 			}
 		}

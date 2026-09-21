@@ -12,6 +12,11 @@ allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" join:*)
 
 Report what the output says, in one or two lines.
 
+A room can be joined by name alone when its host's invitation already reached this
+machine. If the output instead lists rooms waiting to be accepted, relay the list
+and the names — the person likely typed a name they were told verbally rather than
+one that was delivered.
+
 **If it refused because this session has already been in a room, relay the whole
 explanation rather than condensing it.** The person has done nothing wrong, cannot
 undo what happened, and the useful parts are the reason and the way forward — that

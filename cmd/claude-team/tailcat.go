@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"tailscale.com/tailcfg"
 
 	"github.com/tailscale/tailcat"
 	"tailscale.com/types/key"
@@ -50,6 +52,8 @@ import (
 // tailcatPort is the port inside the tunnel. It is not an address on any machine
 // and never leaves one, so a fixed number is fine and one fewer thing to publish.
 const tailcatPort = 4783
+
+const tailcatRegionFile = "tailcat-region.json"
 
 const tailcatKeyFile = "tailcat.key"
 
@@ -165,15 +169,32 @@ func (a tailcatAddr) Network() string { return schemeTailcat }
 func (a tailcatAddr) String() string  { return string(a) }
 
 // StartTailcat begins listening and returns the endpoint to advertise.
-func StartTailcat() (net.Listener, string, error) {
+func StartTailcat(allowed []key.NodePublic) (net.Listener, string, *tailcat.Server, error) {
 	k, err := loadTailcatKey()
 	if err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 	l := &connListener{conns: make(chan net.Conn), closed: make(chan struct{})}
 
+	region, rerr := loadTailcatRegion()
+	if rerr != nil {
+		return nil, "", nil, rerr
+	}
 	s := &tailcat.Server{
-		Key: k,
+		Key:    k,
+		Region: region,
+		// No pre-shared key, so the published address contains no secret and is
+		// identical on every start (D-104). With one, the library mints a fresh
+		// key at each Start and the address changes, which silently invalidates
+		// every pairing string and invitation this machine has issued. The key
+		// also made the address confidential, and §12 requires it to be
+		// pasteable — the two cannot both hold, because the key travels inside
+		// the thing that must be published.
+		DisablePresharedKey: true,
+		// Who may open a tunnel is a list, not a secret. It is the peers this
+		// machine has recorded, which is a question we can already answer, and
+		// unlike a shared key it is per peer and revocable.
+		AllowedClients: allowed,
 		// Silenced: tailcat narrates its startup at a volume suited to a CLI, and
 		// this is a daemon whose log a person reads to learn about peers.
 		Logf: func(string, ...any) {},
@@ -196,13 +217,62 @@ func StartTailcat() (net.Listener, string, error) {
 		},
 	}
 	if err := s.Start(); err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 	addr := string(s.TailcatAddr())
 	if addr == "" {
 		s.Close()
-		return nil, "", errors.New("tailcat started but published no address")
+		return nil, "", nil, errors.New("tailcat started but published no address")
 	}
 	l.addr = tailcatAddr(addr)
-	return l, Endpoint{Scheme: schemeTailcat, Value: addr}.String(), nil
+	return l, Endpoint{Scheme: schemeTailcat, Value: addr}.String(), s, nil
+}
+
+// loadTailcatRegion pins the relay this node publishes.
+//
+// The address names a rendezvous: where this node can be found so an introduction
+// can happen, not where it is. Left unpinned the library re-chooses by latency at
+// every start, with a random fallback when the probe fails, so the published
+// address could differ after a restart on another network — and a changed address
+// strands everybody holding the old one (D-104).
+//
+// Pinned, a machine that travels keeps an address its colleagues can still use, at
+// the cost of a relay that may no longer be the nearest. That is the right trade:
+// the relay carries an introduction and the path upgrades to direct afterwards, so
+// the penalty is a slower handshake rather than a slower session.
+func loadTailcatRegion() (*tailcfg.DERPRegion, error) {
+	path := filepath.Join(homeDir(), tailcatRegionFile)
+	if b, err := os.ReadFile(path); err == nil {
+		var r tailcfg.DERPRegion
+		if json.Unmarshal(b, &r) == nil && r.RegionID != 0 {
+			return &r, nil
+		}
+	}
+	ci := &tailcat.ConnInfo{RegionID: -1}
+	if err := ci.Expand(context.Background(), tailcat.ExpandForServer); err != nil {
+		return nil, err
+	}
+	if len(ci.Region) == 0 {
+		return nil, errors.New("no relay region could be chosen")
+	}
+	r := ci.Region[0]
+	if buf, err := json.MarshalIndent(r, "", "  "); err == nil {
+		_ = os.MkdirAll(homeDir(), 0o700)
+		_ = os.WriteFile(path, buf, 0o600)
+	}
+	return r, nil
+}
+
+// nodeKeyFor reads the tunnel identity out of an address recorded for a peer, so
+// the allow-list can be built from the peers this machine already knows.
+func nodeKeyFor(endpoint string) (key.NodePublic, bool) {
+	e, err := ParseEndpoint(endpoint)
+	if err != nil || e.Scheme != schemeTailcat {
+		return key.NodePublic{}, false
+	}
+	ci, err := tailcat.ParseAddr(tailcat.Addr(e.Value))
+	if err != nil || ci.ServerPublic.NodePublic.IsZero() {
+		return key.NodePublic{}, false
+	}
+	return ci.ServerPublic.NodePublic, true
 }

@@ -808,3 +808,81 @@ func TestEverySlashCommandNamesARealSubcommand(t *testing.T) {
 		}
 	}
 }
+
+// An address belongs to a peer and is recorded once (D-103). The table it used to
+// share with rooms had no peer column, so none of this could be asked.
+func TestAnAddressBelongsToAPeer(t *testing.T) {
+	m := testMembership(t)
+	alice := testIdentity(t).PeerID
+	bob := testIdentity(t).PeerID
+	for _, p := range []string{alice, bob} {
+		if err := m.Allow(p, PeerName(p)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := m.SetPeerEndpoint(alice, "tc://alice-one"); err != nil {
+		t.Fatal(err)
+	}
+	if got := m.PeerEndpoint(alice); got != "tc://alice-one" {
+		t.Fatalf("PeerEndpoint = %q", got)
+	}
+	if got := m.PeerEndpoint(bob); got != "" {
+		t.Errorf("bob has an address he was never given: %q", got)
+	}
+
+	// A peer that moves overwrites its own row rather than adding one. The old
+	// table appended, so a colleague's every network stayed on the list for ever.
+	if err := m.SetPeerEndpoint(alice, "tc://alice-two"); err != nil {
+		t.Fatal(err)
+	}
+	if got := m.PeerEndpoint(alice); got != "tc://alice-two" {
+		t.Fatalf("a move did not replace the address: %q", got)
+	}
+	if all := m.PeerEndpoints(); len(all) != 1 {
+		t.Errorf("%d addresses recorded for one peer that moved once; want 1", len(all))
+	}
+}
+
+// Where to reach a room's members is its guest list joined to their addresses,
+// with self excluded by saying so rather than by having no row (D-103).
+func TestRoomPeersAreItsGuests(t *testing.T) {
+	m := testMembership(t)
+	self := testIdentity(t)
+	room, err := m.CreateRoom(self.PeerID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	guest := testIdentity(t).PeerID
+	stranger := testIdentity(t).PeerID
+	for _, p := range []string{guest, stranger} {
+		if err := m.Allow(p, PeerName(p)); err != nil {
+			t.Fatal(err)
+		}
+		if err := m.SetPeerEndpoint(p, "tc://"+PeerName(p)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := m.Invite(room.RoomID, guest); err != nil {
+		t.Fatal(err)
+	}
+
+	peers := m.RoomPeers(room.RoomID, self.PeerID)
+	if len(peers) != 1 || peers[0] != "tc://"+PeerName(guest) {
+		t.Fatalf("room peers = %v; want only the guest's address", peers)
+	}
+
+	// Self is a guest of its own room. Give it an address and it must still not
+	// appear, or a daemon polls itself.
+	if err := m.Allow(self.PeerID, "me"); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.SetPeerEndpoint(self.PeerID, "tc://myself"); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range m.RoomPeers(room.RoomID, self.PeerID) {
+		if p == "tc://myself" {
+			t.Error("a daemon would poll itself")
+		}
+	}
+}

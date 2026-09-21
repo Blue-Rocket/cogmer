@@ -37,7 +37,22 @@ CREATE TABLE IF NOT EXISTS known_peers (
   -- held at MACHINE scope because pairing precedes any room: without it there is
   -- nowhere to reach a peer until a room already exists, which would force
   -- verification to follow admission rather than precede it.
-  endpoint TEXT
+  endpoint TEXT,
+  -- When this address was last advertised by the peer whose address it is. An
+  -- address is a snapshot of where a machine was, so age is the only thing that
+  -- distinguishes one worth trying from one worth trying last (§4).
+  endpoint_at TEXT
+);
+-- An invitation that has arrived and has not been accepted. Held apart from the
+-- rooms table deliberately: a room recorded there would be synchronized and shown
+-- before anybody agreed to join it, and an offer is a thing to accept rather than
+-- a room you are in (D-105).
+CREATE TABLE IF NOT EXISTS pending_offers (
+  room_id      TEXT PRIMARY KEY,
+  room_name    TEXT NOT NULL,
+  host_peer_id TEXT NOT NULL,
+  endpoint     TEXT NOT NULL,
+  offered_at   TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS rooms (
   room_id         TEXT PRIMARY KEY,
@@ -75,12 +90,6 @@ CREATE TABLE IF NOT EXISTS session_rooms (
 
 -- Where a room's other members can be reached. An endpoint is reachability, not
 -- identity (D-018): it changes when a machine moves and is only ever a hint.
-CREATE TABLE IF NOT EXISTS room_peers (
-  room_id  TEXT NOT NULL,
-  endpoint TEXT NOT NULL,
-  PRIMARY KEY (room_id, endpoint)
-);
-
 -- Machine-level state. current_room is the room a session joins when it begins:
 -- a session cannot be asked which room it wants, because nothing knows a session
 -- exists until its first hook fires.
@@ -154,6 +163,7 @@ func migrateMembership(db *sql.DB) error {
 	for _, c := range []struct{ table, column, typ string }{
 		{"known_peers", "verified_at", "TEXT"},
 		{"known_peers", "endpoint", "TEXT"},
+		{"known_peers", "endpoint_at", "TEXT"},
 		{"session_rooms", "left_at", "TEXT"},
 	} {
 		if err := addColumnIfMissing(db, c.table, c.column, c.typ); err != nil {
@@ -164,6 +174,13 @@ func migrateMembership(db *sql.DB) error {
 	// and nothing writes it -- but a column encoding a rule that was removed is a
 	// rule somebody will later find and reinstate (D-056).
 	if err := dropColumnIfPresent(db, "session_rooms", "injected"); err != nil {
+		return err
+	}
+	// An address belongs to a peer (D-103). This table held addresses with no peer
+	// column, so nothing can be carried out of it -- which is the defect, not a
+	// migration difficulty. Peers re-advertise on their next synchronization and
+	// the rows rebuild themselves, in the place that names whose they are.
+	if _, err := db.Exec(`DROP TABLE IF EXISTS room_peers`); err != nil {
 		return err
 	}
 	if unique == "" {
@@ -223,8 +240,34 @@ func (m *Membership) SetPeerEndpoint(peerID, endpoint string) error {
 	if endpoint == "" {
 		return nil
 	}
-	_, err := m.db.Exec(`UPDATE known_peers SET endpoint = ? WHERE peer_id = ?`, endpoint, peerID)
+	// Written on every synchronization a peer performs, which is often and almost
+	// always the same value. Comparing first keeps that from being a database
+	// write per poll, and the timestamp is only interesting when it moved.
+	if cur, at := m.peerEndpointAt(peerID); cur == endpoint && at != "" {
+		return nil
+	}
+	_, err := m.db.Exec(`UPDATE known_peers SET endpoint = ?, endpoint_at = ? WHERE peer_id = ?`,
+		endpoint, time.Now().UTC().Format(time.RFC3339), peerID)
 	return err
+}
+
+// PeerEndpoint is the address recorded for one peer.
+//
+// The query that should always have been here. Its absence is why verification
+// dialled every address this machine knew: there was no way to ask which one was a
+// particular peer's, so it asked for all of them (D-103).
+func (m *Membership) PeerEndpoint(peerID string) string {
+	e, _ := m.peerEndpointAt(peerID)
+	return e
+}
+
+func (m *Membership) peerEndpointAt(peerID string) (endpoint, at string) {
+	var e, a sql.NullString
+	if err := m.db.QueryRow(`SELECT endpoint, endpoint_at FROM known_peers WHERE peer_id = ?`,
+		peerID).Scan(&e, &a); err != nil {
+		return "", ""
+	}
+	return e.String, a.String
 }
 
 // PeerEndpoints is every machine-scope address worth trying. Room membership
@@ -532,11 +575,6 @@ func (m *Membership) RecordRoom(roomID, roomName string) error {
 	return err
 }
 
-func (m *Membership) AddRoomPeer(roomID, endpoint string) error {
-	_, err := m.db.Exec(`INSERT OR IGNORE INTO room_peers (room_id, endpoint) VALUES (?,?)`, roomID, endpoint)
-	return err
-}
-
 // RoomPeers lists where a room's other members might be. Endpoints go stale, so
 // this is a set of things to try rather than a directory.
 // ReserveSequence issues the next peer sequence for a room and records it HERE,
@@ -576,8 +614,23 @@ func (m *Membership) IssuedSequence(roomID string) int64 {
 	return issued
 }
 
-func (m *Membership) RoomPeers(roomID string) []string {
-	rows, err := m.db.Query(`SELECT endpoint FROM room_peers WHERE room_id = ?`, roomID)
+// RoomPeers is where to reach the other members of a room.
+//
+// A join rather than a list of its own: a room's members are its guests, and an
+// address belongs to a peer (D-103). Asking the question this way returns the
+// identity alongside each address, which is what lets a failure be attributed and
+// a peer that moves overwrite one row instead of adding another.
+//
+// self is excluded explicitly. You are a guest of your own rooms and are never in
+// your own known-peers list, so the join would drop you anyway -- by the absence of
+// a row, which is the right answer for the wrong reason and stops being right the
+// moment somebody adds one.
+func (m *Membership) RoomPeers(roomID, self string) []string {
+	rows, err := m.db.Query(`
+		SELECT k.endpoint FROM room_guests g
+		JOIN known_peers k ON k.peer_id = g.peer_id
+		WHERE g.room_id = ? AND g.peer_id <> ? AND k.endpoint IS NOT NULL AND k.endpoint <> ''`,
+		roomID, self)
 	if err != nil {
 		return nil
 	}
@@ -761,4 +814,87 @@ func dropColumnIfPresent(db *sql.DB, table, column string) error {
 	}
 	_, err = db.Exec("ALTER TABLE " + table + " DROP COLUMN " + column)
 	return err
+}
+
+// --- invitations that have arrived and not been accepted (D-105) ---
+
+// Offer is a room somebody has admitted you to and told you about.
+type Offer struct {
+	RoomID    string
+	RoomName  string
+	Host      string
+	Endpoint  string
+	OfferedAt string
+}
+
+// RecordOffer stores an invitation delivered over the channel. Repeating one is
+// ordinary rather than an error: a host that cannot tell whether the last delivery
+// landed should send again, and the newest details win.
+func (m *Membership) RecordOffer(o Offer) error {
+	_, err := m.db.Exec(`
+		INSERT INTO pending_offers (room_id, room_name, host_peer_id, endpoint, offered_at)
+		VALUES (?,?,?,?,?)
+		ON CONFLICT(room_id) DO UPDATE SET
+			room_name = excluded.room_name,
+			host_peer_id = excluded.host_peer_id,
+			endpoint = excluded.endpoint,
+			offered_at = excluded.offered_at`,
+		o.RoomID, o.RoomName, o.Host, o.Endpoint, time.Now().UTC().Format(time.RFC3339))
+	return err
+}
+
+// Offers lists invitations waiting to be accepted.
+func (m *Membership) Offers() []Offer {
+	rows, err := m.db.Query(`SELECT room_id, room_name, host_peer_id, endpoint, offered_at
+		FROM pending_offers ORDER BY offered_at`)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var out []Offer
+	for rows.Next() {
+		var o Offer
+		if rows.Scan(&o.RoomID, &o.RoomName, &o.Host, &o.Endpoint, &o.OfferedAt) == nil {
+			out = append(out, o)
+		}
+	}
+	return out
+}
+
+// FindOffer resolves an offer by room name or id, so a person can accept one by
+// typing the name they were shown.
+func (m *Membership) FindOffer(nameOrID string) (Offer, bool) {
+	var o Offer
+	err := m.db.QueryRow(`SELECT room_id, room_name, host_peer_id, endpoint, offered_at
+		FROM pending_offers WHERE room_id = ? OR room_name = ?`, nameOrID, nameOrID).
+		Scan(&o.RoomID, &o.RoomName, &o.Host, &o.Endpoint, &o.OfferedAt)
+	return o, err == nil
+}
+
+// DropOffer removes one once it has been accepted.
+func (m *Membership) DropOffer(roomID string) error {
+	_, err := m.db.Exec(`DELETE FROM pending_offers WHERE room_id = ?`, roomID)
+	return err
+}
+
+// RoomsAdmitting lists the rooms a peer has been admitted to, which is what a host
+// owes them an invitation for. Used to deliver whatever was waiting when a
+// verification completes (D-106).
+func (m *Membership) RoomsAdmitting(peerID string) []Room {
+	rows, err := m.db.Query(`
+		SELECT r.room_id, r.room_name, r.state, r.created_at FROM room_guests g
+		JOIN rooms r ON r.room_id = g.room_id
+		WHERE g.peer_id = ?`, peerID)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var out []Room
+	for rows.Next() {
+		var r Room
+		if rows.Scan(&r.RoomID, &r.RoomName, &r.State, &r.CreatedAt) == nil {
+			out = append(out, r)
+		}
+	}
+	return out
 }

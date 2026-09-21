@@ -3,12 +3,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/tailscale/tailcat"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"tailscale.com/types/key"
 )
 
 // Injection limits (§21). Exceeding them yields a catch-up marker rather than
@@ -88,6 +90,10 @@ type Daemon struct {
 	// key and cached because that key never changes (D-101).
 	tls peerTLS
 
+	// The overlay server, kept so that a peer recorded after startup can be let
+	// through the tunnel without a restart (D-104). Nil when the overlay is off.
+	tunnel *tailcat.Server
+
 	subs     map[chan struct{}]bool
 	subsMu   sync.Mutex
 	peerSeen map[string]*peerState
@@ -129,6 +135,7 @@ func (d *Daemon) LocalRoutes() *http.ServeMux {
 	mux.HandleFunc("/", d.handleUI)
 	mux.HandleFunc("/stream", d.handleStream)
 	mux.HandleFunc("/pair/new", guardLocal(d.handlePairNew))
+	mux.HandleFunc("/offer/send", guardLocal(d.handleSendOffer))
 	// The ceremony page itself is a GET somebody navigated to.
 	mux.HandleFunc("/pair/", d.handlePairPage)
 	mux.HandleFunc("/verify/start", guardLocal(d.handleVerifyStart))
@@ -150,6 +157,7 @@ func (d *Daemon) PeerRoutes() *http.ServeMux {
 	mux.HandleFunc("/healthz", d.health)
 	mux.HandleFunc("/sync", d.handleSync)
 	mux.HandleFunc("/verify", d.handleVerify)
+	mux.HandleFunc("/offer", d.handleOffer)
 	return mux
 }
 
@@ -598,4 +606,32 @@ func renderedSize(evs []Event, perEvent int) int {
 		n += c + len(e.UserDisplayName) + len(e.PeerID) + 64 // framing per turn
 	}
 	return n
+}
+
+// tunnelPeers is every recorded peer whose address names an overlay node.
+//
+// The allow-list and the known-peers list answer the same question in different
+// currencies: one in tunnel identities, one in signing identities. This converts
+// between them, and a peer reached over plain TCP contributes nothing because it
+// never arrives through the tunnel.
+func (d *Daemon) tunnelPeers() []key.NodePublic {
+	var out []key.NodePublic
+	for _, e := range d.members.PeerEndpoints() {
+		if k, ok := nodeKeyFor(e); ok {
+			out = append(out, k)
+		}
+	}
+	return out
+}
+
+// permitTunnel lets a newly recorded peer through, without a restart. Adding one
+// while the server runs takes effect immediately; the library locks the list on
+// both sides.
+func (d *Daemon) permitTunnel(endpoint string) {
+	if d.tunnel == nil {
+		return
+	}
+	if k, ok := nodeKeyFor(endpoint); ok {
+		d.tunnel.AddAllowedClient(k)
+	}
 }
