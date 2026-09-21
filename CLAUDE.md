@@ -208,6 +208,49 @@ zero-configuration path), and detection of a lost room database (review C-1, Pha
 The `claude-team` binary is **not** tracked — `bin/` is ignored, because it is 17MB
 per commit and `go build` reproduces it.
 
+## Where a thing gets written down
+
+Each document answers one question, and putting an answer in the wrong one is how
+they rot.
+
+| document | answers |
+|---|---|
+| `Shared Claude Sessions.md` | what must be true |
+| `docs/decisions.md` | why, and what was rejected |
+| `docs/*-findings.md` | what we observed when we tried it |
+| `cmd/claude-team/behaviors.go` | what someone else's software does that we rely on |
+
+**A finding is evidence and a spec statement is a commitment.** Evidence has a
+method, a date and a version; a commitment has none of those and is true because we
+say it must be. So a finding never goes in the spec — put the **requirement it
+justifies** there instead, and cite the finding only where the requirement would
+otherwise look arbitrary. A spec carrying findings acquires an expiry date it does
+not advertise.
+
+**A finding about someone else's software goes in the behaviour registry**, not a
+findings document and not the spec. The registry is the only one of the four that
+tests itself, so a fact recorded there cannot rot silently.
+
+**Current-state defects go in none of them.** "Today `room_peers` accumulates" is
+false the moment it is fixed, and it takes the surrounding entry with it. Defects
+are work; they live wherever work lives and they die when done.
+
+**A decision that changes what the system *is* updates the spec in the same pass**
+(D-098). Recording the rationale feels like finishing and it is half: the spec goes
+on stating the old rule, and the next reader concludes the code is wrong. This has
+happened twice — see review finding A1.
+
+**Corrections are clean replacements.** No superseded text, and no narration of what
+the old text said or why it changed. That belongs in `decisions.md`, where tracking
+alternatives is the job. These documents are hard enough to read without carrying
+every way the system might have worked and does not.
+
+**This file is the exception, deliberately.** The sections below that recite
+findings duplicate the behaviour registry on purpose: this is the document that
+loads itself every session, and a warning nobody reads is not a warning. Each one
+names the behaviour that checks it. Do not delete them for duplicating the
+registry; do keep them pointing at it.
+
 ## Before proposing a change to how any of this works
 
 Read `docs/decisions.md`. It records what was decided, and — more usefully — what

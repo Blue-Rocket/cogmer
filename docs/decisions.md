@@ -4985,3 +4985,50 @@ should read the payload.
 
 **Revisit when:** a fourth peer fact appears, which should now be an implementation
 change only.
+
+## D-100 — Each document answers one question, and a finding is not a commitment
+
+**Date:** 2026-09-20 · **Status:** active · **Generalises** D-098
+
+**Context.** Asked whether findings belong in the specification, in the course of
+deciding what a rewritten D-091 should contain. They do not, and working out why
+produced a rule that covers more than findings.
+
+**A finding is evidence; a specification statement is a commitment.** Evidence has a
+method, a date and a version. A commitment has none of those and is true because it
+is required. "Injected context survives compaction" was true of one Claude Code
+version under one test; written into the specification it reads as timeless, and
+nothing in the sentence says otherwise. The choice then is to let it rot quietly or
+to stamp the specification with versions and dates, which turns it into a laboratory
+notebook with requirements scattered through it.
+
+The requirement a finding justifies has no such problem. "The delivery watermark is
+keyed on session id and does not rewind at compaction" stays true until it is
+deliberately changed.
+
+**Review finding C2 is valid and is not asking for this.** It observes that
+compaction findings live only in a findings document — and the gap it names is that
+the specification makes **no commitment at all** about compaction while the
+implementation depends on several. State the requirements; cite the finding only
+where a requirement would otherwise look arbitrary. "Findings do not belong in the
+specification" and "C2 is a real gap" are both true, because C2 is about the missing
+commitment rather than the missing evidence.
+
+**A finding about someone else's software belongs in the behaviour registry.** It is
+the only one of these documents that **tests itself**, so a fact recorded there
+cannot rot silently — which is the exact failure that makes findings dangerous in a
+specification. That is review finding C1 approached from the other side.
+
+**Current-state defects belong in none of them.** This was caught in the draft of
+D-091, which listed what the code gets wrong today as evidence for its rule. Those
+sentences are false the moment the defects are fixed, and they take the surrounding
+entry down with them. A decision states the rule and may say once that the code does
+not implement it; the defects are work, and work dies when it is done.
+
+**`CLAUDE.md` is a deliberate exception.** Its recitals of findings duplicate the
+behaviour registry, and should: it is the document that loads itself every session,
+and a warning nobody reads is not a warning. Each recital names the behaviour that
+checks it, which is what keeps the duplicate honest.
+
+**Revisit when:** a fifth kind of document appears, at which point the question to
+ask of it is which question it answers that none of the others do.
