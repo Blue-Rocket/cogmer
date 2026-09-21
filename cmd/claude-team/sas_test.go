@@ -385,9 +385,10 @@ func verifiedFlag(t *testing.T, out string) bool {
 func verifiableDaemon(t *testing.T) (*Daemon, string) {
 	t.Helper()
 	d, _ := testDaemon(t)
-	srv := httptest.NewServer(d.PeerRoutes())
-	t.Cleanup(srv.Close)
-	return d, strings.TrimPrefix(srv.URL, "http://")
+	// TLS, because that is what a peer listener presents now (D-101). A plain
+	// server here does not fail fast — the client cannot handshake, so the
+	// exchange polls to its deadline and the test hangs for ninety seconds.
+	return d, servePeerTLS(t, d)
 }
 
 // The pairing string is an identifier and a bootstrap address, and must survive a

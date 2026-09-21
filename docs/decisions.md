@@ -5066,3 +5066,96 @@ claim has nowhere else to live.
 
 **Revisit when:** a fifth kind of document appears, at which point the question to
 ask of it is which question it answers that none of the others do.
+
+## D-101 — Peer connections are TLS pinned to the key already verified
+
+**Date:** 2026-09-20 · **Status:** active (implemented)
+
+**Context.** Asking what a `tc://` address contains led to noticing that `peerURL`
+was `http://` and that no `https` appeared anywhere. Confidentiality of room content
+had never been stated as a requirement, and the specification discussed it only for
+pairing strings, where the correct answer is that none is needed because the payload
+is public keys. Room content is a developer's prompts and whatever their Claude said
+back. Confidentiality is a requirement.
+
+**Signing is not secrecy.** Events are signed at origin and verified on receipt,
+which is integrity and attribution. It conceals nothing from anybody carrying the
+bytes.
+
+**Every peer connection is TLS 1.3, over every transport.** Including the overlay,
+which is already encrypted. The duplication is cheap and it buys the property that
+matters: nobody has to reason about whether a particular dial took the safe path.
+
+**Pinned to the key, so there is no PKI.** The burden people mean by "certificates"
+is an authority, issuance, trust stores, expiry and revocation. Pinning removes all
+of it. A `peerId` **is** an Ed25519 public key (D-042), already confirmed to be that
+person's by the two-word comparison (D-055), so the certificate is a container for a
+key we hold and verification is one comparison against it. Chains, hostnames and
+dates are never consulted.
+
+**Considered: deriving a key exchange from the same keys directly**, to avoid
+certificates altogether. Rejected. What that avoids is not certificates but a
+reviewed implementation — it would mean writing a handshake, nonce discipline, a
+replay window and rekeying, where the primitives are sound and the composition is
+what fails silently. Pinning already achieves the property the idea was reaching
+for, which is that transport identity and event identity are the same key.
+
+**A client certificate is required, not requested.** A peer with nothing to pin has
+no business completing a handshake, and refusing there is earlier and clearer than
+refusing after a body has been read. This moves authentication ahead of the signed
+request, which remains and is what binds identity exactly.
+
+**Two shapes of pin, because a dial knows different things.** Verification dials one
+named peer, so reaching a different key at that address is refused outright — which
+is what an address quietly changing hands looks like. Sync dials an address from a
+room's records, which say where members listen rather than which member listens
+where, so any known peer is accepted there.
+
+**Superseded within the hour: refusing cleartext off this machine.** An interim
+guard refused bare TCP to anything but loopback. It was the right stopgap and is
+redundant now, since a bare TCP endpoint is no longer a cleartext one. Its escape
+hatch is gone with it.
+
+**`peerURL` is `https://`, and that is load-bearing.** `http.Transport` applies a
+TLS config only for that scheme. A revert to `http://` would silently disable every
+check above and nothing else would fail, so a test asserts the scheme.
+
+**A note for whenever a second person runs this:** the handshake is a hard version
+boundary. A peer built before this cannot connect at all, rather than degrading.
+Nobody else has run it, so the cost is zero now and would not be later.
+
+**Revisit when:** content needs protecting from a room's own members, which this
+deliberately does not do, or at rest.
+
+## D-102 — The reveal step tolerates a peer that has already finished
+
+**Date:** 2026-09-20 · **Status:** active (implemented)
+
+**Context.** Making every peer connection TLS (D-101) turned a test that had passed
+for weeks into one that failed about one run in six. The handshake did not break it;
+it changed the timing enough to expose a race that was always there.
+
+**The two halves of the exchange were not treated alike.** A commit that reached a
+peer not yet expecting a verification set `lastErr` and retried, which is right: the
+other person may not have run their side yet, and waiting is the whole point of the
+ninety-second window. A reveal that got the same answer returned it.
+
+Nothing is not-yet-ready between one call and the next, but something can be
+*no longer* ready. The other side can complete between our commit and our reveal,
+and its deferred cleanup discards the session, so the reveal lands on a daemon that
+is not expecting one. One side then finished with two words while the other reported
+that its peer was not expecting a verification.
+
+**It recovers by looping rather than by retrying that call.** By the time the other
+side has finished it has already sent its own reveal, so its nonce is in this
+session, and the inbound check at the top of the loop finds it. The fix is to give
+the reveal the same tolerance the commit has.
+
+**A test that passes is not a test that holds.** This one ran green through the
+whole of Phase 5 and the two-machine runs, and the defect was reachable the entire
+time — it needed one side to finish inside the window between another's two calls.
+Treat a timing change that breaks an old test as evidence about the test's coverage
+before assuming it is evidence about the change.
+
+**Revisit when:** the exchange gains a third round trip, which would widen the same
+window.

@@ -138,7 +138,14 @@ func (d *Daemon) pullFrom(addr string) (int, error) {
 	// building a tunnel: probing the network, choosing a relay and handshaking.
 	// Later rounds ride the cached client and return in milliseconds, so this
 	// bounds the first attempt rather than the ordinary one.
-	client, err := clientFor(addr, 30*time.Second)
+	// A room records where its members listen, not which member listens where, so
+	// there is no single key to expect here. Any known peer is accepted, and the
+	// signed request inside binds identity exactly (D-044).
+	conf, cerr := d.clientConfig("")
+	if cerr != nil {
+		return 0, cerr
+	}
+	client, err := clientFor(addr, 30*time.Second, conf)
 	if err != nil {
 		return 0, err
 	}

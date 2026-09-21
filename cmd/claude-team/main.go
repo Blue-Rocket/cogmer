@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -400,6 +401,17 @@ func runDaemon() {
 		log.Printf("  could not record the endpoint (%v); invitations may carry the wrong one", err)
 	}
 
+	// Both peer listeners, including the overlay's, which is already encrypted:
+	// uniform TLS means confidentiality never depends on which path a dial took.
+	serverTLS, terr := d.serverConfig()
+	if terr != nil {
+		log.Fatalf("peer tls: %v", terr)
+	}
+	peer = tls.NewListener(peer, serverTLS)
+	if tcListener != nil {
+		tcListener = tls.NewListener(tcListener, serverTLS)
+	}
+
 	rooms, _ := members.Rooms()
 	log.Printf("claude-team daemon  peer=%s (%s)  serving %d room(s)",
 		id.UserDisplayName, id.PeerName, len(rooms))
@@ -413,14 +425,15 @@ func runDaemon() {
 		log.Printf("  current room  none — `claude-team create` or `claude-team join <room>`")
 	}
 	log.Printf("  hooks and UI  http://%s  (loopback)", addr())
-	log.Printf("  peer sync     http://%s", peerAddr())
+	log.Printf("  peer sync     https://%s  (TLS, pinned to known peers)", peerAddr())
 	if tcListener != nil {
 		log.Printf("  reachable at  %s", shortEndpoint(advertised))
 	}
 	if !isLoopback(peerAddr()) {
-		log.Printf("  WARNING: the peer API is reachable from other machines. Requests are")
-		log.Printf("           authenticated and events are signed, and only each room's")
-		log.Printf("           guests are admitted — but anything reachable is worth knowing about.")
+		log.Printf("  NOTE: the peer API is bound where other machines can reach it. Every")
+		log.Printf("        connection is TLS pinned to a key this machine already knows, so")
+		log.Printf("        a stranger completes no handshake — but anything reachable is")
+		log.Printf("        worth knowing about.")
 	}
 
 	go d.RunSync(peerList(), syncInterval())

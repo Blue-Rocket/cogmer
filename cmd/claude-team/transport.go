@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
@@ -84,6 +85,9 @@ type Dialer interface {
 
 type tcpDialer struct{}
 
+// A bare TCP endpoint is no longer a cleartext one: every peer connection is
+// wrapped in TLS pinned to the peer's key (D-101), so this dialler's job is to
+// produce a socket and nothing more.
 func (tcpDialer) Dial(ctx context.Context, e Endpoint) (net.Conn, error) {
 	var d net.Dialer
 	return d.DialContext(ctx, "tcp", e.Value)
@@ -101,7 +105,7 @@ func RegisterDialer(scheme string, d Dialer) { dialers[scheme] = d }
 // address is two hundred characters and has no business being url-encoded into a
 // hostname. The URL becomes http://peer/… and the dialer ignores it entirely,
 // which is honest about where the routing decision is actually made.
-func clientFor(endpoint string, timeout time.Duration) (*http.Client, error) {
+func clientFor(endpoint string, timeout time.Duration, tlsConf *tls.Config) (*http.Client, error) {
 	e, err := ParseEndpoint(endpoint)
 	if err != nil {
 		return nil, err
@@ -116,6 +120,7 @@ func clientFor(endpoint string, timeout time.Duration) (*http.Client, error) {
 			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
 				return d.Dial(ctx, e)
 			},
+			TLSClientConfig: tlsConf,
 			// A peer is one host, so a pool of one keeps a dead peer from holding
 			// connections open against every room that polls it.
 			MaxIdleConnsPerHost: 1,
@@ -126,7 +131,10 @@ func clientFor(endpoint string, timeout time.Duration) (*http.Client, error) {
 
 // peerURL is the URL used with a client from clientFor. The host is a placeholder:
 // the dialer decides where this goes.
-func peerURL(path string) string { return "http://peer" + path }
+// peerURL names no real host: clientFor replaces the dial entirely, so "peer" is a
+// placeholder that is never resolved. The scheme is https because that is what makes
+// http.Transport perform the handshake with the config below (D-101).
+func peerURL(path string) string { return "https://peer" + path }
 
 // --- what we tell other peers, which is not what we bind ---
 

@@ -1857,6 +1857,28 @@ That is deliberate: whom to admit remains the host's judgement (D-051), and the
 second gate is not a second opinion about that judgement — it is a different
 question, asked of a different party.
 
+## Room content is unreadable in transit
+
+Events are signed, which gives integrity and origin and conceals nothing. Room
+content is a developer's prompts and whatever their Claude said back, so
+confidentiality is a requirement and not a preference.
+
+Every connection between peers is TLS 1.3, over every transport — including one
+that is already encrypted, so that confidentiality never depends on which path a
+dial happened to take. The certificate each daemon presents is self-signed and
+carries the identity key; the check is that the key inside it is a peer this machine
+already knows, and for a dial aimed at one named peer, that it is that peer. Chains,
+authorities, hostnames and expiry are never consulted, because none of them exist
+here. A client certificate is required rather than requested: a peer with nothing to
+pin has no business completing a handshake.
+
+This places the transport's identity and the event's identity on the same key,
+confirmed by the same comparison (§25).
+
+It does not protect content at rest, and it does not protect a room from its own
+members. A member is entitled to read what the room carries; that is what admission
+means.
+
 ## The local API is not reachable from a web page
 
 The daemon serves the view, and the ceremony above happens on it, so the local API

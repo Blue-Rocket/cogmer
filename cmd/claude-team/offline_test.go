@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -56,7 +55,9 @@ func newOfflinePeer(t *testing.T, roomID, roomName string) *offlinePeer {
 	up := &atomic.Bool{}
 	up.Store(true)
 	routes := d.PeerRoutes()
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// TLS, because that is what a peer listener presents now (D-101). The pin is
+	// evaluated at handshake time, so `introduce` may still run after this.
+	addr := servePeerTLSHandler(t, d, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !up.Load() {
 			// Stands for unreachable. The address survives so the peer can come
 			// back at it, which is what makes reconnection testable at all.
@@ -65,9 +66,8 @@ func newOfflinePeer(t *testing.T, roomID, roomName string) *offlinePeer {
 		}
 		routes.ServeHTTP(w, r)
 	}))
-	t.Cleanup(srv.Close)
 
-	return &offlinePeer{d: d, store: store, addr: strings.TrimPrefix(srv.URL, "http://"), up: up}
+	return &offlinePeer{d: d, store: store, addr: addr, up: up}
 }
 
 // introduce makes two peers guests of the room and verified to each other, which

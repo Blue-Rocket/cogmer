@@ -146,7 +146,7 @@ func TestAnUnreachableTransportIsRefusedByName(t *testing.T) {
 	dialers = map[string]Dialer{schemeTCP: tcpDialer{}}
 	defer func() { dialers = saved }()
 
-	_, err := clientFor("tc://whatever", time.Second)
+	_, err := clientFor("tc://whatever", time.Second, nil)
 	if err == nil {
 		t.Fatal("a client was built for a transport this build lacks")
 	}
@@ -154,7 +154,7 @@ func TestAnUnreachableTransportIsRefusedByName(t *testing.T) {
 		t.Errorf("the refusal does not name the transport: %v", err)
 	}
 
-	if _, err := clientFor("198.51.100.7:4783", time.Second); err != nil {
+	if _, err := clientFor("198.51.100.7:4783", time.Second, nil); err != nil {
 		t.Errorf("a plain address was refused: %v", err)
 	}
 }

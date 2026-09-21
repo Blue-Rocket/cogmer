@@ -84,6 +84,10 @@ type Daemon struct {
 	// Pairings awaiting their ceremony, one per opened page (D-088).
 	pairs pairRegistry
 
+	// The certificate this daemon presents to peers, derived from the identity
+	// key and cached because that key never changes (D-101).
+	tls peerTLS
+
 	subs     map[chan struct{}]bool
 	subsMu   sync.Mutex
 	peerSeen map[string]*peerState

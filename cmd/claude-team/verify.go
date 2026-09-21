@@ -207,7 +207,13 @@ func (d *Daemon) RunVerification(peerID string, addrs []string) (string, error) 
 		// is a wrong peer, not a wrong address, and verifyStep refuses it.
 		var lastErr error
 		for _, addr := range addrs {
-			client, err := clientFor(addr, 10*time.Second)
+			// The strongest form of the pin: this dial is for one named peer, so
+			// reaching a different key at that address is refused outright.
+			conf, cerr := d.clientConfig(peerID)
+			if cerr != nil {
+				return "", cerr
+			}
+			client, err := clientFor(addr, 10*time.Second, conf)
 			if err != nil {
 				lastErr = err
 				continue
@@ -219,7 +225,15 @@ func (d *Daemon) RunVerification(peerID string, addrs []string) (string, error) 
 			}
 			theirNonce, err := d.verifyStep(client, addr, peerID, "reveal", s.nonce)
 			if err != nil {
-				return "", err
+				// The same tolerance the commit step above has, and for a reason
+				// that only shows up under load: the other side can finish
+				// between our two calls and discard its session, so our reveal
+				// arrives at a daemon no longer expecting one. It has already
+				// sent us its own reveal by then, and the inbound check at the
+				// top of the loop finds it. Returning here instead made one side
+				// fail while the other succeeded (D-102).
+				lastErr = err
+				continue
 			}
 			if !sasOpens(theirCommit, peerID, theirNonce) {
 				// The peer revealed something other than what it committed to.
