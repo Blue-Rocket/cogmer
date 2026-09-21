@@ -155,6 +155,37 @@ interactive session and leaves this open. Addressing another developer's Claude
 would need it, and it raises its own questions — whose subscription, what tool
 access, what was agreed to — none of them answered.
 
+**A notice when a second session from this machine joins a room — not thought
+through.** `SessionsInRoom` already counts this machine's live sessions in a room
+and `join` never consults it, so noticing is free. What to *say* is the open part.
+The test it has to pass: the notice earns its place only if it is **actionable**, or
+at least explains how the person got here. A bare "this machine already has a
+session in misty-canyon" fails that — it is the same defect as the rejected
+discriminator (D-112), one level up: it distinguishes without informing.
+
+Three ways somebody arrives at this moment, and a good notice separates them:
+
+- the other session exists and they forgot — another tab, another directory;
+- the other session crashed, and its row survives with `left_at` null because exit
+  makes a member absent rather than gone;
+- they want two on purpose.
+
+**The fact that separates them is when the other session last produced a turn.**
+Two minutes ago is a live session they may have meant to go to; three days ago is a
+corpse and they should proceed. That is `MAX(created_at)` over `origin_session_id`
+in the *room* store, while the notice fires from *membership* — so the cheap notice
+needs a cross-database read, and whether that coupling is worth a display string is
+undecided.
+
+**Making the other session findable is a separate and harder question.** The useful
+answer is its working directory, which is not stored. D-015 forbids *deriving* a
+room from a directory and says nothing about showing one, but storing a directory
+is how somebody later keys on it. Not obviously worth it.
+
+Probably not actionable beyond informing: letting session B end session A would be
+a session acting on another session's membership, and D-016 already forbids the
+move it resembles.
+
 ## Cleanup
 
 `WithheldFor` is used only by its own test — a leftover from the count that was
