@@ -218,6 +218,7 @@ they rot.
 | `docs/decisions.md` | why, and what was rejected |
 | `docs/*-findings.md` | what we observed when we tried it |
 | `cmd/claude-team/behaviors.go` | what someone else's software does that we rely on |
+| `docs/open.md` | what is still to do, and what is still undecided |
 
 **A finding is evidence and a spec statement is a commitment.** Evidence has a
 method, a date and a version; a commitment has none of those and is true because we
@@ -230,9 +231,11 @@ not advertise.
 findings document and not the spec. The registry is the only one of the four that
 tests itself, so a fact recorded there cannot rot silently.
 
-**Current-state defects go in none of them.** "Today `room_peers` accumulates" is
-false the moment it is fixed, and it takes the surrounding entry with it. Defects
-are work; they live wherever work lives and they die when done.
+**Current-state defects go in `docs/open.md`.** "Today `room_peers` accumulates" is
+false the moment it is fixed, and it takes the surrounding entry with it. Work is
+the one thing here with no permanent record: items in that file are deleted when
+done rather than marked, because anything worth keeping has already moved into a
+decision, the specification, or the code.
 
 **A decision that changes what the system *is* updates the spec in the same pass**
 (D-098). Recording the rationale feels like finishing and it is half: the spec goes
