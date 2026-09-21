@@ -968,18 +968,34 @@ for.
 Admission by guest list requires that a host already hold the guest's key. That is one exchange per person, ever:
 
 ```
+Each prints their own string and sends it to the other:
+
 Alice:   /self-status
          → ed25519:M7Kd…4Fq2@198.51.100.7:4783#Alice
 
-         (sent to David by whatever means is convenient)
+David:   /self-status
+         → ed25519:GoR7…IWPU@203.0.113.9:4783#David
 
-Both, at the same time, on a call:
+Then, on a call, both at the same time, each pasting the OTHER's:
+
 David:   /peer-pair ed25519:M7Kd…4Fq2@198.51.100.7:4783#Alice
 Alice:   /peer-pair ed25519:GoR7…IWPU@203.0.113.9:4783#David
 
          → a page opens on each machine: ribcage tambourine
          → each says whether the other read the same two words
 ```
+
+**Two strings cross, and both people run the command.** The exchange is symmetric
+because what it establishes is symmetric: that the key David holds for Alice is the
+one Alice has, and that the key Alice holds for David is the one David has. One
+direction alone would leave the other person trusting a key nothing had checked.
+
+A daemon refuses an incoming verification twice over when its own side has not been
+run. It refuses a peer whose identifier it has never recorded, which is what the
+other person's string supplies. And it refuses a verification it was not asked for,
+even from a peer it knows and with a signature that checks, because a peer may not
+cause a ceremony to begin on somebody else's machine — only the person at that
+machine may.
 
 The string carries an identifier, a bootstrap address, and the name its sender goes by. None of it is a secret: an identifier is a public key, an address is where a daemon listens, a name is what somebody calls themselves, and holding all three admits nobody (D-026, D-042). It may be pasted into a chat, mailed, printed, or read aloud.
 
@@ -990,6 +1006,15 @@ The string carries an identifier, a bootstrap address, and the name its sender g
 **That is a claim about confidentiality only.** The exchange needs no privacy and it does need integrity, and nothing about sending a public value supplies it. An interceptor who reads the string learns nothing; an interceptor who **replaces** it is recorded as the guest, under the name the host expected, durably, with nothing appearing wrong. The two-word comparison is what closes that, and §25 states the requirement it must meet.
 
 Pairing carries the address because verification has to be possible before any room exists. Were the address learned only on joining, every first verification would happen after the room it was meant to protect.
+
+**Only one of the two needs an address that works.** Both must hold the other's
+identifier and both must run the command, but the exchange completes as soon as
+either side reaches the other: a daemon looks for an exchange that has already
+arrived before it tries to dial, and derives the same two words from what it
+received. So a colleague behind a network nothing can traverse still sends their
+string and still runs their side — they simply never place the call. A pairing
+string that carries no address at all is therefore not a dead end, and must not be
+treated as one.
 
 ## The guest list
 
