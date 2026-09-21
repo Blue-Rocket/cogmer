@@ -950,6 +950,11 @@ a line for the guest to be sent by any means, which they present instead of a ro
 name. That is the fallback rather than the ordinary path, and a host learns
 immediately which one they are on.
 
+**When the guest is not yet verified**, neither happens. The admission is recorded
+and nothing is sent, because a guest who joins before verification gets a room that
+is silent by design (§25). The host is told to finish verifying, and the invitation
+is delivered when they do.
+
 This is the intended shape: **a name locates a room, a guest list admits a peer.**
 
 The joining peer receives the room's `roomId` on admission and uses it from then on.
@@ -2050,6 +2055,13 @@ Inviting an unverified peer is permitted and has no effect until they are verifi
 That is deliberate: whom to admit remains the host's judgement (D-051), and the
 second gate is not a second opinion about that judgement — it is a different
 question, asked of a different party.
+
+What is withheld is the **delivery** of the invitation, not the admission. The
+guest-list entry is written when the host makes it; the guest is told about it once
+verification makes the room usable, and completing a verification delivers whatever
+was waiting. Otherwise the easiest room to create would be one that does nothing:
+the guest accepts, both believe they are collaborating, and the silence is explained
+only by a sentence somebody may not read.
 
 ## Room content is unreadable in transit
 

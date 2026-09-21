@@ -5481,3 +5481,47 @@ never paired, which D-051 declines to support.
 
 **Revisit when:** paired peers acquire a standing reason to poll each other, at
 which point pull costs nothing extra and is the better shape.
+
+## D-106 — An offer is delivered when it can work, not when it is made
+
+**Date:** 2026-09-21 · **Status:** decided, not implemented · **Refines** D-105
+
+**Context.** D-105 makes an invitation an offer pushed over the paired channel.
+Inviting an unverified peer is permitted and inert (§25), so the two together would
+make a room that does nothing easier to create than one that works.
+
+**What today's friction was hiding.** A host reads the warning, copies a string,
+sends it to the guest. Even a host who ignores the warning passes through a human
+moment where noticing is possible. Push removes that: invite, accept, and both
+people believe they are in a room which is permanently silent. The join-time warning
+becomes the only thing between them and that, and it travels by the weakest channel
+there is — a line a command printed, relayed by a model.
+
+**So the admission is recorded and the offer is withheld.** Inviting an unverified
+peer still writes the guest-list row, immediately. Whom to admit remains the host's
+judgement and §25's separation of the two questions is untouched. What waits is the
+*delivery of a notification*, and it waits only as long as it would be useless.
+
+**Verification gains an effect: it flushes what was waiting.** When two peers
+complete the two-word comparison, offers already recorded for that peer are
+delivered. So the sequence a host expects — invite, then verify — produces the room
+at the end of it, rather than producing a silent one in the middle and repairing it
+later.
+
+**The fallback string is withheld on the same terms.** It would otherwise be a way
+to reach the outcome the withholding exists to prevent: a guest who pastes a string
+joins and gets the same dead room. Inviting an unverified peer therefore produces
+neither a delivery nor a string, and says what to do instead.
+
+**Rejected: deliver it, marked unverified.** The guest's daemon could receive the
+offer and say that nothing will sync until both verify. It was not taken because a
+notification that produces a dead room is worse than no notification — it reads as
+progress, and the only thing correcting it is a sentence somebody may not read. An
+offer that arrives when it works needs no warning at all.
+
+**Self is a guest of its own rooms and is never in its own peer list** (D-103), so
+any check of "is this guest verified" must exclude self rather than conclude that
+the creator is unverified and withhold from them.
+
+**Revisit when:** admission and verification stop being separable — if a future
+change makes one imply the other, withholding has nothing left to sequence.
