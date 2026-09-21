@@ -2528,6 +2528,20 @@ It is a phase rather than an afterthought because it is the only one that can fa
 
 Two things to watch for specifically, because both have been argued about without evidence: whether the two-word comparison is performed or skipped, and whether the browser view is consulted or forgotten.
 
+**One question must be settled before this phase, not during it.** Reaching a peer
+across NAT currently works by way of a public relay operated by a third party, used
+with no account and no configuration of ours. Until now that has carried one
+author's traffic between two of his own machines. Phase 13 is the point at which it
+begins carrying somebody else's conversation, so the question of whether that relay
+is an acceptable dependency stops being theoretical.
+
+Three parts to it, and they have different answers. Whether depending on a relay
+nobody here operates is compatible with §3's local-first framing and §4's rule that
+no transport is a prerequisite. What the relay observes — a relay cannot read what
+it carries, and does see which nodes are talking, when, and how much. And whether
+unconfigured use of somebody's free infrastructure is something to build a product
+on at all.
+
 ---
 
 ## Phase 14 — First contact without a paste, if Phase 13 says so
