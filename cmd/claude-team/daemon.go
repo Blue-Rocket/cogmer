@@ -426,7 +426,15 @@ func FormatTeamContext(evs []Event, verified func(peerID string) bool) string {
 	// JSON does not: it lets the framing assert where the block ends in a way the
 	// content cannot imitate.
 	type injectedTurn struct {
-		Speaker  string `json:"speaker"`
+		// What the peer calls themselves. Their claim, and free text they choose.
+		Speaker string `json:"speaker"`
+		// Derived from their key, and the only authoritative one. It is a separate
+		// FIELD rather than part of the speaker string: escaping stopped a crafted
+		// name breaking out (D-081), but it did not stop one imitating what sits
+		// beside it. A display name of "Alice (quiet-otter)" escapes nothing,
+		// forges no turn, and still reads as though it carried a derived name.
+		// A value cannot occupy another field's position, so structure settles it.
+		PeerName string `json:"peerName"`
 		Verified bool   `json:"verified"`
 		Kind     string `json:"kind"`
 		At       string `json:"at"`
@@ -447,15 +455,11 @@ func FormatTeamContext(evs []Event, verified func(peerID string) bool) string {
 		// recognising channel (D-052) is not marked. It should never appear at all
 		// now that verification gates synchronization (D-054); if it does, a filter
 		// has failed, and saying so where the model can read it is the point.
+		// Nothing of ours is concatenated onto their text any more. The verified
+		// state is its own boolean, and whether a turn came from a person or from
+		// their Claude is what `kind` says -- both were previously folded into the
+		// speaker string, where free text sat next to them.
 		isVerified := verified != nil && verified(e.PeerID)
-		mark := ", unverified"
-		if isVerified {
-			mark = ""
-		}
-		speaker := fmt.Sprintf("%s (%s%s)", e.UserDisplayName, PeerName(e.PeerID), mark)
-		if e.EventType == EventAssistantMessage {
-			speaker = "Claude-" + speaker
-		}
 
 		content := e.Content
 		if len(content) > lim.chars {
@@ -466,7 +470,7 @@ func FormatTeamContext(evs []Event, verified func(peerID string) bool) string {
 		content = strings.ReplaceAll(content, fence, "")
 
 		turns = append(turns, injectedTurn{
-			Speaker: speaker, Verified: isVerified,
+			Speaker: e.UserDisplayName, PeerName: PeerName(e.PeerID), Verified: isVerified,
 			Kind: e.EventType, At: e.Timestamp, Text: content,
 		})
 	}

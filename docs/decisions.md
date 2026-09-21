@@ -4475,5 +4475,114 @@ zero-configuration path and which is not built. Advertising an address that work
 some colleagues and silently not others is worse than an address that visibly works
 for none. This belongs with local discovery, not ahead of it.
 
+> **Superseded by D-091.** That reasoning holds only while a peer advertises exactly
+> one address. Asked how a daemon could know which address suits the topology between
+> two particular machines, the answer is that it cannot — topology is a property of
+> the pair. Advertise a set and let the receiver find out, and a LAN address stops
+> being a wrong guess and becomes one more candidate that either works or is
+> discarded. The objection above was to the singular, not to the address.
+
 **Revisit when:** local network discovery lands, or tailcat stops being on by
 default.
+
+## D-090 — Attribution is structured; the derived name is a field, not part of a string
+
+**Date:** 2026-09-20 · **Status:** active (implemented)
+
+**Context.** From `docs/residual-concerns.md`: what should happen when a peer's
+self-identified name collides with one already in the list. Tracing it found three
+different name spaces with three different answers, and one genuine hole.
+
+**The derived name** (`quiet-otter`) can collide and that is accepted — D-050 says
+names may collide and identities do not, nothing keys on a name (D-017), and it takes
+roughly 107 known peers before a collision among 8,280 combinations is more likely
+than not.
+
+**The local label** you assign is settled by D-074: `known_peers.name` is unique and
+`explainNameTaken` says that a changed key is indistinguishable from somebody else's
+key sent in their name.
+
+**The self-asserted display name has no constraint, correctly** — it is the peer's
+name for themselves and two colleagues really may both be David. That already
+happened: the first two-peer run had both daemons assert the same display name
+because both ran under the same OS user.
+
+**The hole was structural rather than a collision.** The injected block built one
+string:
+
+```go
+speaker := fmt.Sprintf("%s (%s%s)", e.UserDisplayName, PeerName(e.PeerID), mark)
+```
+
+Peer-chosen free text immediately before a parenthetical the model is meant to read
+as the derived identity. A display name of `Alice (quiet-otter)` produced
+`Alice (quiet-otter) (prudent-wagtail, unverified)`. It escapes nothing, forges no
+turn and leaves the block intact — so `TestACraftedDisplayNameCannotForgeASpeaker`
+passed, because it tests escaping. Escaping stops a value leaving its field. It does
+nothing about a value imitating the field beside it.
+
+**So the derived name became a field**, as `verified` already was, and two other
+concatenations went with it: the verified state (a boolean) and the `Claude-` prefix
+that marked an assistant turn (what `kind` already says). Nothing of ours is glued to
+their text any more, and a value cannot occupy another field's position.
+
+This is the same lesson as D-040 (fence the block so content cannot close it) and
+D-081 (encode turns as JSON so a value cannot escape its string), applied one level
+further in: **do not concatenate our facts with their claims.**
+
+**Still open, and not fixed here:** the view renders the two names in separate
+elements already, so it does not have this bug — but it gives them similar visual
+weight. Somebody skimming a room is a different reader from a model parsing JSON,
+and nothing has been measured about what they actually notice.
+
+**Revisit when:** another field is added that a peer can influence.
+
+## D-091 — A peer advertises a set of addresses; the receiver finds out which works
+
+**Date:** 2026-09-20 · **Status:** decided, not implemented · **Supersedes** part of D-089
+
+**Context.** From `docs/residual-concerns.md`: if a peer sends their address in an
+invitation, how can their daemon know which method — and so which address — suits the
+network topology between the two machines.
+
+**It cannot, and should not try.** Topology is a property of the *pair*, not of
+either machine. The sender knows its own interfaces and nothing about where the
+receiver sits. Only the receiver can discover which route works, by attempting it.
+
+That is what ICE and happy-eyeballs do, and what tailcat already does inside a single
+`tc://` endpoint: DERP first, direct once it can. Which is exactly why the tailcat
+path survives NAT and the plain TCP path does not — the negotiation exists at one
+layer and is absent at the other.
+
+**So advertise a set and let the receiver choose.** Today an invitation carries one
+endpoint, `AdvertisedEndpoint` records one, and `SetPeerEndpoint` stores one per
+peer. `syncTargets` already collects several from different sources, so half the
+machinery exists; the invitation and the per-peer record are the singular parts.
+
+**This supersedes D-089's rejection of advertising the LAN address.** That rejection
+was right about the singular and wrong as a general rule: an address that works for
+some colleagues and not others is bad only when it is the *only* one offered. As a
+candidate among several it costs a failed attempt and is discarded.
+
+**On ordering, asked directly: no, a daemon should not have a configurable sort.**
+
+The receiver holds the information, so any order the sender expresses is a preference
+rather than knowledge. Worse, it is a preference the receiver would be honouring on
+the word of the peer whose address it is.
+
+Order by *class* instead, which is derivable rather than configured — same-host,
+same-network, public, relayed — and try the first few concurrently, so a dead
+candidate costs a round trip rather than a timeout. Then **remember which one won,
+per peer**, and try it first next time. A learned winner dominates any static order
+after the first successful connection, which makes a configured one dead weight that
+is wrong in exactly the cases it was added for.
+
+Every real requirement that arrives dressed as ordering is a **filter**, not a sort:
+"never use a relay" for a site that will not route through third-party
+infrastructure, or "never expose a direct address". Those need *never*, and a
+preference order cannot express never. Add filters if such a requirement appears;
+do not add a sort in anticipation of one.
+
+**Revisit when:** local discovery lands (D-019's zero-configuration path), which is
+what makes a LAN candidate worth having, or when a deployment states a routing policy
+that a class order cannot express.
