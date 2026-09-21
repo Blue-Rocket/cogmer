@@ -5291,3 +5291,141 @@ before assuming it is evidence about the change.
 
 **Revisit when:** the exchange gains a third round trip, which would widen the same
 window.
+
+## D-103 — An address belongs to a peer, and is stored in one place
+
+**Date:** 2026-09-21 · **Status:** decided, not implemented
+
+**Context.** Asked why a newer address would not update both stores, and then more
+pointedly why an address is stored in more than one place at all. Following that
+found a modelling error underneath several problems that had been treated as
+separate.
+
+**Addresses live in two tables.** `known_peers.endpoint` holds one per peer, written
+at pairing. `room_peers(room_id, endpoint)` holds addresses per room, with **no peer
+column**, written when a member synchronizes and when an invitation is accepted.
+
+**Both writers hold the identity and discard it.** The synchronization handler calls
+`AddRoomPeer(room.RoomID, req.Endpoint)` one line after `verifyRequest` has
+cryptographically established `req.PeerID`. The join path calls it two lines from
+`Allow(host, "")`, where the host's identifier came out of the invitation. There is
+no path by which an address arrives without an identity attached; the identity is
+thrown away at the moment of writing.
+
+**Five problems, one cause.** Each of these had been treated as its own defect:
+
+- verification dials every address this machine knows, because it cannot ask which
+  one is a particular peer's;
+- an unexpected key therefore cannot be an alarm, because dialling the wrong peer is
+  the expected case rather than a surprise;
+- room addresses accumulate for ever, because `INSERT OR IGNORE` cannot overwrite
+  per peer when there is no peer;
+- invalidation has nowhere to live, since expiring "that peer's stale address"
+  requires knowing whose it is;
+- a tunnel-level allow-list cannot be built from them (D-104), because it needs each
+  peer's node key and a bare address does not say whose it is.
+
+**The replacement is a join that already has both halves.** `Guests(roomID)` returns
+peer identifiers, and `known_peers.endpoint` holds an address per peer. So *where do
+I poll for this room* becomes *the guests of this room, excluding me, and the address
+recorded for each* — which yields identity along with every address, so a failure can
+be attributed, a peer that moves overwrites one row rather than adding another, and
+expiry has something to attach to.
+
+**Checked: no room holds an address for a non-guest.** `verifyRequest` refuses a
+request from anybody who is not a guest of that room before `AddRoomPeer` is reached,
+and the join path admits the host in the same breath as recording them. The join is
+therefore exact rather than approximate.
+
+**One wrinkle, deliberately made explicit.** `Invite` requires only that an
+identifier name a key, and `CreateRoom` invites the creator, so **you are a guest of
+your own rooms and are never in your own known-peers list**. The join drops you
+because no address row exists for you, which is the right outcome reached by
+accident. Exclude self by saying so, rather than relying on a missing row that
+somebody will later add for an unrelated reason.
+
+**This removes work rather than adding it.** The pruning machinery for accumulated
+room addresses becomes unnecessary — one row per peer, replaced when they move, gone
+when they are forgotten. So does any reconciliation between the two stores, and so
+does the argument for verification's fallback sweep: that argument was that
+`room_peers` might hold a fresher address than `known_peers`, and with one store that
+divergence cannot occur.
+
+**What the §4 lifecycle assumed.** It was written describing an address that enters
+from several sources, ages, and is discarded — all of which is right, and all of
+which the schema cannot express while an address has no owner. The prose described a
+model the tables could not hold.
+
+**Revisit when:** an address is legitimately held for something that is not a peer.
+
+## D-104 — The overlay address is public and stable; admission moves to a list
+
+**Date:** 2026-09-21 · **Status:** decided, not implemented
+
+**Context.** Somebody prints their pairing string at a coffee shop, is interrupted,
+and sends it from home two hours later. Is the address still good? Following that
+found the address is not stable at all, and that it contains a secret.
+
+**The address changes on every restart, and the cause was measured.** A tailcat
+address encodes three keys and a relay. Two of the keys derive from the node key,
+which is persisted. The third is a **pre-shared key**, and the library generates a
+fresh one at every `Start()` unless told not to. Restarting a daemon twice and
+comparing the published endpoints:
+
+| | two starts identical |
+|---|---|
+| pre-shared key disabled | yes — byte for byte |
+| pre-shared key enabled | no |
+
+So every reboot, plugin update or bad wake from sleep silently invalidates every
+pairing string and every invitation that machine has issued. That makes §4's claim
+that an address need only be correct once false for the overlay path, which is the
+path everybody uses.
+
+**And it puts a secret in a string this design requires to be public.** The
+library's own guidance is to treat an address containing a pre-shared key as secret.
+§12 says the opposite, and must: the string is pasted into chat and read aloud, and
+the two-word comparison exists precisely so that it need not be confidential. A
+secret in that string reintroduces the bootstrap problem the ceremony was built to
+remove.
+
+**The two cannot both hold at that layer.** The key's purpose is a post-quantum
+hedge on recorded traffic, which requires it to stay secret, and it travels inside
+the address, which must be published. No arrangement of one node's address escapes
+that. A second address would mean a second node key, which is the identity.
+
+**So the access-control half moves to a list, where it is better.** The library
+accepts a set of client node keys and refuses anybody else, and a peer's node key is
+recoverable from the address already recorded for them. Measured: a peer absent from
+the list cannot open a tunnel, and adding one while the server runs takes effect
+without a restart.
+
+| | pre-shared key | allow-list |
+|---|---|---|
+| admits | anyone holding the string | only recorded peers |
+| revocable | no; rotating strands everyone at once | per peer |
+| secret in the address | yes | none |
+| survives a restart | no | yes, rebuilt from the peer list |
+
+**A measured cost: the list refuses by silence.** A peer not on it receives no reply
+at all, so the caller waits out its dial timeout rather than being told. Today an
+unrecorded peer is refused by TLS in milliseconds. This makes the ordering in D-103
+load-bearing rather than tidy: dialling one known address must come before any
+sweep, or a verification round spends a minute on addresses that were never going to
+answer.
+
+**The hedge is genuinely lost, and is recoverable elsewhere.** Nothing else in the
+stack is quantum-resistant — the TLS layer keys on the same elliptic curve — so
+removing it removes the only such element. It can be rebuilt at our own layer, from
+material the pairing exchange already produces, per peer rather than one secret
+shared with everybody ever paired with. That is a separate decision and is not
+blocked by this one.
+
+**Also pin the region.** The published address embeds a relay chosen at startup by
+latency, with a random fallback when the probe fails. Disabling the pre-shared key
+made two starts identical on one network; it does not follow that a start on another
+network picks the same relay. Persisting the chosen region alongside the node key
+makes the address a property of the identity rather than of the last startup.
+
+**Revisit when:** the post-quantum hedge is wanted, or the library offers a per-peer
+pre-shared key.

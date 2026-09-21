@@ -319,13 +319,22 @@ who may be told about them.
 An **overlay address** names a node and where to find it. It carries the node's
 public keys together with a relay through which an introduction can be made, after
 which the path upgrades to a direct one if the two machines can reach each other.
-The keys are durable: they identify a machine and do not change when it moves. The
-relay is a **rendezvous** rather than an identity, chosen for proximity, and a
-machine that moves far enough is no longer attached to the one named in an address
-it published earlier. Relays generally forward for a node attached elsewhere, so a
-stale rendezvous usually still works — but that is the relay network behaving well,
-not a property this design holds. Treat the keys as durable and the rendezvous as
-best effort.
+The relay is a **rendezvous** rather than a location: it is where a node can be
+found, not where it is, so moving a machine does not change its address.
+
+Everything the address is built from must be **persisted with the identity** —
+the node key, and the relay once chosen. An address assembled freshly at each start
+is a different address at each start, which silently invalidates every pairing
+string and every invitation that machine has issued. Nothing announces that, and
+the person who sent the string has no way to learn it. An overlay address is
+therefore a property of the identity and not of the process, and it survives both
+moving and restarting.
+
+**It must contain no secret.** A pairing string is pasted into chat and read aloud,
+and the two-word comparison exists so that it need not be confidential. Anything
+embedded in an address that would need protecting reintroduces the problem that
+ceremony removes, however useful it is on its own terms. Access is decided by who is
+on a list, never by who holds a string.
 
 A **public address** names a place reachable from anywhere. It is true of one
 network position, and a machine that moves has left it.
@@ -341,6 +350,14 @@ something offered to another person means no address was learned rather than tha
 this one should be tried.
 
 ## The lifecycle of a peer address
+
+**An address belongs to a peer, and is recorded once.** It is a fact about one
+machine, so it is stored against that machine's identity and nowhere else. Storing
+it anywhere that does not name whose it is loses the only thing that makes it
+usable: which address to try for a particular peer, which one to replace when they
+move, and whose failure a failure was. Where a room needs to know who to poll, the
+answer is its guest list and the address recorded for each of them — not a separate
+list of addresses.
 
 **It enters** one of several ways, and each says something different about how far
 it can be trusted:
@@ -396,9 +413,12 @@ A public address may reasonably be tried for longer. The keys in an overlay addr
 do not age, though the rendezvous beside them does, and the relay network refreshes
 that without anybody's help.
 
-**Replacement is not disproof.** A peer that advertises a different address has
-moved, and the previous one is superseded rather than shown to be wrong. It may
-still be where they return to.
+**Replacement is not disproof, and it overwrites.** A peer that advertises a
+different address has moved, and the previous one is superseded rather than shown to
+be wrong — it may still be where they return to. It is nonetheless replaced rather
+than kept alongside: an address per peer that is written over is a list that stays
+the size of the peer list, where one that appends grows with every network a
+colleague has ever visited and tries all of them for ever.
 
 **Forgetting a peer takes every address recorded for them**, for the same reason it
 takes their admissions (§12): a later meeting is a first meeting.
