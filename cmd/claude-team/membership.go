@@ -414,6 +414,18 @@ func (m *Membership) MarkVerified(peerID string) error {
 	return nil
 }
 
+// VerifiedAt is when a peer was verified, or empty if they have not been. Reported
+// so that "already paired" can say since when, which is the difference between an
+// assertion and something a person can check against their memory.
+func (m *Membership) VerifiedAt(peerID string) string {
+	var at string
+	if err := m.db.QueryRow(`SELECT COALESCE(verified_at,'') FROM known_peers WHERE peer_id = ?`,
+		peerID).Scan(&at); err != nil {
+		return ""
+	}
+	return at
+}
+
 func (m *Membership) IsVerified(peerID string) bool {
 	var at string
 	if err := m.db.QueryRow(`SELECT COALESCE(verified_at,'') FROM known_peers WHERE peer_id = ?`, peerID).Scan(&at); err != nil {

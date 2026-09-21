@@ -1195,6 +1195,9 @@ func parsePairing(s string) (peerID, endpoint, name string) {
 // unverified peers.
 func runPair(args []string) {
 	args, terminal := takeFlag(args, "--terminal")
+	// Re-running the ceremony on a pairing already complete needs the other
+	// person present at the same moment, so it is asked for rather than assumed.
+	args, again := takeFlag(args, "--again")
 	if len(args) == 0 {
 		// A prefix names its target, and what this printed was YOU (D-096). Still
 		// not an error: somebody here is at the first half of pairing and needs
@@ -1215,17 +1218,45 @@ func runPair(args []string) {
 	// second half has no name anybody would guess, and this one silently hashes
 	// "alice" into a peer nobody has ever met.
 	if _, err := PublicFromPeerID(peerID); err != nil {
-		var pid, display, mine string
+		var pid, display, mine, since string
+		var done bool
 		withMembership(func(m *Membership, id *Identity) {
 			resolved, rerr := resolvePeer(m, args[0])
 			if rerr != nil {
 				log.Fatal(rerr)
 			}
 			pid, display, mine = resolved, firstNonEmpty(m.Label(resolved), PeerName(resolved)), id.PeerName
+			done, since = m.IsVerified(resolved), m.VerifiedAt(resolved)
 		})
+		if done && !again {
+			reportAlreadyPaired(display, since, "")
+			return
+		}
 		// No label is passed: they already have one, chosen when they were
 		// recorded, and this is not the moment to rename anybody.
 		beginCeremony(pid, display, mine, "", "", terminal)
+		return
+	}
+
+	// Asked before anything is named, because somebody already paired needs no
+	// name chosen for them and should not be asked about one.
+	var alreadyDone bool
+	var doneAt, known string
+	withMembership(func(m *Membership, _ *Identity) {
+		alreadyDone, doneAt = m.IsVerified(peerID), m.VerifiedAt(peerID)
+		known = firstNonEmpty(m.Label(peerID), PeerName(peerID))
+		// A string from somebody already paired is how a colleague who moved
+		// tells you by hand, and it is the only repair for a stale address
+		// between two peers who share no room (§4). Take it; the ceremony is
+		// what does not need repeating.
+		if alreadyDone && !again && endpoint != "" {
+			if err := m.SetPeerEndpoint(peerID, endpoint); err != nil {
+				log.Fatalf("pair: %v", err)
+			}
+		}
+	})
+	if alreadyDone && !again {
+		reportAlreadyPaired(known, doneAt, endpoint)
 		return
 	}
 
@@ -1590,4 +1621,26 @@ func cut10(s string) string {
 		return ""
 	}
 	return s[:10]
+}
+
+// reportAlreadyPaired answers the commonest repeat of this command: somebody
+// checking, or arriving here twice.
+//
+// Running the ceremony again is not harmless and must not be the default. It needs
+// the other person at their machine at the same moment, so an unrequested one
+// leaves somebody watching a page wait ninety seconds for a colleague who was
+// never asked.
+func reportAlreadyPaired(who, since, updatedAddress string) {
+	if since != "" && len(since) >= 10 {
+		fmt.Printf("You and %s are already paired — since %s.\n", who, since[:10])
+	} else {
+		fmt.Printf("You and %s are already paired.\n", who)
+	}
+	if updatedAddress != "" {
+		fmt.Printf("Their address is updated to %s.\n", shortEndpoint(updatedAddress))
+	}
+	fmt.Printf("\nNothing to do. Pairing holds for every room you ever share.\n")
+	fmt.Printf("\nIf you have reason to think their key changed — they said two words that\n")
+	fmt.Printf("did not match yours, or you were told to check — compare again with:\n\n")
+	fmt.Printf("  /peer-pair %s --again\n", who)
 }
