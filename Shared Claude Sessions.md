@@ -446,7 +446,7 @@ A label means one key, and recording a second key under a label already in use i
 
 A person may set the display name other people see for them. Until they do, it is inferred, and the two are not interchangeable: a name that was guessed must never travel as though somebody picked it, because a guess presented as a choice is a claim about a person that nobody made.
 
-Whether it was chosen is therefore recorded, rather than inferred by comparing the name against the guess — which would pester for ever the person whose account name genuinely is their name. Keeping the guessed name counts as choosing it, because the act of keeping it is the choice.
+Whether it was chosen is recorded rather than inferred. Keeping the guessed name counts as choosing it, because the act of keeping it is the choice.
 
 The name is seen only by other people. Nobody is shown their own name on their own turns, so there is no moment at which its owner notices it is wrong, and it can travel wrongly for weeks. The moment to offer the choice is therefore the first time the name is about to leave the machine — which is when a pairing string is handed to a colleague, and is the only such moment that precedes any room.
 
@@ -849,9 +849,9 @@ Alice:   /peer-pair ed25519:GoR7…IWPU@203.0.113.9:4783#David
 
 The string carries an identifier, a bootstrap address, and the name its sender goes by. None of it is a secret: an identifier is a public key, an address is where a daemon listens, a name is what somebody calls themselves, and holding all three admits nobody (D-026, D-042). It may be pasted into a chat, mailed, printed, or read aloud.
 
-**Pairing needs a name for the peer, and takes it before the comparison.** The name is what this person will call that colleague everywhere afterwards, and asking for it after the words match would make a second thing to finish — whose unfinished form has no good meaning, since defaulting it to the derived name reinstates the name nobody remembers, and withholding the verification until it is supplied holds a security act hostage to a convenience field. Taking it beforehand is not the same as asserting it: it is held, and written only if the words match.
+**Pairing needs a name for the peer, and takes it before the comparison.** The name is what this person will call that colleague everywhere afterwards. Taking it beforehand is not the same as asserting it: it is held, and written only if the words match.
 
-**A pairing has three endings and they are not the same.** Abandoned leaves the key recorded, unverified, and unnamed, so the attempt can be resumed. Matched records the verification and writes the name. Differed removes what the attempt created — a key nobody established anything about should not remain on the list wearing the name meant for somebody else, where it would also block a later pairing with the real person. Re-verifying an existing peer is different again: different words there are an alarm about a relationship, not grounds for discarding it and the admissions it holds.
+**A pairing has three endings and they are not the same.** Abandoned leaves the key recorded, unverified, and unnamed, so the attempt can be resumed. Matched records the verification and writes the name. Differed removes what the attempt created: a key nobody established anything about must not remain on the list wearing the name meant for somebody else. Re-verifying an existing peer is different again: different words there are an alarm about a relationship, not grounds for discarding it and the admissions it holds.
 
 **That is a claim about confidentiality only.** The exchange needs no privacy and it does need integrity, and nothing about sending a public value supplies it. An interceptor who reads the string learns nothing; an interceptor who **replaces** it is recorded as the guest, under the name the host expected, durably, with nothing appearing wrong. The two-word comparison is what closes that, and §25 states the requirement it must meet.
 
@@ -880,9 +880,8 @@ Both must be inspectable and changeable:
 ```
 
 Recording a peer **without** verifying is possible and is not part of this list. It
-exists for scripts and for tests, it leaves the peer unable to collaborate until the
-comparison happens, and offering it to a person as an ordinary way to add a
-colleague would be offering the way that does not work.
+exists for scripts and for tests, and it leaves the peer unable to collaborate until
+the comparison happens.
 
 A room's creator is its first guest.
 
@@ -1536,7 +1535,7 @@ An unverified speaker does not appear in injected context at all: §25 makes ver
 
 What remains true of every speaker, verified or not, is that the **display name is self-asserted**. It comes from the peer's own environment and is a claim; two peers asserted the same one during the first two-peer run, because both daemons happened to run under the same OS user. Attribution therefore anchors on the name derived from the identifier, which cannot be chosen.
 
-**The derived name is a separate field, never part of the same string as the claim.** Escaping keeps a crafted name from leaving its field; it does nothing to stop one imitating the field beside it. A display name of `Alice (quiet-otter)`, concatenated into `Alice (quiet-otter) (prudent-wagtail)`, escapes nothing, forges no turn, leaves the block intact, and still reads as though it carried a derived name. The same applies to every fact the receiving side knows and the sender does not assert: whether the speaker is verified, and whether the turn came from a person or their Claude. Do not concatenate our facts with their claims.
+**The derived name is a separate field, never part of the same string as the claim.** Escaping keeps a crafted name from leaving its field; it does nothing to stop one imitating a field beside it. A display name reading `Alice (quiet-otter)` placed next to a derived name escapes nothing, forges no turn, leaves the block intact, and still reads as though it carried the anchor. The same holds for every fact the receiving side knows and the sender does not assert: whether the speaker is verified, and whether the turn came from a person or their Claude. Do not concatenate our facts with their claims.
 
 A display name may also be **chosen** rather than inferred (§6), which changes what it is worth and not what it is: a chosen name is still a claim, still self-asserted, and still anchored by the derived one.
 
@@ -1873,16 +1872,8 @@ publish a turn into a room, which reaches teammates' context windows.
 So a request that changes anything must **present** a header that our own code sends
 and a page from another origin cannot. A browser will not send a custom header to
 another origin without asking first, and that question is answered with nothing, so
-the request is never made. Requiring presence rather than refusing a bad value is
-what makes this fail closed: anything that cannot present the header is refused,
-whatever it is, and no argument is needed about which headers a browser can be made
-to omit.
-
-The referrer is not a substitute and must not be added as one. A page suppresses its
-own with a single tag, and an absent referrer has to be treated as allowed, because
-the command-line tool and the hooks send none — so the check would pass in exactly
-the case it exists to fail. Passing a request through a redirect does not help
-either: the referrer names the initiating document and survives the redirect.
+the request is never made. The check is that the header is present, which is what makes
+it fail closed: anything that cannot present it is refused, whatever it is.
 
 None of this defends against a malicious program running as the same user, which can
 send any header it likes and could edit the databases directly in any case. The
@@ -2033,9 +2024,9 @@ Joining in particular belongs here. A room is session-scoped, and a command type
 - Its output must reach a person's eyes **unaltered**. Two words whose purpose is that you compared exactly what your daemon computed must not pass through a model, and least of all through the model that is reading room content from peers — the content §20 exists because it once impersonated an operator instruction.
 - Recording the result is a **human act**, and the human is on a telephone rather than at a prompt.
 
-Those properties rule out the model. They do not rule out a browser, and this specification previously concluded that they did, writing the requirement as *at a terminal* — because a terminal was the only non-model surface anybody had established. The view is the other one, and it is the better one. A terminal is an operator surface, and asking somebody to open one in order to meet a colleague was never a user experience.
+Those properties rule out the model. They do not rule out a browser, and the view is where the ceremony belongs: a terminal is an operator surface, and asking somebody to open one in order to meet a colleague is not a user experience.
 
-So a slash command **performs** the ceremony rather than pointing at it. It records the peer, mints a page, opens it, and returns without waiting; the waiting and the comparison happen on the page. Every pairing gets its own address, so a second one arrives as a new tab rather than as a silent rewrite of one nobody is looking at, and a page left over from an earlier attempt can never quietly become a different pairing.
+A slash command therefore **performs** the ceremony rather than pointing at it. It records the peer, mints a page, opens it, and returns without waiting; the waiting and the comparison happen on the page. Every pairing gets its own address, so a second one arrives as a new tab rather than as a silent rewrite of one nobody is looking at, and a page left over from an earlier attempt can never quietly become a different pairing.
 
 The page is reachable only by the person at the machine. The daemon serves it on loopback, and the requests that change anything — beginning an exchange, recording its result, publishing a turn — are refused unless they carry a header a page from any other origin cannot send. Loopback keeps other machines out; that header is what keeps out a page open in this machine's own browser.
 
@@ -2482,7 +2473,7 @@ A slash command is a **thin wrapper**, never a reimplementation (D-057). It shel
 
 That is what lets **`create` and `join` bind a session**, and that is what let the machine-level current room be deleted. It existed only because a terminal command cannot name a session, and it was a hazard while it existed: a room created and forgotten is silently joined weeks later by a session in an unrelated repository, because nothing derives a room from a directory and nothing expires the setting.
 
-**Pairing and verification do not pass through the model** (§29). Each is interactive, each blocks on another person, and the two words must reach a person's eyes without passing through a model that reads room content from peers. That was first written as *at a terminal*, because a terminal was the only non-model surface established at the time; the view the daemon serves is the other one, and the ceremony lives there. A terminal ceremony remains for a machine that cannot open a browser.
+**Pairing and verification do not pass through the model** (§29). Each is interactive, each blocks on another person, and the two words must reach a person's eyes without passing through a model that reads room content from peers. The ceremony happens in the view the daemon serves, and at a terminal on a machine that cannot open a browser.
 
 ---
 

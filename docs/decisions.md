@@ -4932,10 +4932,14 @@ of one pattern is a pattern.
   named after the system.
 - **§31** corrects the phase note that said the ceremony stays at a terminal.
 
-**Where the old text was wrong rather than merely incomplete, it says so.** "This
-specification previously concluded that they did" is more useful than a clean
-sentence, because the reasoning that produced the old rule was sound and only the
-available surfaces changed.
+**The specification says what the system is, and nothing about what it was.** The
+first version of this pass annotated each correction with the reasoning it replaced
+— "this specification previously concluded that they did" — on the theory that the
+old rule had been sound and a reader deserved to know why it changed. That is
+exactly the burden the no-superseded-text rule exists to remove. These documents are
+hard enough to read without carrying every way the system might have worked and
+does not, and a reader who wants that has this log, where tracking alternatives is
+the whole job. Corrections are clean replacements; the archaeology stays here.
 
 **Revisit when:** never — this is a working rule rather than a decision with a
 condition. If it lapses, the symptom is a specification that contradicts the code,
