@@ -631,8 +631,14 @@ func runPeers() {
 			// exactly the state D-054 refuses to sync, with no hint why. It also
 			// printed a bare key rather than the pairing string, so the colleague
 			// received no address and could not reach them.
-			fmt.Println("No peers yet — pairing is how somebody becomes one.")
-			printPairingInvitation(id)
+			// A prefix names its target (D-096), so this does not print your own
+			// string: /peer-list is about other people, and there are none.
+			fmt.Println("No peers yet. Pairing is how somebody becomes one, and it takes the")
+			fmt.Println("string your colleague sends you plus a name for them:")
+			fmt.Println()
+			fmt.Println("  /peer-pair <their string> <what you call them>")
+			fmt.Println()
+			fmt.Println("Your own string, to send them, is in /self-status.")
 			return
 		}
 		for _, p := range known {
@@ -1060,10 +1066,15 @@ func parsePairing(s string) (peerID, endpoint string) {
 func runPair(args []string) {
 	args, terminal := takeFlag(args, "--terminal")
 	if len(args) == 0 {
-		// Not an error. Pairing has two halves -- sending yours and receiving
-		// theirs -- and somebody who runs this with nothing is at the first one.
-		// Failing with a usage line would answer a question they did not ask.
-		withMembership(func(_ *Membership, id *Identity) { printPairingInvitation(id) })
+		// A prefix names its target, and what this printed was YOU (D-096). Still
+		// not an error: somebody here is at the first half of pairing and needs
+		// telling what the two halves are, not a usage line.
+		fmt.Println("Pairing takes two things: the string your colleague sends you, and a")
+		fmt.Println("name for them.")
+		fmt.Println()
+		fmt.Println("  /peer-pair <their string> <what you call them>")
+		fmt.Println()
+		fmt.Println("Your own string — the one you send THEM — is in /self-status.")
 		return
 	}
 	peerID, endpoint := parsePairing(args[0])

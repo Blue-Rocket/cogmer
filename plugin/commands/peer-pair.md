@@ -1,5 +1,5 @@
 ---
-description: Pair with a colleague — shows your string, or starts the two-word check
+description: Pair with a colleague: the two-word check, in your browser
 argument-hint: [their pairing string] [what you call them]
 allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" pair:*)
 ---
@@ -12,10 +12,9 @@ allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" pair:*)
 
 The output is one of four things and says which.
 
-**A pairing string.** They ran it with nothing, so they are at the first half. Give
-them the string exactly as printed and say it is safe to send by any means — it is a
-public key and an address, and holding it admits nobody. Then say what comes back:
-their colleague sends one too, and it takes a name as well as a string.
+**The two halves of pairing.** They ran it with nothing. Relay what it says and
+point them at `/self-status` for their own string — do not paste a string here, since
+this command did not print one.
 
 **A request for a name.** They pasted a string and gave no name. Do not treat this as
 an error and do not pick one for them. Ask what they call this person — their first

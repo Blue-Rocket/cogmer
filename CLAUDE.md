@@ -4,15 +4,21 @@ Prototype from `Shared Claude Sessions.md` — a local-first P2P daemon replicat
 Claude Code conversations between developers. Read that spec before changing
 architecture; section numbers (§7, §19, …) are referenced throughout the code.
 
-## Command prefixes name the scope (D-095)
+## A command prefix names its target (D-095, D-096)
 
-`peer-` is for a command about **somebody else** — `/peer-pair`, `/peer-list`,
-`/peer-forget`. `self-` is for one about **you** — `/self-name`. `room-` is for one
-about a room.
+`peer-` acts on **somebody else**, `room-` on **a room**, `self-` on **you**. Every
+command in the set already reads that way — `peer-forget`, `room-revoke`,
+`self-name` — and the rule is the target, not the activity.
 
-A prefix names the **activity**, not the object, so `/peer-pair` with no arguments
-printing your own pairing string is not a violation: sending your half is part of
-pairing with a peer. Say so when the question comes up, because it will.
+That was briefly written down as "the activity", to excuse `/peer-pair` with no
+arguments printing your own pairing string. It was a rule bent to fit an exception.
+The exception was the defect: your string now lives in `/self-status`, and both
+`/peer-pair` and `/peer-list` point there rather than printing it.
+
+**There is no prefix for the tool itself**, and that is not an oversight. An overview
+command would be `/<product-name>`, and the name is what Phase 13 is blocked on. Do
+not invent a placeholder for it; a command name is harder to change than a
+directory.
 
 ## Numbered references carry a short description
 
