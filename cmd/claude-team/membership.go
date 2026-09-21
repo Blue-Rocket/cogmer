@@ -86,16 +86,6 @@ CREATE TABLE IF NOT EXISTS session_rooms (
   -- becomes a move to another room with two extra keystrokes, which is the one
   -- thing §12a forbids (D-071).
   left_at    TEXT
-);
-
--- Where a room's other members can be reached. An endpoint is reachability, not
--- identity (D-018): it changes when a machine moves and is only ever a hint.
--- Machine-level state. current_room is the room a session joins when it begins:
--- a session cannot be asked which room it wants, because nothing knows a session
--- exists until its first hook fires.
-CREATE TABLE IF NOT EXISTS settings (
-  key   TEXT PRIMARY KEY,
-  value TEXT NOT NULL
 );`
 
 type Membership struct{ db *sql.DB }

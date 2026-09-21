@@ -3180,6 +3180,111 @@ this phase builds is what makes it small.
 
 ---
 
+## D-064 — A session's room is the one somebody chose inside it, never a machine default
+
+**Date:** 2026-09-18 · **Status:** active (implemented) · **reconstructed 2026-09-21**
+
+**This entry was never written.** The number was allocated while writing `e4fd2d8`
+("Phase 11: ship as a plugin, and bind sessions explicitly", 2026-09-18), which
+cited it in six files and did not touch this document. What follows is
+reconstructed from those citations, the code they annotate, and the tests that
+enforce it. The rule and its hazard are recoverable exactly. **The alternatives
+actually weighed are not**, so the rejected list below states only what the code
+rules out, and should not be read as a record of deliberation.
+
+**Context.** One pointer was answering two different questions.
+
+- *Which room is this session in?* — `session_rooms`, written only when somebody
+  runs `/room-create` or `/room-join` **inside that session**.
+- *Which room does a command at a terminal act on?* — a machine-level
+  `current_room`, for the case where there is no session to ask.
+
+Answering the first with the second is the conflation this decision names.
+
+**Decision.** `RoomForSession` reports the room a session was put in and never puts
+it in one. A session joins a room because a person ran a command inside it, and a
+session in no room is an ordinary Claude Code session: nothing captured, nothing
+injected, nothing shared (§12a).
+
+**The hazard is silent, which is why it needed a decision.** Otherwise a room
+created and forgotten is joined weeks later by a session in an unrelated
+repository, capturing and publishing with nobody having done anything. Nothing
+derives a room from a directory (D-015), so nothing else would have caught it. The
+failure has no error and no moment: its first sign is a colleague reading turns
+from work they were never shown.
+
+**Enforced by a test rather than by care.** `membership_test.go:424` names itself
+"the hazard D-064 removes, stated as a test so it cannot come back."
+
+**What became of the other pointer.** D-076 placed `CLAUDE_TEAM_ROOM` above the
+session's own room, reinstating this failure at higher precedence the same
+afternoon. D-077 gave every room its own URL, removing the pointer's last consumer,
+and D-080 deleted it. `current_room` no longer exists anywhere. Its schema comment
+outlived it and described the removed behaviour as the design, which is most of why
+this entry was hard to recover; the comment is gone as of 2026-09-21, along with the
+`settings` table it annotated, which nothing had ever read or written.
+
+**Rejected** — what the code rules out, not what was considered:
+
+- *Derive a session's room from its working directory or repository.* Independently
+  forbidden by D-015 (rooms are session-scoped).
+- *Let a machine-level default apply only when a session has no room.* That is the
+  conflation itself, in the one case where it does the damage.
+
+**Revisit when** something needs a room and genuinely has no session to ask. That
+case is a command at a terminal, and D-077 answers it by naming a room per
+invocation rather than by storing one.
+
+---
+
+## D-065 — The daemon reads a range of wire versions, so upgrading is not a flag day
+
+**Date:** 2026-09-18 · **Status:** active (implemented) · **reconstructed 2026-09-21**
+
+**This entry was never written**, for the same reason and in the same commit as
+D-064. Reconstructed from `protocol.go:19-27` and `sync.go:250-256`, which carry
+the reasoning nearly in full.
+
+**Context.** `wireVersion` names the protocol a build speaks. Comparing it for
+equality is the obvious implementation and makes every protocol change a flag day:
+both people must upgrade at the same moment or the room goes silent, and the
+failure names a version rather than saying what to do.
+
+**Decision.** A build declares the newest version it speaks (`wireVersion`) and the
+oldest it can still read (`minWireVersion`); `speaks` accepts anything between.
+Today that is 2 and 1. A peer outside the range is reported rather than guessed at,
+because silently accepting unknown-shaped events is how a field comes to mean two
+things — and the error says which side is older and what to do about it.
+
+**Zero means one.** A peer predating the field spoke v1, so an absent version reads
+as 1 rather than as unknown.
+
+**Why this stopped being optional at Phase 11.** A flag day is tolerable while one
+person builds both sides, because both sides upgrade when he says so. Phase 11
+shipped the plugin, which is the point at which the two sides belong to two people
+upgrading on their own schedules. The constraint did not change; the number of
+people did.
+
+**Why the floor moves rarely.** Raise `minWireVersion` only when an older version
+genuinely cannot be understood — a statement about the events on the wire, not
+about tidiness. Raising it to delete a branch is how the room goes silent for
+whoever upgrades last.
+
+**Rejected** — what the code rules out, not what was considered:
+
+- *Hard equality on the version.* The flag day above.
+- *No version on the wire at all.* Then there is nothing to refuse, and an
+  unknown-shaped event is accepted as though understood. D-043 (the wire format is
+  not the database row) keeps the two structs separate precisely so a column added
+  for local bookkeeping cannot become protocol by accident; a version is what makes
+  that refusable at the far end.
+
+**Revisit when** a change cannot be expressed so that a v1 reader can skip it. The
+floor rises then, the range narrows, and whatever announces a release has to say
+so.
+
+---
+
 ## D-066 — The binary is fetched and verified, never shipped in the plugin
 
 **Date:** 2026-09-18 · **Status:** active (implemented); inert until a release exists
@@ -5642,3 +5747,190 @@ withdrawn.
 **Revisit when:** a peer can move while sharing no room with anybody and still need
 to be reached — which would mean something other than an invitation had come to
 depend on a stored address.
+
+---
+
+## D-109 — Two is the target and nothing rules out more
+
+**Date:** 2026-09-21 · **Status:** active (standing constraint)
+
+**Context.** D-032 (the order of work) records in an aside that "pairs remain the
+target" and that Phase 6 waits for evidence a third peer is wanted. That is half a
+principle, and the recorded half is the one that needs no enforcing. The half that
+governs day-to-day work has been applied consistently and never written down: while
+bearing down on two, **avoid anything that forecloses more**.
+
+The two are easy to confuse and pull in opposite directions. "Two is the target"
+argues for spending nothing on a third peer. "Nothing rules it out" argues for
+noticing when a shortcut would make a third peer a rewrite rather than a feature.
+Neither is the whole rule, and holding only the first is how a prototype acquires a
+ceiling nobody chose.
+
+**Decision.** Build for two people in a room. Spend no effort on a third. But treat
+any design that *cannot* extend past two as a defect to be argued for explicitly,
+not a saving to be taken quietly.
+
+The distinction is between a **cost** and a **ceiling**. Sync is a pull against a
+per-peer watermark and guest lists are per-peer (D-046, the daemon serves many
+rooms); both would be O(n) work with more peers and neither breaks — those are
+costs, and they are fine. A pairwise ceremony assumed to be the only shape of
+admission, or a room identity derived from exactly two identifiers, would be
+ceilings. So would describing the tool by a count, which is why the word "several"
+does not belong in its first line either.
+
+This is also why several things already built are shaped the way they are.
+Transitive relay (§13) and immutable events with per-peer sequences (§7) only pay
+for themselves past two peers; both were built anyway, because retrofitting event
+identity is not possible once events exist.
+
+**Rejected.**
+
+- *Design for N now.* Every hard problem so far has been specific to the pair in
+  front of us, and a generalisation written before the second case is a guess. It
+  also costs the thing the prototype is for: evidence about whether two people
+  actually use it.
+- *Optimise for exactly two and revisit later.* This is the position that sounds
+  identical to the decision and is not. It permits the ceiling, and the moment an
+  event format or an identity scheme has one, D-058 (signature schemes are added,
+  never edited) and §7's immutability make it permanent.
+- *Leave it in D-032's aside.* An aside inside a decision about phase ordering is
+  not where somebody looks before choosing a data structure, which is the moment
+  this rule applies.
+
+**Revisit when** evidence arrives that a third peer is wanted — the trigger D-032
+already names. Note that the trigger releases the first half of this rule and not
+the second: the second half has no expiry.
+
+---
+
+## D-110 — Host order: Claude Code, CoWork soon after, ChatGPT Desktop much later
+
+**Date:** 2026-09-21 · **Status:** active (ordering; alters neither D-043 nor D-086)
+
+**Context.** The order of target hosts was recorded nowhere. One sentence in D-086
+(the terminal is not a user experience) carries it as context for a user-interface
+argument — "Claude Code is the first host; Claude CoWork is wanted as a fast follow"
+— and ChatGPT Desktop appears nowhere in the repository. An ordering that governs
+scope should not be a supporting clause inside a decision about pairing surfaces.
+
+**Decision.** Three hosts, in order: **Claude Code**, **Claude CoWork**, **ChatGPT
+Desktop**. The interval from Claude Code to CoWork is short. The interval from
+CoWork to ChatGPT Desktop is long, and long enough that the two are not planned
+together.
+
+**The intervals are the load-bearing part, not the order.** An order alone says only
+that ChatGPT Desktop is third, which nothing acts on. The gap sizes are what decide,
+for any given piece of host-independence, whether it is preparation or speculation.
+
+**This licenses nothing.** D-043 (the wire format is not the database row) forbids
+`source`/adapter machinery, and D-086 already considered this exact move and refused
+it: "naming a second host does not change that." Naming a third does not either. The
+reasoning is untouched — capture generalises, injection does not, and every hard
+problem so far has been host-specific. This entry records an intention, not a
+permission.
+
+**What the short interval does support** is D-086's cheapest-preparation argument,
+now with a nearer payoff. The daemon and its view are host-independent by
+construction — a local service and a web page, not an extension of anything — so
+every piece of experience living there is one a second host does not reimplement.
+That was justified on today's host alone. A short gap to a same-vendor host makes it
+a good bet as well as a justified one, which is a reason to prefer the view for new
+surfaces, and not a reason to abstract anything.
+
+**What the long interval settles** is that nothing is designed against ChatGPT
+Desktop. Different vendor, unknown extension model, and the parts most likely to
+differ are precisely the ones D-043 named as non-generalising: §3.5's thinking-block
+exclusion is a fact about one transcript format, D-014 (delivery is confirmed by
+observation) depends on evidence appearing in a specific file, and the whole
+injection path assumes a hook that runs before a turn. A host with no hook
+equivalent does not need a smaller adapter; it needs a different design, and that
+design is not written before the host exists.
+
+**A consequence for the specification, recorded and not resolved.** §3.8 — "Claude
+Code is launched and used unchanged" — is the single test applied to every proposal,
+and it is written as a statement about one named product. With a host order it must
+either become host-general (*the host is launched and used unchanged; we install
+only what it already loads*) or stand as a Claude Code rule at the head of a project
+with three hosts. Deciding that is a separate pass; naming it here keeps it from
+being decided by drift.
+
+**Rejected.**
+
+- *Leave it in D-086.* Where an ordering lives determines whether anybody finds it,
+  and the person who needs this one is scoping a host, not choosing a pairing
+  surface.
+- *Put it in §31's phase order.* A phase needs a placement, and CoWork's placement
+  depends on its extension model — which is D-086's own revisit trigger. An ordering
+  of intent is not yet a phase.
+- *Record the order and omit the intervals.* The order without them is inert: it
+  cannot tell anybody whether host-independence work is early or premature, which is
+  the only question the ordering is consulted for.
+
+**Revisit when:** CoWork's extension model is known (D-086's trigger, unchanged); or
+ChatGPT Desktop moves near enough that the long interval stops being the operative
+fact; or a fourth host is wanted, at which point an ordering of intent has probably
+become a roadmap and wants a different home.
+
+---
+
+## D-111 — §3.8 is a test about hosts, not about Claude Code
+
+**Date:** 2026-09-21 · **Status:** active (amends §3.8; resolves the question D-110 left open)
+
+**Context.** D-110 (host order) recorded that §3.8 — the single test applied to
+every proposal before anything else — is written about one named product, and left
+the resolution open rather than letting it be decided by drift. With three hosts
+named, §3.8 either becomes host-general or stands as a Claude Code rule at the head
+of a project that has committed to more.
+
+**Decision.** §3.8 now reads *The host is launched and used unchanged*. It defines
+**host** as the application a session runs in, names Claude Code as the host today,
+and states every clause of the test about the host.
+
+**The test itself did not change.** The same three clauses put a proposal out: a
+different launch command, installing something the host does not already load, or
+depending on how the host renders. It still rules out the PTY wrapper (D-034) and
+still permits a view outside the session, on the same grounds as before.
+
+**Generalising exposed two things that had been resting on the single host.**
+
+*First, "things the host already loads" was ambiguous, and had been carrying an
+unstated word.* The original said "already loads **on its own**", and dropping it in
+summary produced a phrase that could not be read at all. The sense is a **kind of
+extension the host loads by its own design, when nobody has changed how it starts**
+— not a file that happens to be loaded, and not something that could be made to
+load. Against Claude Code alone the distinction never had to be drawn: hooks, skills
+and MCP servers are plainly in, a PTY wrapper is plainly out. Against a host nobody
+has examined, "could it be made to load something?" has a yes answer for almost any
+program, and the test collapses. §3.8 now says which question it is asking.
+
+*Second, what the test says about a host offering no way in.* It says the host is
+out of reach. That is the intended reading rather than a new rule — the constraint
+is a product boundary, so a host that cannot be extended is a host this system does
+not serve, and is never an argument for wrapping one. This does not conflict with
+D-110's note that a host lacking a hook equivalent needs a different design rather
+than a smaller adapter: that concerns hosts with some other way in.
+
+**The rule generalises; the evidence for it does not.** The reach argument — Claude
+Code is a terminal program, a desktop application and an editor extension, and
+extending it through its own mechanisms reaches all three — is a fact about one
+product and stays stated as one. A different host has different surfaces, which
+changes which mechanisms exist and changes nothing about the reasoning.
+
+**Rejected.**
+
+- *Leave §3.8 naming Claude Code, and add a note that it applies to other hosts.* It
+  is consulted as a test, and a test carrying a footnote about which product it
+  governs is a test people apply inconsistently.
+- *Generalise the whole specification.* §3.8 is the framing test; the rest of the
+  document describes Claude Code's actual mechanisms and is correct as written.
+  Host-general language throughout would claim a generality nothing else in the
+  document has earned, and would make every section quietly harder to check.
+- *Wait for CoWork.* The rewrite costs the same now as later, and the ambiguity in
+  "already loads" is a defect today, with one host and no prospect of a second
+  mattering to it.
+
+**Revisit when** a second host is actually supported — at which point §3.8's Claude
+Code examples want a companion rather than a replacement — or if a host appears
+whose extension points reach a person directly, which would make §3.8's consequence
+subsection an understatement rather than a description.

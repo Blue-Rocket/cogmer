@@ -227,32 +227,36 @@ What must hold either way is that no such run becomes the interactive session's 
 
 ---
 
-## 3.8 Claude Code is launched and used unchanged
+## 3.8 The host is launched and used unchanged
 
-A developer starts Claude Code exactly as they do today, and uses it exactly as they do today. This system is installed *into* it and never *around* it.
+The **host** is the application a session runs in. Claude Code is the host today and the one this specification describes throughout. The constraint in this section is stated about hosts in general because a system that can only be installed into one product has chosen that product permanently, and this one has not.
 
-The only things a participant installs are things Claude Code already loads on its own: hooks, skills, MCP servers, and whatever else it accepts as an extension. Nothing replaces the command, wraps the process, interposes a terminal, or patches the application.
+A person starts the host exactly as they do today, and uses it exactly as they do today. This system is installed *into* it and never *around* it.
 
-This is a constraint on the product boundary before it is a technical one. The alternative — shipping an alternate way to launch Claude Code — makes terminal emulation, pseudo-terminals on each operating system, editor terminals, shell integration, and every surface Anthropic adds in future into this project's responsibility. None of that is this project's problem, and none of it should become so.
+**A participant installs only kinds of thing the host already loads by its own design** — in Claude Code, hooks, skills, MCP servers, and whatever else it accepts as an extension. The test is not whether something *can* be made to load. It is whether the host loads that kind of thing already, for its own reasons, when nobody has changed how it starts. Nothing replaces the command, wraps the process, interposes a terminal, or patches the application.
 
-It also buys reach that cannot be bought any other way. Claude Code is a terminal program, a desktop application, and an editor extension. A system that extends it through its own mechanisms works on all of them without knowing any of them exist. A system that wraps its process works on one, and cannot be made to work on the others.
+This is a constraint on the product boundary before it is a technical one. The alternative — shipping an alternate way to launch the host — makes terminal emulation, pseudo-terminals on each operating system, editor terminals, shell integration, and every surface the host's authors add in future into this project's responsibility. None of that is this project's problem, and none of it should become so.
+
+It also buys reach that cannot be bought any other way. Claude Code is a terminal program, a desktop application, and an editor extension. A system that extends it through its own mechanisms works on all three without knowing any of them exist. A system that wraps its process works on one and cannot be made to work on the others. A different host has a different set of surfaces, which changes which mechanisms are available and changes nothing about this reasoning.
 
 The constraint is useful precisely because it can be applied without argument:
 
-- if a proposal requires a developer to start Claude Code differently, it is out;  
-- if it requires installing something Claude Code does not already load, it is out;  
-- if it requires understanding how Claude Code renders, it is out.
+- if a proposal requires a person to start the host differently, it is out;  
+- if it requires installing a kind of thing the host does not already load by its own design, it is out;  
+- if it requires understanding how the host renders, it is out.
+
+**A host offering no way in fails this test rather than relaxing it.** The question is what a host already does, never what it could be made to do. If a host has no extension point this system can use, that is a fact about the host: it may put the host out of reach, and it never licenses an alternate way to launch one.
 
 ### Consequence: not everything is equally achievable
 
-Claude Code's extension points deliver to the model. Hooks supply context, skills supply instructions, MCP servers supply capability — and each reaches a person only through what the model then says.
+A host's extension points deliver to the model. In Claude Code, hooks supply context, skills supply instructions, MCP servers supply capability — and each reaches a person only through what the model then says. A host whose extension points deliver to the model is the case this system is designed for; one that could deliver to a person directly would be a larger surface than anything assumed here, never a smaller one.
 
 So the two halves of this system are not equally served by the constraint:
 
 - **conversation semantics** — capture, synchronization, and context injection — must work everywhere, and do, because they are model-facing;  
-- **presentation** — a developer seeing a teammate's turn arrive — is best effort, because nothing in the extension surface displays anything.
+- **presentation** — somebody seeing a colleague's turn arrive — is best effort, because nothing in the extension surface displays anything.
 
-Accept the asymmetry rather than escaping it. A view outside the session is permitted and does not violate this principle: it is a separate program a developer may run, not a change to how they start Claude Code. What is not permitted is taking ownership of Claude Code in order to draw inside it.
+Accept the asymmetry rather than escaping it. A view outside the session is permitted and does not violate this principle: it is a separate program a person may run, not a change to how they start the host. What is not permitted is taking ownership of the host in order to draw inside it.
 
 ---
 
