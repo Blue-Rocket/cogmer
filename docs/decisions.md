@@ -4475,12 +4475,11 @@ zero-configuration path and which is not built. Advertising an address that work
 some colleagues and silently not others is worse than an address that visibly works
 for none. This belongs with local discovery, not ahead of it.
 
-> **Superseded by D-091.** That reasoning holds only while a peer advertises exactly
-> one address. Asked how a daemon could know which address suits the topology between
-> two particular machines, the answer is that it cannot — topology is a property of
-> the pair. Advertise a set and let the receiver find out, and a LAN address stops
-> being a wrong guess and becomes one more candidate that either works or is
-> discarded. The objection above was to the singular, not to the address.
+> **The conclusion holds; the reason is restated in D-091.** A LAN address is not
+> rejected because it works for some colleagues and not others, but because it is a
+> claim about a network this machine may no longer be on — and on a different
+> network the same address is a different machine. A location is discovered, never
+> advertised.
 
 **Revisit when:** local network discovery lands, or tailcat stops being on by
 default.
@@ -4537,55 +4536,77 @@ and nothing has been measured about what they actually notice.
 
 **Revisit when:** another field is added that a peer can influence.
 
-## D-091 — A peer advertises a set of addresses; the receiver finds out which works
+## D-091 — Identity is advertised; location is discovered
 
 **Date:** 2026-09-20 · **Status:** decided, not implemented · **Supersedes** part of D-089
 
-**Context.** From `docs/residual-concerns.md`: if a peer sends their address in an
-invitation, how can their daemon know which method — and so which address — suits the
-network topology between the two machines.
+**Context.** Two questions, a few hours apart. How can a peer's daemon know which
+address suits the network topology between two particular machines? And does a
+machine travelling between networks change the answer? It does, and it changes the
+shape of the answer rather than a detail of it.
 
-**It cannot, and should not try.** Topology is a property of the *pair*, not of
-either machine. The sender knows its own interfaces and nothing about where the
-receiver sits. Only the receiver can discover which route works, by attempting it.
+**The sender cannot know which address works, and should not try.** Topology is a
+property of the *pair*. The sender knows its own interfaces and nothing about where
+the receiver sits, so only the receiver can find out, by attempting. That is what
+ICE and happy-eyeballs do, and what an overlay already does inside a single
+endpoint: a relay first, direct once it can. Which is why the overlay path survives
+NAT and the plain TCP path does not — the negotiation exists at one layer and is
+absent at the other.
 
-That is what ICE and happy-eyeballs do, and what tailcat already does inside a single
-`tc://` endpoint: DERP first, direct once it can. Which is exactly why the tailcat
-path survives NAT and the plain TCP path does not — the negotiation exists at one
-layer and is absent at the other.
+**Addresses are of two kinds, and only one of them can be advertised.**
 
-**So advertise a set and let the receiver choose.** Today an invitation carries one
-endpoint, `AdvertisedEndpoint` records one, and `SetPeerEndpoint` stores one per
-peer. `syncTargets` already collects several from different sources, so half the
-machinery exists; the invitation and the per-peer record are the singular parts.
+| | names | survives a move | where it belongs |
+|---|---|---|---|
+| identity-shaped (`tc://…`) | a node | yes, the path is re-derived | the durable peer record |
+| location-shaped (an IP and port) | a place | no | a candidate, with an expiry |
 
-**This supersedes D-089's rejection of advertising the LAN address.** That rejection
-was right about the singular and wrong as a general rule: an address that works for
-some colleagues and not others is bad only when it is the *only* one offered. As a
-candidate among several it costs a failed attempt and is discarded.
+An advertisement outlives the fact it asserts. That is tolerable for a node
+identity, which does not change when a laptop moves from a desk to a hotel, and not
+tolerable for an address, which is true of one network position at one moment.
+
+**A private address is not merely stale; it can be confidently wrong about a
+different machine.** `192.168.1.42` at a coffee shop belongs to somebody else's
+laptop. Attempting it is not a wasted round trip: sync requests are signed (D-044),
+so it delivers our identifier to a stranger, and it does so on every poll for as
+long as the address is held. Private ranges therefore never appear in a pairing
+string, an invitation, or a durable record. They enter only as facts discovered on
+the network we are on now (D-019), where discovery states where a peer *is* rather
+than where a peer *was*.
+
+**A remembered winner is a snapshot too.** Remembering which candidate worked is
+right, and it must carry the time it worked, be tried first, and be discarded on
+failure rather than kept. It is a hint, not a record.
 
 **On ordering, asked directly: no, a daemon should not have a configurable sort.**
 
-The receiver holds the information, so any order the sender expresses is a preference
-rather than knowledge. Worse, it is a preference the receiver would be honouring on
-the word of the peer whose address it is.
+The receiver holds the information, so any order the sender expresses is a
+preference rather than knowledge — and one the receiver would be honouring on the
+word of the peer whose address it is.
 
 Order by *class* instead, which is derivable rather than configured — same-host,
 same-network, public, relayed — and try the first few concurrently, so a dead
-candidate costs a round trip rather than a timeout. Then **remember which one won,
-per peer**, and try it first next time. A learned winner dominates any static order
-after the first successful connection, which makes a configured one dead weight that
-is wrong in exactly the cases it was added for.
+candidate costs a round trip rather than a timeout. A learned winner then dominates
+any static order after the first success, which makes a configured one dead weight
+that is wrong in exactly the cases it was added for.
 
-Every real requirement that arrives dressed as ordering is a **filter**, not a sort:
-"never use a relay" for a site that will not route through third-party
-infrastructure, or "never expose a direct address". Those need *never*, and a
-preference order cannot express never. Add filters if such a requirement appears;
-do not add a sort in anticipation of one.
+Every real requirement that arrives dressed as ordering is a **filter**: "never use
+a relay" for a site that will not route through third-party infrastructure, or
+"never expose a direct address". Those need *never*, and a preference order cannot
+express never. Add filters if such a requirement appears; do not add a sort in
+anticipation of one.
+
+**D-089 rejected advertising this machine's LAN address, and was right.** Its stated
+reason — that an address working for some colleagues and not others is worse than
+one that visibly works for none — was the weaker argument, and an earlier form of
+this entry overturned it on those grounds. The reason that holds is that a LAN
+address is a claim about a network the machine may no longer be on, and the claim is
+wrong about somebody else rather than merely wrong.
+
+**None of this is implemented.** A peer is advertised at one address, that address
+is recorded once, and nothing expires.
 
 **Revisit when:** local discovery lands (D-019's zero-configuration path), which is
-what makes a LAN candidate worth having, or when a deployment states a routing policy
-that a class order cannot express.
+what gives a location candidate a legitimate way in.
 
 ## D-092 — An address is learned once, out of band, and only one side needs one
 
