@@ -4887,3 +4887,56 @@ endpoint survives.
 
 **Revisit when:** the string carries a third thing, at which point `#` is a
 separator with two jobs and wants a real encoding.
+
+## D-098 — A decision that changes what the system is updates the specification in the same pass
+
+**Date:** 2026-09-20 · **Status:** active (spec pass done)
+
+**Context.** Asked whether the answers to two open concerns had ended up in the
+specification or only in this log. Only here — and checking found that nine
+decisions recorded in one day had produced no specification edits at all, while the
+specification had gone on stating the opposite.
+
+**The worst of it was stated as a requirement, not as description.** §29 said *"A
+slash command may point at them. It must not perform them"* of pairing and
+verification, which is precisely what was built. §31 said pairing and verification
+stay at a terminal. Somebody reading the specification first — which CLAUDE.md
+instructs, and which section numbers throughout the code invite — would have
+concluded the implementation was wrong.
+
+**The division of labour was right and incompletely applied.** This log records why,
+including what was rejected; the specification records what the system is. What was
+missing is that a decision changing what the system *is* has to update the
+specification in the same pass. Recording the rationale felt like finishing, and it
+is half.
+
+**This is the same failure as review finding A1**, reopened because the
+implementation settled when delivery advances and §19 never caught up. Two instances
+of one pattern is a pattern.
+
+**What the pass changed**, with no superseded text left in place:
+
+- **§6** gains three names and what each is for, the distinction between a chosen
+  display name and an inferred one, and when a person is offered the choice.
+- **§12** gains the third part of a pairing string, the requirement that pairing
+  takes a name before the comparison rather than after, and the three endings of an
+  attempt. Its worked example and its list of operations were both stale.
+- **§20** replaces an interpolated-markup example with the encoded form, and states
+  that a fact the receiving side knows is a field of its own rather than text beside
+  a claim.
+- **§25** gains the local API boundary: loopback is not a boundary against a page in
+  this machine's own browser, the requirement is a header such a page cannot send,
+  and the referrer is recorded as rejected so it is not added later.
+- **§29** replaces two homes with three, retracts the prohibition on a slash command
+  performing the ceremony, and states the prefix rule and why there is no command
+  named after the system.
+- **§31** corrects the phase note that said the ceremony stays at a terminal.
+
+**Where the old text was wrong rather than merely incomplete, it says so.** "This
+specification previously concluded that they did" is more useful than a clean
+sentence, because the reasoning that produced the old rule was sound and only the
+available surfaces changed.
+
+**Revisit when:** never — this is a working rule rather than a decision with a
+condition. If it lapses, the symptom is a specification that contradicts the code,
+and the check is `git log --name-only` over a day's decisions.

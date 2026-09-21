@@ -414,7 +414,7 @@ peerName: quiet-otter
 
 The `peerId` is the identity that is verified, signed with, and keyed on. The `peerName` is a word pair — an adjective and an animal — that people can read, say, and recognize in a transcript.
 
-A peer name is **derived from the peer identifier**, never chosen. A name that a peer selects for itself is a claim about who it is, and the one thing a display name must not be is a claim. Deriving it means a peer cannot simply declare itself to be someone else.
+A peer name is **derived from the peer identifier**, never chosen. A name a peer picks for itself is a claim about who it is, and the name attribution anchors on must not be a claim. Deriving it means a peer cannot simply declare itself to be someone else.
 
 Deriving it is not sufficient either. A short name has little entropy, and an identity that can be generated freely can be generated until its derived name matches a chosen target. No name short enough to say aloud can resist that. It follows that:
 
@@ -422,7 +422,35 @@ Deriving it is not sufficient either. A short name has little entropy, and an id
 - a name must never be used to admit, to route, to deduplicate, or to establish trust;  
 - two peers may derive the same name, and an interface must show that rather than hide it.
 
-Display a name as itself only for a peer whose identity has been verified. For any other peer, show it as unverified and show the identifier. A name presented without that distinction is an assertion the system cannot support.
+Display a name as itself only for a peer whose identity has been verified. For any other peer, show it as unverified and show the identifier. A name presented without that distinction is an assertion the system cannot support. Because verification is a gate (§25), an unverified peer's turns do not arrive at all — so the marker is a backstop, and displaying it unconditionally makes it say nothing.
+
+## Three names, and what each is for
+
+A peer is referred to by three names, and confusing them is how a colleague ends up trusting the wrong one.
+
+```
+peerName:    quiet-otter     derived from the key; nobody chose it
+displayName: David           what the peer calls itself; a claim
+label:       alice           what YOU call the peer; recorded when you paired
+```
+
+The **derived name** cannot be chosen and is therefore the one attribution anchors on. Its jobs are momentary: separate two peers asserting the same display name, and give a changed key something to be noticed against. Neither asks anybody to remember it, and nobody does — a word pair computed from a key means nothing to a person weeks later. It is a mnemonic for an identity already established, and treating it as a way to recognize a colleague asks it for something it was never able to give.
+
+The **display name** is self-asserted. Unless a person chooses one it is inferred from the operating-system account, which is `David` on a laptop and `Ec2-user` in a container — so it is unreliable in both directions, and two peers asserting the same one is an ordinary event rather than an attack.
+
+The **label** is the name this machine's owner gave the peer, supplied when they paired and bound to exactly one key thereafter. It is the only one of the three that is both memorable and unforgeable, because a person chose it about somebody they had just verified. Interfaces lead with it where there is one, keeping the derived name beside it as the anchor.
+
+A label means one key, and recording a second key under a label already in use is refused rather than allowed to create a second row. That refusal is the one moment where a changed key and a substituted key look the same, so it is stated in full rather than shortened to a conflict.
+
+## Choosing the name others see
+
+A person may set the display name other people see for them. Until they do, it is inferred, and the two are not interchangeable: a name that was guessed must never travel as though somebody picked it, because a guess presented as a choice is a claim about a person that nobody made.
+
+Whether it was chosen is therefore recorded, rather than inferred by comparing the name against the guess — which would pester for ever the person whose account name genuinely is their name. Keeping the guessed name counts as choosing it, because the act of keeping it is the choice.
+
+The name is seen only by other people. Nobody is shown their own name on their own turns, so there is no moment at which its owner notices it is wrong, and it can travel wrongly for weeks. The moment to offer the choice is therefore the first time the name is about to leave the machine — which is when a pairing string is handed to a colleague, and is the only such moment that precedes any room.
+
+Changing it later is safe, and by construction rather than by luck. Turns already sent keep the name they carried, because events are immutable (§7); and the label a colleague chose is theirs, so a rename cannot alter what anybody else calls you.
 
 ## Naming people
 
@@ -774,10 +802,11 @@ something had been permitted and never which of the two.
 
 The split is not cosmetic: it decides where each act can live. Pairing is
 interactive, blocks on another person, and ends with two words that must reach a
-person's eyes unaltered — so it belongs at a terminal. Inviting is a single
-non-interactive act whose output is informational, so it can be a command inside a
-Claude Code session like any other. A vocabulary that ran the two together would
-force both into the more restrictive home.
+person's eyes unaltered — so it cannot happen by way of the model, and belongs in
+the view the daemon serves (§29). Inviting is a single non-interactive act whose
+output is informational, so it can be a command inside a Claude Code session like
+any other. A vocabulary that ran the two together would force both into the more
+restrictive home.
 
 Pairing also carries a **bootstrap address** alongside the identifier, for the
 reason §4 gives — an address need only be correct once. Holding it at machine scope
@@ -785,30 +814,44 @@ is what allows verification to precede admission: without it there is nowhere to
 reach a peer until a room already exists, which would leave every first
 verification happening after the room it was supposed to protect.
 
-Neither part of a pairing string is a secret. An identifier is a public key and an
-address is where a daemon listens; an interceptor learns that a peer exists and
-gains no way in (D-026, D-042). What interception threatens is substitution, which
-is what the two-word comparison is for.
+A pairing string may also carry the **name its sender goes by**, so the person
+receiving it has a sensible default for the name they must supply, rather than
+being asked to invent one for a colleague whose name they can see. It is carried
+only when somebody chose it: a name inferred from an operating-system account
+travelling as though a person picked it is worse than carrying nothing, because the
+derived name is at least honest about being machine-made. The name is a claim by
+whoever sent the string, so a substituted string carries a substituted name — which
+is safe only because a name is recorded after the two words match, never before.
+
+No part of a pairing string is a secret. An identifier is a public key, an address
+is where a daemon listens, and a name is what somebody calls themselves; an
+interceptor learns that a peer exists and gains no way in (D-026, D-042). What
+interception threatens is substitution, which is what the two-word comparison is
+for.
 
 ## Pairing, which happens once
 
 Admission by guest list requires that a host already hold the guest's key. That is one exchange per person, ever:
 
 ```
-Alice:   claude-team whoami
-         → ed25519:M7Kd…4Fq2@198.51.100.7:4783
+Alice:   /self-status
+         → ed25519:M7Kd…4Fq2@198.51.100.7:4783#Alice
 
          (sent to David by whatever means is convenient)
 
 Both, at the same time, on a call:
-David:   claude-team pair ed25519:M7Kd…4Fq2@198.51.100.7:4783 alice
-Alice:   claude-team pair ed25519:GoR7…IWPU@203.0.113.9:4783 david
+David:   /peer-pair ed25519:M7Kd…4Fq2@198.51.100.7:4783#Alice
+Alice:   /peer-pair ed25519:GoR7…IWPU@203.0.113.9:4783#David
 
-         → ribcage tambourine
-         → did they say the same two words? [y/N]
+         → a page opens on each machine: ribcage tambourine
+         → each says whether the other read the same two words
 ```
 
-The string carries an identifier and a bootstrap address, and neither half is a secret: an identifier is a public key, an address is where a daemon listens, and holding both admits nobody (D-026, D-042). It may be pasted into a chat, mailed, printed, or read aloud.
+The string carries an identifier, a bootstrap address, and the name its sender goes by. None of it is a secret: an identifier is a public key, an address is where a daemon listens, a name is what somebody calls themselves, and holding all three admits nobody (D-026, D-042). It may be pasted into a chat, mailed, printed, or read aloud.
+
+**Pairing needs a name for the peer, and takes it before the comparison.** The name is what this person will call that colleague everywhere afterwards, and asking for it after the words match would make a second thing to finish — whose unfinished form has no good meaning, since defaulting it to the derived name reinstates the name nobody remembers, and withholding the verification until it is supplied holds a security act hostage to a convenience field. Taking it beforehand is not the same as asserting it: it is held, and written only if the words match.
+
+**A pairing has three endings and they are not the same.** Abandoned leaves the key recorded, unverified, and unnamed, so the attempt can be resumed. Matched records the verification and writes the name. Differed removes what the attempt created — a key nobody established anything about should not remain on the list wearing the name meant for somebody else, where it would also block a later pairing with the real person. Re-verifying an existing peer is different again: different words there are an alarm about a relationship, not grounds for discarding it and the admissions it holds.
 
 **That is a claim about confidentiality only.** The exchange needs no privacy and it does need integrity, and nothing about sending a public value supplies it. An interceptor who reads the string learns nothing; an interceptor who **replaces** it is recorded as the guest, under the name the host expected, durably, with nothing appearing wrong. The two-word comparison is what closes that, and §25 states the requirement it must meet.
 
@@ -827,14 +870,19 @@ A developer may know six colleagues and admit two of them to a room concerning c
 Both must be inspectable and changeable:
 
 ```
-claude-team peers                      list known peers
-claude-team allow <identifier> [name]  record a peer
-claude-team forget <peer>              discard a peer
+/peer-list                    list known peers
+/peer-pair <string> [name]    record a peer and verify it
+/peer-forget <peer>           discard a peer
 
-claude-team guests                     list this room's guests
-claude-team invite <peer>              admit a known peer
-claude-team revoke <peer>              withdraw admission
+/room-status                  this room, and who may enter it
+/room-invite <peer>           admit a known peer
+/room-revoke <peer>           withdraw admission
 ```
+
+Recording a peer **without** verifying is possible and is not part of this list. It
+exists for scripts and for tests, it leaves the peer unable to collaborate until the
+comparison happens, and offering it to a person as an ordinary way to add a
+colleague would be offering the way that does not work.
 
 A room's creator is its first guest.
 
@@ -1435,21 +1483,24 @@ A session that joins a room already in progress is an exception: it receives the
 
 Never make external conversation appear to be local conversation.
 
-Prefer explicit structure:
+Prefer explicit structure, and prefer an encoding in which a value cannot leave its
+field:
 
 ```
-<team-conversation>
-
-<message speaker="David">
-Could idle pool expiration explain this?
-</message>
-
-<message speaker="Claude-David">
-Yes. The implementation currently...
-</message>
-
-</team-conversation>
+<team-conversation fence="d77a4fcd39b3d7ed781c">
+{"turns":[
+  {"speaker":"David","peerName":"fond-smew","verified":true,
+   "kind":"USER_PROMPT","at":"…","text":"Could idle pool expiration explain this?"},
+  {"speaker":"David","peerName":"fond-smew","verified":true,
+   "kind":"ASSISTANT_MESSAGE","at":"…","text":"Yes. The implementation currently…"}
+]}
+</team-conversation fence="d77a4fcd39b3d7ed781c">
 ```
+
+Markup assembled by interpolation has to escape by hand, which is a problem JSON
+solves by construction: an encoder cannot produce a value that ends its own string.
+Whether a turn came from a person or from their Claude is a field rather than a
+prefix on a name, for the same reason.
 
 Claude should understand:
 
@@ -1483,7 +1534,11 @@ Attribution in injected context carries more weight than attribution in a displa
 
 An unverified speaker does not appear in injected context at all: §25 makes verification a gate, so their turns are neither synchronized nor injected. The requirement that an unverified speaker be **marked inside the injected text** survives that as a backstop rather than as a normal state — if the mark is ever rendered, a filter has failed, and the text must say so where the model can read it rather than only in an interface.
 
-What remains true of every speaker, verified or not, is that the **display name is self-asserted**. It comes from the peer's own environment and is a claim; two peers asserted the same one during the first two-peer run, because both daemons happened to run under the same OS user. Attribution therefore anchors on the name derived from the identifier, which cannot be chosen, with the display name beside it rather than in place of it. Otherwise a peer that has picked a convincing name can place words in a colleague's mouth, in a form that reads to the model exactly like the colleague saying them.
+What remains true of every speaker, verified or not, is that the **display name is self-asserted**. It comes from the peer's own environment and is a claim; two peers asserted the same one during the first two-peer run, because both daemons happened to run under the same OS user. Attribution therefore anchors on the name derived from the identifier, which cannot be chosen.
+
+**The derived name is a separate field, never part of the same string as the claim.** Escaping keeps a crafted name from leaving its field; it does nothing to stop one imitating the field beside it. A display name of `Alice (quiet-otter)`, concatenated into `Alice (quiet-otter) (prudent-wagtail)`, escapes nothing, forges no turn, leaves the block intact, and still reads as though it carried a derived name. The same applies to every fact the receiving side knows and the sender does not assert: whether the speaker is verified, and whether the turn came from a person or their Claude. Do not concatenate our facts with their claims.
+
+A display name may also be **chosen** rather than inferred (§6), which changes what it is worth and not what it is: a chosen name is still a claim, still self-asserted, and still anchored by the derived one.
 
 ---
 
@@ -1801,6 +1856,39 @@ That is deliberate: whom to admit remains the host's judgement (D-051), and the
 second gate is not a second opinion about that judgement — it is a different
 question, asked of a different party.
 
+## The local API is not reachable from a web page
+
+The daemon serves the view, and the ceremony above happens on it, so the local API
+is now something a person acts through rather than only reads. It binds to loopback,
+which keeps other machines out and does nothing whatever about a page open in this
+machine's own browser — `127.0.0.1` is an address like any other to a page, and a
+request with a simple content type is sent without the browser asking permission
+first. The response cannot be read across origins; the effect has already happened
+by then.
+
+What is reachable that way is not incidental. The local API can mark a peer verified,
+which is the gate every other guarantee in this section depends on, and it can
+publish a turn into a room, which reaches teammates' context windows.
+
+So a request that changes anything must **present** a header that our own code sends
+and a page from another origin cannot. A browser will not send a custom header to
+another origin without asking first, and that question is answered with nothing, so
+the request is never made. Requiring presence rather than refusing a bad value is
+what makes this fail closed: anything that cannot present the header is refused,
+whatever it is, and no argument is needed about which headers a browser can be made
+to omit.
+
+The referrer is not a substitute and must not be added as one. A page suppresses its
+own with a single tag, and an absent referrer has to be treated as allowed, because
+the command-line tool and the hooks send none — so the check would pass in exactly
+the case it exists to fail. Passing a request through a redirect does not help
+either: the referrer names the initiating document and survives the redirect.
+
+None of this defends against a malicious program running as the same user, which can
+send any header it likes and could edit the databases directly in any case. The
+threat closed here is a web page, which is the one thing the browser enforces a
+boundary for.
+
 ## The case with no answer
 
 Two people who have never met cannot recognise each other, so neither property is fully available on first contact. Nothing in this design resolves that, and no rendering will.
@@ -1907,13 +1995,16 @@ Peer connectivity configuration should not require committing personal credentia
 Eventually:
 
 ```
-# once with each colleague, at a terminal, on a call with them
-claude-team pair ed25519:M7Kd…4Fq2@198.51.100.7:4783 alice
-→ ribcage tambourine   → verified
+# once, so colleagues have something to send you
+/self-name Alice
+
+# once with each colleague, on a call with them, both at the same time
+/peer-pair ed25519:M7Kd…4Fq2@198.51.100.7:4783#David
+→ a page opens: ribcage tambourine   → both say yes → verified
 
 # thereafter, per room, from inside a session
-/team-create          → misty-canyon
-/team-invite alice
+/room-create          → misty-canyon
+/room-invite david
 ```
 
 ## Installation
@@ -1930,21 +2021,35 @@ This follows from Claude Code being launched and used unchanged. A plugin is loa
 
 ## Where each command lives
 
-Two homes, and which one a command belongs in is decided by the command rather than by preference.
+Three homes, and which one a command belongs in is decided by the command rather than by preference.
 
-**Inside a Claude Code session**, as commands it already loads: anything informational or single-shot. Listing rooms and peers, creating a room, inviting a known peer, joining, leaving, reading the room. These have no interaction beyond their arguments, and their output is something a person reads once — so it is acceptable that it reaches them by way of the model, which is how everything from an extension point reaches a person (§3.8).
+**Inside a Claude Code session**, as commands it already loads: everything a person does in the ordinary course. Listing rooms and peers, creating a room, inviting a known peer, joining, leaving, reading the room, pairing with a colleague, choosing the name others see. Either they have no interaction beyond their arguments, or they hand off to a surface that does — and their output is something a person reads once, so it is acceptable that it reaches them by way of the model, which is how everything from an extension point reaches a person (§3.8).
 
-Joining in particular is better here than at a terminal. A room is session-scoped, and a command typed inside a session can name the session it means; a command outside one cannot, and must instead set a machine-level current room that sessions adopt on first sight.
+Joining in particular belongs here. A room is session-scoped, and a command typed inside a session can name the session it means; a command outside one cannot. Nothing machine-level picks a room on a session's behalf, so a room command typed at a terminal is refused rather than answered with a guess.
 
-**At a terminal**, as a separate program: pairing and verification. Three properties put them there, and any one would be enough.
+**In the local view**, as a page the daemon serves: the two-word comparison. Three properties keep that ceremony away from the model, and any one would be enough.
 
-- They are **interactive**, and block on another person for as long as it takes them to type a command.
-- Their output must reach a person's eyes **unaltered**. Two words whose purpose is that you compared exactly what your daemon computed must not pass through a model, and least of all through the model that is reading room content from peers — the content §20 exists because it once impersonated an operator instruction.
+- It is **interactive**, and blocks on another person for as long as it takes them to start their side.
+- Its output must reach a person's eyes **unaltered**. Two words whose purpose is that you compared exactly what your daemon computed must not pass through a model, and least of all through the model that is reading room content from peers — the content §20 exists because it once impersonated an operator instruction.
 - Recording the result is a **human act**, and the human is on a telephone rather than at a prompt.
 
-A slash command may point at them. It must not perform them: *"run `claude-team pair …` in a terminal, on a call with them"* is a signpost, and a signpost is honest in a way a proxy would not be.
+Those properties rule out the model. They do not rule out a browser, and this specification previously concluded that they did, writing the requirement as *at a terminal* — because a terminal was the only non-model surface anybody had established. The view is the other one, and it is the better one. A terminal is an operator surface, and asking somebody to open one in order to meet a colleague was never a user experience.
+
+So a slash command **performs** the ceremony rather than pointing at it. It records the peer, mints a page, opens it, and returns without waiting; the waiting and the comparison happen on the page. Every pairing gets its own address, so a second one arrives as a new tab rather than as a silent rewrite of one nobody is looking at, and a page left over from an earlier attempt can never quietly become a different pairing.
+
+The page is reachable only by the person at the machine. The daemon serves it on loopback, and the requests that change anything — beginning an exchange, recording its result, publishing a turn — are refused unless they carry a header a page from any other origin cannot send. Loopback keeps other machines out; that header is what keeps out a page open in this machine's own browser.
+
+**At a terminal**, as a separate program: the operator surface, which is not a user experience and is not meant to be. Diagnostics that must work when the plugin path is broken, the daemon's own lifecycle, this machine's identity, and testing. The terminal ceremony remains, as the fallback for a machine that cannot open a browser — one reached over SSH, or in a container — which makes it a second branch rather than a legacy.
 
 This split is why the vocabulary separates pairing from inviting (§12). A single verb spanning both scopes would have forced both into the more restrictive home.
+
+## Command names
+
+A prefix names what the command acts on. `peer-` acts on somebody else, `room-` on a room, `self-` on you. The prefix names the target and not the activity, so a command that prints your own pairing string is `self-` however much it is about pairing.
+
+Commands are prefixed at all because a plugin shares one namespace with every other plugin a person has installed, and an unprefixed `create` or `status` is a collision waiting to happen.
+
+There is no prefix for the system itself, and so no single command that says what it is or lists the rest. That command would be named after the product, and the name is not settled. A placeholder is worse than the gap: a command name goes into habit and into whatever colleagues write down for each other, and is harder to withdraw later than a directory is.
 
 ## Starting the daemon
 
@@ -2375,9 +2480,9 @@ Installation is the wall everything else is behind: nobody but the author has ru
 
 A slash command is a **thin wrapper**, never a reimplementation (D-057). It shells out to the same binary a terminal would, so the CLI remains the surface that can be tested without a Claude session, and there is one implementation of each operation rather than two that drift. `CLAUDE_CODE_SESSION_ID` is in the environment of every tool call and equals the id the hooks report (B21), so a command run from a session knows which session it is in without being told.
 
-That is what lets **`create` and `join` bind a session**, and that is what lets the machine-level current room be deleted. The current room exists only because a terminal command cannot name a session. It is also a hazard: a room created and forgotten is silently joined weeks later by a session in an unrelated repository, because nothing derives a room from a directory and nothing expires the setting.
+That is what lets **`create` and `join` bind a session**, and that is what let the machine-level current room be deleted. It existed only because a terminal command cannot name a session, and it was a hazard while it existed: a room created and forgotten is silently joined weeks later by a session in an unrelated repository, because nothing derives a room from a directory and nothing expires the setting.
 
-**Pairing and verification stay at a terminal** (§29). Each is interactive, each blocks on another person, and the two words must reach a person's eyes without passing through a model that reads room content from unverified peers.
+**Pairing and verification do not pass through the model** (§29). Each is interactive, each blocks on another person, and the two words must reach a person's eyes without passing through a model that reads room content from peers. That was first written as *at a terminal*, because a terminal was the only non-model surface established at the time; the view the daemon serves is the other one, and the ceremony lives there. A terminal ceremony remains for a machine that cannot open a browser.
 
 ---
 
