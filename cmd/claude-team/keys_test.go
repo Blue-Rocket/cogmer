@@ -251,3 +251,57 @@ func TestSigningNamespacesCarryNoProductName(t *testing.T) {
 		t.Error("signingBytesV2 was edited; events signed by older builds will not verify")
 	}
 }
+
+// The name is seen only by OTHER people, so there is no moment where its owner
+// notices it is wrong. That is why the difference between a name somebody picked
+// and one $USER supplied has to be recorded rather than guessed at (D-095).
+func TestAChosenNameIsDistinguishedFromAGuessedOne(t *testing.T) {
+	t.Setenv("CLAUDE_TEAM_HOME", t.TempDir())
+
+	id, err := LoadIdentity()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id.NameChosen {
+		t.Fatal("a freshly invented name reports itself as chosen")
+	}
+	if id.UserDisplayName == "" {
+		t.Fatal("no name at all; other people would see nothing")
+	}
+	if !strings.Contains(nameLine(id), "username") {
+		t.Errorf("a guessed name does not say so: %q", nameLine(id))
+	}
+
+	// Keeping the guessed name IS a choice, and must stop the offer. Comparing
+	// against the guess instead of recording the act would pester the person whose
+	// username really is their name, for ever.
+	same := id.UserDisplayName
+	got, err := SetDisplayName(same)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.NameChosen || got.UserDisplayName != same {
+		t.Fatalf("keeping the guessed name did not count as choosing it: %+v", got)
+	}
+	if strings.Contains(nameLine(got), "username") {
+		t.Errorf("the offer survives a deliberate choice: %q", nameLine(got))
+	}
+
+	// It survives a reload, or the offer returns every session.
+	again, err := LoadIdentity()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !again.NameChosen || again.UserDisplayName != same {
+		t.Errorf("the choice was not persisted: %+v", again)
+	}
+
+	// And a new name replaces it.
+	renamed, err := SetDisplayName("Alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if renamed.UserDisplayName != "Alice" {
+		t.Errorf("name is %q, want Alice", renamed.UserDisplayName)
+	}
+}

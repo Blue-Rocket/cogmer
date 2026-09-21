@@ -53,6 +53,8 @@ func main() {
 		runWhere()
 	case "whoami":
 		runWhoami()
+	case "name":
+		runName(os.Args[2:])
 	case "conflicts":
 		runConflicts(os.Args[2:])
 	case "peers":
@@ -112,6 +114,7 @@ func usage() {
   claude-team version         Print the build version
   claude-team where           Print the address to watch the room at
   claude-team whoami          Show this peer's identity and room
+  claude-team name [text]     Show or set the name other people see for you
   claude-team conflicts [room] Show quarantined events (sequence conflicts)
 
 Peers — durable, above any room. Done once with each colleague:
@@ -975,6 +978,7 @@ func runWhoami() {
 		"identity": id, "peerName": id.PeerName, "room": room, "addr": addr(),
 	}, "", "  ")
 	fmt.Println(string(buf))
+	fmt.Printf("\n%s\n", nameLine(id))
 	printPairingInvitation(id)
 }
 
@@ -1294,6 +1298,13 @@ func invocation() string {
 // (D-088) rather than at a terminal, because meeting a colleague was never an
 // operator task.
 func printPairingInvitation(id *Identity) {
+	if !id.NameChosen {
+		// Said here because this is the moment the name starts travelling: all
+		// three paths that hand your identity to somebody else come through this
+		// function (D-089 consolidated them), and the name is seen by nobody but
+		// other people.
+		fmt.Printf("\n%s\n", nameLine(id))
+	}
 	endpoint := AdvertisedEndpoint()
 	fmt.Printf("\nSend your colleague this — any channel will do, it is not a secret:\n\n  %s\n",
 		pairingString(id.PeerID, endpoint))
@@ -1353,4 +1364,39 @@ func pairingReachable(endpoint string) (bool, string) {
 func endpointRecorded() bool {
 	_, err := os.Stat(filepath.Join(homeDir(), endpointFile))
 	return err == nil
+}
+
+// nameLine says what other people see, and — only while nothing has chosen it —
+// how to change it.
+//
+// Both, not one or the other. The name is the literal answer to "who am I", so it
+// is always shown; saying "you chose this" in the other case is noise about
+// something the person already knows. The offer appears exactly while it is true
+// and stops at the first deliberate act (D-095).
+func nameLine(id *Identity) string {
+	if id.NameChosen {
+		return fmt.Sprintf("Other people see you as %s.", id.UserDisplayName)
+	}
+	return fmt.Sprintf("Other people see you as %s — that is this computer's username,\n"+
+		"not a name anybody picked. /self-name changes it.", id.UserDisplayName)
+}
+
+// runName shows or sets what other people call you.
+//
+// Self scope, not peer scope: `peer-` is for commands about somebody else, and a
+// command that sets your own name has no business in that namespace (D-095).
+func runName(args []string) {
+	if len(args) == 0 {
+		withMembership(func(_ *Membership, id *Identity) {
+			fmt.Println(nameLine(id))
+		})
+		return
+	}
+	id, err := SetDisplayName(strings.Join(args, " "))
+	if err != nil {
+		log.Fatalf("name: %v", err)
+	}
+	fmt.Printf("Other people will see you as %s.\n", id.UserDisplayName)
+	fmt.Println("Turns you have already sent keep the name they were sent with, and a")
+	fmt.Println("colleague who gave you a name of their own still sees theirs.")
 }

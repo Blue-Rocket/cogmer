@@ -4,6 +4,16 @@ Prototype from `Shared Claude Sessions.md` — a local-first P2P daemon replicat
 Claude Code conversations between developers. Read that spec before changing
 architecture; section numbers (§7, §19, …) are referenced throughout the code.
 
+## Command prefixes name the scope (D-095)
+
+`peer-` is for a command about **somebody else** — `/peer-pair`, `/peer-list`,
+`/peer-forget`. `self-` is for one about **you** — `/self-name`. `room-` is for one
+about a room.
+
+A prefix names the **activity**, not the object, so `/peer-pair` with no arguments
+printing your own pairing string is not a violation: sending your half is part of
+pairing with a peer. Say so when the question comes up, because it will.
+
 ## Numbered references carry a short description
 
 This project refers to numbered things constantly — `§` sections of the spec,

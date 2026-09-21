@@ -30,7 +30,15 @@ type Identity struct {
 	private         ed25519.PrivateKey `json:"-"`
 	UserID          string             `json:"userId"`
 	UserDisplayName string             `json:"userDisplayName"`
-	MachineID       string             `json:"machineId"`
+	// NameChosen distinguishes a name somebody picked from one this program
+	// guessed. The guess is $USER capitalised, which is "David" on a laptop and
+	// "Ec2-user" in a container -- and the difference matters because the name is
+	// seen only by OTHER people. Without the flag there is no way to tell "David
+	// because I meant it" from "David because the OS said so", and comparing
+	// against the guess would pester the person whose username really is their
+	// name (D-095).
+	NameChosen bool   `json:"nameChosen"`
+	MachineID  string `json:"machineId"`
 }
 
 // Config separates room membership (shareable) from identity (personal), per §28.
@@ -110,6 +118,7 @@ func LoadIdentity() (*Identity, error) {
 		PeerID:          derived,
 		UserID:          strings.ToLower(user),
 		UserDisplayName: strings.ToUpper(user[:1]) + user[1:],
+		NameChosen:      false, // guessed, and said so
 		MachineID:       host,
 	}
 	if err := os.MkdirAll(homeDir(), 0o755); err != nil {
@@ -121,5 +130,34 @@ func LoadIdentity() (*Identity, error) {
 	}
 	id.private = priv
 	id.PeerName = PeerName(id.PeerID)
+	return id, nil
+}
+
+// SetDisplayName records what this person wants other people to call them.
+//
+// Deliberate even when it changes nothing: somebody who runs this and keeps the
+// guessed name has chosen it, and should stop being offered the chance.
+//
+// Changing it is safe, and that is a consequence rather than a coincidence. Events
+// already sent keep the old name, because events are immutable (§7). And the label
+// a colleague gave you is theirs (D-094), so your rename cannot alter what anybody
+// else calls you -- which is what makes this cosmetic enough to defer and to change.
+func SetDisplayName(name string) (*Identity, error) {
+	id, err := LoadIdentity()
+	if err != nil {
+		return nil, err
+	}
+	name = strings.TrimSpace(name)
+	if name != "" {
+		id.UserDisplayName = name
+	}
+	id.NameChosen = true
+	buf, err := json.MarshalIndent(id, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	if err := os.WriteFile(filepath.Join(homeDir(), "identity.json"), buf, 0o600); err != nil {
+		return nil, err
+	}
 	return id, nil
 }
