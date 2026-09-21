@@ -62,6 +62,13 @@ transport, and not testable alone.
 **Whether the public relay is an acceptable dependency.** Parked deliberately as a
 precondition of Phase 13, where it stops being theoretical.
 
+## Lost, and needs recovering from David
+
+An item on **idempotency** was in `residual-concerns.md` and is gone: the file was
+deleted on the strength of a reading from earlier in the session, and being
+untracked there is no copy. `/peer-pair` repeated on a completed pairing was worked
+in D-107 and D-108, which may or may not be what it said.
+
 ## Older, from the specification review
 
 **A1** — §19 still does not say when delivery advances. Reopened because the
