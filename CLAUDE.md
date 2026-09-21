@@ -66,19 +66,27 @@ per run, and `< /dev/null` or it waits on stdin.
 ## The host is launched and used unchanged (§3.8)
 
 The single test to apply to any proposal. The *host* is the application a session
-runs in — Claude Code today.
+runs in — Claude Code today. Three ways a proposal fails it:
 
-- Install only kinds of thing the host already loads by its own design, when nobody
-  has changed how it starts: in Claude Code, hooks, skills and MCP servers. Not what
-  it could be made to load. Rules out the PTY wrapper (D-034).
-- No different launch command, and no reliance on how the host renders.
-- A host offering no way in is out of reach, never a reason to wrap one.
+- it needs the host started differently — a replacement command, a wrapper, a
+  terminal interposed (D-034);
+- it needs installing an artifact of a type that is not among the host's
+  demonstrated, documented extension mechanisms. In Claude Code: hooks, skills,
+  MCP servers and the plugin that carries them. The type is constrained; what the
+  artifact *does* is not (D-113);
+- it needs knowing how the host renders.
+
+A host offering no way in is out of reach, never a reason to wrap one.
+
 - Every extension point delivers to the model; presentation is best effort (D-033).
 - MCP is never a display channel (D-036). Nothing checks this.
-- An MCP server must not expose sampling (§3.7).
-- A remote event never causes inference in an interactive session (§3.7). Remote
-  events are stored, displayed and queued, and enter context at the next locally
-  initiated turn.
+
+## A remote event never causes inference in an interactive session (§3.7)
+
+- Remote events are stored, displayed and queued; they enter context at the next
+  locally initiated turn and never before.
+- An MCP server must not expose sampling, which would let a peer cause a turn in
+  somebody's session.
 - `sync.go`, `daemon.go`, `store.go` and `transcript.go` must not import `os/exec`
   or `syscall`, or call `RunProbe`/`EnsureVerified`/`runDoctor`. A test enforces it.
 

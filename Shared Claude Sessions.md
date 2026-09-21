@@ -233,7 +233,7 @@ The **host** is the application a session runs in. Claude Code is the host today
 
 A person starts the host exactly as they do today, and uses it exactly as they do today. This system is installed *into* it and never *around* it.
 
-**A participant installs only kinds of thing the host already loads by its own design** — in Claude Code, hooks, skills, MCP servers, and whatever else it accepts as an extension. The test is not whether something *can* be made to load. It is whether the host loads that kind of thing already, for its own reasons, when nobody has changed how it starts. Nothing replaces the command, wraps the process, interposes a terminal, or patches the application.
+**A participant installs only artifacts of a type included in the host's demonstrated, documented extension mechanisms** — in Claude Code, hooks, skills, MCP servers, and the plugin that carries them. The constraint is on the type and not on what the artifact does: a hook that replicates a conversation to a peer is a hook, however little anybody anticipated one. The test is not whether the host *can* be made to load something, because almost any program can be made to load something, and a runtime that loads a shim on the host's behalf is loading it for us rather than for the host. Nothing replaces the command, wraps the process, interposes a terminal, or patches the application.
 
 This is a constraint on the product boundary before it is a technical one. The alternative — shipping an alternate way to launch the host — makes terminal emulation, pseudo-terminals on each operating system, editor terminals, shell integration, and every surface the host's authors add in future into this project's responsibility. None of that is this project's problem, and none of it should become so.
 
@@ -242,7 +242,7 @@ It also buys reach that cannot be bought any other way. Claude Code is a termina
 The constraint is useful precisely because it can be applied without argument:
 
 - if a proposal requires a person to start the host differently, it is out;  
-- if it requires installing a kind of thing the host does not already load by its own design, it is out;  
+- if it requires installing an artifact of a type the host does not document as an extension mechanism, it is out;  
 - if it requires understanding how the host renders, it is out.
 
 **A host offering no way in fails this test rather than relaxing it.** The question is what a host already does, never what it could be made to do. If a host has no extension point this system can use, that is a fact about the host: it may put the host out of reach, and it never licenses an alternate way to launch one.
