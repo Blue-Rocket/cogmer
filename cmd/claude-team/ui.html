@@ -94,7 +94,11 @@ const ROOM = decodeURIComponent(location.pathname.replace(/^\/room\//, ''));
     feed.innerHTML=state.events.map(e=>{
       const mine=e.peerId===state.selfPeerId;
       const claude=e.eventType==='ASSISTANT_MESSAGE';
-      const name=claude?('Claude — '+e.userDisplayName):e.userDisplayName;
+      // The label this person chose leads, because it is the only name that is
+      // both memorable and bound to one key. The display name is the peer's own
+      // claim and is used only until you have named them (D-094).
+      const who=e.label||e.userDisplayName;
+      const name=claude?('Claude — '+who):who;
       // A real disclosure rather than a triangle that does nothing: the tool
       // names are stored, so the summary expands to them.
       let tools='';
@@ -108,7 +112,8 @@ const ROOM = decodeURIComponent(location.pathname.replace(/^\/room\//, ''));
       // The derived name and the unverified marker earn their place only on a
       // peer that is not you; on your own turns they are noise.
       const ident = mine ? ''
-        : '<span class="peer">'+esc(e.peerName)+'</span><span class="unverified">unverified</span>';
+        : '<span class="peer">'+esc(e.peerName)+'</span>'
+          +(e.verified?'':'<span class="unverified">unverified</span>');
       return '<div class="turn"><div class="who">'
         +'<span class="name '+(mine?'me':'them')+'">'+esc(name)+'</span>'
         +ident

@@ -23,10 +23,19 @@ var uiPage []byte
 // peer name, never on the self-asserted display name (D-021) -- two peers claimed
 // the same display name during the first two-peer run.
 type uiEvent struct {
-	EventID   string   `json:"eventId"`
-	PeerID    string   `json:"peerId"`
-	PeerName  string   `json:"peerName"`
-	Display   string   `json:"userDisplayName"`
+	EventID  string `json:"eventId"`
+	PeerID   string `json:"peerId"`
+	PeerName string `json:"peerName"`
+	Display  string `json:"userDisplayName"`
+	// Label is what THIS person calls the peer, chosen when they paired. Empty
+	// for your own turns and for a peer recorded by a script (D-094).
+	Label string `json:"label"`
+	// Verified is a fact, not a constant. The view marked every remote turn
+	// unverified because it had no way to ask -- a comment written before D-054,
+	// which now refuses an unverified peer's events outright. So the marker sat on
+	// every turn that could exist, and a warning that is always on is not a
+	// warning. Seeing one now means a filter failed, which is worth shouting about.
+	Verified  bool     `json:"verified"`
 	EventType string   `json:"eventType"`
 	Content   string   `json:"content"`
 	Clock     string   `json:"clock"`
@@ -104,6 +113,7 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 		return uiState{}, err
 	}
 	st := uiState{Room: cur.RoomID, RoomName: cur.RoomName, SelfPeerID: d.id.PeerID, Peers: d.peerStatus()}
+	labels := d.members.Labels()
 	for _, e := range evs {
 		ts := e.Timestamp
 		if t, err := time.Parse(time.RFC3339Nano, e.Timestamp); err == nil {
@@ -111,7 +121,9 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 		}
 		ue := uiEvent{
 			EventID: e.EventID, PeerID: e.PeerID, PeerName: PeerName(e.PeerID),
-			Display: e.UserDisplayName, EventType: e.EventType, Content: e.Content, Clock: ts,
+			Display: e.UserDisplayName, Label: labels[e.PeerID],
+			Verified:  e.PeerID == d.id.PeerID || d.members.IsVerified(e.PeerID),
+			EventType: e.EventType, Content: e.Content, Clock: ts,
 			// §6/D-021 require the identifier be shown for any peer whose identity
 			// is unverified. That is every remote peer today. It is not required
 			// for your own turns, where it identifies nothing you did not know.

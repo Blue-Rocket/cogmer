@@ -256,6 +256,27 @@ func (m *Membership) PeerEndpoints() []string {
 // ninety seconds on a ceremony, rather than discovering the clash once the words
 // have already matched — which would leave a verified peer and an unusable name,
 // and so a second thing for somebody to finish (D-093).
+// Labels maps each known peer to the name this person gave it.
+//
+// The label is the only name that is both memorable and bound to one key: the
+// display name is the peer's own claim and can be anything, and the derived name is
+// computed from the key and means nothing to anybody weeks later (D-094).
+func (m *Membership) Labels() map[string]string {
+	out := map[string]string{}
+	known, err := m.KnownPeers()
+	if err != nil {
+		return out
+	}
+	for _, p := range known {
+		// A label equal to the derived name is a placeholder, not a choice, and
+		// offering it as though somebody picked it would be a lie.
+		if p.Name != "" && p.Name != PeerName(p.PeerID) {
+			out[p.PeerID] = p.Name
+		}
+	}
+	return out
+}
+
 func (m *Membership) NameFree(name, peerID string) error {
 	if name == "" {
 		return nil

@@ -184,3 +184,101 @@ func TestNotifyDoesNotBlockOnASlowReader(t *testing.T) {
 		t.Errorf("wake-ups accumulated (%d); a slow reader would stall publishing", len(ch))
 	}
 }
+
+// The label is the only name that is both memorable and bound to one key: a display
+// name is the peer's own claim, and a derived name means nothing to anybody weeks
+// later. It lived in the database and reached neither the view nor the model
+// (D-094).
+func TestTheViewCarriesTheNameYouChose(t *testing.T) {
+	d, room := testDaemon(t)
+	store, err := d.storeFor(room.RoomID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	named := testIdentity(t).PeerID
+	unnamed := testIdentity(t).PeerID
+	if err := d.members.Allow(named, "alice"); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.members.MarkVerified(named); err != nil {
+		t.Fatal(err)
+	}
+	// Recorded with no label of its own, as a script would (D-053).
+	if err := d.members.Allow(unnamed, ""); err != nil {
+		t.Fatal(err)
+	}
+	for i, p := range []string{named, unnamed} {
+		if _, err := store.Append(int64(i+1), &Identity{PeerID: p, UserDisplayName: "Ec2-user"},
+			room.RoomID, "s", EventUserPrompt, "hello", nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	st, err := d.snapshot(room)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(st.Events) != 2 {
+		t.Fatalf("want 2 events, got %d", len(st.Events))
+	}
+	if st.Events[0].Label != "alice" {
+		t.Errorf("label is %q, want alice; the name chosen at pairing did not reach the view", st.Events[0].Label)
+	}
+	// A placeholder is not a choice, and offering it as one would be a lie.
+	if st.Events[1].Label != "" {
+		t.Errorf("an unnamed peer carries label %q; the derived placeholder was offered as a chosen name", st.Events[1].Label)
+	}
+	// Both still carry the derived name, which is what a key change surfaces on.
+	for _, e := range st.Events {
+		if e.PeerName == "" {
+			t.Error("the derived anchor was dropped when a label appeared")
+		}
+	}
+}
+
+// The marker used to be rendered on every remote turn, because the view had no way
+// to ask. D-054 refuses an unverified peer's events outright, so anything displayed
+// is verified -- and a warning that is always on is not a warning.
+func TestTheUnverifiedMarkerInTheViewIsAFact(t *testing.T) {
+	d, room := testDaemon(t)
+	store, err := d.storeFor(room.RoomID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	verified := testIdentity(t).PeerID
+	stranger := testIdentity(t).PeerID
+	if err := d.members.Allow(verified, "alice"); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.members.MarkVerified(verified); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.members.Allow(stranger, "bob"); err != nil {
+		t.Fatal(err)
+	}
+	for i, p := range []string{verified, stranger} {
+		if _, err := store.Append(int64(i+1), &Identity{PeerID: p, UserDisplayName: "X"},
+			room.RoomID, "s", EventUserPrompt, "hello", nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	st, err := d.snapshot(room)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !st.Events[0].Verified {
+		t.Error("a verified peer's turn is still marked unverified, so the marker says nothing")
+	}
+	if st.Events[1].Verified {
+		t.Error("an unverified peer's turn is reported verified; the marker is the backstop for a failed filter")
+	}
+	// Your own turns need no marker and no anchor (D-021).
+	if _, err := store.Append(3, d.id, room.RoomID, "s", EventUserPrompt, "mine", nil); err != nil {
+		t.Fatal(err)
+	}
+	st, _ = d.snapshot(room)
+	own := st.Events[len(st.Events)-1]
+	if !own.Mine || !own.Verified {
+		t.Error("your own turn is reported as somebody else's, or as unverified")
+	}
+}
