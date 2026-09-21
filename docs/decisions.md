@@ -5545,11 +5545,25 @@ An offer waiting to be accepted is a room, and belongs with rooms — it is list
 apart from the rooms already joined, because accepting is the act that has not
 happened. An invitation withheld for want of a verification is not visible to the
 person it is for and is entirely visible to the person who can release it, so it
-belongs beside that peer: "unverified" is a state, "unverified, one invitation
-waiting on this" is a reason. Naming what is blocked is the difference between a
-prompt somebody acts on and a reproach they learn to skip, and the count must
-disappear when the verification happens rather than persist as a record of work
-already done.
+belongs beside that peer.
+
+**Name the person, do not count the rooms.** A tally was tried first and is close
+to useless here: the ordinary room holds two people, so the number is always one
+and carries nothing. What somebody can act on is which colleague is unfinished and
+what to type. It must also stop being said once the pairing completes, rather than
+persisting as a record of work already done.
+
+**The appeal is to finish pairing, not to verify.** Pairing is the act a person
+recognises; verifying is our word for a step inside it, and nobody thinks "I must
+verify Alice". So the prompt says there is work to do with Alice and offers
+`/peer-pair alice`.
+
+That required the command to accept a name. It previously took only a pairing
+string, so `/peer-pair alice` hashed the literal text into an identifier and
+invented a peer nobody had met — worse than refusing, because it produced a
+plausible stranger. It now resolves a recorded peer and runs the ceremony, which is
+the second half of an act rather than a new one, so it asks for no label: they were
+named when they were recorded.
 
 **Revisit when:** admission and verification stop being separable — if a future
 change makes one imply the other, withholding has nothing left to sequence.

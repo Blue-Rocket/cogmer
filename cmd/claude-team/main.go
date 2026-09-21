@@ -657,24 +657,22 @@ func runPeers() {
 			fmt.Println("Your own string, to send them, is in /self-status.")
 			return
 		}
-		withheld := 0
+		var unfinished []string
 		for _, p := range known {
-			state := "unverified"
-			if p.VerifiedAt != "" {
-				state = "verified " + p.VerifiedAt[:10]
+			state := "verified " + firstNonEmpty(cut10(p.VerifiedAt), "")
+			if p.VerifiedAt == "" {
+				state = "not finished"
+				unfinished = append(unfinished, p.Name)
 			}
-			// An unverified peer is a state; an unverified peer holding up an
-			// invitation is a reason. Naming what is blocked is what makes this
-			// worth acting on rather than a standing reproach (D-106).
-			note := ""
-			if n := m.WithheldFor(p.PeerID); n > 0 {
-				withheld += n
-				note = fmt.Sprintf("  — %d invitation(s) waiting on this", n)
-			}
-			fmt.Printf("  %-22s %-14s %s%s\n", p.Name, state, p.PeerID, note)
+			fmt.Printf("  %-22s %-14s %s\n", p.Name, state, p.PeerID)
 		}
-		if withheld > 0 {
-			fmt.Printf("\nVerifying releases them: /peer-pair <name>, two words on a call.\n")
+		// Named, not counted. The usual room has two people in it, so a tally is
+		// always one and says nothing; what a person can act on is which
+		// colleague it is and what to type (D-106).
+		for _, who := range unfinished {
+			fmt.Printf("\nThere is still work to do with %s — nothing passes between you until\n", who)
+			fmt.Printf("you finish pairing. Two words, on a call, both at once:\n\n")
+			fmt.Printf("  /peer-pair %s\n", who)
 		}
 	})
 }
@@ -708,10 +706,14 @@ func runForget(args []string) {
 		if err != nil {
 			log.Fatal(err)
 		}
+		// Read before forgetting: the label is about to be discarded with the
+		// peer, and naming them by a word pair they were never called reads as
+		// having forgotten somebody else.
+		who := firstNonEmpty(m.Label(pid), PeerName(pid))
 		if err := m.Forget(pid); err != nil {
 			log.Fatalf("forget: %v", err)
 		}
-		fmt.Printf("forgot %s. A later meeting will be a first meeting.\n", PeerName(pid))
+		fmt.Printf("forgot %s. A later meeting will be a first meeting.\n", who)
 	})
 }
 
@@ -849,6 +851,8 @@ func runJoin(args []string) {
 		bindInvokingSession(m, r)
 		fmt.Printf("joined %s. %s\n", r.RoomName, watchLine(r.RoomName))
 		if host != "" {
+			// The derived name, correctly: the host was recorded a moment ago with
+			// no label, because nobody has chosen one for them yet.
 			fmt.Printf("admitted %s, who invited you.\n", PeerName(host))
 			if !m.IsVerified(host) {
 				fmt.Printf("their key is UNVERIFIED, so nothing will sync yet. On a call with\n")
@@ -926,17 +930,19 @@ func runInvite(args []string) {
 		if err := m.Invite(r.RoomID, pid); err != nil {
 			log.Fatalf("invite: %v", err)
 		}
-		fmt.Printf("%s may now enter %s.\n", PeerName(pid), r.RoomName)
+		// The label, not the derived name. Switching between the two inside one
+		// message reads as two different peers (D-094).
+		fmt.Printf("%s may now enter %s.\n", firstNonEmpty(m.Label(pid), PeerName(pid)), r.RoomName)
 
 		// Admitted, queued, one step from done — and never a refusal. Wanting to
 		// start a room is what makes somebody willing to verify, so this is the
 		// moment the check finally has a visible purpose, and blocking here would
 		// send them away to do an errand instead of finishing (D-106).
 		if !m.IsVerified(pid) {
-			fmt.Printf("\nThey have not been told yet: you and %s have not verified each other,\n",
-				firstNonEmpty(m.Label(pid), PeerName(pid)))
-			fmt.Printf("and until you do, nothing would pass between you in either direction.\n\n")
-			fmt.Printf("  /peer-pair %s\n\n", firstNonEmpty(m.Label(pid), PeerName(pid)))
+			who := firstNonEmpty(m.Label(pid), PeerName(pid))
+			fmt.Printf("\nThey have not been told yet — you and %s have not finished pairing,\n", who)
+			fmt.Printf("and until you do nothing would pass between you in either direction.\n\n")
+			fmt.Printf("  /peer-pair %s\n\n", who)
 			fmt.Printf("Two words, on a call, both at once. The invitation goes when you finish.\n")
 			return
 		}
@@ -1202,6 +1208,26 @@ func runPair(args []string) {
 		return
 	}
 	peerID, endpoint, theirName := parsePairing(args[0])
+
+	// A name rather than a pairing string: somebody finishing what they started.
+	// Pairing is the act people recognise, and verifying is our word for a step
+	// inside it, so the same command has to serve both halves — otherwise the
+	// second half has no name anybody would guess, and this one silently hashes
+	// "alice" into a peer nobody has ever met.
+	if _, err := PublicFromPeerID(peerID); err != nil {
+		var pid, display, mine string
+		withMembership(func(m *Membership, id *Identity) {
+			resolved, rerr := resolvePeer(m, args[0])
+			if rerr != nil {
+				log.Fatal(rerr)
+			}
+			pid, display, mine = resolved, firstNonEmpty(m.Label(resolved), PeerName(resolved)), id.PeerName
+		})
+		// No label is passed: they already have one, chosen when they were
+		// recorded, and this is not the moment to rename anybody.
+		beginCeremony(pid, display, mine, "", "", terminal)
+		return
+	}
 
 	// What to call them: what this person said, else what THEY said they are
 	// called, else ask. Resolved before anything happens, because a flow with two
@@ -1556,4 +1582,12 @@ func chosenName(id *Identity) string {
 		return ""
 	}
 	return id.UserDisplayName
+}
+
+// cut10 shortens a timestamp to its date, tolerating one that is absent.
+func cut10(s string) string {
+	if len(s) < 10 {
+		return ""
+	}
+	return s[:10]
 }
