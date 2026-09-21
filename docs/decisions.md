@@ -4557,12 +4557,32 @@ absent at the other.
 
 | | names | survives a move | where it belongs |
 |---|---|---|---|
-| identity-shaped (`tc://…`) | a node | yes, the path is re-derived | the durable peer record |
+| identity-shaped (`tc://…`) | a node, and where to find it | mostly — see below | the durable peer record |
 | location-shaped (an IP and port) | a place | no | a candidate, with an expiry |
 
-An advertisement outlives the fact it asserts. That is tolerable for a node
-identity, which does not change when a laptop moves from a desk to a hotel, and not
-tolerable for an address, which is true of one network position at one moment.
+An advertisement outlives the fact it asserts. That is tolerable for something that
+identifies a machine, which does not change when a laptop moves from a desk to a
+hotel, and not tolerable for an address, which is true of one network position at
+one moment.
+
+**An overlay address is not purely an identity, and the difference matters.**
+Decoding one gives a small CBOR map: three 32-byte public keys, and the node's home
+relay — a hostname and its v4 and v6 addresses. The keys are the durable part. The
+relay is not an identity but a **rendezvous**: where this node can currently be
+found so that an introduction can happen, after which the path upgrades to direct
+if the two ends can reach each other.
+
+A rendezvous can go stale. The overlay picks the lowest-latency relay, and that
+choice changes when a machine moves far enough — a different continent, sometimes a
+different country. The keys in the advertised value stay correct and the relay named
+beside them may no longer be the one that node is attached to.
+
+In practice it usually still works, because the relays mesh and one that receives a
+connection for a node attached elsewhere forwards it. That is a property of somebody
+else's network rather than a guarantee this design holds, which is one of the
+reasons the dependency on it is a precondition of Phase 13 rather than a settled
+matter. So: treat the keys as durable and the rendezvous as best-effort, and do not
+write anything that assumes an overlay address is timeless.
 
 **A private address is not merely stale; it can be confidently wrong about a
 different machine.** `192.168.1.42` at a coffee shop belongs to somebody else's
