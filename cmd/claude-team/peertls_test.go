@@ -55,10 +55,11 @@ func get(t *testing.T, d *Daemon, addr, expect string) (int, error) {
 	return resp.StatusCode, nil
 }
 
-// Events are signed, which is integrity and origin. Room content also has to be
-// unreadable in transit, and it is not the transport's job to decide that: every
-// peer connection is TLS pinned to a key this machine already verified (D-101).
-func TestPeersThatKnowEachOtherConnect(t *testing.T) {
+// Every peer connection is TLS pinned to a key this machine has RECORDED — not to
+// one it has verified. Verification is what this connection carries, so requiring
+// it would be a deadlock (D-101). What keeps an unverified peer harmless is a layer
+// up: D-054 refuses its events either way.
+func TestARecordedButUnverifiedPeerCanConnect(t *testing.T) {
 	server, _ := testDaemon(t)
 	client, _ := testDaemon(t)
 	if err := server.members.Allow(client.id.PeerID, "c"); err != nil {
@@ -68,10 +69,19 @@ func TestPeersThatKnowEachOtherConnect(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Neither has verified the other, and that is the case under test rather than
+	// an oversight: verification happens OVER this connection, so a pin that
+	// required it would make the only route to it unreachable and nobody could
+	// ever pair. If this test is ever seen failing, the fix is not to verify the
+	// peers here (D-101).
+	if server.members.IsVerified(client.id.PeerID) || client.members.IsVerified(server.id.PeerID) {
+		t.Fatal("this test is meaningless unless both peers are unverified")
+	}
+
 	addr := servePeerTLS(t, server)
 	code, err := get(t, client, addr, server.id.PeerID)
 	if err != nil {
-		t.Fatalf("a known peer could not connect: %v", err)
+		t.Fatalf("a recorded but unverified peer could not connect, so pairing can never complete: %v", err)
 	}
 	if code != http.StatusOK {
 		t.Errorf("got %d, want 200", code)

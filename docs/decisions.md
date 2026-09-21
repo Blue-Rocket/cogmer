@@ -5164,6 +5164,23 @@ A client certificate is **required** rather than requested. A peer with nothing 
 pin has no business completing a handshake, and refusing there is earlier and
 clearer than refusing after a body has been read.
 
+**The test is that the key is recorded, not that it is verified**, and that is not a
+weakening. Verification happens *over* this connection: it is how a recorded peer
+becomes a verified one. Requiring verification to connect would make the only route
+to verification unreachable, so nobody could ever be verified and pairing would
+never complete. Tightening this check would read as an obvious hardening and is a
+deadlock.
+
+An unverified peer connecting is harmless because the gate that matters is a layer
+up: D-054 refuses its events in both directions, so it may complete a handshake and
+a ceremony and still move no transcript until a person has compared two words.
+
+Note that being recorded is per machine. Running `/peer-pair` records the colleague
+on *this* machine and puts nothing on theirs, which is why the person who types
+first cannot connect until the other types too — not because the pin is strict, but
+because the far side has no record of them yet. The attempt retries, so typing a
+few seconds early is ordinary rather than an error.
+
 ### The two situations a dial can be in
 
 **Verifying a specific person.** We know exactly who we are calling: the ceremony is

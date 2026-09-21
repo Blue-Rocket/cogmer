@@ -86,6 +86,13 @@ func pinnedVerifier(knows func(string) bool, expect string) func([][]byte, [][]*
 			return fmt.Errorf("expected %s and reached %s: the address answers for a different key",
 				PeerName(expect), PeerName(got))
 		}
+		// RECORDED, not verified, and the difference is the whole ceremony.
+		// Verification is how a recorded peer becomes a verified one, and it
+		// happens over this connection — so requiring verification here would
+		// make it permanently unreachable and nobody could ever be verified at
+		// all. Tightening this to IsVerified looks like hardening and is a
+		// deadlock. What keeps an unverified peer harmless is D-054: its events
+		// are refused at the layer above, and no transcript crosses.
 		if knows != nil && !knows(got) {
 			return fmt.Errorf("%s is not a peer this machine knows", PeerName(got))
 		}
