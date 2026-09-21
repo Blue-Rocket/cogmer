@@ -998,7 +998,7 @@ func runVerify(args []string) {
 		peerID, name, mine = pid, PeerName(pid), id.PeerName
 	})
 
-	beginCeremony(peerID, name, mine, terminal)
+	beginCeremony(peerID, name, mine, "", "", terminal)
 }
 
 func postLocal(path string, body, out any) error {
@@ -1063,24 +1063,21 @@ func runPair(args []string) {
 		return
 	}
 	peerID, endpoint := parsePairing(args[0])
-	name := ""
-	if len(args) > 1 {
-		name = args[1]
+	if len(args) < 2 || strings.TrimSpace(args[1]) == "" {
+		// Asked for up front rather than after the words match, because a flow
+		// with two completion points has to answer what an unfinished second one
+		// means, and every answer was worse than asking now (D-093).
+		fmt.Printf("This needs a name for them as well — what you will call %s in your own\n",
+			PeerName(peerID))
+		fmt.Printf("room and peer list:\n\n  /peer-pair %s <name>\n\n", args[0])
+		fmt.Println("The derived name above is computed from their key. It identifies them")
+		fmt.Println("exactly, and it will mean nothing to you in three weeks.")
+		return
 	}
+	name := strings.TrimSpace(args[1])
 
 	var mine string
-	withMembership(func(m *Membership, id *Identity) {
-		if err := m.Allow(peerID, name); err != nil {
-			explainNameTaken(err)
-			log.Fatalf("pair: %v", err)
-		}
-		if err := m.SetPeerEndpoint(peerID, endpoint); err != nil {
-			log.Fatalf("pair: %v", err)
-		}
-		mine = id.PeerName
-	})
-
-	fmt.Printf("recorded %s.\n", PeerName(peerID))
+	withMembership(func(_ *Membership, id *Identity) { mine = id.PeerName })
 	if endpoint == "" {
 		// Not a dead end. Only ONE side needs a usable address: RunVerification
 		// checks for an inbound exchange before it dials, so if they reach us the
@@ -1091,7 +1088,7 @@ func runPair(args []string) {
 		fmt.Println("only one of you needs a reachable address, and they can reach you.")
 		fmt.Printf("If nothing happens within %s, ask them for their whole pairing string.\n\n", verifyTimeout)
 	}
-	beginCeremony(peerID, PeerName(peerID), mine, terminal)
+	beginCeremony(peerID, PeerName(peerID), mine, name, endpoint, terminal)
 }
 
 // takeFlag removes a flag from args and reports whether it was there.
@@ -1110,15 +1107,10 @@ func takeFlag(args []string, flag string) ([]string, bool) {
 
 // beginCeremony puts the two-word comparison somewhere a person can do it.
 //
-// The view first (D-086): a terminal is an operator surface, and asking somebody to
-// open one to meet a colleague was never a user experience. The terminal path is
-// kept and is not a legacy -- it is what happens on a machine with no browser, and
-// on one reached over SSH, where the view cannot be shown at all.
-//
-// Opening the view does NOT wait. The exchange blocks for up to verifyTimeout while
-// the other person starts their side, and that wait belongs in the page, not in a
-// command a slash command is holding open.
-func beginCeremony(peerID, name, mine string, preferTerminal bool) {
+// label is what this person calls the peer, and is empty when re-verifying one they
+// already named. It is carried to the daemon and written only if the words match,
+// so abandoning leaves nothing claimed (D-093).
+func beginCeremony(peerID, name, mine, label, endpoint string, preferTerminal bool) {
 	// BOTH paths need the daemon: the terminal one posts to /verify/start just as
 	// the page does. Falling back to it when the daemon is down produced a second
 	// failure with a different message, which reads as two problems rather than
@@ -1128,13 +1120,18 @@ func beginCeremony(peerID, name, mine string, preferTerminal bool) {
 			"  It starts with a Claude Code session. If one is open, %s doctor says what is wrong.",
 			invocation())
 	}
+	// One pairing record for both surfaces. What a match, a mismatch and an
+	// abandonment each mean is then decided in one place rather than twice.
+	var res pairNewResponse
+	if err := postLocal("/pair/new", pairNewRequest{Peer: peerID, Name: label, Endpoint: endpoint}, &res); err != nil {
+		log.Fatalf("pair: %v", err)
+	}
+	if res.Error != "" {
+		fmt.Println(res.Error)
+		return
+	}
 	if !preferTerminal {
-		var res pairNewResponse
-		if err := postLocal("/pair/new", pairNewRequest{Peer: peerID}, &res); err != nil {
-			fmt.Printf("could not open a pairing page (%v), so this is happening here instead.\n\n", err)
-		} else if res.Error != "" {
-			fmt.Printf("%s\n\n", res.Error)
-		} else if err := openInBrowser(res.URL); err != nil {
+		if err := openInBrowser(res.URL); err != nil {
 			// A machine with no browser. Say so once, then do the thing that works.
 			fmt.Printf("%v, so this is happening here instead.\n\n", err)
 		} else {
@@ -1146,15 +1143,24 @@ func beginCeremony(peerID, name, mine string, preferTerminal bool) {
 	}
 	fmt.Printf("ask %s to run their side now (on their machine you are %s) — this waits %s.\n\n",
 		name, mine, verifyTimeout)
-	verifyWith(peerID, name)
+	verifyWith(pairIDFromURL(res.URL), peerID, name)
+}
+
+// pairIDFromURL takes the id back off the URL the daemon minted, so the terminal
+// path confirms against the same pairing the page would have.
+func pairIDFromURL(u string) string {
+	if i := strings.LastIndex(u, "/pair/"); i >= 0 {
+		return u[i+len("/pair/"):]
+	}
+	return ""
 }
 
 // verifyWith drives the ceremony and records the answer. Shared by `pair` and
 // `verify`: the first is a first meeting, the second is confirming a key recorded
 // some other way, and the ceremony is identical.
-func verifyWith(peerID, name string) {
+func verifyWith(pairID, peerID, name string) {
 	var out verifyStartResponse
-	if err := postLocal("/verify/start", verifyStartRequest{Peer: peerID}, &out); err != nil {
+	if err := postLocal("/verify/start", verifyStartRequest{PairID: pairID, Peer: peerID}, &out); err != nil {
 		log.Fatalf("verify: %v  (is the daemon running?)", err)
 	}
 	if out.Error != "" {
@@ -1170,7 +1176,7 @@ func verifyWith(peerID, name string) {
 	matched := answer == "y" || answer == "Y"
 
 	var res map[string]string
-	if err := postLocal("/verify/confirm", verifyConfirmRequest{Peer: peerID, Matched: matched}, &res); err != nil {
+	if err := postLocal("/verify/confirm", verifyConfirmRequest{PairID: pairID, Peer: peerID, Matched: matched}, &res); err != nil {
 		log.Fatalf("verify: %v", err)
 	}
 	if matched {
@@ -1296,9 +1302,13 @@ func printPairingInvitation(id *Identity) {
 	if ok, why := pairingReachable(endpoint); !ok {
 		fmt.Printf("\nNOTE: %s\n", why)
 	}
-	fmt.Printf("\nWhen they send you theirs, run /peer-pair with it. A page opens in your\n")
-	fmt.Printf("browser showing two words. Get on a call, both of you do this at the same\n")
-	fmt.Printf("time, and read the words to each other. They must match.\n")
+	fmt.Printf("\nWhen they send you theirs, run:\n\n  /peer-pair <their string> <what you call them>\n")
+	fmt.Printf("\nThe name is yours and is used everywhere you see them. Their key already\n")
+	fmt.Printf("gives them a name, but it is a word pair computed from the key and it will\n")
+	fmt.Printf("mean nothing to you in three weeks.\n")
+	fmt.Printf("\nA page then opens in your browser showing two words. Get on a call, both of\n")
+	fmt.Printf("you do this at the same time, and read the words to each other. They must\n")
+	fmt.Printf("match. Nothing is recorded until they do.\n")
 }
 
 // pairingReachable reports whether a pairing string is usable by the person who

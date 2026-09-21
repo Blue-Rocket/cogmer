@@ -245,6 +245,29 @@ func (m *Membership) PeerEndpoints() []string {
 	return out
 }
 
+// NameFree reports whether a label may be attached to this peer.
+//
+// A name must mean one key. Without that, recording a substituted key under a
+// colleague's name produced a second row and nothing said so — and `invite alice`
+// would then admit whichever came back first, which is the failure the whole
+// verification apparatus exists to prevent (D-074).
+//
+// Separate from Allow so a pairing can check the label is available BEFORE spending
+// ninety seconds on a ceremony, rather than discovering the clash once the words
+// have already matched — which would leave a verified peer and an unusable name,
+// and so a second thing for somebody to finish (D-093).
+func (m *Membership) NameFree(name, peerID string) error {
+	if name == "" {
+		return nil
+	}
+	var existing string
+	if err := m.db.QueryRow(`SELECT peer_id FROM known_peers WHERE name = ? AND peer_id <> ?`,
+		name, peerID).Scan(&existing); err == nil {
+		return &NameTakenError{Name: name, Existing: existing, Offered: peerID}
+	}
+	return nil
+}
+
 func (m *Membership) Allow(peerID, name string) error {
 	if _, err := PublicFromPeerID(peerID); err != nil {
 		return fmt.Errorf("refusing to record an identifier that names no key: %w", err)
@@ -252,18 +275,11 @@ func (m *Membership) Allow(peerID, name string) error {
 	if name == "" {
 		name = PeerName(peerID)
 	}
-	// A name must mean one key. Without this, recording a substituted key under a
-	// colleague's name produced a second row and nothing said so — and `invite
-	// alice` would then admit whichever came back first, which is the failure the
-	// whole verification apparatus exists to prevent (D-074).
-	var existing string
-	err := m.db.QueryRow(`SELECT peer_id FROM known_peers WHERE name = ? AND peer_id <> ?`,
-		name, peerID).Scan(&existing)
-	if err == nil {
-		return &NameTakenError{Name: name, Existing: existing, Offered: peerID}
+	if err := m.NameFree(name, peerID); err != nil {
+		return err
 	}
 
-	_, err = m.db.Exec(`
+	_, err := m.db.Exec(`
 		INSERT INTO known_peers (peer_id, name, added_at) VALUES (?,?,?)
 		ON CONFLICT(peer_id) DO UPDATE SET name = excluded.name`,
 		peerID, name, time.Now().UTC().Format(time.RFC3339))

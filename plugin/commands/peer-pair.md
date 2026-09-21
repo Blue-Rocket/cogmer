@@ -1,6 +1,6 @@
 ---
 description: Pair with a colleague — shows your string, or starts the two-word check
-argument-hint: [their pairing string]
+argument-hint: [their pairing string] [what you call them]
 allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" pair:*)
 ---
 
@@ -10,25 +10,31 @@ allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" pair:*)
 
 ## Your task
 
-This command does one of two things and the output says which.
+The output is one of four things and says which.
 
-**If it printed a pairing string**, they ran it with nothing. Give them the string
-exactly as it appears, and say it is safe to send by any means — it is a public key
-and an address, and holding it admits nobody. Say what comes back: their colleague
-sends one too, and `/peer-pair <that string>` is the next step.
+**A pairing string.** They ran it with nothing, so they are at the first half. Give
+them the string exactly as printed and say it is safe to send by any means — it is a
+public key and an address, and holding it admits nobody. Then say what comes back:
+their colleague sends one too, and it takes a name as well as a string.
 
-**If it says a page was opened**, the two-word check is now in their browser. Say so
-in one line and stop — the instructions are on the page and repeating them here just
-competes with it. The one thing worth adding: their colleague has to do this at the
-same time, on a call, so if they have not called them yet that is the next move.
+**A request for a name.** They pasted a string and gave no name. Do not treat this as
+an error and do not pick one for them. Ask what they call this person — their first
+name is the usual answer — and then run the command again with the string and that
+name. The name is theirs, is used everywhere they see that person, and is written
+only if the two words match.
 
-Do not tell them to open a terminal. Pairing happens in the browser, and the command
-above already did the terminal part.
+**A page was opened.** The check is now in their browser. Say so in one line and
+stop; the instructions are on the page and repeating them competes with it. Worth
+adding only this: their colleague has to do it at the same time, on a call, so if
+they have not called them yet that is the next move.
 
-**If it says the daemon is not answering, or fell back to the terminal**, relay that
-plainly. A fallback is not a failure — it is what happens on a machine with no
-browser — but they need to know the words will appear in their terminal instead.
+**A refusal.** Usually the name already means a different key. Relay it whole. That
+message is the one place a substituted key becomes visible, so do not shorten it to
+"name taken".
 
 Never summarise, invent, or repeat two words yourself. The comparison is between two
 people on a call; anything that looks like it came from you undermines the only check
 that makes it mean anything.
+
+Do not tell them to open a terminal. Pairing happens in the browser, and the command
+above already did the terminal part.

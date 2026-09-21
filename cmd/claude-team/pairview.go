@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"net/http"
 	"strings"
@@ -42,8 +41,24 @@ var pairTemplate = template.Must(template.New("pair").Parse(pairPageSrc))
 const pairTTL = 15 * time.Minute
 
 type pendingPair struct {
-	peerID  string
-	created time.Time
+	peerID string
+	// name is what this person decided to call the peer, taken BEFORE the
+	// ceremony and written only if it succeeds. Collecting is not asserting: the
+	// label claims "this key is Alice", which is true only once the words match.
+	//
+	// Held here rather than asked for afterwards because a flow with two
+	// completion points has to answer what an unfinished second one means, and
+	// both answers were bad — default the label to the derived name, which is the
+	// forgettable thing we are trying to escape, or withhold the verification
+	// until named, which holds the security-meaningful act hostage to a
+	// convenience field (D-093).
+	name string
+	// createdPeer records whether this pairing is what put the peer on the list.
+	// A mismatch removes only a row this pairing created: re-verifying a
+	// colleague of two years and seeing different words is an alarm about an
+	// existing relationship, not a reason to discard it and its admissions.
+	createdPeer bool
+	created     time.Time
 }
 
 type pairRegistry struct {
@@ -52,7 +67,7 @@ type pairRegistry struct {
 }
 
 // newPairing records an intent to pair and returns the id its page lives at.
-func (d *Daemon) newPairing(peerID string) string {
+func (d *Daemon) newPairing(peerID, name string, createdPeer bool) string {
 	raw := make([]byte, 16)
 	if _, err := rand.Read(raw); err != nil {
 		// Never guess an id. A predictable one would let another page start a
@@ -71,13 +86,25 @@ func (d *Daemon) newPairing(peerID string) string {
 			delete(d.pairs.byID, k)
 		}
 	}
-	d.pairs.byID[id] = &pendingPair{peerID: peerID, created: time.Now()}
+	d.pairs.byID[id] = &pendingPair{peerID: peerID, name: name, createdPeer: createdPeer, created: time.Now()}
 	return id
 }
 
 // peerForPairing resolves a pairing id. Expiry is reported as absence, because to
 // the person there is no difference worth explaining: the link no longer works and
 // the answer is to start again.
+// pairing returns the whole record, for the confirm step which needs more than
+// the peer.
+func (d *Daemon) pairing(id string) (pendingPair, bool) {
+	d.pairs.mu.Lock()
+	defer d.pairs.mu.Unlock()
+	p, ok := d.pairs.byID[id]
+	if !ok || time.Since(p.created) > pairTTL {
+		return pendingPair{}, false
+	}
+	return *p, true
+}
+
 func (d *Daemon) peerForPairing(id string) (string, bool) {
 	d.pairs.mu.Lock()
 	defer d.pairs.mu.Unlock()
@@ -93,7 +120,9 @@ func (d *Daemon) peerForPairing(id string) (string, bool) {
 }
 
 type pairNewRequest struct {
-	Peer string `json:"peer"`
+	Peer     string `json:"peer"`
+	Name     string `json:"name"`
+	Endpoint string `json:"endpoint"`
 }
 
 type pairNewResponse struct {
@@ -109,12 +138,32 @@ func (d *Daemon) handlePairNew(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	if !d.members.Knows(req.Peer) {
-		writeJSON(w, pairNewResponse{Error: fmt.Sprintf(
-			"%s is not a peer this machine knows", PeerName(req.Peer))})
+	// The label is checked for availability here, before ninety seconds are spent,
+	// so a clash is something to resolve now rather than after the words matched.
+	if err := d.members.NameFree(req.Name, req.Peer); err != nil {
+		writeJSON(w, pairNewResponse{Error: err.Error()})
 		return
 	}
-	id := d.newPairing(req.Peer)
+	// Record the key so the exchange has something to run against, with no label
+	// attached: the derived name is a placeholder computed from the key, not a
+	// claim about who anybody is. Abandoning the ceremony therefore leaves a
+	// nameless, unverified, inert row rather than the attacker's key wearing a
+	// colleague's name.
+	createdPeer := !d.members.Knows(req.Peer)
+	if createdPeer {
+		if err := d.members.Allow(req.Peer, ""); err != nil {
+			writeJSON(w, pairNewResponse{Error: err.Error()})
+			return
+		}
+	}
+	// Recorded here, with the row, because SetPeerEndpoint is an UPDATE: run
+	// before the peer exists it matches nothing, returns nil, and loses the only
+	// address anybody had for them.
+	if err := d.members.SetPeerEndpoint(req.Peer, req.Endpoint); err != nil {
+		writeJSON(w, pairNewResponse{Error: err.Error()})
+		return
+	}
+	id := d.newPairing(req.Peer, req.Name, createdPeer)
 	if id == "" {
 		writeJSON(w, pairNewResponse{Error: "could not generate a pairing link"})
 		return

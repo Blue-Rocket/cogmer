@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"sync"
@@ -367,7 +368,19 @@ func (d *Daemon) handleVerifyConfirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req.Peer = peer
+	// A flow with two interactions has to say what an unfinished second one means,
+	// and the three endings here are genuinely different (D-093). Abandoned leaves
+	// a nameless unverified row you can resume from. Matched writes the label the
+	// person chose before they started. Differed removes what this pairing created,
+	// because nothing about it was ever established -- and leaving the attacker's
+	// key behind wearing a colleague's name obstructed pairing with the real one.
+	pair, havePair := d.pairing(req.PairID)
 	if !req.Matched {
+		if havePair && pair.createdPeer {
+			if err := d.members.Forget(peer); err != nil {
+				log.Printf("verify: could not discard %s after a mismatch: %v", PeerName(peer), err)
+			}
+		}
 		// The fingerprint travels with the refusal because the view has to show it:
 		// a mismatch is evidence to be read out on the call, and this is the only
 		// place it becomes visible (§25). It marks nothing on its own (D-055).
@@ -381,5 +394,17 @@ func (d *Daemon) handleVerifyConfirm(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	writeJSON(w, map[string]string{"status": "verified"})
+	// Only now is the label a true statement about who holds this key.
+	if havePair && pair.name != "" {
+		if err := d.members.Allow(req.Peer, pair.name); err != nil {
+			// Checked free before the ceremony, so this is a race in the last
+			// ninety seconds. The verification stands; say what did not happen.
+			writeJSON(w, map[string]string{
+				"status": "verified",
+				"note":   fmt.Sprintf("verified, but %q is now taken, so they are still listed as %s", pair.name, PeerName(req.Peer)),
+			})
+			return
+		}
+	}
+	writeJSON(w, map[string]string{"status": "verified", "name": pair.name})
 }

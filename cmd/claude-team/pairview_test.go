@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -19,7 +21,7 @@ func TestEachPairingGetsItsOwnURL(t *testing.T) {
 
 	seen := map[string]bool{}
 	for i := 0; i < 50; i++ {
-		id := d.newPairing(peer)
+		id := d.newPairing(peer, "", true)
 		if id == "" {
 			t.Fatal("newPairing returned no id")
 		}
@@ -34,7 +36,7 @@ func TestPairingResolvesToItsPeer(t *testing.T) {
 	d, _ := testDaemon(t)
 	peer := testIdentity(t).PeerID
 
-	id := d.newPairing(peer)
+	id := d.newPairing(peer, "", true)
 	got, ok := d.peerForPairing(id)
 	if !ok || got != peer {
 		t.Fatalf("peerForPairing(%q) = %q,%v; want %q,true", id, got, ok, peer)
@@ -50,7 +52,7 @@ func TestPairingResolvesToItsPeer(t *testing.T) {
 func TestExpiredPairingIsRefused(t *testing.T) {
 	d, _ := testDaemon(t)
 	peer := testIdentity(t).PeerID
-	id := d.newPairing(peer)
+	id := d.newPairing(peer, "", true)
 
 	d.pairs.mu.Lock()
 	d.pairs.byID[id].created = time.Now().Add(-pairTTL - time.Minute)
@@ -64,7 +66,7 @@ func TestExpiredPairingIsRefused(t *testing.T) {
 func TestPairPageRendersAndExpires(t *testing.T) {
 	d, _ := testDaemon(t)
 	peer := testIdentity(t).PeerID
-	id := d.newPairing(peer)
+	id := d.newPairing(peer, "", true)
 
 	rec := httptest.NewRecorder()
 	d.handlePairPage(rec, httptest.NewRequest(http.MethodGet, "/pair/"+id, nil))
@@ -162,5 +164,146 @@ func TestPairingReachabilityDistinguishesItsTwoCauses(t *testing.T) {
 	}
 	if guessed == noRoute {
 		t.Fatal("both causes give the same advice, so one of them sends the person somewhere useless")
+	}
+}
+
+// confirm drives the confirm step the way the page does.
+func confirm(t *testing.T, d *Daemon, pairID string, matched bool) {
+	t.Helper()
+	body, _ := json.Marshal(verifyConfirmRequest{PairID: pairID, Matched: matched})
+	rec := httptest.NewRecorder()
+	d.handleVerifyConfirm(rec, httptest.NewRequest(http.MethodPost, "/verify/confirm", bytes.NewReader(body)))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("confirm returned %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func startPairing(t *testing.T, d *Daemon, peer, name string) string {
+	t.Helper()
+	body, _ := json.Marshal(pairNewRequest{Peer: peer, Name: name})
+	rec := httptest.NewRecorder()
+	d.handlePairNew(rec, httptest.NewRequest(http.MethodPost, "/pair/new", bytes.NewReader(body)))
+	var res pairNewResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
+		t.Fatalf("pair/new: %v", err)
+	}
+	if res.Error != "" {
+		t.Fatalf("pair/new refused: %s", res.Error)
+	}
+	return pairIDFromURL(res.URL)
+}
+
+func peerLabel(t *testing.T, d *Daemon, peerID string) (string, bool) {
+	t.Helper()
+	known, err := d.members.KnownPeers()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range known {
+		if p.PeerID == peerID {
+			return p.Name, true
+		}
+	}
+	return "", false
+}
+
+// A flow with two interactions has to choose what an unfinished second one means,
+// and these three endings are genuinely different. Abandoning is not mismatching,
+// and neither used to be distinguishable from the other (D-093).
+func TestTheThreeEndingsOfAPairing(t *testing.T) {
+	t.Run("abandoned leaves a nameless, unverified row", func(t *testing.T) {
+		d, _ := testDaemon(t)
+		peer := testIdentity(t).PeerID
+		startPairing(t, d, peer, "alice")
+
+		label, present := peerLabel(t, d, peer)
+		if !present {
+			t.Fatal("the key was not recorded, so an inbound exchange has nothing to reach")
+		}
+		if label == "alice" {
+			t.Error("the chosen name was written before the words were compared")
+		}
+		if label != PeerName(peer) {
+			t.Errorf("label is %q, want the derived placeholder %q", label, PeerName(peer))
+		}
+		if d.members.IsVerified(peer) {
+			t.Error("an abandoned pairing recorded a verification")
+		}
+	})
+
+	t.Run("matched writes the name and the verification", func(t *testing.T) {
+		d, _ := testDaemon(t)
+		peer := testIdentity(t).PeerID
+		id := startPairing(t, d, peer, "alice")
+		confirm(t, d, id, true)
+
+		if !d.members.IsVerified(peer) {
+			t.Error("a matched comparison did not record the verification")
+		}
+		if label, _ := peerLabel(t, d, peer); label != "alice" {
+			t.Errorf("label is %q, want alice", label)
+		}
+	})
+
+	t.Run("differed removes what the pairing created", func(t *testing.T) {
+		d, _ := testDaemon(t)
+		peer := testIdentity(t).PeerID
+		id := startPairing(t, d, peer, "alice")
+		confirm(t, d, id, false)
+
+		if _, present := peerLabel(t, d, peer); present {
+			t.Error("an intercepted key stayed on the list, wearing the name meant for somebody else")
+		}
+		// And the name is free again, so pairing with the real person is not
+		// blocked by the attempt that detected the attack.
+		if err := d.members.NameFree("alice", "ed25519:someone-else"); err != nil {
+			t.Errorf("the name is still taken after a mismatch: %v", err)
+		}
+	})
+
+	t.Run("differed does NOT discard a peer it did not create", func(t *testing.T) {
+		d, _ := testDaemon(t)
+		peer := testIdentity(t).PeerID
+		// A colleague of long standing, already known and named.
+		if err := d.members.Allow(peer, "bob"); err != nil {
+			t.Fatal(err)
+		}
+		id := startPairing(t, d, peer, "")
+		confirm(t, d, id, false)
+
+		label, present := peerLabel(t, d, peer)
+		if !present {
+			t.Fatal("re-verifying an existing peer and seeing different words discarded them; " +
+				"that is an alarm about a relationship, not a reason to end it")
+		}
+		if label != "bob" {
+			t.Errorf("label became %q, want bob", label)
+		}
+	})
+}
+
+// A label already meaning another key must be refused BEFORE the ceremony, or the
+// clash surfaces once the words have matched -- leaving a verified peer and an
+// unusable name, which is one more thing for somebody to finish.
+func TestATakenNameIsRefusedBeforeTheCeremony(t *testing.T) {
+	d, _ := testDaemon(t)
+	first := testIdentity(t).PeerID
+	second := testIdentity(t).PeerID
+	if err := d.members.Allow(first, "alice"); err != nil {
+		t.Fatal(err)
+	}
+
+	body, _ := json.Marshal(pairNewRequest{Peer: second, Name: "alice"})
+	rec := httptest.NewRecorder()
+	d.handlePairNew(rec, httptest.NewRequest(http.MethodPost, "/pair/new", bytes.NewReader(body)))
+	var res pairNewResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
+		t.Fatal(err)
+	}
+	if res.Error == "" {
+		t.Fatal("a name already meaning another key was accepted")
+	}
+	if _, present := peerLabel(t, d, second); present {
+		t.Error("the refused pairing recorded the peer anyway")
 	}
 }
