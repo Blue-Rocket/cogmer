@@ -30,6 +30,27 @@ preference.
 **Say when your own address changes.** Every pairing string and invitation already
 handed out is then stale, and only the daemon can know.
 
+## Commands that mislead
+
+**`leave`, run twice, says "this session is not in a room."** True, and unhelpful
+to somebody who left it a moment ago: it reads as a failure and sends them looking
+for a problem. It should say it has already left. `LeaveSession` returns that error
+from `RoomForSession` finding nothing, so the distinction to draw is between never
+having been in one and having left it — the row is still there with `left_at` set,
+so both are answerable.
+
+**`create`, run twice, silently makes a second room.** Inherent — a room is a new
+thing each time — but it is the command where a mistaken repeat costs most, because
+the second room is indistinguishable from the first to everybody except its
+creator, who now has two and is talking in one of them.
+
+Nothing currently helps. The session invoking it is already bound to a room when
+this happens, and binding is what `BindSession` already knows about, so a second
+`create` from a session already in a room could say which room that is and ask.
+That is the one place a non-idempotent command could cheaply refuse a mistake it
+now makes in silence. The command's documentation warns against retrying, which is
+the weakest possible form of the check.
+
 ## Undecided
 
 **Whether to rebuild the post-quantum hedge.** D-104 removed the pre-shared key,
