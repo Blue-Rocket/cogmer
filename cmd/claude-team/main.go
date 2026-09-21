@@ -1229,7 +1229,7 @@ func runPair(args []string) {
 			done, since = m.IsVerified(resolved), m.VerifiedAt(resolved)
 		})
 		if done && !again {
-			reportAlreadyPaired(display, since, "")
+			reportAlreadyPaired(display, since)
 			return
 		}
 		// No label is passed: they already have one, chosen when they were
@@ -1245,18 +1245,15 @@ func runPair(args []string) {
 	withMembership(func(m *Membership, _ *Identity) {
 		alreadyDone, doneAt = m.IsVerified(peerID), m.VerifiedAt(peerID)
 		known = firstNonEmpty(m.Label(peerID), PeerName(peerID))
-		// A string from somebody already paired is how a colleague who moved
-		// tells you by hand, and it is the only repair for a stale address
-		// between two peers who share no room (§4). Take it; the ceremony is
-		// what does not need repeating.
-		if alreadyDone && !again && endpoint != "" {
-			if err := m.SetPeerEndpoint(peerID, endpoint); err != nil {
-				log.Fatalf("pair: %v", err)
-			}
-		}
 	})
 	if alreadyDone && !again {
-		reportAlreadyPaired(known, doneAt, endpoint)
+		// The address in the string is deliberately ignored. Pairing is a
+		// security act and must not quietly write network state, and there is
+		// nothing here to repair: an address matters only when it is used, and
+		// every use repairs itself. A host who cannot reach a guest falls back to
+		// a line the guest pastes, and the guest's first synchronization carries
+		// their current address back (D-108).
+		reportAlreadyPaired(known, doneAt)
 		return
 	}
 
@@ -1630,14 +1627,11 @@ func cut10(s string) string {
 // the other person at their machine at the same moment, so an unrequested one
 // leaves somebody watching a page wait ninety seconds for a colleague who was
 // never asked.
-func reportAlreadyPaired(who, since, updatedAddress string) {
+func reportAlreadyPaired(who, since string) {
 	if since != "" && len(since) >= 10 {
 		fmt.Printf("You and %s are already paired — since %s.\n", who, since[:10])
 	} else {
 		fmt.Printf("You and %s are already paired.\n", who)
-	}
-	if updatedAddress != "" {
-		fmt.Printf("Their address is updated to %s.\n", shortEndpoint(updatedAddress))
 	}
 	fmt.Printf("\nNothing to do. Pairing holds for every room you ever share.\n")
 	fmt.Printf("\nIf you have reason to think their key changed — they said two words that\n")

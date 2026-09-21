@@ -5588,11 +5588,10 @@ Not recorded, given a string: record and run the ceremony. Recorded but unfinish
 given a name: resume — this is the second half of an act, and the reason the
 command accepts a name at all. Already paired: say so, say since when, and stop.
 
-**A string for somebody already paired is an address update, not a reason to start
-over.** That is how a colleague who moved tells you by hand, and between two peers
-who share no room it is the only repair there is: nothing polls, so nothing heals
-(§4). The address is taken and the ceremony is skipped, which is the useful half of
-what they sent.
+**A string for somebody already paired changes nothing, including the address.**
+This entry first took the address out of it, on the reasoning that a colleague who
+moved has no other way to tell you. That was wrong twice over, and is superseded by
+D-108.
 
 **Re-verification stays available and must be asked for.** `--again` exists for the
 case it is actually needed in: somebody read two words that did not match, or was
@@ -5606,3 +5605,40 @@ the answer might change something.
 
 **Revisit when:** a pairing can expire, at which point "already paired" needs to
 say until when rather than since when.
+
+## D-108 — Pairing is not how an address is updated
+
+**Date:** 2026-09-21 · **Status:** active (implemented) · **Supersedes** part of D-107
+
+**Context.** D-107 made a pairing string offered for an already-paired peer update
+the stored address while skipping the ceremony, on the grounds that a colleague who
+moved has no other way to tell you. Rejected on sight, and both halves of the
+reasoning turn out to be wrong.
+
+**It is the wrong shape.** Pairing is a security act, and a security act that
+silently writes network state is a quiet mutation of the kind this design keeps
+removing. It also teaches the wrong reflex: re-pasting somebody's string becomes a
+maintenance chore, when handing over a pairing string should be rare, deliberate,
+and attached to a ceremony. A string that gets pasted routinely stops being
+treated as significant.
+
+**And the gap it filled does not exist.** The case was two peers paired with no
+room between them, one of whom moved, so nothing polls and nothing heals. But
+nobody needs the address in that state. The next thing that happens is an
+invitation, and a host who cannot reach a guest is told so and given a line to send
+by hand (D-105). The guest pastes it, joins, and their first synchronization
+carries their current address back — repairing the record as a side effect of the
+thing they were trying to do anyway.
+
+**An address matters only when it is used, and every use repairs itself.** That is
+the general form, and it is why no command for setting one is needed either. A
+dedicated address-update command would be a mechanism for a problem that resolves
+itself, and one more thing to explain.
+
+**What remains true from D-107:** already paired says so and stops, and `--again`
+exists for a comparison somebody has reason to repeat. Only the address write is
+withdrawn.
+
+**Revisit when:** a peer can move while sharing no room with anybody and still need
+to be reached — which would mean something other than an invitation had come to
+depend on a stored address.
