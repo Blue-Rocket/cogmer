@@ -1539,6 +1539,8 @@ What remains true of every speaker, verified or not, is that the **display name 
 
 A display name may also be **chosen** rather than inferred (§6), which changes what it is worth and not what it is: a chosen name is still a claim, still self-asserted, and still anchored by the derived one.
 
+The block also carries the **label** — the name the person receiving it gave that peer when they paired (§6) — and says that it is the name to refer to them by. It is the only name in the block that the person reading the answer also uses, so answering with either of the others describes a colleague by a name that person has never used. All three travel together, because the label is preferred rather than substituted: what can be checked must remain checkable.
+
 ---
 
 # 21\. Context Window Management

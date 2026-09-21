@@ -282,7 +282,7 @@ func TestABacklogIsInjectedInChronologicalOrder(t *testing.T) {
 	// And the rendered block carries that order, since the block is what the model
 	// reads. Ordering the query and then rendering some other way would be worse
 	// than not ordering at all -- it would look correct in every test but this one.
-	text := FormatTeamContext(pending, func(string) bool { return true })
+	text := FormatTeamContext(pending, fixedFacts{verified: true})
 	last := -1
 	for _, id := range want {
 		at := strings.Index(text, id)

@@ -307,7 +307,7 @@ func TestTheInjectedBlockIsBounded(t *testing.T) {
 		})
 	}
 
-	out := FormatTeamContext(evs, func(string) bool { return true })
+	out := FormatTeamContext(evs, fixedFacts{verified: true})
 	if len(out) > 40000 {
 		t.Errorf("block is %d characters; the budget was 30000 and every event passed the other two limits", len(out))
 	}

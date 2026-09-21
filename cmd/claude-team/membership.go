@@ -256,6 +256,22 @@ func (m *Membership) PeerEndpoints() []string {
 // ninety seconds on a ceremony, rather than discovering the clash once the words
 // have already matched — which would leave a verified peer and an unusable name,
 // and so a second thing for somebody to finish (D-093).
+// Label is the name this person gave one peer, or empty if they gave none.
+//
+// A label equal to the derived name is a placeholder rather than a choice, and
+// reporting it as one would present a machine-made word pair as somebody's
+// decision.
+func (m *Membership) Label(peerID string) string {
+	var name string
+	if err := m.db.QueryRow(`SELECT name FROM known_peers WHERE peer_id = ?`, peerID).Scan(&name); err != nil {
+		return ""
+	}
+	if name == PeerName(peerID) {
+		return ""
+	}
+	return name
+}
+
 // Labels maps each known peer to the name this person gave it.
 //
 // The label is the only name that is both memorable and bound to one key: the

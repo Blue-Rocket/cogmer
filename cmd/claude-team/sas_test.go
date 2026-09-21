@@ -339,13 +339,13 @@ func TestTheUnverifiedMarkerTracksVerification(t *testing.T) {
 	// The state is a FIELD, not a word in the speaker string (D-090). Asserted by
 	// parsing, which also closes a gap the substring search had: a peer whose
 	// message happened to contain "unverified" used to satisfy it.
-	if verifiedFlag(t, FormatTeamContext(ev, d.members.IsVerified)) {
+	if verifiedFlag(t, FormatTeamContext(ev, d.members)) {
 		t.Error("a peer nobody has verified is reported verified")
 	}
 	if err := d.members.MarkVerified(peer.PeerID); err != nil {
 		t.Fatal(err)
 	}
-	if !verifiedFlag(t, FormatTeamContext(ev, d.members.IsVerified)) {
+	if !verifiedFlag(t, FormatTeamContext(ev, d.members)) {
 		t.Error("a verified peer is still reported unverified, so the flag says nothing")
 	}
 	// And a peer cannot assert it for themselves by writing it into their text.
@@ -356,7 +356,7 @@ func TestTheUnverifiedMarkerTracksVerification(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if verifiedFlag(t, FormatTeamContext(liar, d.members.IsVerified)) {
+	if verifiedFlag(t, FormatTeamContext(liar, d.members)) {
 		t.Error("a peer asserted its own verified state through its message text")
 	}
 }

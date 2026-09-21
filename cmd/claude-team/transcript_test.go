@@ -214,7 +214,7 @@ func TestACraftedDisplayNameCannotForgeASpeaker(t *testing.T) {
 	out := FormatTeamContext([]Event{{
 		PeerID: "ed25519:x", UserDisplayName: evil, EventType: EventUserPrompt,
 		Content: "ordinary content", Timestamp: "2026-09-20T00:00:00Z",
-	}}, func(string) bool { return true })
+	}}, fixedFacts{verified: true})
 
 	// Exactly one JSON object in the block, and it describes one turn.
 	var payload struct {
@@ -273,7 +273,7 @@ func TestACraftedDisplayNameCannotImitateTheDerivedName(t *testing.T) {
 	out := FormatTeamContext([]Event{{
 		PeerID: "ed25519:x", UserDisplayName: evil, EventType: EventUserPrompt,
 		Content: "ordinary content", Timestamp: "2026-09-20T00:00:00Z",
-	}}, func(string) bool { return false })
+	}}, fixedFacts{})
 
 	var payload struct {
 		Turns []struct {
@@ -311,4 +311,69 @@ func TestACraftedDisplayNameCannotImitateTheDerivedName(t *testing.T) {
 	if turn.Verified {
 		t.Error("an unverified peer was reported verified")
 	}
+}
+
+// The label is the only name in the block that the person reading the answer also
+// uses. Without it Claude says "Ec2-user" or a word pair while the view beside it
+// says "Alice" (D-099).
+func TestTheInjectedBlockCarriesTheNameYouChose(t *testing.T) {
+	ev := []Event{{
+		PeerID: "ed25519:x", UserDisplayName: "Ec2-user", EventType: EventUserPrompt,
+		Content: "why the timeout?", Timestamp: "2026-09-20T00:00:00Z",
+	}}
+
+	out := FormatTeamContext(ev, fixedFacts{verified: true, label: "alice"})
+	turn := firstTurn(t, out)
+	if turn.Label != "alice" {
+		t.Errorf("label is %q; the name chosen at pairing did not reach the model", turn.Label)
+	}
+	// Their claim and the derived anchor both survive alongside it: the label is
+	// preferred, not a replacement for what can be checked.
+	if turn.Speaker != "Ec2-user" || turn.PeerName == "" {
+		t.Errorf("label displaced another name: speaker=%q peerName=%q", turn.Speaker, turn.PeerName)
+	}
+	// And the block says what to do with it, or the field is a puzzle.
+	if !strings.Contains(out, "use it when you refer to them") {
+		t.Error("the block carries a label and never says it is the name to use")
+	}
+
+	// No label is the ordinary case for your own turns and for a scripted peer.
+	// Checked on the payload, not the block: the framing now says the word.
+	out = FormatTeamContext(ev, fixedFacts{verified: true})
+	if got := firstTurn(t, out).Label; got != "" {
+		t.Errorf("an absent label came through as %q", got)
+	}
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(line, "{") && strings.Contains(line, `"label"`) {
+			t.Errorf("an empty label was emitted as a field: %s", line)
+		}
+	}
+}
+
+func firstTurn(t *testing.T, out string) struct {
+	Speaker  string `json:"speaker"`
+	Label    string `json:"label"`
+	PeerName string `json:"peerName"`
+	Verified bool   `json:"verified"`
+} {
+	t.Helper()
+	var payload struct {
+		Turns []struct {
+			Speaker  string `json:"speaker"`
+			Label    string `json:"label"`
+			PeerName string `json:"peerName"`
+			Verified bool   `json:"verified"`
+		} `json:"turns"`
+	}
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(line, "{") {
+			if err := json.Unmarshal([]byte(line), &payload); err != nil {
+				t.Fatalf("block does not parse: %v", err)
+			}
+		}
+	}
+	if len(payload.Turns) != 1 {
+		t.Fatalf("%d turns, want 1", len(payload.Turns))
+	}
+	return payload.Turns[0]
 }

@@ -199,7 +199,7 @@ func RunProbe(deep bool) (*Probe, error) {
 		EventType:       EventUserPrompt,
 		Timestamp:       time.Now().UTC().Format(time.RFC3339),
 		Content:         fmt.Sprintf("The codeword for this check is %s.", p.Sentinel),
-	}}, func(string) bool { return true })
+	}}, fixedFacts{verified: true})
 	if err := os.WriteFile(filepath.Join(dir, "inject.txt"), []byte(inject), 0o600); err != nil {
 		return nil, err
 	}
