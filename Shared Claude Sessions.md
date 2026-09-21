@@ -370,14 +370,86 @@ that one that no longer answers costs a round trip instead of a timeout.
 next time. That record is a hint and not a fact: it is a snapshot of where a machine
 was, so it is discarded when it stops working rather than retried indefinitely.
 
-**It stops being true silently.** Nothing announces that a machine has moved, and an
-address that has gone wrong behaves exactly like one whose owner is asleep. So an
-address that has not answered for long enough is not tried at all, rather than
-carried forever and attempted on every poll.
+### How an address is invalidated
 
-**It leaves** when it stops working, when it has aged past use, or when the peer it
-belongs to is forgotten — which takes every address recorded for them with it, for
-the same reason forgetting takes their admissions (§12).
+Nothing announces that a machine has moved. What arrives instead is one of several
+kinds of evidence, and they are not interchangeable — treating them alike is how a
+colleague who shut their laptop for the weekend loses the address that would have
+worked on Monday.
+
+**Silence is weak evidence.** A refused connection, a timeout and no route at all
+are what a wrong address produces, and they are equally what a sleeping machine, a
+closed laptop and a hotel captive portal produce. Silence therefore moves an address
+down the order of candidates. It does not remove it.
+
+**A wrong key is strong evidence, and it is a positive fact rather than an absence.**
+The address answered, and what answered was not who was expected. That is available
+only because every connection is pinned to a key already verified (§25), and it is
+the one signal that establishes an address is no longer a particular peer's. It
+invalidates immediately, without waiting for a pattern.
+
+**Age is a judgement, and it is not the same judgement for every kind.** An
+unrefreshed address grows less likely to be true, and how fast depends on what it
+names. A private address should not outlive the network it was learned on at all,
+because off that network it is not merely stale but wrong about a different machine.
+A public address may reasonably be tried for longer. The keys in an overlay address
+do not age, though the rendezvous beside them does, and the relay network refreshes
+that without anybody's help.
+
+**Replacement is not disproof.** A peer that advertises a different address has
+moved, and the previous one is superseded rather than shown to be wrong. It may
+still be where they return to.
+
+**Forgetting a peer takes every address recorded for them**, for the same reason it
+takes their admissions (§12): a later meeting is a first meeting.
+
+### Whether the rules tighten where it matters most
+
+They do not need to, and the reason is worth stating because the intuition runs the
+other way.
+
+**Pairing is the phase least exposed to a stale address**, because it is the only
+one where the exact key that must answer is known in advance. A pairing string
+carries the identifier, so the connection is pinned to it, and an address that has
+changed hands produces a failed handshake rather than a conversation with the wrong
+machine. A stale address can waste the attempt; it cannot mislead.
+
+It is also the phase where addresses are least likely to be stale, since the string
+was sent by a person minutes earlier. **Re-verifying an existing peer is the
+different case**: it uses the address on file, which may be months old, and it is a
+security-sensitive act. The pin is exactly as strict there, so the outcome is the
+same — a failure rather than a wrong answer.
+
+**Synchronization is where the pin is loosest**, because a room records where its
+members listen rather than which member listens where, so any known peer is
+accepted and the signed request inside the connection settles which one it is.
+
+What should differ is not the strictness but **what a failure is taken to mean**.
+An address that answers with an unexpected key during synchronization is an address
+that changed hands, and it is routine. The same event while verifying a named peer
+is what substitution looks like from the inside, and it is worth saying so to the
+person rather than retrying quietly.
+
+One thing a stale address does **not** do is give anything away. A connection is
+abandoned when the key on the other side is not one this machine knows, before this
+machine has presented anything of its own, so whoever now holds a reassigned address
+learns that something attempted a connection and nothing about who.
+
+### Whether an address is ever rehabilitated
+
+Yes, by evidence, and never by time.
+
+An address demoted for silence returns to ordinary standing the moment it answers;
+that is the whole reason silence demotes rather than deletes. An address set aside
+for age is current again when the peer advertises it afresh, or when it answers.
+
+An address invalidated by a wrong key is the interesting case, and it too can
+return — but only by presenting the right key. A reassigned address can be
+reassigned back, and the pin is proof rather than assumption, so a connection that
+succeeds against the expected identity is evidence enough.
+
+The asymmetry is the point. Time is allowed to cast doubt on an address and is never
+allowed to restore confidence in one, because nothing has happened.
 
 ---
 

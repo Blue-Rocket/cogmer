@@ -4586,12 +4586,20 @@ write anything that assumes an overlay address is timeless.
 
 **A private address is not merely stale; it can be confidently wrong about a
 different machine.** `192.168.1.42` at a coffee shop belongs to somebody else's
-laptop. Attempting it is not a wasted round trip: sync requests are signed (D-044),
-so it delivers our identifier to a stranger, and it does so on every poll for as
-long as the address is held. Private ranges therefore never appear in a pairing
-string, an invitation, or a durable record. They enter only as facts discovered on
-the network we are on now (D-019), where discovery states where a peer *is* rather
-than where a peer *was*.
+laptop, so attempting it does not fail — it succeeds against a stranger, and then
+has to be unwound at a higher layer. Private ranges therefore never appear in a
+pairing string, an invitation, or a durable record. They enter only as facts
+discovered on the network we are on now (D-019), where discovery states where a
+peer *is* rather than where a peer *was*.
+
+This entry first argued that the cost was disclosure — that a signed sync request
+(D-044) would deliver our identifier to whoever now holds the address, on every
+poll. That was true when it was written and TLS removed it (D-101): the connection
+is abandoned as soon as the far side presents a key this machine does not know,
+which in TLS 1.3 is before this machine has sent a certificate of its own. Measured
+rather than assumed. What a stranger at a reassigned address learns is that
+something attempted a connection, and nothing about who. The argument from
+correctness stands unchanged and is sufficient on its own.
 
 **A remembered winner is a snapshot too.** Remembering which candidate worked is
 right, and it must carry the time it worked, be tried first, and be discarded on
