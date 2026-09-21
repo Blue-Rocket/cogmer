@@ -234,7 +234,7 @@ func (d *Daemon) RunVerification(peerID string, addrs []string) (string, error) 
 			return "", lastErr
 		}
 		if time.Now().After(deadline) {
-			return "", fmt.Errorf("%s did not run `claude-team pair` or `claude-team verify` within %s",
+			return "", fmt.Errorf("%s did not run /peer-pair within %s",
 				PeerName(peerID), verifyTimeout)
 		}
 		time.Sleep(time.Second)
@@ -337,7 +337,7 @@ func (d *Daemon) handleVerifyStart(w http.ResponseWriter, r *http.Request) {
 	req.Peer = peer
 	if !d.members.Knows(req.Peer) {
 		writeJSON(w, verifyStartResponse{Error: fmt.Sprintf(
-			"%s is not a peer this machine knows; `claude-team allow <identifier>` records one first",
+			"%s is not a peer this machine knows; /peer-pair with their pairing string records one",
 			PeerName(req.Peer))})
 		return
 	}

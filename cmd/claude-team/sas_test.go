@@ -287,6 +287,45 @@ func TestTwoDaemonsReachTheSameWords(t *testing.T) {
 	}
 }
 
+// Only ONE side needs a usable address. RunVerification checks for an inbound
+// exchange before it dials, so a peer nobody can reach still reaches the same two
+// words -- which is the arrangement a colleague behind a NAT that cannot be
+// traversed actually needs. `pair` used to refuse outright when a pairing string
+// carried no address, which made a working arrangement look broken (D-092).
+func TestOnlyOneSideNeedsAnAddress(t *testing.T) {
+	a, _ := verifiableDaemon(t)
+	b, bAddr := verifiableDaemon(t)
+	if err := a.members.Allow(b.id.PeerID, "b"); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.members.Allow(a.id.PeerID, "a"); err != nil {
+		t.Fatal(err)
+	}
+
+	type result struct {
+		words string
+		err   error
+	}
+	done := make(chan result, 2)
+	// A can reach B. B has no address for A at all.
+	go func() {
+		w, err := a.RunVerification(b.id.PeerID, []string{bAddr})
+		done <- result{w, err}
+	}()
+	go func() {
+		w, err := b.RunVerification(a.id.PeerID, nil)
+		done <- result{w, err}
+	}()
+
+	first, second := <-done, <-done
+	if first.err != nil || second.err != nil {
+		t.Fatalf("an exchange with one reachable side failed: %v / %v", first.err, second.err)
+	}
+	if first.words != second.words {
+		t.Fatalf("the two sides saw different words: %q and %q", first.words, second.words)
+	}
+}
+
 // The marker §25 requires inside injected text must be a fact, not a constant.
 func TestTheUnverifiedMarkerTracksVerification(t *testing.T) {
 	d, _ := testDaemon(t)

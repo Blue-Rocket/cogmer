@@ -567,7 +567,7 @@ func explainNameTaken(err error) {
 	fmt.Println("changed key is indistinguishable from somebody else's key sent in their name.")
 	fmt.Println("That is what an interception looks like after the fact, so check with them on")
 	fmt.Println("a call before recording it.")
-	fmt.Println("\nIf they really do have a new key, `claude-team forget` the old one first.")
+	fmt.Printf("\nIf they really do have a new key, `%s forget` the old one first.\n", invocation())
 	fmt.Printf("That discards its admissions too, so you will invite them again deliberately.\n\n")
 }
 
@@ -589,7 +589,7 @@ func resolvePeer(m *Membership, arg string) (string, error) {
 	case 1:
 		return matches[0], nil
 	case 0:
-		return "", fmt.Errorf("no peer known as %q; pass its identifier, or run `claude-team peers`", arg)
+		return "", fmt.Errorf("no peer known as %q; pass its identifier, or run /peer-list", arg)
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "%q names %d different keys, so it names nobody. Say which:", arg, len(matches))
@@ -598,7 +598,7 @@ func resolvePeer(m *Membership, arg string) (string, error) {
 	}
 	b.WriteString("\n\nTwo keys under one name is what a substituted key looks like once it has been")
 	b.WriteString("\nrecorded. If you did not knowingly record both, ask the person which is theirs")
-	b.WriteString("\nover a channel you can recognise them on, and `claude-team forget` the other.")
+	b.WriteString("\nover a channel you can recognise them on, and `" + invocation() + " forget` the other.")
 	return "", errors.New(b.String())
 }
 
@@ -817,7 +817,7 @@ func runLeave() {
 		}
 		fmt.Printf("this session has left %s. It stops capturing and stops receiving.\n", room.RoomName)
 		fmt.Println("Nothing is hidden or undone: the room's history is unchanged, still readable")
-		fmt.Printf("with `claude-team log`, and still shown at http://%s.\n", addr())
+		fmt.Printf("with /room-log, and still shown at http://%s.\n", addr())
 		fmt.Println("What you already published stays in the room; leaving does not un-say it.")
 		fmt.Printf("\nThis session may rejoin %s. It may not join a different one — what it has\n", room.RoomName)
 		fmt.Println("been told cannot be withdrawn from its context.")
@@ -1082,9 +1082,14 @@ func runPair(args []string) {
 
 	fmt.Printf("recorded %s.\n", PeerName(peerID))
 	if endpoint == "" {
-		fmt.Println("no address was given, so there is nowhere to reach them yet. Ask for the")
-		fmt.Println("whole pairing string — `claude-team whoami` prints it — and run this again.")
-		return
+		// Not a dead end. Only ONE side needs a usable address: RunVerification
+		// checks for an inbound exchange before it dials, so if they reach us the
+		// nonce is already here and the same two words come out. Refusing to start
+		// made a working arrangement look broken -- and it is the arrangement a
+		// colleague behind a NAT that nothing can traverse actually needs.
+		fmt.Println("They sent a key but no address, so you cannot dial them. That still works:")
+		fmt.Println("only one of you needs a reachable address, and they can reach you.")
+		fmt.Printf("If nothing happens within %s, ask them for their whole pairing string.\n\n", verifyTimeout)
 	}
 	beginCeremony(peerID, PeerName(peerID), mine, terminal)
 }

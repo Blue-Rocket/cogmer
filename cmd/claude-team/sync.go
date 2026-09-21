@@ -298,7 +298,8 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 		// gate doing its job, and the only thing that clears it is two people on a
 		// call. Silence here would look like an empty room.
 		log.Printf("sync: %d event(s) held back — their origin peer is UNVERIFIED. "+
-			"Both of you run `claude-team verify`; they arrive in full once you have.", unverified)
+			"Both of you run /peer-pair, which opens the two-word check in a browser; "+
+			"their turns arrive in full once you have.", unverified)
 	}
 	if rejected > 0 {
 		log.Printf("sync: %d event(s) from %s failed verification and were not stored", rejected, addr)
