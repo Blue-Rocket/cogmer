@@ -296,6 +296,10 @@ https://alice-machine.tail9c2f.ts.net:4783
 https://david-machine.tail9c2f.ts.net:4783
 ```
 
+That could later be replaced by local network discovery, WebRTC, libp2p, another
+virtual private network, direct QUIC, or a transport nobody has proposed. Keep
+synchronization semantics separate from whichever it turns out to be.
+
 ## How an address is obtained
 
 A daemon must **discover** the address it is reachable at. It must never derive one from its own hostname.
@@ -306,16 +310,74 @@ Under Tailscale, reachability comes from the tailnet: either the device's MagicD
 
 A daemon that cannot determine a reachable address should say so plainly rather than emit an invitation that cannot be used.
 
-could later be replaced by:
+## What kind of address it is
 
-- LAN discovery;  
-- WebRTC;  
-- libp2p;  
-- another VPN;  
-- direct QUIC;  
-- another transport.
+Addresses are not interchangeable things that differ only in whether they happen to
+work. They differ in what they name, and that decides how long they stay true and
+who may be told about them.
 
-Keep synchronization semantics separate from transport.
+An **overlay address** names a node and where to find it. It carries the node's
+public keys together with a relay through which an introduction can be made, after
+which the path upgrades to a direct one if the two machines can reach each other.
+The keys are durable: they identify a machine and do not change when it moves. The
+relay is a **rendezvous** rather than an identity, chosen for proximity, and a
+machine that moves far enough is no longer attached to the one named in an address
+it published earlier. Relays generally forward for a node attached elsewhere, so a
+stale rendezvous usually still works — but that is the relay network behaving well,
+not a property this design holds. Treat the keys as durable and the rendezvous as
+best effort.
+
+A **public address** names a place reachable from anywhere. It is true of one
+network position, and a machine that moves has left it.
+
+A **private address** names a place reachable only from one network. It is true
+there and meaningless elsewhere — and worse than meaningless, because the same
+private address on a different network names a different machine. Reaching it does
+not fail; it succeeds against a stranger.
+
+A **loopback address** names a place reachable only from the machine that holds it.
+It is correct locally and cannot be used by anybody else, so its appearance in
+something offered to another person means no address was learned rather than that
+this one should be tried.
+
+## The lifecycle of a peer address
+
+**It enters** one of several ways, and each says something different about how far
+it can be trusted:
+
+- from a **pairing string**, typed in by a person from something a colleague sent.
+  It is that colleague's claim about where they listen, at the moment they sent it.
+- from an **invitation**, which carries the room and where its host can be reached.
+- from a **synchronization request**, which carries the address the caller
+  advertises, so a member that has moved says so by continuing to poll.
+- from **discovery** on the network currently in use, which is the only source that
+  reports where a peer *is* rather than where a peer *was*.
+
+**Only what identifies a machine may be advertised.** An overlay address may be put
+in a pairing string, an invitation, or a durable record. A private address may not,
+anywhere, because an advertisement outlives the network it was true on and the claim
+it then makes is about somebody else's machine. A private address may only enter
+from discovery, where it is a fact about the network in use rather than a claim
+about one left behind.
+
+**It is used as a candidate rather than as a fact.** Which address works is a
+property of the pair of machines, not of either one, so the side attempting the
+connection is the only side that can find out. Candidates are ordered by kind —
+same host, same network, public, relayed — and the first few attempted together, so
+that one that no longer answers costs a round trip instead of a timeout.
+
+**Whichever answered is remembered, with the time it answered**, and tried first
+next time. That record is a hint and not a fact: it is a snapshot of where a machine
+was, so it is discarded when it stops working rather than retried indefinitely.
+
+**It stops being true silently.** Nothing announces that a machine has moved, and an
+address that has gone wrong behaves exactly like one whose owner is asleep. So an
+address that has not answered for long enough is not tried at all, rather than
+carried forever and attempted on every poll.
+
+**It leaves** when it stops working, when it has aged past use, or when the peer it
+belongs to is forgotten — which takes every address recorded for them with it, for
+the same reason forgetting takes their admissions (§12).
 
 ---
 
