@@ -40,33 +40,6 @@ affirmatively.
 The `claude-team` binary is **not** tracked — `bin/` is ignored, because it is 17MB
 per commit and `go build` reproduces it.
 
-## The specification currently states something false
-
-**Verification dials every address this machine knows.** `RunVerification` is handed
-`syncTargets()`, so verifying one colleague dials every other. `PeerEndpoint` exists
-now (D-103) and nothing uses it for this. Try the peer's own address first and keep
-the sweep as a fallback.
-
-**And so §4 promises an alarm that cannot be delivered.** It says an unexpected key
-while verifying a named peer is worth telling the person about. It is not told, and
-cannot be while wrong keys are the expected outcome of most dials. Fixing the sweep
-is what makes the sentence true; nothing else needs writing.
-
-**D-076 is cited three times and does not exist, and should not be written.** No
-commit in all 142 ever contained the heading; `323f46d` (2026-09-20) added the
-citations in code and did not touch `decisions.md`. It held that a room-scoped
-command inside a session acts on that session's room first — but D-080 records that
-it also put `CLAUDE_TEAM_ROOM` above the session's own room, "exactly the failure
-D-064 removed, reinstated at higher precedence, in the same afternoon it was fixed
-elsewhere." Wrong within hours, and its surviving rule is stated better by D-077
-(every room has its own URL).
-
-The two mentions in `decisions.md:3788,3790` are correct as they stand: they narrate
-what D-076 did, and rewriting history to point elsewhere would be worse than a
-dangling number. Only `membership_test.go:697` is a true dangling reference — a
-reader is sent to D-076 for reasoning that was never written. Point it at D-077 and
-say the rule outlived the entry.
-
 ## Decided and not built
 
 **Re-pick the overlay relay when it cannot be reached.** D-104 pins it so the

@@ -164,6 +164,41 @@ func reply(w http.ResponseWriter, d *Daemon, s *verifySession, step string, payl
 	})
 }
 
+// verifyTargets is where to look for ONE named peer, and deliberately not
+// everywhere this machine could dial.
+//
+// Verification was handed syncTargets(), which is every address the daemon knows.
+// Two things were wrong with that. Most of those addresses cannot answer: since
+// D-103 put every address in known_peers, each one belongs to a key that is not
+// the key being verified, and clientConfig(peerID) refuses exactly that. So the
+// sweep spent a dial and a timeout on peers that were never candidates.
+//
+// The other is the reason this is worth a function. Verifying with one colleague
+// opened a connection to every colleague, which makes a private act -- two people
+// on a call, comparing two words -- visible to everybody else on the list, every
+// time. Nothing about pairing with Alice is Bob's business.
+//
+// It also cost §4 its alarm. §4 says that reaching an unexpected key while
+// verifying a named peer is worth telling somebody about, and that could not be
+// said while a wrong key was the ORDINARY outcome of most dials. Against one
+// address recorded for one peer it is once again the exception it is described as.
+//
+// CLAUDE_TEAM_PEERS stays in the list because those addresses name no peer: they
+// are configured for this machine, so one of them may be the peer we want and
+// nothing but dialling can tell. Everything else is somebody else's address.
+func (d *Daemon) verifyTargets(peerID string) []string {
+	var out []string
+	if own := d.members.PeerEndpoint(peerID); own != "" {
+		out = append(out, own)
+	}
+	for _, a := range peerList() {
+		if a != "" && (len(out) == 0 || a != out[0]) {
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
 // RunVerification drives the exchange to a string of words, or to an error.
 //
 // Commit, commit, reveal, reveal -- in that order, and the order IS the security.
@@ -356,7 +391,7 @@ func (d *Daemon) handleVerifyStart(w http.ResponseWriter, r *http.Request) {
 			PeerName(req.Peer))})
 		return
 	}
-	words, err := d.RunVerification(req.Peer, d.syncTargets())
+	words, err := d.RunVerification(req.Peer, d.verifyTargets(req.Peer))
 	if err != nil {
 		writeJSON(w, verifyStartResponse{Error: err.Error()})
 		return
