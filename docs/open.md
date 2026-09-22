@@ -84,8 +84,9 @@ the weakest possible form of the check.
 bare-IP droplet somebody here operates — the one centralized component failing
 D-115's benefit test, tagged rather than defended. It exists because a module path
 must match a repository URL and there is no repository; the name is settled now
-(D-117), so creating one is the event that both unblocks Phase 13 and retires this. `publish.sh` is the only script that changes;
-`release.sh` is host-agnostic by design.
+(D-117), so creating one is the event that both unblocks Phase 13 and retires this.
+`publish.sh` is the only script that changes; `release.sh` is host-agnostic by
+design.
 
 **Create the repository the module path names.** `go.mod` says
 `github.com/Blue-Rocket/cogmer` and nothing lives there yet. This is now the whole of
@@ -110,9 +111,6 @@ and would need to follow.
 during the rename, not caused by it, and `release.sh` writes only the latter. Which
 one the plugin manager believes, and whether the two are meant to track each other
 at all, is unchecked.
-
-**The working directory is still `~/repos/scs`.** Renaming it is a move plus whatever
-refers to it by path; nothing in the repository depends on the directory name.
 
 ## Undecided
 
