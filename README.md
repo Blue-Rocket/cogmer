@@ -9,16 +9,21 @@ next prompt, never before it: nothing they do makes your session take a turn.
 
 ## Install
 
-Two lines, inside a Claude Code session:
+Two commands, inside a Claude Code session. Run them one at a time: pasted
+together, they arrive as a single command and the first one fails.
 
 ```
 /plugin marketplace add Blue-Rocket/cogmer
+```
+
+```
 /plugin install cogmer@blue-rocket
 ```
 
-Then start a new session. A hook fetches the binary for your platform and starts a
-daemon on your machine; the session you install from may have nothing yet, and the
-next one has everything. Nothing about how Claude Code starts changes, no shell
+Then start a new session. A hook fetches the binary for your platform when a session
+starts and starts a daemon on your machine, so on a first install the session you installed from has
+no binary, and its `/cogmer:` commands say so. The download is about 30MB and
+usually takes seconds. Nothing about how Claude Code starts changes, no shell
 profile is edited, and no service is registered with the operating system.
 
 Each binary is authorised by a sha256 pinned in the plugin. A download that does not
