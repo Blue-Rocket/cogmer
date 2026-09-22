@@ -212,6 +212,6 @@ h1{font-size:15px;letter-spacing:.14em;text-transform:uppercase}
 p{color:var(--dim)}code{font:13px ui-monospace,Menlo,monospace}</style>
 <main><h1>This pairing link has expired</h1>
 <p>Pairing links last a few minutes, because they hold a ceremony open.
-Start a new one with <code>/peer-pair</code> and this page will be replaced.</p>
+Start a new one with <code>/cogmer:peer-pair</code> and this page will be replaced.</p>
 <p>Nothing was recorded, and nobody was verified.</p></main>`)
 }

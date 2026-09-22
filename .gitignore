@@ -7,7 +7,7 @@ bin/
 .codegraph/
 
 # The compiled binary. Rebuilt by `go build`; 17MB per commit otherwise.
-/claude-team
+/cogmer
 
 dist/
 

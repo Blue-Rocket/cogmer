@@ -1,7 +1,7 @@
 # What leaves the machine
 
 **Date:** 2026-09-21 · **Version:** `plugin/VERSION` 0.6.0, `wireVersion` 2 ·
-**Method:** read every outbound path in `cmd/claude-team` — every `http` client,
+**Method:** read every outbound path in `cmd/cogmer` — every `http` client,
 every `Listen`, every marshalled wire type — plus the release scripts and the
 embedded view.
 
@@ -35,7 +35,7 @@ notice the moment it goes.
 
 | what | status today | what holds it |
 |---|---|---|
-| The private key | never leaves `~/.claude-team/identity.key` (0600) | Architecture, and a test: it is absent from `identity.json`, which `whoami` prints, and a test asserts it never marshals. |
+| The private key | never leaves `~/.cogmer/identity.key` (0600) | Architecture, and a test: it is absent from `identity.json`, which `whoami` prints, and a test asserts it never marshals. |
 | Any account or registration | none exists | Architecture. An identity is a keypair generated on the machine that uses it (§6); nobody issues it and nobody records it. |
 | The machine-level list of known peers | in no response, no sync request, no invitation — an invitation carries the room's name, id, endpoint and the inviting peer's id | **Nothing.** True because no payload happens to include it. No decision says it must not, and no test would catch it. |
 | Telemetry, usage reporting, a version check | none exists; every outbound destination is loopback or a peer | **Nothing.** Not a decision — nobody decided against it, and whether to add one is open. |

@@ -137,7 +137,7 @@ func TestVerifyingDeliversWhatWasWaiting(t *testing.T) {
 }
 
 // An unverified peer is a state; one holding up an invitation is a reason. The
-// count is what lets /peer-list say what verifying would release (D-106).
+// count is what lets /cogmer:peer-list say what verifying would release (D-106).
 func TestWithheldInvitationsAreCounted(t *testing.T) {
 	m := testMembership(t)
 	self := testIdentity(t)

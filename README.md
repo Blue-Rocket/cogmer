@@ -1,4 +1,4 @@
-# claude-team
+# cogmer
 
 Shared Claude Code conversations, replicated peer-to-peer. People working
 separately, each on their own Claude Code subscription and session, collaborate in
@@ -27,10 +27,11 @@ now complete or deliberately dissolved.**
 Outstanding: local network discovery, and a host approving an unsolicited join
 request — the latter undecided rather than pending.
 
-**Blocked on the name.** The plugin is built and the install is one line by design
-(D-041), but a Go module path must match its repository URL, so until the name is
-settled there is no repository and nowhere for a colleague to install from. That is
-what stands between this and somebody else using it.
+**Blocked on the repository.** The plugin is built and the install is one line by
+design (D-041), but a Go module path must match its repository URL, and the one
+`github.com/Blue-Rocket/cogmer` names does not exist yet, so there is nowhere for a
+colleague to install from. That is what stands between this and somebody else using
+it.
 
 Earlier findings that the design still rests on:
 [`docs/phase0-findings.md`](docs/phase0-findings.md) (integration spike, including
@@ -45,40 +46,41 @@ the binary and starts the daemon, and nothing below needs doing by hand. That pa
 is blocked on the name (see Status), so today it is built from source.
 
 ```sh
-go build -o bin/claude-team ./cmd/claude-team
-claude-team daemon                       # hooks and UI on 127.0.0.1:4782
+go build -o bin/cogmer ./cmd/cogmer
+cogmer daemon                       # hooks and UI on 127.0.0.1:4782
 ```
 
 **One thing to know before reading any command here.** A plugin install puts the
-binary in `~/.claude-team/bin`, which is deliberately not on PATH — §29 forbids
-editing a shell profile to put it there. So `claude-team pair` resolves only if you
+binary in `~/.cogmer/bin`, which is deliberately not on PATH — §29 forbids
+editing a shell profile to put it there. So `cogmer pair` resolves only if you
 installed it yourself. Every command below is written short for readability; the
 binary prints its own path in the lines it asks you to type, and those are the ones
 to trust:
 
 ```sh
-~/.claude-team/bin/claude-team whoami
+~/.cogmer/bin/cogmer whoami
 ```
 
 Register the hooks (`--settings` keeps this out of your real config):
 
 ```json
 {"hooks":{
- "UserPromptSubmit":[{"hooks":[{"type":"command","command":"/abs/path/bin/claude-team hook prompt"}]}],
- "Stop":[{"hooks":[{"type":"command","command":"/abs/path/bin/claude-team hook stop"}]}]
+ "UserPromptSubmit":[{"hooks":[{"type":"command","command":"/abs/path/bin/cogmer hook prompt"}]}],
+ "Stop":[{"hooks":[{"type":"command","command":"/abs/path/bin/cogmer hook stop"}]}]
 }}
 ```
 
-Set `CLAUDE_TEAM_PEER_ADDR` to an address your colleague can reach — it defaults to
+Set `COGMER_PEER_ADDR` to an address your colleague can reach — it defaults to
 loopback, so nobody can reach you until you do.
 
 **Pair, once, on a call with them.** Each of you sends the other your pairing
-string; then both run `/peer-pair` with the other's, at the same time. A page opens
-in each of your browsers showing two words, which you read to each other.
+string; then both run `/cogmer:peer-pair` with the other's, at the same time. A
+page opens in each of your browsers showing two words, which you read to each
+other.
 
 ```sh
-/peer-pair                                   # prints your string — send it to them
-/peer-pair ed25519:GoR7…IWPU@203.0.113.9:4783
+/cogmer:peer-pair                                   # prints your string — send it to them
+/cogmer:peer-pair ed25519:GoR7…IWPU@203.0.113.9:4783
 #   Opened the pairing page:
 #     http://127.0.0.1:4782/pair/mX_ky1Cyk1_TpgQjcTJHqA
 ```
@@ -97,9 +99,9 @@ in the terminal instead. `--terminal` forces it; otherwise it is automatic.
 **Then make a room and invite them.**
 
 ```sh
-claude-team create                       # → misty-canyon
-claude-team invite david
-#   give them: claude-team join misty-canyon/0f7a…@198.51.100.7:4783#ed25519:GoR7…
+cogmer create                       # → misty-canyon
+cogmer invite david
+#   give them: cogmer join misty-canyon/0f7a…@198.51.100.7:4783#ed25519:GoR7…
 ```
 
 Start Claude Code normally on both machines. Turns replicate; teammate turns are
@@ -108,7 +110,7 @@ injected at each session's next locally initiated prompt, never before.
 ## The room, in a browser
 
 ```sh
-claude-team daemon        # then open http://127.0.0.1:4782
+cogmer daemon        # then open http://127.0.0.1:4782
 ```
 
 Live-updating over server-sent events, with attribution anchored on each peer's
@@ -154,11 +156,11 @@ Running it:
 | `doctor [--deep]` | Verify relied-on Claude Code behaviors against the installed version |
 | `behaviors` | List those behaviors (`--markdown` regenerates the doc) |
 
-`CLAUDE_TEAM_ADDR` sets the local
-address; `CLAUDE_TEAM_PEER_ADDR` the peer address; `CLAUDE_TEAM_PEERS` extra peer
-addresses; `CLAUDE_TEAM_PREFLIGHT=off` skips behavior checks on new rooms;
-`CLAUDE_TEAM_MAX_EVENTS`, `CLAUDE_TEAM_MAX_EVENT_CHARS` and
-`CLAUDE_TEAM_MAX_BLOCK_CHARS` bound injected context (§21).
+`COGMER_ADDR` sets the local
+address; `COGMER_PEER_ADDR` the peer address; `COGMER_PEERS` extra peer
+addresses; `COGMER_PREFLIGHT=off` skips behavior checks on new rooms;
+`COGMER_MAX_EVENTS`, `COGMER_MAX_EVENT_CHARS` and
+`COGMER_MAX_BLOCK_CHARS` bound injected context (§21).
 
 ## Specification review
 
@@ -181,16 +183,16 @@ contractual, and several fail silently: the room keeps accepting events while
 recording the wrong thing.
 
 [`docs/relied-on-behaviors.md`](docs/relied-on-behaviors.md) lists them, generated
-from the registry in `cmd/claude-team/behaviors.go` so it cannot drift from what
+from the registry in `cmd/cogmer/behaviors.go` so it cannot drift from what
 is actually checked.
 
 ```sh
-claude-team doctor          # 16 checks, one Claude turn, ~5s
-claude-team doctor --deep   # adds 7 compaction checks, drives a real compaction, ~40s
+cogmer doctor          # 16 checks, one Claude turn, ~5s
+cogmer doctor --deep   # adds 7 compaction checks, drives a real compaction, ~40s
 ```
 
 The session tier runs automatically the first time a room is formed on a Claude
-Code version that has not been verified, cached in `~/.claude-team/verified.json`.
+Code version that has not been verified, cached in `~/.cogmer/verified.json`.
 Keyed on version rather than room, so forming a tenth room costs nothing.
 
 A failure never blocks the room — it reports which assumption changed, and
@@ -203,7 +205,7 @@ no runtime dependency — which matters because Claude Code now ships as a nativ
 binary and teammates may have no Node installed.
 
 ```sh
-GOOS=windows GOARCH=amd64 go build -o bin/claude-team.exe ./cmd/claude-team
+GOOS=windows GOARCH=amd64 go build -o bin/cogmer.exe ./cmd/cogmer
 ```
 
 Windows binaries build but are **unverified at runtime** — hook shell semantics

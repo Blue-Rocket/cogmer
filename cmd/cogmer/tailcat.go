@@ -61,7 +61,7 @@ const tailcatKeyFile = "tailcat.key"
 // the case it serves is the one that exists, and a peer that does not need it
 // pays for a listener nobody dials.
 func tailcatEnabled() bool {
-	return !strings.EqualFold(strings.TrimSpace(os.Getenv("CLAUDE_TEAM_TAILCAT")), "off")
+	return !strings.EqualFold(strings.TrimSpace(os.Getenv("COGMER_TAILCAT")), "off")
 }
 
 func init() { RegisterDialer(schemeTailcat, &tailcatDialer{}) }

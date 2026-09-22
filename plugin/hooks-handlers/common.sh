@@ -2,27 +2,27 @@
 # Shared by every entry point: the hooks, the installer, and the slash commands.
 #
 # One resolution rule, in one place. The slash commands used to invoke a bare
-# `claude-team`, which resolves only if the person installed it themselves — and
-# the installer puts it in ~/.claude-team/bin, which is on nobody's PATH. So every
+# `cogmer`, which resolves only if the person installed it themselves — and
+# the installer puts it in ~/.cogmer/bin, which is on nobody's PATH. So every
 # command failed for every installed user, while the hooks worked, because only
 # the hooks knew where to look. Two rules meant one of them was wrong.
 
-# claude_team_binary prints the path to the binary, or fails.
+# cogmer_binary prints the path to the binary, or fails.
 #
 # Searched in the order a person would expect to win: an explicit override, a
 # binary they installed themselves, the plugin's own copy, then PATH.
-claude_team_binary() {
-  if [ -n "${CLAUDE_TEAM_BIN:-}" ] && [ -x "$CLAUDE_TEAM_BIN" ]; then
-    printf '%s' "$CLAUDE_TEAM_BIN"; return 0
+cogmer_binary() {
+  if [ -n "${COGMER_BIN:-}" ] && [ -x "$COGMER_BIN" ]; then
+    printf '%s' "$COGMER_BIN"; return 0
   fi
   for candidate in \
-    "${CLAUDE_TEAM_HOME:-$HOME/.claude-team}/bin/claude-team" \
-    "${CLAUDE_PLUGIN_ROOT:-}/bin/claude-team"
+    "${COGMER_HOME:-$HOME/.cogmer}/bin/cogmer" \
+    "${CLAUDE_PLUGIN_ROOT:-}/bin/cogmer"
   do
     if [ -x "$candidate" ]; then printf '%s' "$candidate"; return 0; fi
   done
-  if command -v claude-team > /dev/null 2>&1; then
-    command -v claude-team; return 0
+  if command -v cogmer > /dev/null 2>&1; then
+    command -v cogmer; return 0
   fi
   return 1
 }
@@ -35,7 +35,7 @@ claude_team_binary() {
 # the user's turn, so a stray line there would corrupt every prompt.
 ct_say() {
   local f
-  f="${CLAUDE_TEAM_HOME:-$HOME/.claude-team}/$1"; shift
+  f="${COGMER_HOME:-$HOME/.cogmer}/$1"; shift
   mkdir -p "$(dirname "$f")" 2>/dev/null
   printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >> "$f" 2>/dev/null
 }
@@ -56,16 +56,16 @@ json_safe() { printf '%s' "$*" | tr -d '\\"' | tr '\r\n\t' '   '; }
 # downloading — a two-session warm-up nobody would guess at.
 start_daemon_if_needed() {
   local bin addr log
-  if ! bin="$(claude_team_binary)"; then
+  if ! bin="$(cogmer_binary)"; then
     # Ordinary on a first session -- the binary is still downloading -- and a real
     # fault on any later one. install-state tells those apart (D-075); this records
     # that the start was attempted and found nothing, which is the half that used
     # to be missing.
-    ct_say daemon.log "hook: no binary yet (searched CLAUDE_TEAM_BIN, ${CLAUDE_TEAM_HOME:-$HOME/.claude-team}/bin, plugin bin, PATH); not starting"
+    ct_say daemon.log "hook: no binary yet (searched COGMER_BIN, ${COGMER_HOME:-$HOME/.cogmer}/bin, plugin bin, PATH); not starting"
     return 0
   fi
 
-  addr="${CLAUDE_TEAM_ADDR:-127.0.0.1:4782}"
+  addr="${COGMER_ADDR:-127.0.0.1:4782}"
   if command -v curl > /dev/null 2>&1; then
     if curl -s -m 1 "http://${addr}/healthz" > /dev/null 2>&1; then
       return 0   # already running, which is the ordinary outcome, not an error
@@ -76,7 +76,7 @@ start_daemon_if_needed() {
     ct_say daemon.log "hook: no curl, so whether a daemon already answers on ${addr} is unknown; starting one, which exits harmlessly if the port is already ours"
   fi
 
-  log="${CLAUDE_TEAM_HOME:-$HOME/.claude-team}/daemon.log"
+  log="${COGMER_HOME:-$HOME/.cogmer}/daemon.log"
   mkdir -p "$(dirname "$log")" 2>/dev/null
 
   # Detached, so the daemon outlives the session that started it: a room may have
@@ -110,7 +110,7 @@ start_daemon_if_needed() {
 # silently: no daemon, no capture, no injection, and nothing anywhere saying why.
 daemon_state() {
   local f line state when detail age
-  f="${CLAUDE_TEAM_HOME:-$HOME/.claude-team}/daemon-state"
+  f="${COGMER_HOME:-$HOME/.cogmer}/daemon-state"
   [ -f "$f" ] || { printf 'none 0 '; return 0; }
   IFS=$'\t' read -r state when detail < "$f" || { printf 'none 0 '; return 0; }
   age=$(( $(date +%s) - ${when:-0} ))
@@ -128,7 +128,7 @@ daemon_state() {
 # command wrapper explains it, and the session-start hook passes it to the model so
 # an answer to "why isn't this working" is true rather than invented.
 
-install_state_file() { printf '%s' "${CLAUDE_TEAM_HOME:-$HOME/.claude-team}/install-state"; }
+install_state_file() { printf '%s' "${COGMER_HOME:-$HOME/.cogmer}/install-state"; }
 
 # set_install_state <installing|failed> <detail>
 set_install_state() {

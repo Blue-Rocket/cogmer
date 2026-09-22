@@ -15,7 +15,7 @@ import (
 // Phase 2 anti-entropy, reduced to what the §30 experiment needs.
 //
 // Deliberately omitted, and none of it changes what the experiment measures:
-// invitations and guest lists (§12) — peers are named by CLAUDE_TEAM_PEERS;
+// invitations and guest lists (§12) — peers are named by COGMER_PEERS;
 // signatures (§25) — a peer is trusted to report its own identity. Either would
 // entrench a format before D-023 has settled one.
 //
@@ -109,7 +109,7 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 }
 
 func peerList() []string {
-	raw := os.Getenv("CLAUDE_TEAM_PEERS")
+	raw := os.Getenv("COGMER_PEERS")
 	if strings.TrimSpace(raw) == "" {
 		return nil
 	}
@@ -302,7 +302,7 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 		case InsertStored:
 			stored++
 		case InsertConflict:
-			log.Printf("sync: CONFLICT from %s — peer %s sequence %d is already held by a different event; run `claude-team conflicts`",
+			log.Printf("sync: CONFLICT from %s — peer %s sequence %d is already held by a different event; run `cogmer conflicts`",
 				addr, PeerName(ev.PeerID), ev.PeerSequence)
 		}
 	}
@@ -311,7 +311,7 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 		// gate doing its job, and the only thing that clears it is two people on a
 		// call. Silence here would look like an empty room.
 		log.Printf("sync: %d event(s) held back — their origin peer is UNVERIFIED. "+
-			"Both of you run /peer-pair, which opens the two-word check in a browser; "+
+			"Both of you run /cogmer:peer-pair, which opens the two-word check in a browser; "+
 			"their turns arrive in full once you have.", unverified)
 	}
 	if rejected > 0 {

@@ -133,7 +133,7 @@ func (d *Daemon) handleOffer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Printf("OFFER %s from %s — accept with /room-join %s",
+	log.Printf("OFFER %s from %s — accept with /cogmer:room-join %s",
 		req.RoomName, PeerName(req.PeerID), req.RoomName)
 	d.notify()
 	writeJSON(w, map[string]string{"status": "offered"})

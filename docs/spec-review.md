@@ -346,7 +346,7 @@ conflict must be distinguished on receipt.
 `Insert` now returns `stored` / `duplicate` / `conflict` instead of silently
 ignoring both of the last two. A conflict is quarantined with both event
 identifiers and the rejected event retained — discarding it would destroy the
-evidence that distinguishes lost state from forgery — and `claude-team conflicts`
+evidence that distinguishes lost state from forgery — and `cogmer conflicts`
 surfaces them, since a conflict is never routine and is invisible unless asked for.
 Three tests cover the conflict, ordinary redelivery staying silent, and normal
 sequential inserts.
@@ -390,7 +390,7 @@ is worth fixing before Phase 2 rather than after.
 
 ### C1 — Nothing in the specification acknowledges that it depends on undocumented behavior
 
-**OPEN in the specification; built.** `claude-team doctor` verifies twenty behaviors against the installed version, keyed on `claude --version`, with negative tests. The specification still does not require any of it, so a second implementation would not know to.
+**OPEN in the specification; built.** `cogmer doctor` verifies twenty behaviors against the installed version, keyed on `claude --version`, with negative tests. The specification still does not require any of it, so a second implementation would not know to.
 
 **Medium.** The system rests on roughly nineteen behaviors of a third-party binary
 — hook payload shapes, transcript record structure, what compaction preserves.
@@ -404,7 +404,7 @@ instinct — but a one-time inspection does not survive upgrades.
 **Recommend.** Add a standing architectural requirement, alongside §33's transport
 abstraction: relied-on behaviors are enumerated and verified against the installed
 Claude Code, and a verification failure degrades the feature rather than breaking
-the session. `claude-team doctor` already implements this; the specification
+the session. `cogmer doctor` already implements this; the specification
 should require it rather than have it exist only as an accident of how we worked.
 
 ### C2 — Compaction has a phase but no standing requirement

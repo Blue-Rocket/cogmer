@@ -37,7 +37,7 @@ synchronized over the open internet in 0.44 s with identical event ordering, in
 `docs/phase2-experiment.md`, which is also where §30's question is answered
 affirmatively.
 
-The `claude-team` binary is **not** tracked — `bin/` is ignored, because it is 17MB
+The `cogmer` binary is **not** tracked — `bin/` is ignored, because it is 17MB
 per commit and `go build` reproduces it.
 
 ## Decided and not built
@@ -51,7 +51,7 @@ preference.
 handed out is then stale, and only the daemon can know.
 
 **Rooms are not yet what D-015 (rooms are session-scoped) describes.**
-`CLAUDE_TEAM_ROOM` selects a single room per daemon process; there is no invite, no
+`COGMER_ROOM` selects a single room per daemon process; there is no invite, no
 membership tracking, and no archive. That is Phase 1 work — do not treat the current
 shape as the design.
 
@@ -83,9 +83,41 @@ the weakest possible form of the check.
 **Retire the pre-GA release host.** `plugin/release-url.txt` is plain HTTP to a
 bare-IP droplet somebody here operates — the one centralized component failing
 D-115's benefit test, tagged rather than defended. It exists because a module path
-must match a repository URL and there is no repository, so the same event that
-unblocks Phase 13 retires this. `publish.sh` is the only script that changes;
+must match a repository URL and there is no repository; the name is settled now
+(D-117), so creating one is the event that both unblocks Phase 13 and retires this. `publish.sh` is the only script that changes;
 `release.sh` is host-agnostic by design.
+
+**Create the repository the module path names.** `go.mod` says
+`github.com/Blue-Rocket/cogmer` and nothing lives there yet. This is now the whole of
+the Phase 13 chain: no repository means nowhere to `claude plugin install` from, and
+the installer's source-build fallback points at a path that does not resolve. D-069
+recorded the casing bug that made the inherited path fail; the new path fixes it, but
+only once the repository exists to match.
+
+**Publish v0.7.0.** `release.sh` has built it and `checksums.txt` pins those bytes,
+but nothing is on the host: the old release tree was deleted with everything else
+under the former name, so `release-url.txt` currently points at a path that does not
+exist. Until `publish.sh` runs, the installer finds nothing to download and refuses,
+which is the correct failure rather than a bug — but the plugin is inert until then.
+
+**Every slash command is model-invocable, and none of them should be.** Claude Code
+loads `commands/*.md` identically to `skills/<name>/SKILL.md`, so every one of them
+appears in the model's own skill listing — verified with a throwaway plugin, where both
+layouts surfaced as model-invocable entries. The model can therefore decide by itself
+to run `room-leave`, `room-revoke` or `peer-forget`. §3.1 says a session must be no
+worse for having installed this, and a command that withdraws a colleague's admission
+without a person asking is worse. The fix is `disable-model-invocation: true` in the
+frontmatter, but which commands deserve it is a decision, not a sweep: a read-only
+`room-status` may be worth leaving reachable. Needs a behaviour registry entry with a
+negative test either way, because nothing currently checks it.
+
+**`plugin.json` says version 0.1.0 while `plugin/VERSION` says 0.7.0.** Noticed
+during the rename, not caused by it, and `release.sh` writes only the latter. Which
+one the plugin manager believes, and whether the two are meant to track each other
+at all, is unchecked.
+
+**The working directory is still `~/repos/scs`.** Renaming it is a move plus whatever
+refers to it by path; nothing in the repository depends on the directory name.
 
 ## Undecided
 
@@ -94,9 +126,9 @@ which was the only quantum-resistant element in the stack. It could be rebuilt a
 our own layer from material the pairing exchange already produces — per peer, which
 is better than one secret shared with everybody. Nothing depends on deciding this.
 
-**Whether `verify` still earns its place.** `/peer-pair <name> --again` now does the
-same job, and `verify` has no slash command, so it may be a subcommand nobody has a
-route to.
+**Whether `verify` still earns its place.** `/cogmer:peer-pair <name> --again` now
+does the same job, and `verify` has no slash command, so it may be a subcommand
+nobody has a route to.
 
 **What a person actually notices in the view.** D-090 left this open: the display
 name and the derived name are separate elements but carry similar weight, and
@@ -147,7 +179,7 @@ move it resembles.
 `WithheldFor` is used only by its own test — a leftover from the count that was
 dropped in favour of naming the person.
 
-`/room-list` and `/self-status` were both named without confirmation.
+`/cogmer:room-list` and `/cogmer:self-status` were both named without confirmation.
 
 `VERSION` is 0.6.0 and has not moved across a large amount of work.
 
@@ -163,8 +195,8 @@ precondition of Phase 13, where it stops being theoretical.
 
 An item on **idempotency** was in `residual-concerns.md` and is gone: the file was
 deleted on the strength of a reading from earlier in the session, and being
-untracked there is no copy. `/peer-pair` repeated on a completed pairing was worked
-in D-107 and D-108, which may or may not be what it said.
+untracked there is no copy. `/cogmer:peer-pair` repeated on a completed pairing was
+worked in D-107 and D-108, which may or may not be what it said.
 
 ## Older, from the specification review
 

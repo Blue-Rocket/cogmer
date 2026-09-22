@@ -80,7 +80,7 @@ with discovery rather than after it.
 ### `log`, `conflicts`, `seed` and `whoami` still read the pre-D-046 room
 
 They call `openLocal()`, which resolves a single room from `config.json` and
-defaults to `default`. During a live room with seven events, `claude-team log`
+defaults to `default`. During a live room with seven events, `cogmer log`
 reported `ROOM DEFAULT -- 0 events`, and `conflicts` reported on a room nobody was
 in. The daemon has served many rooms since D-046; these four commands never caught
 up, and the failure is silent — an empty room reads as a quiet one.

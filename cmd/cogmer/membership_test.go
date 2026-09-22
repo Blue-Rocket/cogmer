@@ -693,7 +693,7 @@ func TestTheWatchLineDoesNotInventARoom(t *testing.T) {
 
 // A command run from inside a session acts on that session's room, before
 // anything else is consulted. currentRoom went straight to the machine-level
-// pointer, so /room-invite inside a session in one room admitted people to
+// pointer, so /cogmer:room-invite inside a session in one room admitted people to
 // whichever room was last created — silently, and to the wrong people (D-076).
 //
 // A room-scoped command resolves one way: the room the invoking session is in.
@@ -725,7 +725,7 @@ func TestARoomResolvesOnlyThroughTheSession(t *testing.T) {
 
 // An environment variable is ambient: exported once in a profile, or inherited by
 // every session a machine starts, it answers for sessions that are in other rooms.
-// CLAUDE_TEAM_ROOM was consulted ahead of the session's own room, which quietly
+// COGMER_ROOM was consulted ahead of the session's own room, which quietly
 // reinstated the failure D-064 removed, at higher precedence (D-077).
 func TestNoAmbientRoomOverride(t *testing.T) {
 	src, err := os.ReadFile("main.go")
@@ -733,16 +733,16 @@ func TestNoAmbientRoomOverride(t *testing.T) {
 		t.Fatal(err)
 	}
 	// It may be named in a comment explaining its absence; it may not be read.
-	if strings.Contains(string(src), `os.Getenv("CLAUDE_TEAM_ROOM")`) {
-		t.Error("CLAUDE_TEAM_ROOM is read again; an ambient value must not decide which room a command acts on")
+	if strings.Contains(string(src), `os.Getenv("COGMER_ROOM")`) {
+		t.Error("COGMER_ROOM is read again; an ambient value must not decide which room a command acts on")
 	}
 	for _, f := range []string{"identity.go", "daemon.go", "sync.go"} {
 		src, err := os.ReadFile(f)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if strings.Contains(string(src), `os.Getenv("CLAUDE_TEAM_ROOM")`) {
-			t.Errorf("%s reads CLAUDE_TEAM_ROOM", f)
+		if strings.Contains(string(src), `os.Getenv("COGMER_ROOM")`) {
+			t.Errorf("%s reads COGMER_ROOM", f)
 		}
 	}
 }
@@ -780,7 +780,7 @@ func TestOnlyASessionInTheRoomCanChangeIt(t *testing.T) {
 //
 // The plugin and the binary version together (D-075), so a command file naming a
 // subcommand the binary lacks is a release that half works — which is exactly what
-// v0.2.0 shipped, where /room-status called `where` and got usage back.
+// v0.2.0 shipped, where /cogmer:room-status called `where` and got usage back.
 func TestEverySlashCommandNamesARealSubcommand(t *testing.T) {
 	files, err := filepath.Glob("../../plugin/commands/*.md")
 	if err != nil || len(files) == 0 {

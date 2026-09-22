@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Obtain the claude-team binary, once, in the background.
+# Obtain the cogmer binary, once, in the background.
 #
 # Run detached from SessionStart, because §29 requires that starting must not delay
 # a session: a session that begins before the binary exists simply has nothing to
@@ -26,9 +26,9 @@ set -u
 . "$(dirname "$0")/common.sh"
 
 root="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
-home_dir="${CLAUDE_TEAM_HOME:-$HOME/.claude-team}"
+home_dir="${COGMER_HOME:-$HOME/.cogmer}"
 bin_dir="$home_dir/bin"
-target="$bin_dir/claude-team"
+target="$bin_dir/cogmer"
 lock="$home_dir/.install.lock"
 cooldown_seconds=3600
 
@@ -81,7 +81,7 @@ case "$(uname -m)" in
 esac
 
 set_install_state installing "fetching v${want}"
-asset="claude-team_${want}_${os}_${arch}"
+asset="cogmer_${want}_${os}_${arch}"
 [ "$os" = windows ] && asset="$asset.exe"
 expected="$(grep -E "[[:space:]]${asset}\$" "$root/checksums.txt" 2>/dev/null | awk '{print $1}' | head -1)"
 
@@ -97,7 +97,7 @@ if [ -n "$expected" ] && command -v curl > /dev/null 2>&1; then
   # authorise them -- moving hosts is then one commit that changes both together.
   # An unreachable or wrong host costs a failed download; a hash that did not move
   # with it would cost a refusal nobody could explain.
-  base="${CLAUDE_TEAM_RELEASE_URL:-$(grep -v '^#' "$root/release-url.txt" 2>/dev/null | head -1 | tr -d '[:space:]')}"
+  base="${COGMER_RELEASE_URL:-$(grep -v '^#' "$root/release-url.txt" 2>/dev/null | head -1 | tr -d '[:space:]')}"
   url="${base}/v${want}/${asset}"
   say "downloading $url"
   if curl -fsSL --max-time 120 -o "$tmp/bin" "$url"; then
@@ -128,8 +128,8 @@ fi
 if command -v go > /dev/null 2>&1; then
   say "building from source"
   if (cd "$tmp" && GOBIN="$tmp" go install -ldflags "-X main.version=$want" \
-        "github.com/bluerocket/claude-team/cmd/claude-team@v${want}" > "$tmp/build.log" 2>&1); then
-    if [ -x "$tmp/claude-team" ] && mv -f "$tmp/claude-team" "$target"; then
+        "github.com/Blue-Rocket/cogmer/cmd/cogmer@v${want}" > "$tmp/build.log" 2>&1); then
+    if [ -x "$tmp/cogmer" ] && mv -f "$tmp/cogmer" "$target"; then
       say "installed $want from source"
       clear_install_state
       start_daemon_if_needed

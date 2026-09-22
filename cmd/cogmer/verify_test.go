@@ -39,7 +39,7 @@ func TestVerifyDialsOnlyTheNamedPeer(t *testing.T) {
 	}
 }
 
-// CLAUDE_TEAM_PEERS survives the narrowing because those addresses name no peer,
+// COGMER_PEERS survives the narrowing because those addresses name no peer,
 // so one of them may be the peer we want. Anything attributed to somebody else
 // does not.
 func TestVerifyKeepsUnattributedConfiguredAddresses(t *testing.T) {
@@ -48,7 +48,7 @@ func TestVerifyKeepsUnattributedConfiguredAddresses(t *testing.T) {
 	if err := m.Allow(alice.PeerID, "alice"); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("CLAUDE_TEAM_PEERS", "configured.example:4783")
+	t.Setenv("COGMER_PEERS", "configured.example:4783")
 	d := &Daemon{id: testIdentity(t), members: m}
 
 	got := d.verifyTargets(alice.PeerID)

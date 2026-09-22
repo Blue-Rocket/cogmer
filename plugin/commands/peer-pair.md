@@ -13,8 +13,8 @@ allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" pair:*)
 The output is one of four things and says which.
 
 **The two halves of pairing.** They ran it with nothing. Relay what it says and
-point them at `/self-status` for their own string — do not paste a string here, since
-this command did not print one.
+point them at `/cogmer:self-status` for their own string — do not paste a string
+here, since this command did not print one.
 
 **A request for a name.** They pasted a string and gave no name. Do not treat this as
 an error and do not pick one for them. Ask what they call this person — their first

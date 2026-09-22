@@ -138,7 +138,7 @@ func checkFailOpen() error {
 	cmd := exec.Command(self, "hook", "prompt")
 	cmd.Stdin = strings.NewReader(`{"session_id":"preflight","prompt":"x","cwd":"/tmp"}`)
 	// Port 1 is reliably closed; this simulates a dead daemon.
-	cmd.Env = append(os.Environ(), "CLAUDE_TEAM_ADDR=127.0.0.1:1")
+	cmd.Env = append(os.Environ(), "COGMER_ADDR=127.0.0.1:1")
 	var out strings.Builder
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
@@ -180,7 +180,7 @@ func RunProbe(deep bool) (*Probe, error) {
 	if err != nil {
 		return nil, fmt.Errorf("claude not found on PATH: %w", err)
 	}
-	dir, err := os.MkdirTemp("", "claude-team-preflight-")
+	dir, err := os.MkdirTemp("", "cogmer-preflight-")
 	if err != nil {
 		return nil, err
 	}
@@ -220,11 +220,11 @@ func RunProbe(deep bool) (*Probe, error) {
 		cmd := exec.Command(claude, args...)
 		cmd.Dir = dir
 		cmd.Stdin = strings.NewReader("")
-		// If the user has registered the real claude-team hooks globally, they
+		// If the user has registered the real cogmer hooks globally, they
 		// will also fire inside this probe session. Pointing them at a closed
 		// port makes them fail open and record nothing, so a preflight can
 		// never leak events into a live room.
-		cmd.Env = append(os.Environ(), "CLAUDE_TEAM_ADDR=127.0.0.1:1")
+		cmd.Env = append(os.Environ(), "COGMER_ADDR=127.0.0.1:1")
 		out, err := cmd.CombinedOutput()
 		return string(out), err
 	}

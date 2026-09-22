@@ -46,18 +46,18 @@ type Config struct {
 	Room string `json:"room"`
 }
 
-// stateDirName is the one place the product name reaches the filesystem. Renaming
-// the product is then a one-line change plus a migration, rather than a search.
-const stateDirName = ".claude-team"
+// stateDirName is the one place the product name reaches the filesystem, so a
+// rename is one line rather than a search.
+const stateDirName = ".cogmer"
 
 // homeDir is where identity, membership, rooms and the fetched binary live.
 //
-// CLAUDE_TEAM_HOME overrides it. That is not only for tests: the plugin's
+// COGMER_HOME overrides it. That is not only for tests: the plugin's
 // installer already honoured the variable while the binary ignored it, so a
 // person who set it got a binary in one place and its state in another, and
 // nothing said so.
 func homeDir() string {
-	if v := strings.TrimSpace(os.Getenv("CLAUDE_TEAM_HOME")); v != "" {
+	if v := strings.TrimSpace(os.Getenv("COGMER_HOME")); v != "" {
 		return v
 	}
 	h, err := os.UserHomeDir()
@@ -73,7 +73,7 @@ func randomID() string {
 	return hex.EncodeToString(b)
 }
 
-// LoadIdentity reads ~/.claude-team/identity.json, creating a default on first run.
+// LoadIdentity reads ~/.cogmer/identity.json, creating a default on first run.
 func LoadIdentity() (*Identity, error) {
 	priv, err := loadOrCreateKey()
 	if err != nil {

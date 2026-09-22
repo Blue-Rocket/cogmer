@@ -18,8 +18,8 @@ Then, briefly: the name other people see, and the room this session is in if it 
 one.
 
 If the output says the name is this computer's username rather than one anybody
-picked, mention it once and offer `/self-name`. Do not press the point — a username
-is often exactly right.
+picked, mention it once and offer `/cogmer:self-name`. Do not press the point — a
+username is often exactly right.
 
 If the output says nobody can reach the address, that is the important part and it
 outranks everything else: a colleague given that string cannot complete a pairing.

@@ -194,7 +194,7 @@ func roomIndex(rooms []Room) []byte {
 	b.WriteString("a{display:block;padding:.6rem 0;border-bottom:1px solid #8883}h1{font-size:1rem;letter-spacing:.1em;text-transform:uppercase;opacity:.6}</style>")
 	b.WriteString("<h1>rooms on this machine</h1>")
 	if len(rooms) == 0 {
-		b.WriteString("<p>None yet. <code>/room-create</code> in a Claude Code session makes one.</p>")
+		b.WriteString("<p>None yet. <code>/cogmer:room-create</code> in a Claude Code session makes one.</p>")
 	}
 	for _, r := range rooms {
 		fmt.Fprintf(&b, "<a href=\"/room/%s\">%s</a>", template.HTMLEscapeString(r.RoomName), template.HTMLEscapeString(r.RoomName))

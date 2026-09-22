@@ -149,7 +149,7 @@ const endpointFile = "endpoint"
 // It is deliberately NOT peerAddr(). That is the address the daemon binds, and a
 // bound address is only reachable by somebody else when nothing sits in between.
 func AdvertisedEndpoint() string {
-	if v := strings.TrimSpace(os.Getenv("CLAUDE_TEAM_PEER_ENDPOINT")); v != "" {
+	if v := strings.TrimSpace(os.Getenv("COGMER_PEER_ENDPOINT")); v != "" {
 		return v
 	}
 	if b, err := os.ReadFile(filepath.Join(homeDir(), endpointFile)); err == nil {

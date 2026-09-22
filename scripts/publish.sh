@@ -17,9 +17,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 version="$(cat plugin/VERSION)"
-host="${CLAUDE_TEAM_PUBLISH_HOST:-root@<droplet>}"
-key="${CLAUDE_TEAM_PUBLISH_KEY:-$HOME/.ssh/droplet}"
-remote="${CLAUDE_TEAM_PUBLISH_DIR:-/srv/claude-team/claude-team}"
+host="${COGMER_PUBLISH_HOST:-root@<droplet>}"
+key="${COGMER_PUBLISH_KEY:-$HOME/.ssh/droplet}"
+remote="${COGMER_PUBLISH_DIR:-/srv/cogmer/cogmer}"
 
 [ -d dist ] || { echo "no dist/ — run scripts/release.sh $version first" >&2; exit 1; }
 

@@ -16,7 +16,7 @@ import (
 
 // Verification is a thing both people do, not a thing one does to the other.
 //
-// Each side runs `claude-team verify <peer>`; each daemon holds a session until
+// Each side runs `cogmer verify <peer>`; each daemon holds a session until
 // the other appears. Nothing arrives unsolicited, so this adds no inbound surface
 // and no prompt anyone can be trained to dismiss -- both open questions in §12a
 // stay closed by construction rather than by a rule someone has to remember.
@@ -183,7 +183,7 @@ func reply(w http.ResponseWriter, d *Daemon, s *verifySession, step string, payl
 // said while a wrong key was the ORDINARY outcome of most dials. Against one
 // address recorded for one peer it is once again the exception it is described as.
 //
-// CLAUDE_TEAM_PEERS stays in the list because those addresses name no peer: they
+// COGMER_PEERS stays in the list because those addresses name no peer: they
 // are configured for this machine, so one of them may be the peer we want and
 // nothing but dialling can tell. Everything else is somebody else's address.
 func (d *Daemon) verifyTargets(peerID string) []string {
@@ -284,7 +284,7 @@ func (d *Daemon) RunVerification(peerID string, addrs []string) (string, error) 
 			return "", lastErr
 		}
 		if time.Now().After(deadline) {
-			return "", fmt.Errorf("%s did not run /peer-pair within %s",
+			return "", fmt.Errorf("%s did not run /cogmer:peer-pair within %s",
 				PeerName(peerID), verifyTimeout)
 		}
 		time.Sleep(time.Second)
@@ -381,13 +381,13 @@ func (d *Daemon) handleVerifyStart(w http.ResponseWriter, r *http.Request) {
 	}
 	peer, ok := d.peerFromRequest(req.Peer, req.PairID)
 	if !ok {
-		writeJSON(w, verifyStartResponse{Error: "this pairing link has expired. Start a new one with /peer-pair."})
+		writeJSON(w, verifyStartResponse{Error: "this pairing link has expired. Start a new one with /cogmer:peer-pair."})
 		return
 	}
 	req.Peer = peer
 	if !d.members.Knows(req.Peer) {
 		writeJSON(w, verifyStartResponse{Error: fmt.Sprintf(
-			"%s is not a peer this machine knows; /peer-pair with their pairing string records one",
+			"%s is not a peer this machine knows; /cogmer:peer-pair with their pairing string records one",
 			PeerName(req.Peer))})
 		return
 	}

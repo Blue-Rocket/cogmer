@@ -23,7 +23,7 @@ import (
 // our own code sends. A browser cannot send a custom header to another origin
 // without a preflight, and we answer preflights with nothing, so the real request
 // is never sent. Measured: the OPTIONS arrived carrying
-// `Access-Control-Request-Headers: x-claude-team`, and no POST followed.
+// `Access-Control-Request-Headers: x-cogmer`, and no POST followed.
 //
 // Requiring presence rather than refusing a bad value is what makes this
 // fail-closed. Anything that cannot present the header is refused, whatever it is,
@@ -41,7 +41,7 @@ import (
 // The threat closed here is a web page.
 
 const (
-	localGuardHeader = "X-Claude-Team"
+	localGuardHeader = "X-Cogmer"
 	localGuardValue  = "1"
 )
 

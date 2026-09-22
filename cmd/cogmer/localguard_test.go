@@ -31,7 +31,7 @@ func call(t *testing.T, h http.HandlerFunc, method string, headers map[string]st
 }
 
 func TestLocalGuardRefusesAWebPage(t *testing.T) {
-	t.Setenv("CLAUDE_TEAM_ADDR", "127.0.0.1:4782")
+	t.Setenv("COGMER_ADDR", "127.0.0.1:4782")
 
 	// The demonstrated attack: a page on another local port, simple request, so no
 	// preflight. It cannot send our header, and it cannot hide its Origin.
@@ -49,7 +49,7 @@ func TestLocalGuardRefusesAWebPage(t *testing.T) {
 }
 
 func TestLocalGuardRefusesAMissingHeader(t *testing.T) {
-	t.Setenv("CLAUDE_TEAM_ADDR", "127.0.0.1:4782")
+	t.Setenv("COGMER_ADDR", "127.0.0.1:4782")
 	// No Origin at all -- the shape a non-browser attacker would try. Requiring
 	// presence is what makes this fail closed rather than open.
 	h, reached := guarded(t)
@@ -63,7 +63,7 @@ func TestLocalGuardRefusesAMissingHeader(t *testing.T) {
 }
 
 func TestLocalGuardRefusesNonPost(t *testing.T) {
-	t.Setenv("CLAUDE_TEAM_ADDR", "127.0.0.1:4782")
+	t.Setenv("COGMER_ADDR", "127.0.0.1:4782")
 	// A navigation or an <img src> carries no custom header anyway, but these must
 	// not reach a handler that reads a body.
 	for _, m := range []string{http.MethodGet, http.MethodHead, http.MethodPut} {
@@ -79,7 +79,7 @@ func TestLocalGuardRefusesNonPost(t *testing.T) {
 }
 
 func TestLocalGuardAdmitsOurOwnClients(t *testing.T) {
-	t.Setenv("CLAUDE_TEAM_ADDR", "127.0.0.1:4782")
+	t.Setenv("COGMER_ADDR", "127.0.0.1:4782")
 
 	// The CLI and the hooks: our header, no Origin, because they are not browsers.
 	h, reached := guarded(t)
@@ -116,12 +116,12 @@ func TestLocalGuardAdmitsOurOwnClients(t *testing.T) {
 // and we answer nothing. This asserts the server half of that -- that the guard
 // does not treat an OPTIONS as permission.
 func TestLocalGuardDoesNotAnswerPreflight(t *testing.T) {
-	t.Setenv("CLAUDE_TEAM_ADDR", "127.0.0.1:4782")
+	t.Setenv("COGMER_ADDR", "127.0.0.1:4782")
 	h, reached := guarded(t)
 	req := httptest.NewRequest(http.MethodOptions, "/verify/confirm", nil)
 	req.Header.Set("Origin", "http://127.0.0.1:4799")
 	req.Header.Set("Access-Control-Request-Method", "POST")
-	req.Header.Set("Access-Control-Request-Headers", "x-claude-team")
+	req.Header.Set("Access-Control-Request-Headers", "x-cogmer")
 	rec := httptest.NewRecorder()
 	h(rec, req)
 	if rec.Header().Get("Access-Control-Allow-Origin") != "" {

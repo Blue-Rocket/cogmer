@@ -6,7 +6,7 @@ later reader re-proposes something already ruled out, or "simplifies" code whose
 awkwardness was load-bearing.
 
 **Revisit when** ties each decision to the automated check that would invalidate
-it, where one exists (`claude-team doctor`, registry in `cmd/claude-team/behaviors.go`).
+it, where one exists (`cogmer doctor`, registry in `cmd/cogmer/behaviors.go`).
 A decision whose trigger fires is not automatically wrong — it is due for review.
 
 Commit bodies carry additional detail; `git log` is the long form of this file.
@@ -30,7 +30,7 @@ native Mach-O binary — **Claude Code no longer ships as an npm package**, so a
 teammate can have Claude Code and no Node runtime at all. Go gives one
 dependency-free binary per platform; all four targets cross-compile from one Mac.
 The hook entry in `settings.json` is then an identical string on every platform
-(`claude-team hook prompt`), avoiding Windows backslash-and-space paths inside
+(`cogmer hook prompt`), avoiding Windows backslash-and-space paths inside
 JSON string literals.
 
 **Rejected.**
@@ -181,8 +181,8 @@ ever becomes wrong.
 should run when something might have changed.
 
 **Decision.** Check at room formation; cache on `claude --version` in
-`~/.claude-team/verified.json`. Forming a tenth room on a verified version is
-free. `CLAUDE_TEAM_PREFLIGHT=off` opts out.
+`~/.cogmer/verified.json`. Forming a tenth room on a verified version is
+free. `COGMER_PREFLIGHT=off` opts out.
 
 **Rejected.**
 - *Per room* — re-proves the same thing and burns quota; the version is what
@@ -212,8 +212,8 @@ session, which is precisely the failure mode §3.1 forbids.
 
 **Date:** 2026-09-16 · **Status:** active
 
-**Decision.** `cmd/claude-team/behaviors.go` holds behaviors and checks together.
-`docs/relied-on-behaviors.md` is generated (`claude-team behaviors --markdown`).
+**Decision.** `cmd/cogmer/behaviors.go` holds behaviors and checks together.
+`docs/relied-on-behaviors.md` is generated (`cogmer behaviors --markdown`).
 
 **Rejected.** *A hand-written document beside the checks* — it drifts, and a stale
 list of safety properties is worse than none because it is believed.
@@ -244,11 +244,11 @@ down; connection-refused returns immediately rather than burning the timeout.
 
 ---
 
-## D-012 — The preflight probe uses the `claude-team` binary as its own hook
+## D-012 — The preflight probe uses the `cogmer` binary as its own hook
 
 **Date:** 2026-09-16 · **Status:** active
 
-**Decision.** `claude-team probe-hook <name> <dir>`, registered as the hook
+**Decision.** `cogmer probe-hook <name> <dir>`, registered as the hook
 command, rather than writing a shell script to a temp directory.
 
 **Rejected.** *A generated `.sh`* — it would not run on Windows, making the
@@ -265,8 +265,8 @@ stack choice (D-001) was driven by Windows support.
 fire inside the probe's own Claude session. A preflight could publish its
 synthetic sentinel conversation into a live room.
 
-**Decision.** Run the probe with `CLAUDE_TEAM_ADDR` pointed at a closed port, so
-any ambient `claude-team` hook fails open (D-011) and records nothing.
+**Decision.** Run the probe with `COGMER_ADDR` pointed at a closed port, so
+any ambient `cogmer` hook fails open (D-011) and records nothing.
 
 **Rejected.** *`--setting-sources ""` to load no ambient settings* — plausible, but
 untested, and a flag-parsing surprise would break the probe entirely. The env var
@@ -591,7 +591,7 @@ is unaffected: no provider may be required, and the same-network case must still
 cost nothing when it arises. What changed is which case gets built first.
 
 **Where this conflicted with earlier decisions, and how it was resolved.** The
-appealing version of zero-configuration joining is `claude-team join misty-canyon`
+appealing version of zero-configuration joining is `cogmer join misty-canyon`
 — find the room by name on the network and enter it. That cannot be adopted as
 stated. D-017 made room names short, speakable, and therefore guessable, and D-018
 made authorization a separate secret precisely because of that.
@@ -606,7 +606,7 @@ replaces the *endpoint* in an invitation, which D-018 had already reduced to a
 bootstrap hint, while the secret remains:
 
 ```
-claude-team join misty-canyon#k7qm-2xpr-9vlt
+cogmer join misty-canyon#k7qm-2xpr-9vlt
 ```
 
 Still short enough to say across a desk. The secret also disambiguates, which
@@ -891,7 +891,7 @@ must land before peers exchange their first event.
 
 **Date:** 2026-09-16 · **Status:** active · **Corrects the emphasis of** D-018, D-020
 
-**Context.** The intent behind a guest registry was `claude-team join misty-harbor`
+**Context.** The intent behind a guest registry was `cogmer join misty-harbor`
 with no secret in it. The specification conceded in one sentence that known peers
 need no secret, and then made the bearer code primary everywhere else.
 
@@ -1073,7 +1073,7 @@ good reason: the pair is an identity, and a receiver that edits it makes its cop
 disagree with every other peer's. A conflict is a condition to report, not to
 paper over.
 
-**Surfacing matters as much as detecting.** `claude-team conflicts` exists because a
+**Surfacing matters as much as detecting.** `cogmer conflicts` exists because a
 quarantined event is invisible otherwise. The failure being silent was the whole
 of B4; detecting it into a table nobody reads would reproduce that.
 
@@ -1227,8 +1227,8 @@ The blocker was small and structural. One listener on `127.0.0.1` served hooks, 
 UI, and synchronization. A second machine could not reach it, and exposing it would
 have exposed the hook API too.
 
-**Decision.** Two listeners. `CLAUDE_TEAM_ADDR` carries hooks and the UI and
-**refuses to bind anything but loopback**. `CLAUDE_TEAM_PEER_ADDR` carries
+**Decision.** Two listeners. `COGMER_ADDR` carries hooks and the UI and
+**refuses to bind anything but loopback**. `COGMER_PEER_ADDR` carries
 synchronization, defaults to loopback, and warns when bound elsewhere.
 
 Separate listeners rather than one mux with a path filter, because the property that
@@ -1422,7 +1422,7 @@ since it requires a terminal and an observer.
 
 **Context.** D-033 established that Claude Code surfaces nothing a hook writes, so
 ambient display needs something outside the session. A pseudo-terminal wrapper was
-proposed: `claude-team` would launch the ordinary interactive `claude` inside a PTY,
+proposed: `cogmer` would launch the ordinary interactive `claude` inside a PTY,
 proxy it, and draw peer turns in a reserved band the child cannot see.
 
 The technique works. A passthrough prototype was byte-for-byte identical to running
@@ -1800,7 +1800,7 @@ saying what installation actually looks like. In practice it was still a manual
 daemon start, a hand-written settings file, and environment variables.
 
 **Decision.** Package as a plugin carrying the hooks, installed with
-`claude plugin install claude-team`. The plugin surface is real and includes
+`claude plugin install cogmer`. The plugin surface is real and includes
 `install`, `uninstall`, `update`, `validate`, `init`, and `marketplace`.
 
 **And the session-start hook starts the daemon.** This is the part that converts the
@@ -2295,7 +2295,7 @@ not fixed by this entry** and is recorded here so it is not mistaken for fixed.
 identifiers resolve through `RoomByID` rather than `FindRoom`. `FindRoom` keeps
 accepting a name, which is right at a command line and wrong on the wire.
 
-`wireVersion` 1 → 2 and the signing tag to `claude-team/sync-request/v3`, because
+`wireVersion` 1 → 2 and the sync-request signing tag to its v3, because
 the signed bytes changed meaning rather than shape. A peer on the old version is
 refused with a version mismatch instead of failing a signature check, which is the
 difference between a diagnosis and a mystery.
@@ -2447,7 +2447,7 @@ pasted after `whoami`, or presented in a request a host approves. The SAS is abo
 **whether the key that arrived is the right one**, whichever way it came. Building
 the second requires nothing of the first.
 
-**Decision.** `claude-team verify <peer>`, run by **both** people at the same time,
+**Decision.** `cogmer verify <peer>`, run by **both** people at the same time,
 on a call. Each CLI asks its own daemon to open a session; each daemon runs
 commit-commit-reveal-reveal with the other; both print the same two words; each
 person answers whether the other said the same ones.
@@ -2533,7 +2533,7 @@ The commands did not reflect it. `allow` said only that something had been permi
 and never which of the two, and sat in a flat list beside `invite`, which is a
 different act at a different scope.
 
-**Decision.** `claude-team pair <identifier>[@address] [name]` is the durable act:
+**Decision.** `cogmer pair <identifier>[@address] [name]` is the durable act:
 record the peer, record a bootstrap address, and run the two-word comparison, in one
 command that both people run at once on a call. `invite` remains room-scoped and
 unchanged. `allow` survives as the low-level "record without verifying" for scripts
@@ -2814,7 +2814,7 @@ compatibility hard once a second host type exists. The adapter boundary turned o
 not to be the problem — it is clean, and `behaviors.go` already documents the
 interface. The problem is one layer down and has nothing to do with hosts.
 
-`signingBytes()` hard-coded the tag `claude-team/event/v2` and a fixed field list,
+`signingBytes()` hard-coded a single event tag and a fixed field list,
 and `Verify()` always recomputed with **today's** code. Adding a field to an event —
 which a second host would plausibly require — would therefore have stopped every
 historical event verifying.
@@ -2957,7 +2957,7 @@ that the peer not corrupt the room on its way back.
 
 **Also fixed, from the Phase 5 findings.** `log`, `conflicts` and `seed` resolved a
 room through `config.json`, which D-046 replaced. During a live room holding seven
-events, `claude-team log` printed `ROOM DEFAULT -- 0 events`. They now use the
+events, `cogmer log` printed `ROOM DEFAULT -- 0 events`. They now use the
 current room from `membership.db`. `whoami` deliberately does **not**: who you are
 is answerable in no room at all, and a command reporting your identity must not
 fail for want of one.
@@ -3000,7 +3000,7 @@ it continues, and once when it returns with how long it was gone. The repeat exi
 because somebody reading a log an hour later should learn the peer is *still* gone
 rather than only that it once went.
 
-Also fixed: `peerStatus` enumerated only `CLAUDE_TEAM_PEERS`, so every peer learned
+Also fixed: `peerStatus` enumerated only `COGMER_PEERS`, so every peer learned
 by pairing or by joining a room was **invisible in the browser view** — which since
 D-053 is most of them. It now reports every address the daemon would try.
 
@@ -3084,7 +3084,7 @@ the defect behind the asymmetric guest list (D-046). One authority.
 **Measured, not assumed.** Built against a trivial program, `CGO_ENABLED=0`, all
 four targets:
 
-| | tailcat hello-world | `claude-team` today |
+| | tailcat hello-world | `cogmer` today |
 |---|---|---|
 | darwin/arm64 | 23.3 MB | 16.3 MB |
 | linux/amd64 | 25.0 MB | |
@@ -3216,7 +3216,7 @@ from work they were never shown.
 **Enforced by a test rather than by care.** `membership_test.go:424` names itself
 "the hazard D-064 removes, stated as a test so it cannot come back."
 
-**What became of the other pointer.** D-076 placed `CLAUDE_TEAM_ROOM` above the
+**What became of the other pointer.** D-076 placed `COGMER_ROOM` above the
 session's own room, reinstating this failure at higher precedence the same
 afternoon. D-077 gave every room its own URL, removing the pointer's last consumer,
 and D-080 deleted it. `current_room` no longer exists anywhere. Its schema comment
@@ -3339,7 +3339,7 @@ convention, which is what goreleaser exists to do. We follow our language's norm
 they follow theirs. The divergence is downstream of choosing Go, which was decided
 for a reason that still holds.
 
-**Decision.** Fetch at first run into `~/.claude-team/bin`, and **run nothing that
+**Decision.** Fetch at first run into `~/.cogmer/bin`, and **run nothing that
 cannot be verified**. `plugin/checksums.txt` is committed to the plugin repository
 and is the only thing that authorises execution. A download whose hash is not
 listed is deleted rather than run, and `scripts/release.sh` generates the file from
@@ -3396,7 +3396,7 @@ session says in the window where the plugin is present and the binary is not.
 
 **Context.** D-066 built verified acquisition and left it inert: no repository
 existed to release to. Worse than absent — **there is no git remote at all**, so
-`github.com/bluerocket/claude-team` is a module path inherited from `go.mod` rather
+`github.com/Blue-Rocket/cogmer` is a module path inherited from `go.mod` rather
 than somewhere anything lives. And GitHub release assets inherit repository
 visibility, so on a private repository the download URL returns 404 to an
 unauthenticated client while `go install` fails for the same reason. Both paths
@@ -3524,12 +3524,12 @@ direct or stays on the relay, and what a relayed round trip costs a turn.
 **Date:** 2026-09-19 · **Status:** active (implemented)
 
 **Context.** Asked to push the repository, which meant choosing a name — and the
-name is not settled. Mapping where `claude-team` is load-bearing turned up two
+name was not settled. Mapping where the product name was load-bearing turned up two
 couplings that are free to break today and permanent after the first real room.
 
 **The signing namespaces.** Every signature covered a domain-separation string with
-the product name inside it: `claude-team/event/v2`, `claude-team/sync-request/v3`,
-and the SAS and verify tags. D-058 settled what a change to those costs — schemes
+the product name inside it: the event tag, the sync-request tag, and the SAS and
+verify tags. D-058 settled what a change to those costs — schemes
 are **added, never edited**, because an event is immutable and can never be
 re-signed and D-029 makes refetching history a recovery path. So a rename after
 real events exist would mean carrying the old namespace forever, for a name nobody
@@ -3540,28 +3540,25 @@ and uniqueness**; it does not need meaning. `protocolNamespace` is now `peer-roo
 documented as arbitrary on purpose so there is never a reason to change it.
 
 **D-058's mechanism got its first real use, which is the point of having built it.**
-`signingBytesV3` carries the new namespace; `signingBytesV2` is untouched and still
-serves every event signed by an older build; `currentSigVersion` is 3. The test that
-covers this was improved in the process: it used to sign under the current scheme
-and relabel the result, which asserted nothing about the old one. It now signs the
-bytes an older build actually produced, and separately requires that a current
-signature does **not** verify as v2 — without which the version is decorative.
+`signingBytesV3` carried the new namespace while the superseded scheme stayed
+untouched beside it, serving every event an older build had signed. (D-117 later
+deleted that scheme, on the ground that no such event existed anywhere; the
+mechanism that would have carried it is unchanged.)
 
 The other three tags moved outright rather than gaining a version. They protect a
 live exchange — a sync request, a verification — and nothing signed under them
 outlives it, so there is no history to keep faith with.
 
-**The state directory.** `~/.claude-team` is where the name reaches the filesystem.
-It is now a single constant, so a rename is one line plus a migration rather than a
-search.
+**The state directory.** `~/.cogmer` is where the name reaches the filesystem.
+It is now a single constant, so a rename is one line rather than a search.
 
-**And a latent bug found by looking.** `install.sh` honoured `CLAUDE_TEAM_HOME`
+**And a latent bug found by looking.** `install.sh` honoured `COGMER_HOME`
 while the binary ignored it, so anyone setting it got a binary in one place and its
 state in another, with nothing saying so. It was invisible because the only thing
 that set it was my own testing, which set `HOME` as well and so never noticed.
 
 **What is deliberately not done.** The module path still says
-`github.com/bluerocket/claude-team`, and the organisation is actually
+`github.com/Blue-Rocket/cogmer`, and the organisation is actually
 `Blue-Rocket` — a path that has never resolved, which is why `go install` failed in
 D-066's test. It is left alone because a module path must match the repository URL,
 and that needs the name. Nothing external imports it, so it costs nothing to wait.
@@ -3889,7 +3886,7 @@ earlier: per-room URLs are mandatory, the machine-level pointer still has no
 evident use, and **an environment variable is inadequate on a machine running
 several sessions**.
 
-The third is the serious one. `CLAUDE_TEAM_ROOM` is **ambient** — exported once in
+The third is the serious one. `COGMER_ROOM` is **ambient** — exported once in
 a profile, or inherited by every session a machine starts — and D-076 had just
 placed it *above* the session's own room. So a single export would have answered
 for every session regardless of which room it was in: exactly the failure D-064
@@ -3954,8 +3951,8 @@ back, because being wrong is self-announcing. `invite` and `revoke` take the fir
 The refusal says what to do rather than only what is missing:
 
     name the room: this changes who can read it, so it will not guess.
-      claude-team <command> --room <name>
-    `claude-team rooms` lists them. Run it from inside a session and it uses
+      cogmer <command> --room <name>
+    `cogmer rooms` lists them. Run it from inside a session and it uses
     that session's room.
 
 **The slash commands need no flag and that is not an oversight.** They run inside a
@@ -4294,7 +4291,7 @@ the only route from a detached daemon to a person (D-033, D-036).
 that none of these three channels — daemon.log, install.log, the state files —
 would have caught.
 
-## D-085 — A line telling somebody to run `claude-team` is a line that fails
+## D-085 — A line telling somebody to run `cogmer` is a line that fails
 
 **Date:** 2026-09-20 · **Status:** active (implemented)
 
@@ -4302,8 +4299,8 @@ would have caught.
 person. The tone was the smaller problem.
 
 **The instructions did not work.** `/peer-pair` told people to run
-`claude-team pair <string>` in a terminal; `/room-join` told them to run
-`claude-team verify`. The installer puts the binary in `~/.claude-team/bin`, which is
+`cogmer pair <string>` in a terminal; `/room-join` told them to run
+`cogmer verify`. The installer puts the binary in `~/.cogmer/bin`, which is
 deliberately not on PATH — §29 forbids editing a shell profile to put it there, and
 `cli.sh` exists precisely because slash commands hit this. So those lines produce
 `command not found` for **every plugin-installed user**: not an edge case, but the
@@ -4412,10 +4409,10 @@ That bypasses D-054, the gate every other guarantee depends on. `/hook/prompt` a
 teammates' context windows.
 
 **The rule is REQUIRE, not refuse.** A request must positively present
-`X-Claude-Team: 1`. A browser cannot send a custom header to another origin without
+`X-Cogmer: 1`. A browser cannot send a custom header to another origin without
 a preflight, and we answer preflights with nothing, so the real request is never
 sent. Measured: the `OPTIONS` arrived carrying
-`Access-Control-Request-Headers: x-claude-team`, and **no POST followed**.
+`Access-Control-Request-Headers: x-cogmer`, and **no POST followed**.
 
 Requiring presence is what makes it fail **closed**. The alternative first
 considered — refuse a mismatched `Origin` — is fail-open on absent, and would have
@@ -4552,7 +4549,7 @@ with the thing it is about.
 
 **The two causes need different answers, and got one.** "No daemon has ever run, so
 this address is a guess" is fixed by starting a session. "A daemon ran and negotiated
-no route out" is fixed by setting `CLAUDE_TEAM_PEER_ADDR`. Sending somebody to the
+no route out" is fixed by setting `COGMER_PEER_ADDR`. Sending somebody to the
 second when the first is true wastes their time on a setting that is not the problem.
 `endpointRecorded()` distinguishes them.
 
@@ -4772,7 +4769,7 @@ has to dial and starts anyway.
 Asserted by `TestOnlyOneSideNeedsAnAddress`, which gives one daemon no addresses at
 all and requires both to reach the same words.
 
-**Seven more instruction sites were still naming a bare `claude-team`** (D-085),
+**Seven more instruction sites were still naming a bare `cogmer`** (D-085),
 including the one in this path. Fixed, and the ones about pairing now point at
 `/peer-pair` rather than at `verify`, since the ceremony is in the view (D-088).
 Operator surfaces — the daemon log, `doctor`'s stderr, the generated behaviours
@@ -6249,9 +6246,9 @@ address answers for a different key", `RunVerification` returns it, and
 sweep was what made the sentence false.
 
 **Decision.** `verifyTargets(peerID)` returns the address recorded for that peer,
-plus `CLAUDE_TEAM_PEERS`, and nothing else.
+plus `COGMER_PEERS`, and nothing else.
 
-`CLAUDE_TEAM_PEERS` stays because those addresses **name no peer**: they are
+`COGMER_PEERS` stays because those addresses **name no peer**: they are
 configured for this machine, so one of them may be the peer wanted and only dialling
 can tell. Every other source attributes an address to somebody, and somebody else's
 address is never a place to look for this one.
@@ -6269,6 +6266,135 @@ the right address would pass unchanged if the sweep returned. Confirmed to fail
 when the sweep is restored.
 
 **Revisit when** an address source appears that attributes an address to nobody, as
-`CLAUDE_TEAM_PEERS` does, or when a peer's recorded address can be refreshed by
+`COGMER_PEERS` does, or when a peer's recorded address can be refreshed by
 something other than pairing — which would make the recorded address likelier still
 and the case for anything else weaker.
+
+---
+
+## D-117 — The product is named `cogmer`, and nothing is carried forward
+
+**Date:** 2026-09-22 · **Status:** active (implemented)
+
+**Context.** The name is settled: the product, the plugin and the repository are
+`cogmer`. D-069 did the expensive half of this a name ago, by breaking the couplings
+that would have been permanent once real events existed. What was left was the half
+that is merely annoying.
+
+**Decision.** The name reaches the module path, the binary, the command directory,
+the plugin manifest, the state directory, the local API header, the environment
+variable prefix and the release path. Nowhere else.
+
+**There is no compatibility surface, because there is nothing to be compatible
+with.** The only installation that ever existed was on the author's machine, and it
+was deleted rather than migrated. That single fact removes work that would
+otherwise have been mandatory, and it is worth stating plainly because every
+instinct here says otherwise:
+
+- The superseded event signing scheme is **deleted**, not retained. `signingBytes`
+  now knows one scheme and refuses every other version, including the zero value
+  that used to mean "stored before the column existed". A test pins that refusal,
+  because silently guessing a scheme verifies bytes whose provenance nobody
+  checked.
+- There is **no state directory migration**. A directory under the former name is
+  not looked for, moved, or mentioned.
+
+**This does not weaken D-058.** Schemes are still added and never edited, and the
+`signingBytes` switch that makes that possible is intact and still tested. What
+changed is that the set of schemes worth keeping turned out to be empty. Once
+anybody else holds a room, it will not be empty again, and deleting a scheme stops
+being available.
+
+**The organisation casing is fixed at the same time.** D-069 recorded that the
+inherited module path disagreed with the organisation's actual name, which is why
+`go install` failed in D-066's test. A path that had never resolved was free to
+leave alone; one about to name a real repository is not.
+
+**Nothing cryptographic moved, which was the point of D-069.**
+`protocolNamespace` is still `peer-room` and still arbitrary on purpose.
+
+**The former name is struck from this log rather than preserved.** Where it was
+incidental — a path, a command, an environment variable, a module path — the
+current name is substituted as though it had always been there. Where the name
+itself was the subject, as in D-069's account of namespaces carrying a product
+name, the prose now says "the product name" and names nothing. A dead name in a
+decision is a thing a reader must hold and resolve, and it buys no understanding:
+the reasoning was never about which name it was.
+
+**The command prefixes did not change**, for reasons that are now different from
+the ones that put them there. See D-118.
+
+**What this unblocks.** The repository, and through it Phase 13 — which is now
+blocked on the repository existing rather than on the name. Also D-096's overview
+command, though not in the form D-096 planned for it; D-118 says why.
+
+**Revisit when** somebody other than the author holds a room. At that point the
+latitude this entry used — deleting a scheme, deleting state — is gone, and D-058's
+rule applies with nothing to soften it.
+
+---
+
+## D-118 — The plugin manifest name is the command namespace, and Claude Code forces it
+
+**Date:** 2026-09-22 · **Status:** active (implemented)
+
+**Context.** D-070 chose `/room-*` over `/team-*` on an empirical finding: a
+subdirectory changes how a command is **displayed** and not what a person types,
+there was no `plugin:command` invocation form, and so two plugins defining the same
+name collided at the only thing a user touches. It named its own revisit trigger —
+"if Claude Code gains a `plugin:command` invocation form". That has happened, and
+in the stronger form: the prefix is not offered, it is imposed.
+
+**The manifest's `name` is documented as the namespace.** "Unique identifier and
+skill namespace. Skills are prefixed with this." And: "Plugin skills are always
+namespaced (like `/my-first-plugin:hello`) to prevent conflicts when multiple
+plugins have skills with the same name. To change the namespace prefix, update the
+`name` field in `plugin.json`."
+
+**Confirmed rather than read.** A throwaway plugin named `nstest`, with one command
+in `commands/` and one in `skills/`, surfaced as `nstest:legacyform` and
+`nstest:skillform`. Both layouts, both namespaced, each exactly once.
+
+**Decision.** The prefixes stay. `/cogmer:room-create`, not `/cogmer:create`.
+
+D-070's protection becomes belt and braces, which is precisely what D-070 said
+would happen. What keeps the prefixes is D-096: a prefix names its target, the set
+will grow, and `room-status` and `self-status` are two different questions that
+would collapse into one word without it. Losing that distinction to save six
+characters in a string the host already made long is a bad trade.
+
+**The cost is stutter, and it is accepted.** `/cogmer:room-create` says the domain
+twice. The alternative said it once and made `/cogmer:status` ambiguous between a
+room and a person.
+
+**The manifest name is now load-bearing in a way it was not.** It is what a person
+types before every colon, so changing `plugin.json`'s `name` renames every command
+at once. It is not a cosmetic field.
+
+**D-096's overview command cannot be what D-096 reserved.** It wanted
+`/<product-name>` as an entry point saying what the tool is, held back because the
+name was unsettled. There is no bare `/cogmer`; it would be `/cogmer:cogmer`. The
+compensation is that D-096's stated blocker is gone — Claude Code owns `/help`, but
+it does not own `/cogmer:help`, because the namespace is exactly what stops the
+collision. Not built here.
+
+**Test.** `TestEveryCommandReferenceCarriesTheManifestNamespace` reads the
+namespace out of `plugin.json` rather than duplicating it as a Go constant, and
+walks the Go, HTML, Markdown and shell sources for two defects: a command named
+with no namespace, and one named with a namespace that is not the manifest's. The
+second is the one worth having — renaming the plugin is a single-word edit that
+would otherwise break every instruction string the binary prints, with
+nothing failing until a person typed one. Both branches confirmed to fail when the
+defect is introduced.
+
+**Not in the behaviour registry, and the reason is a limitation.** Registry checks
+run against hook payloads inside a live session; this is a plugin load-time
+property, which none of them can observe. The half of this finding that does belong
+there — that `commands/*.md` is loaded identically to a skill, and so every command
+is **model-invocable** — is in `open.md`, because which commands should be reachable
+by the model is a decision and not a sweep.
+
+**Revisit when** Claude Code offers an unprefixed alias deliberately rather than as
+the behaviour reported in `anthropics/claude-code` issue 15882, or when `commands/`
+stops being loaded at all — the documentation already calls it legacy and prefers
+`skills/<name>/SKILL.md`.

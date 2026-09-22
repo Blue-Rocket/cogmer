@@ -1,4 +1,4 @@
-# claude-team
+# cogmer
 
 Peer-to-peer daemon replicating one Claude Code conversation between people working
 separately, each on their own subscription, with no central server.
@@ -40,7 +40,7 @@ they rot.
 | `Shared Claude Sessions.md` | what must be true |
 | `docs/decisions.md` | why, and what was rejected |
 | `docs/*-findings.md` | what we observed when we tried it |
-| `cmd/claude-team/behaviors.go` | what someone else's software does that we rely on |
+| `cmd/cogmer/behaviors.go` | what someone else's software does that we rely on |
 | `docs/open.md` | what is to do, what is undecided, where things stand |
 
 - A finding never goes in the spec — put the requirement it justifies there.
@@ -53,7 +53,7 @@ they rot.
 ## The local physics
 
 ```
-cmd/claude-team/
+cmd/cogmer/
   main.go        subcommands + hook client (fails open)
   daemon.go      localhost HTTP, §20 context formatting, §21 limits
   store.go       SQLite event store, §19 delivery watermark
@@ -61,19 +61,19 @@ cmd/claude-team/
   identity.go    §6 peer identity, §28 config split
 ```
 
-State is `~/.claude-team/` (`identity.json`, `identity.key`, `config.json`,
+State is `~/.cogmer/` (`identity.json`, `identity.key`, `config.json`,
 `rooms/*.db`). Pure Go throughout — `modernc.org/sqlite`, no cgo — so every target
 cross-compiles with `CGO_ENABLED=0`.
 
-- Build `go build -o bin/claude-team ./cmd/claude-team`. `bin/` is untracked: 17MB
+- Build `go build -o bin/cogmer ./cmd/cogmer`. `bin/` is untracked: 17MB
   per commit, and the build reproduces it.
 - Test `go test ./...`. To drive a real session, `claude -p … --settings <file>`
-  with a throwaway `CLAUDE_TEAM_ROOM` per run, and `< /dev/null` or it waits on
+  with a throwaway `COGMER_ROOM` per run, and `< /dev/null` or it waits on
   stdin.
-- `claude-team doctor` checks the behaviours we rely on: ~5s, one Claude turn.
+- `cogmer doctor` checks the behaviours we rely on: ~5s, one Claude turn.
   `--deep` adds compaction, ~40s. It auto-runs on new room formation, cached by
-  `claude --version`. `CLAUDE_TEAM_PREFLIGHT=off` for CI.
-- `docs/relied-on-behaviors.md` is **generated** (`claude-team behaviors
+  `claude --version`. `COGMER_PREFLIGHT=off` for CI.
+- `docs/relied-on-behaviors.md` is **generated** (`cogmer behaviors
   --markdown`). Edit `behaviors.go`, never the doc.
 
 **This repo has a codegraph index, and reaching for grep instead is the default
@@ -135,8 +135,12 @@ Not universal truths — the part of the possibility space this project selected
   query rather than at open. `migrate()` runs on open; adding it there is the job.
 - **No CRDT** until testing proves it necessary (§11).
 - A command prefix names its target: `peer-` somebody else, `room-` a room, `self-`
-  you (D-095). There is no prefix for the tool itself, and no placeholder product
-  name — the name is unsettled and Phase 13 is blocked on it.
+  you (D-095, D-096). **Claude Code prefixes every command with the plugin manifest
+  name and offers no unprefixed form** (D-118), so a person types
+  `/cogmer:room-create`. The manifest `name` is therefore not cosmetic: changing it
+  renames every command at once. The `room-`/`peer-`/`self-` prefixes are kept on
+  top of it because they name a target, not to avoid collisions — the namespace
+  does that now.
 
 ## Boundaries
 
@@ -160,7 +164,7 @@ reading a few files.
   *after* the turns (D-040). Frame by classification, never by asserting authority.
   Never a static delimiter.
 - **The local API is reachable from this machine's browser**; loopback is not a
-  boundary (D-087). State-changing routes require `X-Claude-Team: 1` — require, not
+  boundary (D-087). State-changing routes require `X-Cogmer: 1` — require, not
   refuse, which is what makes it fail closed. `Origin` is a second layer. Never
   `Referer`. Reads stay unguarded, because CORS already withholds them.
 - **The private key lives in `identity.key` and never in `identity.json`**, which
@@ -173,7 +177,8 @@ reading a few files.
 - **Events are immutable** (§7). Never rewrite `eventId`, `peerId` or
   `peerSequence`; transitive relay depends on it. Signature schemes are added,
   never edited (D-058) — an event cannot be re-signed and refetching history is a
-  recovery path, so add `signingBytesV3` and bump `currentSigVersion`.
+  recovery path, so add `signingBytesV4` beside `signingBytesV3` and bump
+  `currentSigVersion`.
 - **Durability precedes publication** (§23), and **reserve a sequence before
   publishing the event that uses it** (D-029). The reverse publishes a number with
   no record of it.
@@ -224,5 +229,6 @@ Not a summary of these — a map to them. If the area is not listed, the spec is
 | identity, keys, admission | D-042, D-044, D-053, D-058, D-073, D-054 |
 | addresses, transport, reachability | D-019, D-091, D-101, D-103, D-104 |
 | another host | D-110, D-111, D-113, §3.8 |
+| the name, a slash command, the plugin manifest | D-117, D-118, D-095, D-096, D-085 |
 | sequences, recovery from local loss | D-029, D-060 |
 | what is unfinished or undecided | `docs/open.md` |

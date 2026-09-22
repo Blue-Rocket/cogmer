@@ -63,7 +63,7 @@ function show(html){ stage.innerHTML = html; }
 async function post(path, body){
   const r = await fetch(path, {
     method:'POST',
-    headers:{'Content-Type':'application/json','X-Claude-Team':'1'},
+    headers:{'Content-Type':'application/json','X-Cogmer':'1'},
     body: JSON.stringify(body)
   });
   if(!r.ok) throw new Error(await r.text());

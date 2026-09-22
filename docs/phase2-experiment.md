@@ -175,10 +175,10 @@ The droplet retains everything needed; only the daemon and tunnel were stopped.
 
 | on the droplet | |
 |---|---|
-| `/home/claude/claude-team` | linux/amd64 binary — replace after any change |
+| `/home/claude/cogmer` | linux/amd64 binary — replace after any change |
 | `/home/claude/settings.json` | hook registration |
 | `/home/claude/work/` | the file under investigation |
-| `/home/claude/.claude-team/` | peer identity `mellow-ptarmigan`, room databases |
+| `/home/claude/.cogmer/` | peer identity `mellow-ptarmigan`, room databases |
 | `/home/claude/ct.log` | daemon log from the last run |
 
 ```sh
@@ -187,17 +187,17 @@ ssh -i ~/.ssh/droplet -N -L 4901:127.0.0.1:4783 -R 4902:127.0.0.1:4783 root@<dro
 
 # droplet daemon, detached; do NOT pkill by a pattern matching your own su -c line
 ssh -i ~/.ssh/droplet -n root@<droplet> \
-  'su - claude -c "cd /home/claude && CLAUDE_TEAM_ROOM=<room> CLAUDE_TEAM_PEERS=127.0.0.1:4902 \
-   setsid nohup ./claude-team daemon > ct.log 2>&1 < /dev/null &"'
+  'su - claude -c "cd /home/claude && COGMER_ROOM=<room> COGMER_PEERS=127.0.0.1:4902 \
+   setsid nohup ./cogmer daemon > ct.log 2>&1 < /dev/null &"'
 
 # local daemon
-CLAUDE_TEAM_ROOM=<room> CLAUDE_TEAM_PEERS=127.0.0.1:4901 ./bin/claude-team daemon &
+COGMER_ROOM=<room> COGMER_PEERS=127.0.0.1:4901 ./bin/cogmer daemon &
 ```
 
 Two things cost time and are worth knowing in advance. `ssh host 'cmd &'` holds the
 channel open even with `nohup` and redirection, so the call appears to hang while the
 daemon is in fact running — check reachability rather than waiting. And the droplet's
-peer identity persists in `~/.claude-team/identity.json`, so it keeps the same name
+peer identity persists in `~/.cogmer/identity.json`, so it keeps the same name
 across runs, which is what makes a room's history continuous between them.
 
 ## Limitations

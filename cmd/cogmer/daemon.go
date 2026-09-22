@@ -45,9 +45,9 @@ type injectionLimits struct {
 
 func limits() injectionLimits {
 	return injectionLimits{
-		events: envInt("CLAUDE_TEAM_MAX_EVENTS", defaultMaxInjectedEvents),
-		chars:  envInt("CLAUDE_TEAM_MAX_EVENT_CHARS", defaultMaxInjectedChars),
-		block:  envInt("CLAUDE_TEAM_MAX_BLOCK_CHARS", defaultMaxInjectedBlock),
+		events: envInt("COGMER_MAX_EVENTS", defaultMaxInjectedEvents),
+		chars:  envInt("COGMER_MAX_EVENT_CHARS", defaultMaxInjectedChars),
+		block:  envInt("COGMER_MAX_BLOCK_CHARS", defaultMaxInjectedBlock),
 	}
 }
 
@@ -324,7 +324,7 @@ func (d *Daemon) confirmDelivery(store *Store, req stopReq) {
 		// is noisy and self-announcing rather than silent and lossy.
 		if !BehaviorKnownBroken(d.claudeVersion, "B20") {
 			if n, _ := store.PendingCount(req.SessionID); n > 0 {
-				log.Printf("delivery: no injection evidence in session %.8s (%d pending); re-offering. If this repeats, run `claude-team doctor` (B20)",
+				log.Printf("delivery: no injection evidence in session %.8s (%d pending); re-offering. If this repeats, run `cogmer doctor` (B20)",
 					req.SessionID, n)
 			}
 			return

@@ -92,7 +92,7 @@ func loadOrCreateKey() (ed25519.PrivateKey, error) {
 // here can never be replayed as one made over something else. The version moved to
 // v2 when the session field was renamed -- a signature covers field values, so
 // changing what a field means changes what was signed.
-// Signature schemes are kept, never replaced.
+// Signature schemes are added, never edited.
 //
 // An event is immutable (§7) and therefore can never be re-signed, and old events
 // do not merely sit in a database: §13 relays them between peers, and D-029 makes
@@ -101,17 +101,19 @@ func loadOrCreateKey() (ed25519.PrivateKey, error) {
 // recovery path fails -- reporting "signature does not match the peer id", which
 // reads like an attack rather than a version change.
 //
-// Adding a field to an event therefore means adding a scheme here and leaving the
-// old one intact. It does not mean editing signingBytesV2.
+// Adding a field to an event therefore means adding a scheme beside the current
+// one and leaving that one untouched. However few schemes the switch below lists,
+// editing one is never the answer: the events it must still verify are on
+// somebody else's machine, where this code cannot see them and cannot re-sign
+// them.
 // protocolNamespace separates these signatures from any other use of the same
 // keys. It is a NAMESPACE, not a name: it says which protocol a signature was
 // made for, and nothing about what the software is called.
 //
-// It was the product name until the product name turned out not to be settled,
-// which made every signature ever produced hostage to a naming decision — and by
-// the rule below, a rename would then mean carrying the old namespace forever for
-// a name nobody uses. Domain separation needs stability and uniqueness; it does
-// not need meaning.
+// It carried the product name once, which made every signature ever produced
+// hostage to a naming decision — and by the rule above, a rename would then mean
+// carrying the superseded namespace forever. Domain separation needs stability
+// and uniqueness; it does not need meaning.
 //
 // **Never change this.** It is arbitrary on purpose, so there is never a reason to.
 const protocolNamespace = "peer-room"
@@ -123,10 +125,6 @@ const currentSigVersion = 3
 // this code cannot check is not a signature it may accept.
 func (e *Event) signingBytes(version int) ([]byte, error) {
 	switch version {
-	case 0, 2:
-		// 0 means an event stored before the version was recorded. Every such
-		// event was signed under v2, which was the only scheme that existed.
-		return e.signingBytesV2(), nil
 	case 3:
 		return e.signingBytesV3(), nil
 	default:
@@ -135,15 +133,8 @@ func (e *Event) signingBytes(version int) ([]byte, error) {
 	}
 }
 
-// signingBytesV3 is v2 with the namespace no longer carrying a product name.
-// v2 is kept below, untouched, which is the rule this file states and the first
-// occasion to follow it.
 func (e *Event) signingBytesV3() []byte {
 	return e.eventBytes(protocolNamespace + "/event/v3")
-}
-
-func (e *Event) signingBytesV2() []byte {
-	return e.eventBytes("claude-team/event/v2")
 }
 
 func (e *Event) eventBytes(tag string) []byte {

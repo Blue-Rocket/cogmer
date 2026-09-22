@@ -27,7 +27,7 @@ Each person runs:
 
 1. Claude Code  
 2. Claude Code collaboration hooks  
-3. A lightweight local `claude-team` daemon  
+3. A lightweight local `cogmer` daemon  
 4. A local event store  
 5. A local collaboration UI
 
@@ -107,7 +107,7 @@ Claude Code
      │
      │ localhost
      ▼
-claude-team daemon
+cogmer daemon
      │
      ├── local event store
      ├── local browser UI
@@ -515,7 +515,7 @@ allowed to restore confidence in one, because nothing has happened.
 Create a lightweight process:
 
 ```
-claude-team
+cogmer
 ```
 
 The daemon should expose a localhost API for Claude Code hooks.
@@ -531,7 +531,7 @@ It should also expose a peer synchronization interface.
 Conceptually:
 
 ```
-                    claude-team
+                    cogmer
                          │
         ┌────────────────┼─────────────────┐
         │                │                 │
@@ -964,11 +964,11 @@ One peer creates a room and produces an invitation. Every other participant pres
 Where the people involved already know one another — which is the ordinary case, since colleagues pair repeatedly — an invitation **names a guest** rather than issuing a token:
 
 ```
-David:   /room-invite alice
+David:   /cogmer:room-invite alice
          → invited alice to misty-canyon
 
 Alice:   → misty-canyon is offered to you by david
-         /room-join misty-canyon
+         /cogmer:room-join misty-canyon
 ```
 
 David's daemon records that the peer he knows as `alice` may enter `misty-canyon`,
@@ -1055,16 +1055,16 @@ Admission by guest list requires that a host already hold the guest's key. That 
 ```
 Each prints their own string and sends it to the other:
 
-Alice:   /self-status
+Alice:   /cogmer:self-status
          → ed25519:M7Kd…4Fq2@198.51.100.7:4783#Alice
 
-David:   /self-status
+David:   /cogmer:self-status
          → ed25519:GoR7…IWPU@203.0.113.9:4783#David
 
 Then, on a call, both at the same time, each pasting the OTHER's:
 
-David:   /peer-pair ed25519:M7Kd…4Fq2@198.51.100.7:4783#Alice
-Alice:   /peer-pair ed25519:GoR7…IWPU@203.0.113.9:4783#David
+David:   /cogmer:peer-pair ed25519:M7Kd…4Fq2@198.51.100.7:4783#Alice
+Alice:   /cogmer:peer-pair ed25519:GoR7…IWPU@203.0.113.9:4783#David
 
          → a page opens on each machine: ribcage tambourine
          → each says whether the other read the same two words
@@ -1114,13 +1114,13 @@ A person may know six colleagues and admit two of them to a room concerning cust
 Both must be inspectable and changeable:
 
 ```
-/peer-list                    list known peers
-/peer-pair <string> [name]    record a peer and verify it
-/peer-forget <peer>           discard a peer
+/cogmer:peer-list                    list known peers
+/cogmer:peer-pair <string> [name]    record a peer and verify it
+/cogmer:peer-forget <peer>           discard a peer
 
-/room-status                  this room, and who may enter it
-/room-invite <peer>           admit a known peer
-/room-revoke <peer>           withdraw admission
+/cogmer:room-status                  this room, and who may enter it
+/cogmer:room-invite <peer>           admit a known peer
+/cogmer:room-revoke <peer>           withdraw admission
 ```
 
 Recording a peer **without** verifying is possible and is not part of this list. It
@@ -1192,7 +1192,7 @@ Where peers are on the same network, a room may be found by local service discov
 This removes the endpoint from the invitation, which is only a bootstrap hint:
 
 ```
-claude-team join misty-canyon
+cogmer join misty-canyon
 ```
 
 That requires no account, no external service, no configuration, and nothing secret — the guest list decides who may enter.
@@ -1843,7 +1843,7 @@ SQLite is preferred for the prototype.
 Conceptually:
 
 ```
-~/.claude-team/
+~/.cogmer/
     identity.json
     membership.db
     rooms/
@@ -2262,15 +2262,15 @@ Eventually:
 
 ```
 # once, so colleagues have something to send you
-/self-name Alice
+/cogmer:self-name Alice
 
 # once with each colleague, on a call with them, both at the same time
-/peer-pair ed25519:M7Kd…4Fq2@198.51.100.7:4783#David
+/cogmer:peer-pair ed25519:M7Kd…4Fq2@198.51.100.7:4783#David
 → a page opens: ribcage tambourine   → both say yes → verified
 
 # thereafter, per room, from inside a session
-/room-create          → misty-canyon
-/room-invite david
+/cogmer:room-create          → misty-canyon
+/cogmer:room-invite david
 ```
 
 ## Installation
@@ -2278,7 +2278,7 @@ Eventually:
 A participant installs one thing, and it is a thing Claude Code already understands:
 
 ```
-claude plugin install claude-team
+claude plugin install cogmer
 ```
 
 The plugin carries the hooks. No shell profile is modified, no configuration file is hand-edited, no service is registered with the operating system, and nothing about how Claude Code is started changes.
@@ -2377,45 +2377,32 @@ Phase numbers are never reused or reassigned, so that references elsewhere conti
 | Phase 7 — Hardening | **complete** — the outbound queue was dissolved by pull rather than built |
 | Phase 11 — Installation | **complete** — plugin, hooks, commands, and a verified binary fetch (D-066, D-067) |
 | Phase 12 — Discovery on a local network | deferred — see D-063; the first pair never share a network |
-| Phase 13 — Somebody else uses it | **blocked on a permanent name** — see below; and the untested half of §30 |
+| Phase 13 — Somebody else uses it | **blocked on the repository** — the module path names one that does not exist; and the untested half of §30 |
 | Phase 14 — First contact without a paste | conditional on Phase 13 |
 | Phase 15 — Reaching a peer on another network | **built and working between two machines**; NAT-to-NAT awaits the real peer (D-068) |
 | Phase 8 — The local UI | **complete** |
 | Phase 9 — Peer identity | **complete**; verification added afterwards and gates synchronization |
 | Phase 10 — Pairing | **partial** — pairing, rooms, invitation, joining and admission work; a host approving an unsolicited request does not exist, and whether it should is undecided (§12a) |
 
-## Blocked on a name
+## The name
 
-`claude-team` is a placeholder. The permanent name is not settled, and one line of
-work cannot proceed without it.
+The product, the plugin and the repository are `cogmer`. The name reaches the module
+path, the binary, the plugin manifest, the state directory and the release path, and
+nowhere else.
 
-**What is blocked, and the chain it blocks.** A Go module path must match the
-repository URL that serves it, so the repository cannot be created until the name
-exists. Without a repository there is nowhere for a colleague to
-`claude plugin install` from, and the source-build fallback in the installer points
-at a module path that has never resolved. **Phase 13 depends on that chain**: a
-plugin copied by hand, or a binary handed over, measures a first five minutes that
-will never happen again, which is the one thing Phase 13 exists to observe.
+Nothing cryptographic carries it. Signing namespaces use the `protocolNamespace`
+constant, which is arbitrary on purpose and must never change (D-069): a tag carrying
+a product name would make every signature ever produced hostage to a naming decision,
+and by D-058's rule a rename after real events exist would mean carrying the old
+namespace forever. A scheme is added beside the current one and never edited, so a
+signature outlives every later change to what an event carries.
 
-**What is deliberately not blocked.** Nothing cryptographic (D-069). Signing
-namespaces use a `protocolNamespace` constant that is arbitrary on purpose and must
-never change, because a tag carrying a product name would make every signature ever
-produced hostage to a naming decision — and by D-058's rule, a rename after real
-events exist would mean carrying the old namespace forever. The slash commands are
-prefixed from the same constant rather than from the product name (D-070), for the
-same reason at lower stakes.
+The state directory is `~/.cogmer`, and it is the one place the name reaches the
+filesystem. Nothing derives state from any other name.
 
-Binary distribution is also unblocked: assets are served from a host recorded in
-`release-url.txt`, and the release path carries the name only as a directory
-component (D-067).
-
-**What changes when the name lands.** Module path, binary name, plugin name, state
-directory, release URL path, and the command prefix if the settled name suggests a
-better one. All of them are a rename plus, for the state directory, a migration.
-None of them is cryptographic, none is on the wire, and none touches stored events.
-
-That separation is the point of doing it in this order: the expensive couplings were
-broken while they were still free, so what remains is only work that is annoying.
+The plugin manifest name is the slash command namespace. Claude Code prefixes every
+plugin skill with it, so the manifest name is what a person types before the colon
+and changing it changes every command at once (D-118).
 
 The original sequence assumed four things that have since been displaced: a room scoped to a project, Tailscale as the transport, push between peers, and admission by a shared secret. Work proceeded out of order while those assumptions were being tested, which was the right trade during an experiment and is the wrong one now.
 
@@ -2742,7 +2729,7 @@ Nothing in this phase should be built before Phase 9. Its correctness rests enti
 - delete the machine-level current room;
 - accept an older protocol version for reads, so an upgrade is not a flag day.
 
-Installation is the wall everything else is behind: nobody but the author has run this, and the reason is that running it takes a build, a hand-edited settings file, and a daemon started by hand. §29 says what the result must be — `claude plugin install claude-team`, and nothing about how Claude Code starts changes.
+Installation is the wall everything else is behind: nobody but the author has run this, and the reason is that running it takes a build, a hand-edited settings file, and a daemon started by hand. §29 says what the result must be — `claude plugin install cogmer`, and nothing about how Claude Code starts changes.
 
 A slash command is a **thin wrapper**, never a reimplementation (D-057). It shells out to the same binary a terminal would, so the CLI remains the surface that can be tested without a Claude session, and there is one implementation of each operation rather than two that drift. `CLAUDE_CODE_SESSION_ID` is in the environment of every tool call and equals the id the hooks report (B21), so a command run from a session knows which session it is in without being told.
 
@@ -2791,9 +2778,10 @@ That is made true rather than intended by serving **one set of routes over both 
 - a person who did not write this installs it, pairs, joins a room, and works;
 - record what they hit, in the order they hit it.
 
-**Blocked on a permanent name**, for the reason set out under §31's status: a
-plugin needs a repository to be installed from, and a repository needs the name. A
-plugin copied by hand measures a first five minutes that will never happen again.
+**Blocked on the repository existing**, for the reason set out under §31's status:
+a plugin needs a repository to be installed from, and the one the module path names
+does not exist. A plugin copied by hand measures a first five minutes that will
+never happen again.
 
 **This is the untested half of §30.** Every experiment so far has measured whether Claude understands a teammate. None has measured whether a person finds a teammate's Claude worth having, because no person but the author has ever been in a room.
 
@@ -2954,7 +2942,7 @@ Claude Code
     hooks
      │
      ▼
-claude-team daemon
+cogmer daemon
      │
  ┌───┴────────────┐
  │                │
@@ -3041,7 +3029,7 @@ Perform an integration spike first.
 
 3. Determine exactly how a user-prompt hook can inject additional external context into the pending Claude turn.  
      
-4. Create a minimal local `claude-team` daemon listening only on localhost.  
+4. Create a minimal local `cogmer` daemon listening only on localhost.  
      
 5. Demonstrate:
 
@@ -3050,7 +3038,7 @@ Claude Code
      │
  prompt/response
      ▼
-claude-team
+cogmer
      │
      ▼
 SQLite

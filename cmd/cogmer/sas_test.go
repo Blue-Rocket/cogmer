@@ -448,7 +448,7 @@ func TestTheFirstToTypeWaitsForTheOther(t *testing.T) {
 // supply, rather than being asked to invent one for somebody whose name they can
 // see. A GUESSED name is never carried (D-097).
 func TestAPairingStringCarriesAChosenNameOnly(t *testing.T) {
-	t.Setenv("CLAUDE_TEAM_HOME", t.TempDir())
+	t.Setenv("COGMER_HOME", t.TempDir())
 	id, err := LoadIdentity()
 	if err != nil {
 		t.Fatal(err)

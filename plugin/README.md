@@ -1,4 +1,4 @@
-# claude-team
+# cogmer
 
 Work in a shared Claude Code conversation with a colleague. Your turns and theirs
 replicate directly between your machines — peer-to-peer, no server in between and
@@ -7,7 +7,7 @@ your session keeps working when the other one is offline.
 
 ## What it installs
 
-Three hooks and six slash commands. Nothing about how Claude Code starts changes,
+Hooks and slash commands, listed below. Nothing about how Claude Code starts changes,
 and nothing here replaces or wraps it.
 
 | | |
@@ -18,17 +18,17 @@ and nothing here replaces or wraps it.
 
 | Command | |
 |---|---|
-| `/room-create` | create a room and put this session in it |
-| `/room-join <invitation>` | join a room you were invited to |
-| `/room-leave` | take this session out of its room; it may rejoin |
-| `/room-invite <peer>` | admit a peer you have paired with |
-| `/room-revoke <peer>` | withdraw a peer's admission to this room |
-| `/room-status` | which room this session is in, and who may enter |
-| `/room-log` | the room's conversation so far |
-| `/room-conflicts` | quarantined events, if a peer's sequence went backwards |
-| `/peer-list` | peers this machine knows, and whether each is verified |
-| `/peer-forget <peer>` | discard a peer and every admission it held |
-| `/peer-pair` | your pairing string, and how to pair (done in a terminal) |
+| `/cogmer:room-create` | create a room and put this session in it |
+| `/cogmer:room-join <invitation>` | join a room you were invited to |
+| `/cogmer:room-leave` | take this session out of its room; it may rejoin |
+| `/cogmer:room-invite <peer>` | admit a peer you have paired with |
+| `/cogmer:room-revoke <peer>` | withdraw a peer's admission to this room |
+| `/cogmer:room-status` | which room this session is in, and who may enter |
+| `/cogmer:room-log` | the room's conversation so far |
+| `/cogmer:room-conflicts` | quarantined events, if a peer's sequence went backwards |
+| `/cogmer:peer-list` | peers this machine knows, and whether each is verified |
+| `/cogmer:peer-forget <peer>` | discard a peer and every admission it held |
+| `/cogmer:peer-pair` | your pairing string, and how to pair (done in a terminal) |
 
 Two prefixes because there are two scopes (§12): `room-` acts on one room,
 `peer-` on this machine's relationships, which outlast every room.
@@ -45,8 +45,8 @@ not what you type. Two plugins in the official marketplace already both define
 
 ## The binary
 
-The hooks call a `claude-team` binary, looked for in this order: `$CLAUDE_TEAM_BIN`,
-`~/.claude-team/bin/claude-team`, this plugin's `bin/`, then `PATH`. If none is
+The hooks call a `cogmer` binary, looked for in this order: `$COGMER_BIN`,
+`~/.cogmer/bin/cogmer`, this plugin's `bin/`, then `PATH`. If none is
 found, every hook exits silently and Claude Code is unaffected — a missing binary
 means no collaboration, never a broken session.
 
@@ -55,7 +55,7 @@ means no collaboration, never a broken session.
 **Pairing and verification happen in a terminal.** Both are interactive, both block
 on another person, and the two words you compare must reach your eyes without
 passing through a model that is reading room content from unverified peers.
-`/peer-pair` prints your pairing string and tells you what to run; it does not
+`/cogmer:peer-pair` prints your pairing string and tells you what to run; it does not
 attempt the ceremony.
 
 **Nothing synchronizes with an unverified peer.** Admission says a key may enter;

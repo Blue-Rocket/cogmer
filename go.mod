@@ -1,4 +1,4 @@
-module github.com/bluerocket/claude-team
+module github.com/Blue-Rocket/cogmer
 
 go 1.27.1
 

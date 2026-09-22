@@ -117,7 +117,7 @@ func TestVerifyStartRefusesAnExpiredPairing(t *testing.T) {
 // it fired on every pairing string ever printed, including every working one. These
 // assert it now fires on exactly the strings a colleague cannot use.
 func TestPairingReachabilityWarnsOnlyWhenItShould(t *testing.T) {
-	t.Setenv("CLAUDE_TEAM_HOME", t.TempDir())
+	t.Setenv("COGMER_HOME", t.TempDir())
 
 	// The ordinary case. A false warning here is the regression being guarded
 	// against: it trains somebody to ignore the true one.
@@ -148,7 +148,7 @@ func TestPairingReachabilityWarnsOnlyWhenItShould(t *testing.T) {
 // answers: one is fixed by starting a session, the other by setting an address.
 func TestPairingReachabilityDistinguishesItsTwoCauses(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("CLAUDE_TEAM_HOME", home)
+	t.Setenv("COGMER_HOME", home)
 
 	_, guessed := pairingReachable("127.0.0.1:4783")
 	if !strings.Contains(guessed, "no daemon has published") {
@@ -159,7 +159,7 @@ func TestPairingReachabilityDistinguishesItsTwoCauses(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, noRoute := pairingReachable("127.0.0.1:4783")
-	if !strings.Contains(noRoute, "CLAUDE_TEAM_PEER_ADDR") {
+	if !strings.Contains(noRoute, "COGMER_PEER_ADDR") {
 		t.Fatalf("with a daemon-recorded loopback address, the advice was %q; it should name the setting that fixes it", noRoute)
 	}
 	if guessed == noRoute {

@@ -1,1 +1,1 @@
-http://<droplet>/claude-team
+http://<droplet>/cogmer

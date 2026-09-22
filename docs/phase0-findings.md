@@ -8,7 +8,7 @@ spike stops here; peer networking is not built.
 |---|---|
 | Claude Code | **2.1.273** (native binary, `~/.local/share/claude/versions/`) |
 | Platform tested | macOS 15 (darwin/arm64) |
-| Spike commit | this repo, `cmd/claude-team` |
+| Spike commit | this repo, `cmd/cogmer` |
 | Date | 2026-09-16 |
 
 > Claude Code ships as a **native binary, not an npm package**. A teammate can have

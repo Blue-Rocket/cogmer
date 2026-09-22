@@ -22,9 +22,9 @@ flags="-s -w -X main.version=${version}"
 targets="darwin:arm64 darwin:amd64 linux:amd64 linux:arm64 windows:amd64"
 for t in $targets; do
   os="${t%%:*}"; arch="${t##*:}"
-  out="dist/claude-team_${version}_${os}_${arch}"
+  out="dist/cogmer_${version}_${os}_${arch}"
   [ "$os" = windows ] && out="${out}.exe"
-  CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build -ldflags "$flags" -o "$out" ./cmd/claude-team
+  CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build -ldflags "$flags" -o "$out" ./cmd/cogmer
   printf '%-44s %s\n' "$(basename "$out")" "$(du -h "$out" | cut -f1)"
 done
 

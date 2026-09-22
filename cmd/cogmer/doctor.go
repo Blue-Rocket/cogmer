@@ -104,7 +104,7 @@ func runDoctor(deep bool) {
 	if deep {
 		tier = "session + compaction"
 	}
-	fmt.Printf("claude-team doctor — Claude Code %s (%s checks)\n\n", version, tier)
+	fmt.Printf("cogmer doctor — Claude Code %s (%s checks)\n\n", version, tier)
 	if deep {
 		fmt.Println("Driving a real session and a compaction; this takes a minute.")
 	} else {
@@ -142,26 +142,26 @@ func runDoctor(deep bool) {
 // an unverified Claude Code version.
 //
 // Keyed on version, not room: forming a tenth room on a version already verified
-// costs nothing. Set CLAUDE_TEAM_PREFLIGHT=off to skip, which is what CI and
+// costs nothing. Set COGMER_PREFLIGHT=off to skip, which is what CI and
 // scripted use should do -- the check spends a real turn of the user's quota.
 func EnsureVerified(room string) {
-	if strings.EqualFold(os.Getenv("CLAUDE_TEAM_PREFLIGHT"), "off") {
+	if strings.EqualFold(os.Getenv("COGMER_PREFLIGHT"), "off") {
 		return
 	}
 	version := ClaudeVersion()
 	if v, ok := loadVerifications()[version]; ok {
 		if len(v.Failures) > 0 {
-			fmt.Fprintf(os.Stderr, "claude-team: WARNING — Claude Code %s previously failed %d behavior check(s): %s\n",
+			fmt.Fprintf(os.Stderr, "cogmer: WARNING — Claude Code %s previously failed %d behavior check(s): %s\n",
 				version, len(v.Failures), strings.Join(keysOfStr(v.Failures), ", "))
-			fmt.Fprintln(os.Stderr, "claude-team: run `claude-team doctor` for detail.")
+			fmt.Fprintln(os.Stderr, "cogmer: run `cogmer doctor` for detail.")
 		}
 		return
 	}
 
-	fmt.Fprintf(os.Stderr, "claude-team: new room %q on unverified Claude Code %s — running behavior checks (one Claude turn)...\n", room, version)
+	fmt.Fprintf(os.Stderr, "cogmer: new room %q on unverified Claude Code %s — running behavior checks (one Claude turn)...\n", room, version)
 	results, err := RunChecks(false)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "claude-team: preflight could not run (%v); collaboration continues unverified\n", err)
+		fmt.Fprintf(os.Stderr, "cogmer: preflight could not run (%v); collaboration continues unverified\n", err)
 		return
 	}
 	failures := map[string]string{}
@@ -173,15 +173,15 @@ func EnsureVerified(room string) {
 	saveVerification(verification{Version: version, When: time.Now().UTC().Format(time.RFC3339), Failures: failures})
 
 	if len(failures) == 0 {
-		fmt.Fprintf(os.Stderr, "claude-team: all %d behavior checks passed on %s\n", len(results), version)
+		fmt.Fprintf(os.Stderr, "cogmer: all %d behavior checks passed on %s\n", len(results), version)
 		return
 	}
 	for _, r := range results {
 		if r.Err != nil {
-			fmt.Fprintf(os.Stderr, "claude-team: FAILED %s (%s): %v\n", r.B.ID, r.B.Title, r.Err)
+			fmt.Fprintf(os.Stderr, "cogmer: FAILED %s (%s): %v\n", r.B.ID, r.B.Title, r.Err)
 		}
 	}
-	fmt.Fprintln(os.Stderr, "claude-team: the room still works, but the failed assumptions above no longer hold. Run `claude-team doctor`.")
+	fmt.Fprintln(os.Stderr, "cogmer: the room still works, but the failed assumptions above no longer hold. Run `cogmer doctor`.")
 }
 
 func keysOfStr(m map[string]string) []string {

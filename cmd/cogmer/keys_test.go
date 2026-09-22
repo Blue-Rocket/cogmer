@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/ed25519"
-	"encoding/base64"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -139,39 +138,22 @@ func mustDecode(t *testing.T, s string) []byte {
 	return b
 }
 
-// The upgrade path. An event is immutable (§7) so it can never be re-signed, and
-// old events do not sit still: §13 relays them and D-029 makes refetching a room's
-// history the designed recovery from local loss. An event signed before a field was
-// added must therefore still verify, or that recovery fails.
-func TestAnEventSignedUnderAnOlderSchemeStillVerifies(t *testing.T) {
+// The zero value must be refused rather than resolved to whichever scheme happens
+// to be oldest. An event arriving with no recorded scheme is a build this one does
+// not know or a field somebody dropped, and guessing on its behalf verifies bytes
+// whose provenance nobody established -- which is the one thing a signature check
+// exists to prevent.
+func TestAnEventWithNoRecordedSchemeIsRefused(t *testing.T) {
 	id := testIdentity(t)
-
-	// Signed the way an earlier build signed: under v2, whose namespace carried
-	// the product name. Not merely relabelled -- these are the bytes that build
-	// actually produced, which is the only thing worth asserting about.
-	e := &Event{EventID: "old", PeerID: id.PeerID, PeerSequence: 1, RoomID: "r",
-		Timestamp: "2026-09-01T00:00:00Z", EventType: EventUserPrompt, Content: "from an older build"}
-	e.Signature = base64.RawURLEncoding.EncodeToString(ed25519.Sign(id.private, e.signingBytesV2()))
-
-	// A row written before the version was recorded reads back as 0.
+	e := signed(t, id, "correctly signed, but the version is missing")
 	e.SigVersion = 0
-	if err := e.Verify(); err != nil {
-		t.Fatalf("an event stored before the version was recorded no longer verifies: %v", err)
-	}
-	e.SigVersion = 2
-	if err := e.Verify(); err != nil {
-		t.Errorf("an event signed under v2 does not verify as v2: %v", err)
-	}
 
-	// And a current signature does not verify as v2, which is what makes the
-	// version meaningful rather than decorative.
-	now := signed(t, id, "from this build")
-	if now.SigVersion != currentSigVersion {
-		t.Errorf("Sign recorded scheme %d, want %d", now.SigVersion, currentSigVersion)
+	err := e.Verify()
+	if err == nil {
+		t.Fatal("an event with no recorded scheme verified; the zero value is being guessed at")
 	}
-	now.SigVersion = 2
-	if err := now.Verify(); err == nil {
-		t.Error("a v3 signature verified as v2; the schemes are not actually distinct")
+	if strings.Contains(err.Error(), "does not match the peer id") {
+		t.Errorf("a missing version is reported as a forgery, which sends somebody hunting an attacker: %v", err)
 	}
 }
 
@@ -195,8 +177,8 @@ func TestAnUnknownSchemeIsRefusedAsAVersionProblem(t *testing.T) {
 	}
 }
 
-// Signing stamps the scheme, so nothing relies on the zero value meaning v2 except
-// rows written before the column existed.
+// Signing stamps the scheme, so nothing anywhere relies on the zero value meaning
+// a particular one.
 func TestSigningRecordsItsScheme(t *testing.T) {
 	e := signed(t, testIdentity(t), "hi")
 	if e.SigVersion != currentSigVersion {
@@ -208,11 +190,11 @@ func TestSigningRecordsItsScheme(t *testing.T) {
 // installer already honoured this variable while the binary ignored it -- so a
 // person who set it got a binary in one place and its state in another, silently.
 func TestStateDirectoryIsOverridable(t *testing.T) {
-	t.Setenv("CLAUDE_TEAM_HOME", "/tmp/somewhere-else")
+	t.Setenv("COGMER_HOME", "/tmp/somewhere-else")
 	if got := homeDir(); got != "/tmp/somewhere-else" {
 		t.Errorf("homeDir() = %q, want the override", got)
 	}
-	t.Setenv("CLAUDE_TEAM_HOME", "   ")
+	t.Setenv("COGMER_HOME", "   ")
 	if got := homeDir(); !strings.HasSuffix(got, stateDirName) {
 		t.Errorf("a blank override was honoured, giving %q", got)
 	}
@@ -229,7 +211,7 @@ func TestSigningNamespacesCarryNoProductName(t *testing.T) {
 		"sas":          sasTag,
 		"sas-commit":   sasCommit,
 	} {
-		if strings.Contains(tag, "claude-team") {
+		if strings.Contains(tag, "cogmer") {
 			t.Errorf("the %s tag still carries the product name: %s", name, tag)
 		}
 		if !strings.HasPrefix(tag, protocolNamespace+"/") {
@@ -239,24 +221,19 @@ func TestSigningNamespacesCarryNoProductName(t *testing.T) {
 
 	// And the ones signed in the clear are asserted on the bytes themselves.
 	e := &Event{EventID: "e", PeerID: "ed25519:x", Content: "c"}
-	if got := string(e.signingBytesV3()); strings.Contains(got, "claude-team") {
+	if got := string(e.signingBytesV3()); strings.Contains(got, "cogmer") {
 		t.Error("the event namespace still carries the product name")
 	} else if !strings.Contains(got, protocolNamespace) {
 		t.Error("the event namespace is not separated at all")
 	}
 
-	// v2 is the exception and must keep its original namespace: editing a scheme
-	// is what D-058 forbids, and this is the scheme it exists to protect.
-	if !strings.Contains(string(e.signingBytesV2()), "claude-team/event/v2") {
-		t.Error("signingBytesV2 was edited; events signed by older builds will not verify")
-	}
 }
 
 // The name is seen only by OTHER people, so there is no moment where its owner
 // notices it is wrong. That is why the difference between a name somebody picked
 // and one $USER supplied has to be recorded rather than guessed at (D-095).
 func TestAChosenNameIsDistinguishedFromAGuessedOne(t *testing.T) {
-	t.Setenv("CLAUDE_TEAM_HOME", t.TempDir())
+	t.Setenv("COGMER_HOME", t.TempDir())
 
 	id, err := LoadIdentity()
 	if err != nil {

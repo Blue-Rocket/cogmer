@@ -33,7 +33,7 @@ func TestEachRoomHasItsOwnURL(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	d.LocalRoutes().ServeHTTP(rec, httptest.NewRequest("GET", "/room/"+room.RoomName, nil))
-	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "claude-team") {
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "cogmer") {
 		t.Errorf("a room's own URL does not serve the page (status %d)", rec.Code)
 	}
 
