@@ -80,13 +80,6 @@ That is the one place a non-idempotent command could cheaply refuse a mistake it
 now makes in silence. The command's documentation warns against retrying, which is
 the weakest possible form of the check.
 
-**Create the repository the module path names.** `go.mod` says
-`github.com/Blue-Rocket/cogmer` and nothing lives there yet. This is now the whole of
-the Phase 13 chain: no repository means nowhere to `claude plugin install` from, and
-the installer's source-build fallback points at a path that does not resolve. D-069
-recorded the casing bug that made the inherited path fail; the new path fixes it, but
-only once the repository exists to match.
-
 **Move `plugin/commands/*.md` to the `skills/<name>/SKILL.md` layout.** The
 documentation calls `commands/` legacy and says the two are loaded identically. D-119
 deliberately did not do it in the same pass, because a directory restructure is a bad

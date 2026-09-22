@@ -2383,7 +2383,7 @@ Phase numbers are never reused or reassigned, so that references elsewhere conti
 | Phase 7 — Hardening | **complete** — the outbound queue was dissolved by pull rather than built |
 | Phase 11 — Installation | **complete** — plugin, hooks, commands, and a verified binary fetch (D-066, D-067) |
 | Phase 12 — Discovery on a local network | deferred — see D-063; the first pair never share a network |
-| Phase 13 — Somebody else uses it | **blocked on the repository** — the module path names one that does not exist; and the untested half of §30 |
+| Phase 13 — Somebody else uses it | ready — installable from the repository the module path names; the untested half of §30 |
 | Phase 14 — First contact without a paste | conditional on Phase 13 |
 | Phase 15 — Reaching a peer on another network | **built and working between two machines**; NAT-to-NAT awaits the real peer (D-068) |
 | Phase 8 — The local UI | **complete** |
@@ -2784,10 +2784,11 @@ That is made true rather than intended by serving **one set of routes over both 
 - a person who did not write this installs it, pairs, joins a room, and works;
 - record what they hit, in the order they hit it.
 
-**Blocked on the repository existing**, for the reason set out under §31's status:
-a plugin needs a repository to be installed from, and the one the module path names
-does not exist. A plugin copied by hand measures a first five minutes that will
-never happen again.
+**Unblocked.** The repository the module path names exists, carries the marketplace
+manifest beside the plugin, and serves the release assets the installer verifies
+against its pins (D-121). What remains is a person: a plugin copied by hand would
+measure a first five minutes that never happens again, and that is no longer what
+anybody has to do.
 
 **This is the untested half of §30.** Every experiment so far has measured whether Claude understands a teammate. None has measured whether a person finds a teammate's Claude worth having, because no person but the author has ever been in a room.
 
