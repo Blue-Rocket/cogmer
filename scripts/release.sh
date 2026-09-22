@@ -3,11 +3,12 @@
 #
 # Usage: scripts/release.sh 0.1.0
 #
-# Writes dist/ and rewrites plugin/checksums.txt. The checksums file is what the
-# installer checks a download against, so producing it here -- from the bytes just
-# built -- is the only point at which the two are known to agree. Publishing a
-# release without rerunning this leaves the installer refusing the new asset, which
-# is the correct failure: it will not run what it cannot verify.
+# Writes dist/ and rewrites every file that names the version: plugin/checksums.txt,
+# plugin/VERSION, and the version field in the plugin manifest. The checksums file is
+# what the installer checks a download against, so producing it here -- from the
+# bytes just built -- is the only point at which the two are known to agree.
+# Publishing a release without rerunning this leaves the installer refusing the new
+# asset, which is the correct failure: it will not run what it cannot verify.
 set -euo pipefail
 
 version="${1:?usage: scripts/release.sh <version>}"
@@ -47,6 +48,25 @@ done
 } > plugin/checksums.txt
 
 echo "$version" > plugin/VERSION
+
+# The manifest's version is not decoration: Claude Code pins an installed plugin to
+# whatever string it holds, so a person receives a new plugin -- and with it the
+# checksums.txt that authorises the new binary -- only when this number moves. It is
+# written here for the reason checksums.txt is: the one act that knows the version
+# should write every file that names it, rather than leaving one to be remembered.
+manifest=plugin/.claude-plugin/plugin.json
+fields="$(grep -c '"version"' "$manifest" || true)"
+if [ "$fields" != 1 ]; then
+  echo "$manifest has $fields version fields; refusing to guess which one" >&2
+  exit 1
+fi
+sed -E 's/("version"[[:space:]]*:[[:space:]]*)"[^"]*"/\1"'"$version"'"/' "$manifest" > "$manifest.new"
+mv "$manifest.new" "$manifest"
+grep -Eq '"version"[[:space:]]*:[[:space:]]*"'"$version"'"' "$manifest" || {
+  echo "failed to write v${version} into $manifest" >&2
+  exit 1
+}
+
 echo
-echo "wrote plugin/checksums.txt and plugin/VERSION for v${version}"
-echo "commit both, then publish dist/* as release v${version}"
+echo "wrote plugin/checksums.txt, plugin/VERSION and the manifest version for v${version}"
+echo "commit all three, then publish dist/* as release v${version}"

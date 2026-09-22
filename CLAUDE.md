@@ -96,10 +96,14 @@ holds. Hooks keep it fresh, but they only fire for edits this session made.
 **Releasing is three steps in one order.** Bump `plugin/VERSION`, run
 `scripts/release.sh <that same version>`, then `scripts/publish.sh`.
 
-- `release.sh` builds five targets and rewrites `plugin/checksums.txt` **from the
-  bytes it just built**. That file is the only thing authorising a downloaded
-  binary to run, so never hand-edit it — a hash typed rather than computed
-  authorises something nobody has seen.
+- `release.sh` builds five targets and rewrites every file that names the version:
+  `plugin/checksums.txt` **from the bytes it just built**, `plugin/VERSION`, and the
+  `version` in `plugin.json`. `checksums.txt` is the only thing authorising a
+  downloaded binary to run, so never hand-edit it — a hash typed rather than
+  computed authorises something nobody has seen.
+- The manifest `version` is what pins an installed plugin (D-120): a person receives
+  a new plugin, and with it the checksums that authorise the new binary, only when
+  that string moves. A test fails if it and `plugin/VERSION` disagree.
 - Publishing without rerunning `release.sh` leaves the installer refusing the new
   asset. That is the correct failure, not a bug to work around.
 - `publish.sh` reads `plugin/VERSION`, requires `dist/`, and ships to the host in

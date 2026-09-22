@@ -107,11 +107,6 @@ deliberately did not do it in the same pass, because a directory restructure is 
 thing to bury a §3.1 fix inside. `TestNoCommandIsModelInvocable` reads the old path
 and would need to follow.
 
-**`plugin.json` says version 0.1.0 while `plugin/VERSION` says 0.7.0.** Noticed
-during the rename, not caused by it, and `release.sh` writes only the latter. Which
-one the plugin manager believes, and whether the two are meant to track each other
-at all, is unchecked.
-
 ## Undecided
 
 **Whether to rebuild the post-quantum hedge.** D-104 removed the pre-shared key,
