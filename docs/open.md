@@ -43,16 +43,55 @@ preference.
 **Say when your own address changes.** Every pairing string and invitation already
 handed out is then stale, and only the daemon can know.
 
-**Rooms are not yet what D-015 (rooms are session-scoped) describes.**
-`COGMER_ROOM` selects a single room per daemon process; there is no invite, no
-membership tracking, and no archive. That is Phase 1 work — do not treat the current
-shape as the design.
+**A room never closes, so nothing is archived.** D-015 (rooms are session-scoped)
+has a closed room kept as an archive that can be read but never rejoined, and the
+specification freezes a room's sequences at that point. Membership ends per person
+through `leave` and `revoke`; the room itself has no closed state.
 
-**Plugin packaging (D-041, installation is one line)** is not built, nor is local
-network discovery (D-019's zero-configuration path), nor detection of a lost room
-database (review C-1, Phase 7).
+**Local network discovery** (D-019's zero-configuration path) is not built.
 
 ## Commands that mislead
+
+**`/cogmer:self-status` on first use shows nothing at all.** It is the first command
+a new person runs, because the pairing string is what they came for, and it runs
+while the binary is still downloading: 29MB, measured at 16s on 09-22. In
+that window it prints nothing, and it prints nothing if the install failed.
+
+The cause is in how Claude Code handles a command's `!` lines, observed 09-22 with
+`claude -p "/cogmer:self-status" --plugin-dir ./plugin` against a fresh
+`COGMER_HOME`. A `!` line that exits non-zero abandons the command. Its output comes
+back as `local-command-stderr`, no model turn runs, and the result is the empty
+string. `cli.sh` exits 1 from every branch where there is no binary, so the
+installing, failed and stalled explanations D-075 (say which of three reasons it
+is) wrote are all thrown away.
+
+Four changes would make first use work. `cli.sh` should always exit 0 and send the
+binary's stderr to stdout, so that every explanation reaches the model. Nothing else
+reads its exit code, since the hooks go through `run.sh`.
+
+While an install is in progress, the command should wait for it within a bound and
+then answer with the pairing string, rather than saying to try again in a moment.
+The person asked for that string, and would otherwise type the command a second
+time to get it. Waiting inside a command somebody typed is arguably not what §3.1
+(first, do no harm) means by slowing a session, but that argument has to be settled
+first. A bound of around 30s covers the 16s measured.
+
+When the install failed or stalled, the command should say what to do as well as
+what happened. The failed branch already names `~/.cogmer/install-state` and the
+one-hour cooldown. The stalled branch says to start a new session, which cannot
+help if the crash left `.install.lock` behind, because every later install finds
+the lock and leaves.
+
+The behaviour belongs in `behaviors.go` with a negative test, a command whose `!`
+line exits 1 producing no turn, because it fails silently and the registry exists
+for exactly that.
+
+The same cause hits other commands. `/cogmer:room-status` outside a room shows
+nothing, because its `guests` line exits 1, and that is the state everybody is in
+just after installing. Any `log.Fatal` a command reaches does the same. The `cli.sh`
+change covers every one of them, and each command still needs checking, because
+some exit non-zero on purpose. A fix reaches nobody until the version moves (D-120,
+the manifest version pins an installed plugin).
 
 **`leave`, run twice, says "this session is not in a room."** True, and unhelpful
 to somebody who left it a moment ago: it reads as a failure and sends them looking
@@ -140,8 +179,6 @@ move it resembles.
 dropped in favour of naming the person.
 
 `/cogmer:room-list` and `/cogmer:self-status` were both named without confirmation.
-
-`VERSION` is 0.6.0 and has not moved across a large amount of work.
 
 ## Needs somebody else
 
