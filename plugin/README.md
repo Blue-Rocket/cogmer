@@ -26,22 +26,20 @@ and nothing here replaces or wraps it.
 | `/cogmer:room-status` | which room this session is in, and who may enter |
 | `/cogmer:room-log` | the room's conversation so far |
 | `/cogmer:room-conflicts` | quarantined events, if a peer's sequence went backwards |
+| `/cogmer:room-list` | rooms this machine holds, and which one this session is in |
 | `/cogmer:peer-list` | peers this machine knows, and whether each is verified |
 | `/cogmer:peer-forget <peer>` | discard a peer and every admission it held |
-| `/cogmer:peer-pair` | your pairing string, and how to pair (done in a terminal) |
+| `/cogmer:peer-pair [string] [name]` | pair with a colleague: the two-word check, in your browser |
+| `/cogmer:self-status` | who you are, what you send colleagues, whether they can reach you |
+| `/cogmer:self-name [name]` | show or set the name other people see |
 
-Two prefixes because there are two scopes (§12): `room-` acts on one room,
-`peer-` on this machine's relationships, which outlast every room.
+Three prefixes because there are three targets: `room-` acts on one room, `peer-` on
+this machine's relationships, which outlast every room, and `self-` on you.
 
-Commands are prefixed at all because a slash command's **invocation** is not
-namespaced by the plugin that supplies it — a subdirectory changes how a command is
-displayed, not what you type. Two plugins in the official marketplace already both
-define `/help`.
-
-Commands are prefixed because a slash command's **invocation** is not namespaced by
-the plugin that supplies it — a subdirectory changes how a command is displayed,
-not what you type. Two plugins in the official marketplace already both define
-`/help`. The prefix is the only thing that keeps these apart.
+The `cogmer:` in front of all of them is not ours. Claude Code namespaces a command
+by the plugin manifest's name and offers no unprefixed form, so `cogmer:` is what you
+type whatever we would have preferred. The `room-`/`peer-`/`self-` prefixes are kept
+on top of it because they name a target, not because anything would collide.
 
 ## The binary
 
@@ -50,13 +48,15 @@ The hooks call a `cogmer` binary, looked for in this order: `$COGMER_BIN`,
 found, every hook exits silently and Claude Code is unaffected — a missing binary
 means no collaboration, never a broken session.
 
-## Two things are deliberately not commands here
+## Two things the model does not do for you
 
-**Pairing and verification happen in a terminal.** Both are interactive, both block
-on another person, and the two words you compare must reach your eyes without
-passing through a model that is reading room content from unverified peers.
-`/cogmer:peer-pair` prints your pairing string and tells you what to run; it does not
-attempt the ceremony.
+**The pairing ceremony does not pass through the model.** It is interactive, it
+blocks on another person, and the two words you compare must reach your eyes without
+passing through a model that is reading room content from unverified peers. So
+`/cogmer:peer-pair` does the part a command can do and then opens a page the daemon
+serves, where the two words are; a machine that cannot open a browser falls back to a
+terminal. Nothing about the comparison is reported by the model, and two words it
+told you would mean nothing.
 
 **Nothing synchronizes with an unverified peer.** Admission says a key may enter;
 verification says the key is your colleague's. Every check but the last passes
