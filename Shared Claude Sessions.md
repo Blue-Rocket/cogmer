@@ -2337,6 +2337,10 @@ Three requirements follow, each easy to get wrong:
 
 The daemon outlives the session that started it, because a room may have members in several sessions and because starting it repeatedly is worse than leaving it running. It must therefore be discoverable and stoppable by the person whose machine it is on. A background process a person cannot find is not acceptable merely because it is useful.
 
+Stopping it is a terminal command, because it is the daemon's own lifecycle. It stops whichever cogmer daemon holds the addresses this installation uses, not only the one this installation started. A daemon left running from another state directory, or from an earlier version, holds the same addresses and blocks this one exactly as an unrelated program would, and the person experiences the two the same way. It signals only a process it has identified as a cogmer daemon. Anything else holding an address is named, with its process, and left alone, because stopping a program this system did not start is not the person's request and is not this system's to do.
+
+A daemon that cannot bind says which of those holds its address, and when it is a cogmer daemon, gives the command that clears it. Describing a blocker without identifying it leaves the person to do the identification.
+
 The person should not have to:
 
 - copy transcripts;  

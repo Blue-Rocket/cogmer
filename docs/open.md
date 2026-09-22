@@ -50,6 +50,21 @@ through `leave` and `revoke`; the room itself has no closed state.
 
 **Local network discovery** (D-019's zero-configuration path) is not built.
 
+**`cogmer stop` (D-123, finding a daemon by the addresses it holds).** Specified and
+not built. It needs `runStop` and a SIGTERM handler in `main.go`, since §3.7 keeps
+`os/exec` and `syscall` out of the daemon's files, plus the blocked-address message
+naming `stop` by its full path, and a test that it declines a process not named
+`cogmer`. A test harness that listens on a port under another name is enough for
+that.
+
+Three things about it are undecided. The first is whether `stop` then starts this
+installation's daemon. Clearing the way is almost always why somebody runs it, but a
+person may also want it simply stopped. The second is whether it gets a slash
+command. The person is in a session, not at a terminal, and the binary is not on
+PATH, so from a terminal they have to type `~/.cogmer/bin/cogmer stop`. The third is
+Windows, which has no `lsof`. `netstat -ano` gives the pid there, or `stop` can
+report the port and fall back to moving this daemon aside.
+
 ## Commands that mislead
 
 **`/cogmer:self-status` on first use fails instead of answering.** It is the first
@@ -113,24 +128,13 @@ different program. Only the hooks port is ever probed, through
 `daemonAlreadyServing`, which reads `/healthz` over plain HTTP. The peer mux serves
 `/healthz` too, but over TLS, and nothing asks it.
 
-**Getting rid of a stale daemon that holds the port takes a terminal.** The log
-offers `lsof`, and `COGMER_ADDR` or `COGMER_PEER_ADDR` to move this daemon aside.
-The first is a diagnosis tool, the second leaves the stale one running, and neither
-is reachable from inside Claude Code, where the person actually is. It needs one
-thing somebody can do from a session: say which process holds the port, whether it
-is a cogmer daemon and from which state directory, and when it is one, offer to stop
-it and start this one. It could be a slash command, or part of `self-status` when
-the daemon is blocked. Whatever stops a process lives in `main.go`, because §3.7 (a
-remote event never drives a session) keeps `os/exec` and `syscall` out of
-`daemon.go`, `store.go`, `sync.go` and `transcript.go`.
-
-The commoner stale daemon is probably an old version, and it is invisible.
-`/healthz` reports `ok`, `peerId` and `rooms` but no version, and
-`daemonAlreadyServing` accepts any daemon that answers. So after an update installs
-a new binary, `start_daemon_if_needed` finds the old daemon answering and leaves it
-serving, and the new binary does not run until that process dies of something
-else. Read from the code on 09-22, not yet observed. A daemon that reports its
-version would let the hook replace one older than the binary it just installed.
+**An old daemon keeps serving after an update, and nothing shows it.** `/healthz`
+reports `ok`, `peerId` and `rooms` but no version, and `daemonAlreadyServing`
+accepts any daemon that answers. So after an update installs a new binary,
+`start_daemon_if_needed` finds the old daemon answering and leaves it serving, and
+the new binary does not run until that process dies of something else. Read from
+the code on 09-22, not yet observed. A daemon that reports its version would let
+the hook replace one older than the binary it just installed, using `stop` (D-123).
 
 **`whoami` prints a pairing string it knows nobody can use.** `printPairingInvitation`
 prints the string first and then, when `pairingReachable` fails, a `NOTE:` after it,
