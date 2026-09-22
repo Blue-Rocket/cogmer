@@ -52,7 +52,7 @@ func keyPath() string { return filepath.Join(homeDir(), "identity.key") }
 // loadOrCreateKey reads the private key, generating one on first use.
 //
 // The private key lives in its own file, never in identity.json. That file is
-// printed by `whoami` and is meant to be shared -- an identity a developer cannot
+// printed by `whoami` and is meant to be shared -- an identity a person cannot
 // hand to a colleague without checking what else is in it is not much of an
 // identity.
 func loadOrCreateKey() (ed25519.PrivateKey, error) {

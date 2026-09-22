@@ -9,7 +9,7 @@
 #   Already running is the ordinary outcome. Several sessions begin at once on one
 #   machine routinely: each tries, at most one wins, and none reports a problem.
 #
-#   Failure is silent to the developer. The daemon records its own troubles in its
+#   Failure is silent to the person. The daemon records its own troubles in its
 #   log; the session says nothing about any of it.
 . "$(dirname "$0")/common.sh"
 

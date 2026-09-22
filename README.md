@@ -1,8 +1,8 @@
 # claude-team
 
-Local-first peer-to-peer shared Claude Code conversations. Several developers,
-each on their own Claude Code subscription and session, collaborate in one
-replicated conversation with no central server.
+Shared Claude Code conversations, replicated peer-to-peer. People working
+separately, each on their own Claude Code subscription and session, collaborate in
+one conversation with no central server.
 
 Full specification: [`Shared Claude Sessions.md`](Shared%20Claude%20Sessions.md)
 

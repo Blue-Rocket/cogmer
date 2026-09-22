@@ -389,14 +389,14 @@ behind it: can a session leave, rejoin, or move to a different room?
 being a policy preference. Every captured event belongs to exactly one room, and
 a session in two rooms gives no basis for choosing which. Injection fails the same
 way in reverse: a session receiving turns from two unrelated conversations cannot
-separate them, and neither can the developer reading the result.
+separate them, and neither can the person reading the result.
 
 **Leaving** is always explicit. **Rejoining** the same room is allowed while it
 remains live, and the per-event delivery set from D-014 makes it correct for free
 — a returning session receives what it missed and nothing else.
 
 **Moving to a different room is refused once teammate context has been injected.**
-This is the sharp edge. Injected context cannot be withdrawn: another developer's
+This is the sharp edge. Injected context cannot be withdrawn: another person's
 conversation is in that session's context window for the rest of its life, and
 anything the session subsequently produces may be shaped by it. Admitting the
 session to a second room would publish the first room's conversation into the
@@ -406,13 +406,13 @@ happened; it can only decline to create the conditions.
 
 A session that has received *no* injected context may move freely, which covers
 joining the wrong room and correcting it. A session's own prompts and responses
-impose no restriction: that content originated with the developer, so carrying it
+impose no restriction: that content originated with the person, so carrying it
 forward is their own disclosure, not a leak of someone else's.
 
 **Presence is not membership.** The first draft of this said membership ends when
 the Claude Code session ends — which is wrong, because sessions do not end. The
 process exits, but the session persists and resumes under the same ID (verified in
-Phase 0a, checked by B14). Under that draft, two developers closing their
+Phase 0a, checked by B14). Under that draft, two people closing their
 terminals for lunch would have archived the room, and neither could rejoin it nor
 join another.
 
@@ -440,7 +440,7 @@ favour of keeping rooms open.
 
 **Revisit when** a mechanism exists to scope or evict injected context within a
 live session. The refusal to move rooms is a consequence of that being impossible,
-not a value judgement about developers.
+not a value judgement about people.
 
 ---
 
@@ -457,7 +457,7 @@ and storage — and a `roomName`, generated at the same moment from two curated 
 lists (weather or sky, plus landscape): `misty-canyon`, `thunder-ridge`.
 
 **The name is generated rather than chosen, and that is the point.** A name a
-developer picks will be the name of a project, a client, or a ticket. Rooms named
+person picks will be the name of a project, a client, or a ticket. Rooms named
 after projects become rooms scoped to projects by convention — the exact model
 D-015 abandoned. Generating the name resists that structurally instead of relying
 on anyone's discipline.
@@ -487,7 +487,7 @@ outstanding invitations and make an archived room harder to recognize.
 **Rejected.**
 - *A single identifier* — a UUID cannot be read over a call; a name cannot be a
   synchronization key. The two jobs have incompatible requirements.
-- *Developer-chosen names* — reintroduces project scoping by convention.
+- *Person-chosen names* — reintroduces project scoping by convention.
 - *Globally unique names* — unachievable without coordination, and unnecessary once
   resolution is scoped to a peer.
 - *Including the name on every event* — it is room metadata, and putting a mutable
@@ -563,14 +563,14 @@ will never share a network, so local discovery is not the first transport to bui
 
 **Context.** The specification was written for an internal experiment, where
 assuming Tailscale was free. For a public release it is not: "install this" and
-"install this, create a Tailscale account, put every developer in a configured
+"install this, create a Tailscale account, put every person in a configured
 tailnet" attract very different numbers of people, and Tailscale's free tier is
 framed for personal rather than commercial use, so an evaluating team may read a
 free tool as requiring a paid service.
 
 **Decision.** State as a requirement that no network provider is part of room
 identity, membership, or replication, and that the system must function with no
-VPN at all when peers can already reach one another. Two developers on the same
+VPN at all when peers can already reach one another. Two people on the same
 network is the simplest case and must be the easiest: no account, no external
 service, no configuration.
 
@@ -584,7 +584,7 @@ Tailscale and §33 already had `PeerSyncTransport`. What changed is the **priori
 Local discovery moved from "later possibility" to the first transport built, and
 the independence became a stated requirement rather than an aspiration.
 
-**That priority was wrong, and D-063 corrects it.** It rested on "two developers on
+**That priority was wrong, and D-063 corrects it.** It rested on "two people on
 the same network is the simplest case" — true, and irrelevant, because the first
 pair who need this work from home and will never be on one. The *requirement* above
 is unaffected: no provider may be required, and the same-network case must still
@@ -781,17 +781,17 @@ advisory, and that is the point at which names become trustworthy at all.
 joiner "receives the room from its beginning," in three places, without ever
 saying when the beginning is. Nothing said what happens before a room exists.
 
-**Decision.** The `roomId` and `roomName` are generated at the moment a developer
+**Decision.** The `roomId` and `roomName` are generated at the moment a person
 invites someone. Creating a room and issuing the first invitation are the same
 act. The creating session becomes the first member and the room's history starts
 there.
 
 Before that, a session is an ordinary Claude Code session: nothing captured,
-nothing injected, nothing shared. Collaboration is something a developer starts,
+nothing injected, nothing shared. Collaboration is something a person starts,
 not a state they are in.
 
 **The alternative is a silent disclosure.** The natural implementation — create a
-room when a session starts, so capture is always on — means a developer who works
+room when a session starts, so capture is always on — means a person who works
 alone for two hours and then invites a colleague hands over all two hours. The
 invitation looks like saying hello and behaves like publishing a transcript.
 Nothing in the interface would suggest otherwise, and the disclosure is
@@ -801,7 +801,7 @@ So the specification now states that *"from its beginning" means the beginning o
 the room, never of a session that belongs to it* — the ambiguity that made the
 wrong reading available.
 
-**Acknowledged cost.** A developer usually wants to invite someone *because* of
+**Acknowledged cost.** A person usually wants to invite someone *because* of
 what just happened, and that conversation is precisely what the new room does not
 contain. The prototype accepts this; the workaround is the one people already use,
 which is to explain. Deliberately contributing selected earlier turns is a
@@ -835,7 +835,7 @@ inverse of a room (D-022), which begins at a known moment for a known purpose an
 is archived when that purpose ends. An identity exists before there is anything to
 join, which is what lets a peer be recognized later rather than met afresh.
 
-An identity belongs to a **machine**, not a person: a developer with a laptop and a
+An identity belongs to a **machine**, not a person: a person with a laptop and a
 desktop is two peers and appears twice wherever peers are listed. Deliberate — a
 key that never leaves the machine that made it cannot be lost from one machine by
 losing another — but it should be visible rather than surprising.
@@ -961,7 +961,7 @@ particular conversation are different decisions, and collapsing them makes the
 second inexpressible. **Known peers** belongs to a machine, is durable, and outlives
 every room — it is why a colleague is recognized later rather than met afresh.
 **A room's guests** belongs to the room, names which known peers may enter, and is
-archived with it. A developer may know six colleagues and admit two to a room
+archived with it. A person may know six colleagues and admit two to a room
 concerning customer data.
 
 Commands for both, because a list that cannot be inspected or corrected is not
@@ -1161,7 +1161,7 @@ reconsidered.
 membership, on the grounds that a session-scoped room is cheap to lose. Two things
 were wrong with that assessment.
 
-**The database is not where the value is.** A developer's own turns, and the
+**The database is not where the value is.** A person's own turns, and the
 teammate turns injected into their session, are already in that session's context —
 stored under `~/.claude/projects/`, untouched by the loss. What the room database
 holds is the *record*. Losing it is nearer to losing scrollback than to losing work,
@@ -1237,7 +1237,7 @@ can edit later without seeing what it guarded. Tests assert that neither serves 
 other's routes.
 
 **Why the hook API is the strict one.** Reaching `/hook/prompt` is equivalent to
-being the local developer: it publishes into the room and returns the room's
+being the local person: it publishes into the room and returns the room's
 conversation. That is not an API to expose under any configuration, so it is refused
 rather than discouraged.
 
@@ -1378,20 +1378,20 @@ for the model and never appears on screen. Standard error is not surfaced. Writi
 to `/dev/tty` is not surfaced. Confirmed from the other side by an interactive
 session: injection landed — the transcript holds the attachment, and the model
 answered questions about the teammate's conversation in detail — while the
-developer saw nothing but Claude's reply.
+person saw nothing but Claude's reply.
 
 Claude Code owns its display. No arrangement of hooks produces an ambient view
 inside a session, and the specification now says so rather than leaving someone to
 rediscover it.
 
-**What the test surfaced that was worth more than the answer.** A developer can
+**What the test surfaced that was worth more than the answer.** A person can
 simply *ask*: "what is the team discussing?" gets a full answer — who said what, and
 that they are unverified — from context already injected. It needs no code, no view,
 and no protocol. For a pair on one problem it answers most of what a view would.
 
 It also demonstrated D-021 reaching the person it was for. The `unverified` marker,
 added so a model would not treat a display name as fact, was relayed to the
-developer unprompted in the model's own words. An attribution caveat travelling from
+person unprompted in the model's own words. An attribution caveat travelling from
 the wire to a human without a UI in between is the design working end to end.
 
 **Decision.** §17 no longer prescribes a browser. It states that the room cannot be
@@ -1434,7 +1434,7 @@ not *around* it.
 
 **Three reasons, compounding.**
 
-*It replaces the entry point.* Everything else this project asks of a developer is
+*It replaces the entry point.* Everything else this project asks of a person is
 something Claude Code already loads: hooks. A wrapper asks them to stop running
 `claude` and run something else, permanently, and to keep doing so through every
 future habit and alias. That is a materially larger ask than an install.
@@ -1501,7 +1501,7 @@ received data.
 and runs commands. An event that could initiate a turn on a receiving machine is
 arbitrary execution on that machine, authorised by whoever sent the event — and peer
 identity is not verified (D-023), so that is whoever can reach the port. It is also
-the developer's subscription, context window, attention, and repository, none of
+the person's subscription, context window, attention, and repository, none of
 which are a teammate's to spend.
 
 §3.7 is the converse of local-first: that principle says a session must survive every
@@ -1518,13 +1518,13 @@ should be asked to justify it.
 intended and broader than is right: it collapsed two different concerns — "do not
 disturb my session" and "do not spend my resources" — which have different remedies.
 It also foreclosed something this specification contemplates elsewhere, where one
-developer addresses another's Claude directly.
+person addresses another's Claude directly.
 
-The principle is now scoped to interactive sessions: a session a developer is
-working in takes a turn when that developer asks it to, and at no other time. An
+The principle is now scoped to interactive sessions: a session a person is
+working in takes a turn when that person asks it to, and at no other time. An
 interactive session is a working state rather than merely a process, and a turn
 arriving unbidden consumes the context window being relied on, may act on the
-working tree mid-thought, and destroys the developer's ability to reason about what
+working tree mid-thought, and destroys the person's ability to reason about what
 their own session has seen.
 
 Whether a peer event may cause a **separate** run is explicitly left open. It raises
@@ -1602,7 +1602,7 @@ implementation on Windows. That reasoning was correct and too specific — it ha
 be re-derived for each new proposal, and it was derived *after* a prototype had
 already been built.
 
-**Decision.** State it as a principle instead. A developer starts and uses Claude
+**Decision.** State it as a principle instead. A person starts and uses Claude
 Code exactly as they do today; this system installs *into* it, never *around* it.
 The only things a participant installs are things Claude Code already loads: hooks,
 skills, MCP servers, and whatever else it accepts.
@@ -1628,7 +1628,7 @@ than programs.
 
 So conversation semantics must work everywhere and do, being model-facing, while
 presentation is best effort. A view *outside* the session remains permitted: it is a
-separate program a developer may run, not a change to how they start Claude Code.
+separate program a person may run, not a change to how they start Claude Code.
 What is forbidden is taking ownership of Claude Code in order to draw inside it.
 
 **On searching for an undocumented display seam.** Proposed, and declined. The
@@ -1667,15 +1667,15 @@ that constraint. That framing was backwards.
 A view outside the session is what should be built even if an in-session display
 became available.
 
-**The argument.** A session is a developer's conversation with their own Claude,
+**The argument.** A session is a person's conversation with their own Claude,
 read closely. A room is a record of what colleagues are doing, glanced at.
 Interleaving them buries the glanceable thing inside the closely-read thing, and
-interrupts the closely-read thing with arrivals not addressed to it. A developer
+interrupts the closely-read thing with arrivals not addressed to it. A person
 loses the thread of their own work in order to be told something they could have
 looked at when they chose.
 
 They also scale differently. One colleague interleaved might be tolerable; three is
-unreadable — and the cost lands on the developer's own working view, which is the
+unreadable — and the cost lands on the person's own working view, which is the
 last place it should land. Separated, additional participants cost nothing there.
 This answers the earlier observation that a three-peer session "feels a little
 noisy": the noise is only unavoidable while the room shares space with the
@@ -1716,7 +1716,7 @@ different answer for a pair than for four people, and none is knowable in advanc
 A second renderer built now would encode a guess and then have to be maintained
 whether or not the guess held.
 
-**What using it will settle.** Solo use is sufficient to start: a developer watching
+**What using it will settle.** Solo use is sufficient to start: a person watching
 their own turns appear tests readability, live update, and whether a separate window
 is glanced at or forgotten — without needing a second participant. The
 collaboration-specific questions need a pair, but the ergonomic ones do not.
@@ -1806,7 +1806,7 @@ daemon start, a hand-written settings file, and environment variables.
 **And the session-start hook starts the daemon.** This is the part that converts the
 install from "run these commands and edit this file" to one line — which was the
 original objection to the wrapper, now answered without any of the wrapper's costs.
-A developer should not have to start the daemon, notice it has stopped, or know it
+A person should not have to start the daemon, notice it has stopped, or know it
 exists.
 
 **Three requirements, each easy to get wrong.**
@@ -1820,13 +1820,13 @@ seconds.
 on one machine routinely; each attempts the start, at most one succeeds, none
 reports anything. A failure to bind is the expected outcome.
 
-*Failure is silent to the developer and recorded by the daemon.* No daemon means no
+*Failure is silent to the person and recorded by the daemon.* No daemon means no
 collaboration, which is degraded rather than broken — the same fail-open rule the
 hooks already follow.
 
 **A background process must remain findable.** The daemon outlives the session that
 started it, since a room may have members in several sessions and restarting it
-repeatedly is worse than leaving it up. That makes it something a developer did not
+repeatedly is worse than leaving it up. That makes it something a person did not
 start and might not know about, so it must be discoverable and stoppable by the
 person whose machine it runs on.
 
@@ -2066,7 +2066,7 @@ The second is worth keeping in mind generally: **a guest list is per-peer, so tw
 peers can disagree about who belongs.** Here it presented as one-way collaboration
 and was really an asymmetric list.
 
-**What this makes possible that was not before.** A developer can be in several
+**What this makes possible that was not before.** A person can be in several
 rooms across different sessions, which §12a's constraint describes and a one-room
 daemon could not express. A room outlives the session that created it. And nothing
 is created by starting a process — the bridge is gone, not because it was removed but
@@ -2287,7 +2287,7 @@ The real cost sits one step earlier. `CreateRoom` regenerates on a local name
 collision, but `RecordRoom` — the path taken when **joining** a room someone else
 named — has `ON CONFLICT(room_id)` only. Joining a second room whose generated name
 matches one already held violates the unique index, `runJoin` calls `log.Fatalf`, and
-the developer is told they cannot join a room for a reason that names nothing they
+the person is told they cannot join a room for a reason that names nothing they
 did. 7,656 names make that unlikely per pair and certain at some scale. **That bug is
 not fixed by this entry** and is recorded here so it is not mistaken for fixed.
 
@@ -2326,7 +2326,7 @@ and only the id travels.
 `rooms.room_name` was `NOT NULL UNIQUE`. `CreateRoom` coped by regenerating on a
 clash, but `RecordRoom` — the path taken when **joining** a room somebody else
 named — had `ON CONFLICT(room_id)` only, so the insert violated the index and
-`runJoin` called `log.Fatalf`. The developer was told they could not join a room,
+`runJoin` called `log.Fatalf`. The person was told they could not join a room,
 for a reason naming nothing they had done and nothing they could change.
 
 Not hypothetical at any real scale. Names are drawn from 7,656 combinations, the
@@ -2401,8 +2401,8 @@ about whose. Every other pairing gets a real assurance from that step. This one 
 its appearance — worse than omitting it, because the appearance is what people act on.
 
 Secondarily, the exposure is asymmetric with the benefit. A room carries a working
-session, and admission sends a member's turns to another developer's provider under
-that developer's account (§28). The situations wanting stranger pairing — mentoring, an
+session, and admission sends a member's turns to another person's provider under
+that person's account (§28). The situations wanting stranger pairing — mentoring, an
 interview, a contractor's first day — are ones where a call is almost always available,
 so what is bought is convenience rather than capability.
 
@@ -3139,7 +3139,7 @@ real peer is a colleague at the same company, both working from home. **They wil
 never share a network.**
 
 **What that invalidates.** D-019 made local discovery the first transport to build,
-reasoning that "two developers on the same network is the simplest case and must be
+reasoning that "two people on the same network is the simplest case and must be
 the easiest". The claim is true and it is not about anybody who will use this. A
 zero-configuration path that serves nobody is not a zero-configuration path; it is
 an unused feature with a good argument behind it.
@@ -4223,7 +4223,7 @@ and would then open a window for the second step, which is the more familiar one
 
 **So the first open belongs at the first pairing.** It is also the step that most
 needs a surface: the two words have to be read by both people at once, and a terminal
-is the wrong place to put something a non-developer must find and compare under time
+is the wrong place to put something a non-person must find and compare under time
 pressure.
 
 **Not settled here:** whether pairing and verification are *driven* from the view or
@@ -4233,7 +4233,7 @@ speculation.
 
 **Revisit when:** the pairing ceremony gets a surface, or D-055's ceremony changes.
 
-## D-084 — Silent to the developer is not silent to the log
+## D-084 — Silent to the person is not silent to the log
 
 **Date:** 2026-09-20 · **Status:** active (implemented)
 
@@ -4256,7 +4256,7 @@ What broke it was a **positive** observable — counting browser tabs. Zero tabs
 explicable by a focus theory. One measurement the prevailing story could not
 accommodate did what five consistent ones could not.
 
-**§3.1 requires silence toward the developer, not toward the log,** and the code had
+**§3.1 requires silence toward the person, not toward the log,** and the code had
 been conflating the two. `install.sh` kept a record of its decisions; `common.sh` and
 `session-start.sh` kept none, so the four load-bearing choices in
 `start_daemon_if_needed` — which binary won the search, whether the daemon answered,
@@ -4299,7 +4299,7 @@ would have caught.
 **Date:** 2026-09-20 · **Status:** active (implemented)
 
 **Context.** Reviewing documentation for the assumption that every user is a
-developer. The tone was the smaller problem.
+person. The tone was the smaller problem.
 
 **The instructions did not work.** `/peer-pair` told people to run
 `claude-team pair <string>` in a terminal; `/room-join` told them to run
@@ -4898,7 +4898,7 @@ first letter capitalised, computed once at identity creation, with no command, f
 or environment override to change it — which is why two daemons asserted the same one
 during the first two-peer run. Shipping that in a pairing string would be worse than
 the derived name: `quiet-otter` is honest about being machine-made, while `Ec2-user`
-or `Developer` looks like a claim about a person. Choosing a name has to exist before
+or `Person` looks like a claim about a person. Choosing a name has to exist before
 a pairing string can carry one, and the moment for it is the half of `/peer-pair`
 that already explains what to send.
 
@@ -4924,7 +4924,7 @@ why `Ec2-user` could travel for weeks.
 through it (D-089 consolidated them), so the offer belongs with the string rather
 than with a command. There is no earlier candidate — identity is created by whatever
 touches it first, which is a daemon started detached by a hook, and D-041 forbids
-delaying a session or speaking to the developer. Nobody is watching when the name is
+delaying a session or speaking to the person. Nobody is watching when the name is
 invented.
 
 **Chosen is recorded, not inferred.** `NameChosen` is false at creation and flipped
@@ -5209,7 +5209,7 @@ was `http://` and that no `https` appeared anywhere in the codebase.
 Confidentiality of room content had never been stated as a requirement, and the
 specification discussed it only for pairing strings — where the correct answer is
 that none is needed, because the payload is public keys. Room content is a
-developer's prompts and whatever their Claude said back. Confidentiality is a
+person's prompts and whatever their Claude said back. Confidentiality is a
 requirement.
 
 ### What was wrong

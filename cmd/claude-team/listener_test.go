@@ -9,7 +9,7 @@ import (
 
 // The separation is the security property, not a convention. A hook endpoint
 // reachable from another machine is equivalent to that machine being the local
-// developer: it can publish into the room and read the conversation back.
+// person: it can publish into the room and read the conversation back.
 func mustDaemon(t *testing.T) *Daemon {
 	t.Helper()
 	d, _ := testDaemon(t)

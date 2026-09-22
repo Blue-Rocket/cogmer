@@ -29,7 +29,7 @@ claude_team_binary() {
 
 # ct_say appends one timestamped line to a log under the state directory.
 #
-# §3.1 requires failure to be silent TO THE DEVELOPER. It does not require silence
+# §3.1 requires failure to be silent TO THE PERSON AT THE KEYBOARD. It does not require silence
 # to the log, and conflating the two is how a broken start became indistinguishable
 # from a working one. Nothing here ever writes to stdout: stdout is injected into
 # the user's turn, so a stray line there would corrupt every prompt.

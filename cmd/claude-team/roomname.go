@@ -8,7 +8,7 @@ import (
 
 // Room names are generated, never chosen (§12).
 //
-// A name a developer picks will be the name of a project, a client, or a ticket,
+// A name a person picks will be the name of a project, a client, or a ticket,
 // and rooms named after projects become rooms scoped to projects by convention --
 // the model this specification deliberately abandoned. Generating the name resists
 // that without relying on anyone's discipline.

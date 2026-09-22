@@ -122,7 +122,7 @@ type stopReq struct {
 // LocalRoutes serves Claude Code's hooks and the local UI. It is bound to
 // loopback and must never carry the peer API: the hook endpoints publish into the
 // room and read the conversation back, so reaching them is equivalent to being the
-// local developer (§5, §25).
+// local person (§5, §25).
 func (d *Daemon) LocalRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", d.health)

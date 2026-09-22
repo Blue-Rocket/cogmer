@@ -151,7 +151,7 @@ func (s *Store) Close() error { return s.db.Close() }
 // column added since is therefore missing from every room that predates it --
 // which surfaces not at open but at the first query that names it.
 //
-// Rooms are migrated rather than orphaned: a developer who has been working in one
+// Rooms are migrated rather than orphaned: a person who has been working in one
 // should not lose it to a change that mattered only to us.
 func migrate(db *sql.DB) error {
 	have := map[string]bool{}

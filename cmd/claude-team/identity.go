@@ -108,7 +108,10 @@ func LoadIdentity() (*Identity, error) {
 		user = os.Getenv("USERNAME") // Windows
 	}
 	if user == "" {
-		user = "developer"
+		// A name a colleague reads on every turn. Neither account variable is
+		// set, so we know nothing about them -- say that, rather than guessing
+		// an occupation. Matches unknown-machine below: an honest blank.
+		user = "someone"
 	}
 	host, _ := os.Hostname()
 	if host == "" {

@@ -16,7 +16,7 @@ import (
 // --- confidentiality between peers, pinned to the key we already verified (D-101) ---
 //
 // Events are signed, which is integrity and origin. Signing is not secrecy, and room
-// content is a developer's prompts and whatever their Claude said back. So every peer
+// content is a person's prompts and whatever their Claude said back. So every peer
 // connection is TLS 1.3, over every transport, including the one that is already
 // encrypted -- uniform, so that confidentiality never depends on which path a dial
 // happened to take.

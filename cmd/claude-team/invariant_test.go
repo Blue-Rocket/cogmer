@@ -13,7 +13,7 @@ import (
 //
 // The stricter rule is deliberate and is not what §3.7 requires. Whether a peer
 // event may cause a separate run is explicitly left open -- addressing another
-// developer's Claude would need it. But nothing needs it yet, and the questions it
+// person's Claude would need it. But nothing needs it yet, and the questions it
 // raises (whose subscription, what tool access, what was agreed to) have no answers
 // yet either.
 //

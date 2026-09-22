@@ -131,7 +131,7 @@ central routing rule of the whole daemon.
 
 Our implementation dodged it: one room per daemon process, selected by an
 environment variable. That directly contradicts §22 and does not survive a
-developer working in two repositories at once, which is normal.
+person working in two repositories at once, which is normal.
 
 **Recommend.** Specify that the daemon serves many rooms concurrently and
 resolves each hook call by `cwd`, plus what to do when `cwd` matches no
@@ -141,7 +141,7 @@ configured room (most likely: do nothing, silently, per §3.1).
 
 **LARGELY ADDRESSED — D-015, D-019, D-022, D-024, D-025.** The disclosure surface
 shrank from several directions rather than one. §28 states that injection carries a
-teammate's conversation to another developer's model provider under their own
+teammate's conversation to another person's model provider under their own
 account, and gives `injectSharedContext` a stated purpose. Rooms are no longer
 derived from a repository, so consent is per-pairing (D-015). A room begins when
 someone is invited, so prior solo work is never handed over retroactively (D-022).
@@ -271,7 +271,7 @@ identical event ordering on both daemons.
 **Medium.** §24 offers "timestamp, origin peer, peer sequence, event ID" as fields
 to order by, without a precedence or a tie-break rule. Two correct
 implementations can therefore produce different orderings of the same event set,
-which breaks §17's promise that each developer sees approximately the same room —
+which breaks §17's promise that each person sees approximately the same room —
 and quietly, since it only shows up when events are near-simultaneous.
 
 **Recommend.** Specify the exact tuple and direction: `(timestamp, peerId,
@@ -328,7 +328,7 @@ ordering, even though the delivery watermark tracks arrival.
 **OPEN in the specification; settled in the implementation.** The code excludes by `claudeSessionId`, which is correct, and a test asserts a second local session still sees a peer's events. §19's wording is unchanged.
 
 **Low.** "Exclude Alice's own Claude conversation where it would duplicate
-existing context." A developer may run two Claude sessions on one machine, in the
+existing context." A person may run two Claude sessions on one machine, in the
 same room. Excluding by *peer* would blind each session to the other; excluding by
 *session* is correct, and is what we implemented. The text supports either.
 
@@ -668,7 +668,7 @@ peer-supplied identifiers resolving through `RoomByID` (D-049).
 
 **C-9. Joining a room whose name was already held failed — fixed.** The same UNIQUE
 index that made C-8 harmless rejected a second room carrying a name already present,
-so `runJoin` aborted for a reason naming nothing the developer had done and nothing
+so `runJoin` aborted for a reason naming nothing the person had done and nothing
 they could change. Names now collide locally, and an ambiguous name is reported with
 both identities rather than guessed at (D-050).
 

@@ -64,17 +64,9 @@ nothing before the first invitation is captured at all (D-022); and offline is P
 5, unbuilt. Say peer-to-peer and serverless, which are true without qualification,
 and keep "local-first" where §3's meaning is on the page.
 
-**`README.md:3` describes the tool by a count.** "Several developers" breaks D-109
-(two is the target and nothing rules out more) and the developer rule in one
-sentence. `CLAUDE.md`'s matching line is fixed; this one is the visible copy.
-
-**The documents treat everybody as a developer.** 67 in the spec and 50 in
-`decisions.md`, against 72 and 110 for "person" — so this is habit, not a decision,
-and half the text already reads the other way. Claude Code is not used only by
-programmers and nothing here is about code. `CLAUDE.md` is converted; the rest is a
-pass. Watch for the ones that are load-bearing rather than incidental: §3's
-local-first sentence and §3.7's converse both turn on what *a person* is doing at a
-session, not on their job.
+**`plugin/README.md` still opens with "local-first".** `README.md` and the spec's
+first line are the other two unqualified uses; §3 defines the term narrowly and
+every use inside the spec is sound.
 
 **D-076 is cited three times and does not exist, and should not be written.** No
 commit in all 142 ever contained the heading; `323f46d` (2026-09-20) added the
@@ -151,7 +143,7 @@ avenue) left this open. Do not build a notification on speculation — it has a
 different answer for close pairing than for long solo stretches.
 
 **Whether a peer event may cause a *separate* run.** §3.7 forbids one in an
-interactive session and leaves this open. Addressing another developer's Claude
+interactive session and leaves this open. Addressing another person's Claude
 would need it, and it raises its own questions — whose subscription, what tool
 access, what was agreed to — none of them answered.
 
