@@ -52,22 +52,33 @@ through `leave` and `revoke`; the room itself has no closed state.
 
 ## Commands that mislead
 
-**`/cogmer:self-status` on first use shows nothing at all.** It is the first command
-a new person runs, because the pairing string is what they came for, and it runs
-while the binary is still downloading: 29MB, measured at 16s on 09-22. In
-that window it prints nothing, and it prints nothing if the install failed.
+**`/cogmer:self-status` on first use fails instead of answering.** It is the first
+command a new person runs, because the pairing string is what they came for, and it
+runs before there is a binary. There are two ways that happens. The download takes
+time: 29MB, measured at 16s on 09-22. And a plugin installed inside a running
+session fetches nothing at all, because the fetch is started by the SessionStart
+hook and that session started before the plugin existed. Installing and then
+immediately trying the command, in the same session, is probably the commonest
+first use, and on 09-22 it was David's.
 
-The cause is in how Claude Code handles a command's `!` lines, observed 09-22 with
-`claude -p "/cogmer:self-status" --plugin-dir ./plugin` against a fresh
-`COGMER_HOME`. A `!` line that exits non-zero abandons the command. Its output comes
-back as `local-command-stderr`, no model turn runs, and the result is the empty
-string. `cli.sh` exits 1 from every branch where there is no binary, so the
+The cause is in how Claude Code handles a command's `!` lines. A `!` line that exits
+non-zero abandons the command, and no model turn runs. In an interactive session the
+person sees the line's output under "Shell command failed for pattern …", labelled
+`[stderr]`; with `claude -p` the result is the empty string. Both were observed on
+09-22. `cli.sh` exits 1 from every branch where there is no binary, so the
 installing, failed and stalled explanations D-075 (say which of three reasons it
-is) wrote are all thrown away.
+is) wrote do reach the person, but framed as a crash, and the model never sees them,
+so it can neither explain them nor act on them.
 
-Four changes would make first use work. `cli.sh` should always exit 0 and send the
+Five changes would make first use work. `cli.sh` should always exit 0 and send the
 binary's stderr to stdout, so that every explanation reaches the model. Nothing else
 reads its exit code, since the hooks go through `run.sh`.
+
+When nothing has been fetched, `cli.sh` should start the fetch itself instead of
+telling the person to start a new session. `install.sh` already takes a lock and
+decides for itself whether there is anything to do, so a command can run it exactly
+as the hook does. A command somebody typed is the right place to spend a download,
+which the session-start hook has to do detached so that it slows nothing.
 
 While an install is in progress, the command should wait for it within a bound and
 then answer with the pairing string, rather than saying to try again in a moment.
@@ -86,8 +97,8 @@ The behaviour belongs in `behaviors.go` with a negative test, a command whose `!
 line exits 1 producing no turn, because it fails silently and the registry exists
 for exactly that.
 
-The same cause hits other commands. `/cogmer:room-status` outside a room shows
-nothing, because its `guests` line exits 1, and that is the state everybody is in
+The same cause hits other commands. `/cogmer:room-status` outside a room fails
+the same way, because its `guests` line exits 1, and that is the state everybody is in
 just after installing. Any `log.Fatal` a command reaches does the same. The `cli.sh`
 change covers every one of them, and each command still needs checking, because
 some exit non-zero on purpose. A fix reaches nobody until the version moves (D-120,
