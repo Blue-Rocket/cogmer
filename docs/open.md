@@ -243,6 +243,18 @@ transport, and not testable alone.
 **Whether the public relay is an acceptable dependency.** Parked deliberately as a
 precondition of Phase 13, where it stops being theoretical.
 
+**Whether the download is slow enough to matter.** Deliberately not addressed until
+people installing it say so. The darwin/arm64 binary is 29.3MB and took 16s on
+09-22; release binaries are already stripped. Compressed with `gzip -9` it is
+11.0MB, so compression is the obvious lever. It would add `gunzip` to what the
+installer needs, which is confirmed only on macOS; minimal Linux images may lack
+it, and Git Bash on Windows is unchecked. The version that adds no requirement
+publishes both forms, pins both, and fetches the compressed one only where
+`gunzip` exists, checking the binary it will actually run, not only the file it
+downloaded. Shipping binaries inside the plugin removes the download entirely but
+commits about 150MB per release into the history everybody clones, and is ruled
+out.
+
 ## Lost, and needs recovering from David
 
 An item on **idempotency** was in `residual-concerns.md` and is gone: the file was
