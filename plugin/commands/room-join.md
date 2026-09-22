@@ -2,6 +2,7 @@
 description: Join a room you were invited to
 argument-hint: <invitation>
 allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" join:*)
+disable-model-invocation: true
 ---
 
 ## What happened

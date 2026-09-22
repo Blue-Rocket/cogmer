@@ -1,6 +1,7 @@
 ---
 description: Take this session out of its room
 allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" leave:*)
+disable-model-invocation: true
 ---
 
 ## What happened

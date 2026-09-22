@@ -100,16 +100,11 @@ under the former name, so `release-url.txt` currently points at a path that does
 exist. Until `publish.sh` runs, the installer finds nothing to download and refuses,
 which is the correct failure rather than a bug — but the plugin is inert until then.
 
-**Every slash command is model-invocable, and none of them should be.** Claude Code
-loads `commands/*.md` identically to `skills/<name>/SKILL.md`, so every one of them
-appears in the model's own skill listing — verified with a throwaway plugin, where both
-layouts surfaced as model-invocable entries. The model can therefore decide by itself
-to run `room-leave`, `room-revoke` or `peer-forget`. §3.1 says a session must be no
-worse for having installed this, and a command that withdraws a colleague's admission
-without a person asking is worse. The fix is `disable-model-invocation: true` in the
-frontmatter, but which commands deserve it is a decision, not a sweep: a read-only
-`room-status` may be worth leaving reachable. Needs a behaviour registry entry with a
-negative test either way, because nothing currently checks it.
+**Move `plugin/commands/*.md` to the `skills/<name>/SKILL.md` layout.** The
+documentation calls `commands/` legacy and says the two are loaded identically. D-119
+deliberately did not do it in the same pass, because a directory restructure is a bad
+thing to bury a §3.1 fix inside. `TestNoCommandIsModelInvocable` reads the old path
+and would need to follow.
 
 **`plugin.json` says version 0.1.0 while `plugin/VERSION` says 0.7.0.** Noticed
 during the rename, not caused by it, and `release.sh` writes only the latter. Which

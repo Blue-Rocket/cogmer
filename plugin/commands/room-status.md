@@ -1,6 +1,7 @@
 ---
 description: Show the room this session is in, and who is in it
 allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" rooms:*), Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" guests:*), Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" where:*)
+disable-model-invocation: true
 ---
 
 ## Rooms

@@ -1,6 +1,7 @@
 ---
 description: Show the room's conversation so far
 allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" log:*)
+disable-model-invocation: true
 ---
 
 ## The room

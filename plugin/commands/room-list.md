@@ -1,6 +1,7 @@
 ---
 description: Rooms on this machine, and any waiting for you to accept
 allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" rooms:*)
+disable-model-invocation: true
 ---
 
 ## What happened

@@ -1,6 +1,7 @@
 ---
 description: Show who you are, what you send colleagues, and whether they can reach you
 allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" whoami:*)
+disable-model-invocation: true
 ---
 
 ## What happened
