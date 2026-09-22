@@ -86,7 +86,11 @@ D-115's benefit test, tagged rather than defended. It exists because a module pa
 must match a repository URL and there is no repository; the name is settled now
 (D-117), so creating one is the event that both unblocks Phase 13 and retires this.
 `publish.sh` is the only script that changes; `release.sh` is host-agnostic by
-design.
+design. What is on the droplet to remove: an nginx site `cogmer` rooted at
+`/srv/cogmer`, serving `/srv/cogmer/cogmer/v<version>/` as `/cogmer/v<version>/`.
+That root is not in this repository, so moving the published tree means editing the
+site too — the rename found that out by serving 404s from a directory that had been
+deleted.
 
 **Create the repository the module path names.** `go.mod` says
 `github.com/Blue-Rocket/cogmer` and nothing lives there yet. This is now the whole of
@@ -94,12 +98,6 @@ the Phase 13 chain: no repository means nowhere to `claude plugin install` from,
 the installer's source-build fallback points at a path that does not resolve. D-069
 recorded the casing bug that made the inherited path fail; the new path fixes it, but
 only once the repository exists to match.
-
-**Publish v0.7.0.** `release.sh` has built it and `checksums.txt` pins those bytes,
-but nothing is on the host: the old release tree was deleted with everything else
-under the former name, so `release-url.txt` currently points at a path that does not
-exist. Until `publish.sh` runs, the installer finds nothing to download and refuses,
-which is the correct failure rather than a bug — but the plugin is inert until then.
 
 **Move `plugin/commands/*.md` to the `skills/<name>/SKILL.md` layout.** The
 documentation calls `commands/` legacy and says the two are loaded identically. D-119
