@@ -27,11 +27,17 @@ now complete or deliberately dissolved.**
 Outstanding: local network discovery, and a host approving an unsolicited join
 request — the latter undecided rather than pending.
 
-**Blocked on the repository.** The plugin is built and the install is one line by
-design (D-041), but a Go module path must match its repository URL, and the one
-`github.com/Blue-Rocket/cogmer` names does not exist yet, so there is nowhere for a
-colleague to install from. That is what stands between this and somebody else using
-it.
+**Installable.** Two lines, from inside a session:
+
+```
+/plugin marketplace add Blue-Rocket/cogmer
+/plugin install cogmer@blue-rocket
+```
+
+The session-start hook fetches the binary for the platform and starts the daemon.
+Each binary is authorised by a sha256 pinned in the plugin, and a download that does
+not match it is deleted rather than run; a machine with a Go toolchain and no
+matching asset builds from source instead.
 
 Earlier findings that the design still rests on:
 [`docs/phase0-findings.md`](docs/phase0-findings.md) (integration spike, including
@@ -42,8 +48,8 @@ teammate context survives it, so the delivery watermark is unchanged).
 ## Getting two people talking
 
 Installed as a plugin, this is meant to be invisible: the session-start hook fetches
-the binary and starts the daemon, and nothing below needs doing by hand. That path
-is blocked on the name (see Status), so today it is built from source.
+the binary and starts the daemon, and nothing below needs doing by hand. What
+follows is the same thing by hand, which is what you want when working on it.
 
 ```sh
 go build -o bin/cogmer ./cmd/cogmer
