@@ -6,7 +6,8 @@ import (
 	"testing"
 )
 
-// §3.7 forbids a remote event causing inference in an INTERACTIVE session. This
+// §3.7 forbids a remote event driving an INTERACTIVE session -- starting a turn,
+// never merely being read by one. This
 // test enforces something stricter: that peer-handling code cannot start a process
 // at all.
 //

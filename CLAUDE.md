@@ -1,9 +1,54 @@
 # claude-team
 
-Peer-to-peer daemon replicating one Claude Code conversation between people
-working separately, each on their own subscription, with no central server.
-`Shared Claude Sessions.md` is the specification; its §-numbers appear throughout
-the code.
+Peer-to-peer daemon replicating one Claude Code conversation between people working
+separately, each on their own subscription, with no central server.
+
+This file is operating doctrine, not documentation: how we work, what this project
+has chosen, what it must not break, and how to run it. It is deliberately not an
+encyclopedia — the last section says where to read instead.
+
+## How we work
+
+- **Read `docs/decisions.md` before proposing a change to how anything here works.**
+  It records what was **rejected and why**, and several awkward-looking choices are
+  load-bearing. Add an entry whenever a real alternative was weighed. Never
+  renumber; supersede.
+- **Read the code before characterising it.** Paraphrasing a grep result produced a
+  wrong account of two decisions in one session. Read the function, not the line
+  that mentions it.
+- **Check `git log` before concluding something was removed.** `git log -S` across
+  all commits answers "was this ever written?" — which is a different question from
+  "is it here now", and twice it was the one that mattered.
+- **Cite nothing you have not confirmed exists.** Twelve citations pointed at three
+  decisions that were never written, because a number was allocated while writing a
+  commit and the entry never followed.
+- Corrections are clean replacements: no superseded text, no narration of what the
+  old text said.
+- Give every `§`, `D-NNN` and `B-NN` a few words — "D-054 (verification gates
+  sync)", not "D-054" — in conversation as well as in files.
+- Say **person** or **colleague**, never "developer". Never describe the tool by a
+  count. Never call it **local-first** unqualified: rendezvous needs a relay
+  somebody else operates and D-029 makes recovery a refetch from peers.
+
+**Where a thing gets written down.** Putting an answer in the wrong document is how
+they rot.
+
+| document | answers |
+|---|---|
+| `Shared Claude Sessions.md` | what must be true |
+| `docs/decisions.md` | why, and what was rejected |
+| `docs/*-findings.md` | what we observed when we tried it |
+| `cmd/claude-team/behaviors.go` | what someone else's software does that we rely on |
+| `docs/open.md` | what is to do, what is undecided, where things stand |
+
+- A finding never goes in the spec — put the requirement it justifies there.
+- A finding about someone else's software goes in the behaviour registry, the only
+  one of the five that tests itself.
+- Current state goes in `open.md` and is deleted when done, never marked done.
+- A decision that changes what the system *is* updates the spec in the same pass
+  (D-098).
+
+## The local physics
 
 ```
 cmd/claude-team/
@@ -14,219 +59,141 @@ cmd/claude-team/
   identity.go    §6 peer identity, §28 config split
 ```
 
-State is `~/.claude-team/` (`identity.json`, `config.json`, `rooms/*.db`). Drive a
-real session with `claude -p … --settings <file>`, a throwaway `CLAUDE_TEAM_ROOM`
-per run, and `< /dev/null` or it waits on stdin.
+State is `~/.claude-team/` (`identity.json`, `identity.key`, `config.json`,
+`rooms/*.db`). Pure Go throughout — `modernc.org/sqlite`, no cgo — so every target
+cross-compiles with `CGO_ENABLED=0`.
 
-## Two is the target and nothing rules out more (D-109)
+- Build `go build -o bin/claude-team ./cmd/claude-team`. `bin/` is untracked: 17MB
+  per commit, and the build reproduces it.
+- Test `go test ./...`. To drive a real session, `claude -p … --settings <file>`
+  with a throwaway `CLAUDE_TEAM_ROOM` per run, and `< /dev/null` or it waits on
+  stdin.
+- `claude-team doctor` checks the behaviours we rely on: ~5s, one Claude turn.
+  `--deep` adds compaction, ~40s. It auto-runs on new room formation, cached by
+  `claude --version`. `CLAUDE_TEAM_PREFLIGHT=off` for CI.
+- `docs/relied-on-behaviors.md` is **generated** (`claude-team behaviors
+  --markdown`). Edit `behaviors.go`, never the doc.
 
-- Build for two people in a room. Spend no effort on a third.
-- A design that *cannot* extend past two is a defect to argue for, not a saving to
-  take quietly. O(n) work is a cost and is fine; a ceiling is not.
-- Never describe the tool by a count.
+**Releasing is three steps in one order.** Bump `plugin/VERSION`, run
+`scripts/release.sh <that same version>`, then `scripts/publish.sh`.
 
-## Hosts (D-110)
+- `release.sh` builds five targets and rewrites `plugin/checksums.txt` **from the
+  bytes it just built**. That file is the only thing authorising a downloaded
+  binary to run, so never hand-edit it — a hash typed rather than computed
+  authorises something nobody has seen.
+- Publishing without rerunning `release.sh` leaves the installer refusing the new
+  asset. That is the correct failure, not a bug to work around.
+- `publish.sh` reads `plugin/VERSION`, requires `dist/`, and ships to the host in
+  `plugin/release-url.txt`.
 
-- Claude Code, then Claude CoWork a short interval later, then ChatGPT Desktop much
-  later.
-- Naming them licenses nothing: no `source` column, no adapter interface, nothing
-  designed against an extension model we have not seen (D-043, D-086).
-- Host-independence earns its place only where today's host already justifies it —
-  the daemon and the view, which are a local service and a web page.
+## Choices this project has made
 
-## Documents
+Not universal truths — the part of the possibility space this project selected.
 
-| document | answers |
+- **Two people is the target, and nothing rules out more** (D-109). Spend no effort
+  on a third. O(n) work is a cost and is fine; a design that *cannot* extend past
+  two is a ceiling and must be argued for. Events are immutable, so a ceiling in an
+  event format is permanent.
+- **No adapter machinery for a second host** (D-043, D-113). Capture generalises and
+  injection does not, so the abstraction that looks safe on the capture side is not
+  safe on the injection side. Hosts are ordered — Claude Code, CoWork soon, ChatGPT
+  Desktop much later (D-110) — and naming them licenses nothing.
+- **A view is a separate program, never drawn inside the session** (D-038, D-039).
+  A session is read closely and a room is glanced at. Do not propose a terminal
+  pane; prefer an OS notification from the daemon for ambient awareness.
+- **No network provider is required** (D-019). None belongs in room identity,
+  membership or replication. Tailscale is one provider, never a prerequisite.
+- **No join tokens, and no join-by-name on a trusted network** (D-024, D-026).
+  Nothing a person can hold admits them, and names are guessable by design.
+- **Migrate, do not orphan.** `CREATE TABLE IF NOT EXISTS` ignores an existing
+  table, so a column added later is missing from every older room and fails at first
+  query rather than at open. `migrate()` runs on open; adding it there is the job.
+- **No CRDT** until testing proves it necessary (§11).
+- A command prefix names its target: `peer-` somebody else, `room-` a room, `self-`
+  you (D-095). There is no prefix for the tool itself, and no placeholder product
+  name — the name is unsettled and Phase 13 is blocked on it.
+
+## Boundaries
+
+Violating one makes an otherwise reasonable change wrong, and none is obvious from
+reading a few files.
+
+- **Hooks must never break Claude Code** (§3.1). Every failure path exits 0 with
+  empty stdout. A dead daemon means no collaboration, never a broken session.
+- **A remote event never drives an interactive session** (§3.7). It may be read at a
+  turn the person started; it must never be the reason a turn ran. `sync.go`,
+  `daemon.go`, `store.go` and `transcript.go` must not import `os/exec` or
+  `syscall`, or call `RunProbe`/`EnsureVerified`/`runDoctor` — a test enforces it.
+  An MCP server must not expose sampling, for the same reason.
+- **Room content is untrusted.** It comes from peers. `ui.html` escapes before
+  applying markup and a test asserts that order; the injected block carries a
+  per-injection fence, strips that fence from content, and restates its framing
+  *after* the turns (D-040). Frame by classification, never by asserting authority.
+  Never a static delimiter.
+- **The local API is reachable from this machine's browser**; loopback is not a
+  boundary (D-087). State-changing routes require `X-Claude-Team: 1` — require, not
+  refuse, which is what makes it fail closed. `Origin` is a second layer. Never
+  `Referer`. Reads stay unguarded, because CORS already withholds them.
+- **The private key lives in `identity.key` and never in `identity.json`**, which
+  `whoami` prints. A test asserts it never marshals.
+- **Verification gates synchronization** (D-054). Authentication, admission and
+  verification answer three different questions and must not be collapsed — every
+  one but the last passes equally well for a key substituted in transit. An
+  unverified peer's events are refused at their **origin**, so a verified relay
+  cannot launder an unverified author, and are **held, never dropped**.
+- **Events are immutable** (§7). Never rewrite `eventId`, `peerId` or
+  `peerSequence`; transitive relay depends on it. Signature schemes are added,
+  never edited (D-058) — an event cannot be re-signed and refetching history is a
+  recovery path, so add `signingBytesV3` and bump `currentSigVersion`.
+- **Durability precedes publication** (§23), and **reserve a sequence before
+  publishing the event that uses it** (D-029). The reverse publishes a number with
+  no record of it.
+- **Never publish `thinking` blocks**, exclude `isSidechain` records (§3.5), and do
+  not summarize conversation (§3.4) — store the actual text. Injected context is
+  attributed, never disguised as local (§20).
+- **Key on `roomId`, never on `roomName`** — names collide by design (D-017).
+  Nothing derives a room from a directory, repository or project. A session's room
+  is fixed at its first prompt and never changes (D-016), because injected context
+  cannot be withdrawn from a context window.
+- **`mergeTail` is not an append.** It detects the superset case rather than
+  assuming it; if `last_assistant_message` ever widens to the whole turn, blind
+  appending duplicates every pre-tool block and silently corrupts the room.
+- **Delivery is confirmed by observation**, never marked at injection time (D-014).
+  The daemon's reply can be lost, and committing then discards context permanently
+  and silently.
+
+## Facts that are not obvious from the code
+
+- **Every Claude Code extension point delivers to the model, and nothing displays to
+  a person** (D-033, D-036). A person sees only what the model then says. MCP as a
+  display channel was tested exhaustively and surfaces nowhere anybody looks — do
+  not re-attempt it. **Nothing checks this**, which is why it is written here.
+- **Whether injected context survives a compaction is the summarizer's judgement**,
+  not a format guarantee, so no assertion can cover it. Re-run Test B from
+  `docs/phase0a-findings.md` when the model or the Claude Code version changes.
+- **Claude Code behaviours this project relies on are undocumented, and several fail
+  silently** — the room keeps accepting events while recording the wrong thing. If
+  you find a new reliance, add one to `behaviors.go` with a negative test, because a
+  check that cannot fail reads as protection. Write its `Reliance` field for someone
+  debugging at 2am: what breaks, not what the behaviour is.
+- **Assistant records carry no `promptId`** (B09), which is why turn segmentation is
+  positional rather than keyed. B04, B05 and B09 would report *improvements* as well
+  as breakage; watch for those, since they would let us simplify.
+- **Nothing cryptographic depends on the product name** (D-069). Signing namespaces
+  use `protocolNamespace`, which is arbitrary on purpose and must never change.
+
+## Where to read before changing something
+
+Not a summary of these — a map to them. If the area is not listed, the spec is.
+
+| touching | read first |
 |---|---|
-| `Shared Claude Sessions.md` | what must be true |
-| `docs/decisions.md` | why, and what was rejected |
-| `docs/*-findings.md` | what we observed when we tried it |
-| `cmd/claude-team/behaviors.go` | what someone else's software does that we rely on |
-| `docs/open.md` | what is to do, what is undecided, where things stand |
-
-- **This file is rules. The reasoning is in the decision each rule cites.**
-- Read `decisions.md` before proposing a change to how any of this works. Add an
-  entry whenever a real alternative was weighed. Never renumber; supersede.
-- A finding never goes in the spec — put the requirement it justifies there.
-- A finding about someone else's software goes in the behaviour registry.
-- Current state goes in `open.md`, and is deleted when done rather than marked done.
-- A decision that changes what the system *is* updates the spec in the same pass
-  (D-098).
-- Corrections are clean replacements: no superseded text, no narration of what the
-  old text said.
-- Say **person** or **colleague**, never "developer": Claude Code is not used only
-  by programmers, and nothing here is about code.
-- Never call the project **local-first** unqualified. It is peer-to-peer and
-  serverless; rendezvous across NAT needs a third-party relay, and D-029 (losing a
-  room database) makes recovery a refetch from peers. The part that holds is §3's:
-  a session survives every peer disappearing.
-- Give every `§`, `D-NNN` and `B-NN` a few words — "D-054 (verification gates sync)",
-  not "D-054" — in conversation as well as in files.
-
-## The host is launched and used unchanged (§3.8)
-
-The single test to apply to any proposal. The *host* is the application a session
-runs in — Claude Code today. Three ways a proposal fails it:
-
-- it needs the host started differently — a replacement command, a wrapper, a
-  terminal interposed (D-034);
-- it needs installing an artifact of a type that is not among the host's
-  demonstrated, documented extension mechanisms. In Claude Code: hooks, skills,
-  MCP servers and the plugin that carries them. The type is constrained; what the
-  artifact *does* is not (D-113);
-- it needs knowing how the host renders.
-
-A host offering no way in is out of reach, never a reason to wrap one.
-
-- Every extension point delivers to the model; presentation is best effort (D-033).
-- MCP is never a display channel (D-036). Nothing checks this.
-
-## A remote event never causes inference in an interactive session (§3.7)
-
-- Remote events are stored, displayed and queued; they enter context at the next
-  locally initiated turn and never before.
-- An MCP server must not expose sampling, which would let a peer cause a turn in
-  somebody's session.
-- `sync.go`, `daemon.go`, `store.go` and `transcript.go` must not import `os/exec`
-  or `syscall`, or call `RunProbe`/`EnsureVerified`/`runDoctor`. A test enforces it.
-
-## The view (D-038, D-039)
-
-- The view is a separate program outside the session. Do not interleave it, and do
-  not propose a terminal pane.
-- Room content is untrusted: `ui.html` escapes before applying markup, and a test
-  asserts that order.
-- No control that invites a click it cannot honour.
-- The derived name appears on other peers, never on your own turns (D-021). An
-  `unverified` marker is a backstop; seeing one means a filter failed.
-- Prefer an OS notification from the daemon for ambient awareness.
-
-## Pairing (D-088, D-055)
-
-- Two words from a live commit/reveal exchange, compared aloud on a call, by both
-  people at once. No fallback.
-- Every pairing gets its own URL.
-- `/verify/*` take a `pairId`, never a peer identifier.
-- The 90-second window starts at Start, not at page load.
-- The terminal path is the automatic fallback where no browser opens, so
-  `openInBrowser` returns an error rather than failing quietly.
-
-## The local API (D-087)
-
-- State-changing routes require `X-Claude-Team: 1`. Require, not refuse.
-- `Origin` is a second layer, not the check.
-- Never `Referer`.
-- `/healthz`, `/events`, `/stream` and the page stay unguarded.
-
-## Installation (D-041)
-
-`claude plugin install claude-team`; the session-start hook starts the daemon.
-
-- Starting must not delay the session.
-- Already running is the ordinary outcome, not an error.
-- Failure is silent to the person at the keyboard.
-- The daemon outlives its session, so it stays discoverable and stoppable.
-
-## Command names (D-095, D-096)
-
-- `peer-` acts on somebody else, `room-` on a room, `self-` on you. The prefix names
-  the target, not the activity.
-- No prefix for the tool itself, and no placeholder product name.
-
-## Rooms (D-015, D-046)
-
-- Key on `roomId`, never on `roomName` (D-017).
-- Nothing derives a room from a directory, repository or project.
-- A room begins at the first invitation, never at session start (D-022). Nothing
-  before it is handed over.
-- A session's room is fixed at its first prompt and never changes (D-016, D-056).
-- Membership is durable, presence is not. A log is archived and read, never rejoined.
-- The daemon is the machine's local service, not a room. A session in no room
-  captures and injects nothing.
-- Guest lists are per-peer, and an invitation carries the inviting peer's identifier.
-
-## Transport and admission (D-019, D-024)
-
-- No network provider in room identity, membership or replication. It must work with
-  no VPN. Tailscale is one provider, never a prerequisite.
-- Discovery locates a room and never admits anyone to one.
-- Two scopes: known peers, per machine and durable; a room's guests, per room.
-- Admission is a fresh signed challenge, never replayable.
-- A refusal names the peer to the host (D-025).
-- No join tokens (D-026).
-- No join-by-name on a trusted network; names are guessable by design (D-017).
-
-## Identity and verification (D-042, D-054)
-
-Three checks answering three questions. Do not collapse them:
-
-- **Authentication** — who holds the key (signature).
-- **Admission** — whether that key may enter this room (D-045).
-- **Verification** — whether the key is the person's (D-055).
-
-- A `peerId` is an Ed25519 public key; knowing one grants nothing.
-- Events are signed at origin and rejected on receipt if they do not verify (§13).
-- Sync requests are signed, with replay and staleness rejected (D-044).
-- The private key lives in `identity.key` (0600), never in `identity.json`. A test
-  asserts it never marshals.
-- An unverified peer is refused sync, its events are refused at their origin, and
-  injection filters again.
-- Events from an unverified peer are held, never dropped.
-- Every refusal names the peer and the command that clears it.
-- One way to verify and no fallback (D-055). `Fingerprint` marks nothing.
-- Pairing is machine scope, inviting is room scope (D-053).
-- `revoke` withdraws one room's admission; `forget` discards the identity and every
-  admission it held (D-073); `allow` records without verifying, for scripts and tests.
-- Peer names are derived from `peerId`, never chosen or stored, and are grindable —
-  a mnemonic for an identity already verified, never an introduction.
-
-## Capture and injection (D-014, D-040, D-043)
-
-- Never publish `thinking` blocks, and exclude `isSidechain` records (§3.5).
-- Do not summarize conversation (§3.4) — store the actual text.
-- Injected context is attributed, never disguised as local (§20).
-- Each injected block carries a per-injection fence, strips that fence from content,
-  and restates the framing after the turns, framing by classification rather than by
-  authority (D-040). Never a static delimiter.
-- `ReassembleLastTurn` unions `Stop.last_assistant_message` with the transcript
-  (B04, B05). Turn segmentation is positional (B09).
-- `mergeTail` is not an append. Do not simplify it to one.
-- No compaction rewind and no re-injection floor.
-- Delivery is marked only on observing `hook_success` in the transcript (D-014),
-  never at injection time. Unobserved events stay pending and are re-offered.
-  Committing on trust requires B20 recorded as failing.
-- Re-run Test B (`docs/phase0a-findings.md`) when the model or the Claude Code
-  version changes. Whether injected context survives compaction is unassertable.
-- `protocol.go` and `store.go` stay separate types with explicit conversion (D-043).
-  Sync carries a version and refuses a peer speaking a different one.
-- The session field is `originSessionId`. No `source`/adapter machinery.
-- `migrate()` runs on open; add columns there. `CREATE TABLE IF NOT EXISTS` orphans
-  every older room.
-
-## The behavior registry
-
-`cmd/claude-team/behaviors.go`, from which `docs/relied-on-behaviors.md` is
-generated (`claude-team behaviors --markdown`) — edit the registry, not the doc.
-
-- A new reliance gets a behavior. These fail silently.
-- Every check gets a negative test in `behaviors_test.go`. A check that cannot fail
-  reads as protection.
-- Write `Reliance` for someone debugging at 2am: what breaks, not what the behavior
-  is. The length minimum is a floor, not a target.
-- Watch B04, B05 and B09 for improvements, not only breakage; they would let us
-  simplify.
-- `doctor` is ~5s, `doctor --deep` adds compaction at ~40s. Auto-runs on new room
-  formation, cached by `claude --version`. `CLAUDE_TEAM_PREFLIGHT=off` for CI.
-
-## Invariants
-
-- Hooks never break Claude Code (§3.1). Every failure path exits 0 with empty stdout.
-- Durability precedes publication (§23).
-- Events are immutable (§7). Never rewrite `eventId`, `peerId` or `peerSequence`.
-- Signature schemes are added, never edited (D-058). Add `signingBytesV3` and bump
-  `currentSigVersion`.
-- Reserve a sequence before publishing the event that uses it (D-029). The sequence
-  position lives outside the room database.
-- No CRDT until testing proves it necessary (§11).
-- The name is not settled and Phase 13 is blocked on it (§31). `protocolNamespace`
-  is arbitrary on purpose and must never change (D-069).
+| pairing, verification, the two words | D-055, D-088, D-093, D-047, §25 |
+| the local HTTP API or the view | D-087, D-038, D-039, D-090, D-099 |
+| capture, reassembly, injection | D-014, D-040, D-043, and B04/B05/B09 |
+| rooms, membership, session binding | D-015, D-016, D-046, D-064, D-071, D-077 |
+| identity, keys, admission | D-042, D-044, D-053, D-058, D-073, D-054 |
+| addresses, transport, reachability | D-019, D-091, D-101, D-103, D-104 |
+| another host | D-110, D-111, D-113, §3.8 |
+| sequences, recovery from local loss | D-029, D-060 |
+| what is unfinished or undecided | `docs/open.md` |

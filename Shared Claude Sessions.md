@@ -201,9 +201,11 @@ This bounds several problems that an indefinitely-lived room creates. Unseen con
 
 ---
 
-## 3.7 A remote event never causes inference in an interactive session
+## 3.7 A remote event never drives an interactive session
 
-A session a developer is working in takes a turn when that developer asks it to, and at no other time.
+A session a person is working in takes a turn when that person asks it to, and at no other time.
+
+The rule is about what *starts* a turn, never about what a turn reads. An injected event is part of the context and does bear on what the model produces — that is the point of injecting it. What it must never be is the reason the model runs at all.
 
 Remote events are stored, displayed, and queued. They enter such a session's context at its next **locally initiated** turn, and never before. A peer may place something in front of a developer's Claude; only that developer may cause it to be read.
 
