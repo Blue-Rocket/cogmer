@@ -76,6 +76,23 @@ cross-compiles with `CGO_ENABLED=0`.
 - `docs/relied-on-behaviors.md` is **generated** (`claude-team behaviors
   --markdown`). Edit `behaviors.go`, never the doc.
 
+**This repo has a codegraph index, and reaching for grep instead is the default
+failure.** grep is the reflex for every lookup and wins by inertia unless the split
+is stated:
+
+- **Symbols, callers, callees, impact** — `codegraph_search`, `codegraph_callers`,
+  `codegraph_impact`. `grep -rn "funcName"` is the wrong tool for a call graph, and
+  running `codegraph_impact` before changing a signature is the whole point.
+- **Text** — grep. SQL inside a string literal, a citation like `§3.1`, anything in
+  a `.md`. The graph holds the Go sources and knows nothing about prose,
+  which is most of this repository.
+
+**A stale index answers confidently.** `codegraph_search` on a function added an
+hour ago returns "No results found", which reads as *that does not exist* rather
+than *this index is old* — a failure grep cannot have. `.codegraph/` is gitignored
+and per-machine; `codegraph sync` costs ~0.2s and `codegraph status` says what it
+holds. Hooks keep it fresh, but they only fire for edits this session made.
+
 **Releasing is three steps in one order.** Bump `plugin/VERSION`, run
 `scripts/release.sh <that same version>`, then `scripts/publish.sh`.
 
