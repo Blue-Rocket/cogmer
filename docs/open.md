@@ -14,28 +14,21 @@ every week of work sits in a file loaded into every session.
 
 ## Where things stand
 
-Phases 8 (local UI), 9 (identity) and 10 (pairing and room identity) are done, in
-§31's stated order rather than numeric order:
+Every numbered phase in §31 is complete or deliberately dissolved. Phase 5 closed
+review finding B2 (injection order) by verification, which one live peer could never
+have exercised: the injected block then holds only that peer's turns, already in
+sequence.
 
-```
-Phase 8 local UI  →  Phase 9 identity  →  Phase 10 pairing + room identity
-     →  Phase 5 offline  →  Phase 7 hardening + recovery from local loss
-```
+**Phase 13 — somebody else uses it — is the live one, and it is no longer blocked on
+anything here.** The repository exists, is public, carries the marketplace manifest
+beside the plugin, and serves releases the installer verifies against its pins
+(D-121). What it needs is a person who did not write this: installing, pairing,
+joining, working, and saying what they hit in the order they hit it. It is the only
+phase that can fail in a way none of the others detect, and the failure looks like
+somebody quietly not using it again.
 
-Phase 10 is done **except** a host approving an unsolicited join request, and
-whether that should exist is undecided rather than pending (§12a, D-051).
-
-**Phase 5, offline and reconnection, is next.** It is also the only thing that can
-close review finding B2 (injection order), which cannot be exercised with one live
-peer: the block then contains only that peer's turns, already in sequence. It needs
-a peer reconnecting with a backlog alongside a live one.
-
-Phase 0 (integration spike) and Phase 0a (compaction probe) are complete —
-`docs/phase0-findings.md` and `docs/phase0a-findings.md`. Injected context survives
-compaction, so the watermark is correct as written. Peer networking works: two peers
-synchronized over the open internet in 0.44 s with identical event ordering, in
-`docs/phase2-experiment.md`, which is also where §30's question is answered
-affirmatively.
+Outstanding beneath that: local network discovery, and a host approving an
+unsolicited join request — the second undecided rather than pending (§12a, D-051).
 
 The `cogmer` binary is **not** tracked — `bin/` is ignored, because it is 17MB
 per commit and `go build` reproduces it.

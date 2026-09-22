@@ -6582,3 +6582,54 @@ person installing.
 **Revisit when** GitHub stops serving assets at `/{tag}/{asset}` under the download
 base. `install.sh` builds that URL by concatenation, so a changed convention arrives
 as a 404 and a source build, not as a message saying the convention changed.
+
+---
+
+## D-122 — The two READMEs are split by whether you have installed it
+
+**Date:** 2026-09-22 · **Status:** active (implemented)
+
+**Context.** Until the repository was public the only reader of `README.md` was the
+person writing it, so a lab notebook was the right document: it opened with §30's
+question being answered affirmatively, then phase status, then findings links, then
+how to build from source and register hooks by hand. The audience changed the moment
+the repository was pushed. The first reader is now the colleague who was handed the
+repository's name, and Phase 13 is about that person specifically.
+
+**The second reason is rot, and it had already happened.** The table above governing
+where a thing gets written down gives `open.md` "what is to do, what is undecided,
+where things stand" — and the README's status section was exactly that, in a second
+place. It claimed "blocked on the repository" until it was hand-edited, and removing
+it exposed that `open.md` had drifted the other way, still calling Phase 5 next long
+after Phase 5, 7 and everything else had finished. Two documents owning one fact is
+how both end up wrong.
+
+**Decision.** `README.md` is what somebody who has not installed it needs: what it
+is, the two lines that install it, pairing, a room, why it might be worth it, what it
+does not do, and — below all of that — how to work on it. `plugin/README.md` is what
+somebody who has installed it needs: the command reference and where the binary
+lives. Neither repeats the other, and current state lives in `open.md`.
+
+**What was deliberately kept at the top rather than buried.** The §30 result — a
+second session resolving a referent from the first, disagreeing with it, and finding
+a defect it had missed — is the most persuasive thing in the repository and the only
+reason anybody would spend ten minutes on the install. A user-first README that led
+with commands would lose the reader deciding whether to bother. It is stated with its
+limit attached: it happened between two sessions one person was watching, and whether
+it holds when the second person is somebody else is the thing Phase 13 exists to find
+out.
+
+**Rejected.**
+- *One README serving both.* It is what we had. The two audiences want opposite
+  things in the first screen — one wants the two lines that install it, the other
+  wants to know what is unfinished — and satisfying both means the first screen
+  serves neither.
+- *A user README that drops the findings.* Install steps alone answer "how" for a
+  person who has not decided "whether". The §30 experiment is the answer to
+  "whether", so removing it would cost more readers than the phase status ever did.
+- *Keeping a status section and promising to update it.* That promise was already
+  made and already broken, in both directions at once.
+
+**Revisit when** a third audience appears that is neither of these — somebody
+packaging this, or an organisation deciding whether to allow it. That is a third
+document, not a third section in one of these two.

@@ -42,6 +42,8 @@ they rot.
 | `docs/*-findings.md` | what we observed when we tried it |
 | `cmd/cogmer/behaviors.go` | what someone else's software does that we rely on |
 | `docs/open.md` | what is to do, what is undecided, where things stand |
+| `README.md` | what somebody who has not installed it needs (D-122) |
+| `plugin/README.md` | what somebody who has installed it needs |
 
 - A finding never goes in the spec — put the requirement it justifies there.
 - A finding about someone else's software goes in the behaviour registry, the only
