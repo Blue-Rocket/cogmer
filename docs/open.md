@@ -104,6 +104,46 @@ change covers every one of them, and each command still needs checking, because
 some exit non-zero on purpose. A fix reaches nobody until the version moves (D-120,
 the manifest version pins an installed plugin).
 
+**A port held by another cogmer daemon is reported as held by something else.**
+When the peer-sync port is taken, `runDaemon` calls `reportDaemonBlocked` without
+asking what holds it, and the message says "held by something that is not a cogmer
+daemon" regardless. On 09-22 it was a cogmer daemon, one left running from a test
+with a different `COGMER_HOME`, and the message sends the reader looking for a
+different program. Only the hooks port is ever probed, through
+`daemonAlreadyServing`, which reads `/healthz` over plain HTTP. The peer mux serves
+`/healthz` too, but over TLS, and nothing asks it.
+
+**Getting rid of a stale daemon that holds the port takes a terminal.** The log
+offers `lsof`, and `COGMER_ADDR` or `COGMER_PEER_ADDR` to move this daemon aside.
+The first is a diagnosis tool, the second leaves the stale one running, and neither
+is reachable from inside Claude Code, where the person actually is. It needs one
+thing somebody can do from a session: say which process holds the port, whether it
+is a cogmer daemon and from which state directory, and when it is one, offer to stop
+it and start this one. It could be a slash command, or part of `self-status` when
+the daemon is blocked. Whatever stops a process lives in `main.go`, because §3.7 (a
+remote event never drives a session) keeps `os/exec` and `syscall` out of
+`daemon.go`, `store.go`, `sync.go` and `transcript.go`.
+
+The commoner stale daemon is probably an old version, and it is invisible.
+`/healthz` reports `ok`, `peerId` and `rooms` but no version, and
+`daemonAlreadyServing` accepts any daemon that answers. So after an update installs
+a new binary, `start_daemon_if_needed` finds the old daemon answering and leaves it
+serving, and the new binary does not run until that process dies of something
+else. Read from the code on 09-22, not yet observed. A daemon that reports its
+version would let the hook replace one older than the binary it just installed.
+
+**`whoami` prints a pairing string it knows nobody can use.** `printPairingInvitation`
+prints the string first and then, when `pairingReachable` fails, a `NOTE:` after it,
+so a loopback address goes out looking sendable. On 09-22 `/cogmer:self-status` did
+exactly that: it advised holding off, then gave the string as "provisional" and
+"safe to send". When no address is reachable there should be no string to copy. The
+note for an unpublished address also says to start a session, which misleads when a
+session has started and the daemon is blocked: `pairingReachable` does not read
+`daemon-state`, which already has the real reason.
+
+**The username notice prints twice in `whoami`.** `runWhoami` prints `nameLine`, and
+then `printPairingInvitation` prints it again while the name is not chosen.
+
 **`leave`, run twice, says "this session is not in a room."** True, and unhelpful
 to somebody who left it a moment ago: it reads as a failure and sends them looking
 for a problem. It should say it has already left. `LeaveSession` returns that error
