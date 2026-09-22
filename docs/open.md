@@ -80,18 +80,6 @@ That is the one place a non-idempotent command could cheaply refuse a mistake it
 now makes in silence. The command's documentation warns against retrying, which is
 the weakest possible form of the check.
 
-**Retire the pre-GA release host.** `plugin/release-url.txt` is plain HTTP to a
-bare-IP droplet somebody here operates — the one centralized component failing
-D-115's benefit test, tagged rather than defended. It exists because a module path
-must match a repository URL and there is no repository; the name is settled now
-(D-117), so creating one is the event that both unblocks Phase 13 and retires this.
-`publish.sh` is the only script that changes; `release.sh` is host-agnostic by
-design. What is on the droplet to remove: an nginx site `cogmer` rooted at
-`/srv/cogmer`, serving `/srv/cogmer/cogmer/v<version>/` as `/cogmer/v<version>/`.
-That root is not in this repository, so moving the published tree means editing the
-site too — the rename found that out by serving 404s from a directory that had been
-deleted.
-
 **Create the repository the module path names.** `go.mod` says
 `github.com/Blue-Rocket/cogmer` and nothing lives there yet. This is now the whole of
 the Phase 13 chain: no repository means nowhere to `claude plugin install` from, and

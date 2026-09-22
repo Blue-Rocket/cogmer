@@ -1,0 +1,13 @@
+{
+  "name": "blue-rocket",
+  "owner": {
+    "name": "Blue Rocket"
+  },
+  "plugins": [
+    {
+      "name": "cogmer",
+      "source": "./plugin",
+      "description": "Work in a shared Claude Code conversation with a colleague. Your turns and theirs replicate directly between your machines, peer to peer, with no server holding the conversation."
+    }
+  ]
+}

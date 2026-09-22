@@ -2278,8 +2278,14 @@ Eventually:
 A participant installs one thing, and it is a thing Claude Code already understands:
 
 ```
-claude plugin install cogmer
+/plugin marketplace add Blue-Rocket/cogmer
+/plugin install cogmer@blue-rocket
 ```
+
+Two lines rather than one, because a plugin is installed from a marketplace and a
+marketplace is added by name: the repository carries `.claude-plugin/marketplace.json`
+alongside the plugin it lists, so both lines name the same repository. The first is
+run once per person, the second once per plugin.
 
 The plugin carries the hooks. No shell profile is modified, no configuration file is hand-edited, no service is registered with the operating system, and nothing about how Claude Code is started changes.
 
@@ -2729,7 +2735,7 @@ Nothing in this phase should be built before Phase 9. Its correctness rests enti
 - delete the machine-level current room;
 - accept an older protocol version for reads, so an upgrade is not a flag day.
 
-Installation is the wall everything else is behind: nobody but the author has run this, and the reason is that running it takes a build, a hand-edited settings file, and a daemon started by hand. §29 says what the result must be — `claude plugin install cogmer`, and nothing about how Claude Code starts changes.
+Installation is the wall everything else is behind: nobody but the author has run this, and the reason is that running it takes a build, a hand-edited settings file, and a daemon started by hand. §29 says what the result must be — `/plugin marketplace add Blue-Rocket/cogmer` then `/plugin install cogmer@blue-rocket`, and nothing about how Claude Code starts changes.
 
 A slash command is a **thin wrapper**, never a reimplementation (D-057). It shells out to the same binary a terminal would, so the CLI remains the surface that can be tested without a Claude session, and there is one implementation of each operation rather than two that drift. `CLAUDE_CODE_SESSION_ID` is in the environment of every tool call and equals the id the hooks report (B21), so a command run from a session knows which session it is in without being told.
 

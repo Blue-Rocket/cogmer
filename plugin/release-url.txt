@@ -1,1 +1,5 @@
-http://<droplet>/cogmer
+# Where release assets live. Data, not code: it travels beside the hashes in
+# checksums.txt that authorise them, so moving hosts is one commit that changes both
+# together. install.sh appends /v<version>/<asset>, which is the shape GitHub serves
+# a release's assets at.
+https://github.com/Blue-Rocket/cogmer/releases/download
