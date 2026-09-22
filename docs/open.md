@@ -175,6 +175,38 @@ and would need to follow.
 
 ## Undecided
 
+**Asking for a new session to finish an install is too much.** After `/plugin
+install` the person believes it is installed, and Claude Code agrees: since
+v2.1.221 a plugin installed mid-session is live in that session, with its commands
+and its per-prompt hooks. Only SessionStart has not run, and nothing re-runs it,
+since Claude Code runs no plugin code at install and reloading plugins does not
+fire it. So the binary is never fetched, the daemon never starts, and the standing
+policy for room content (D-081) is never given. Telling somebody to start again to
+finish something they think has finished costs them the session they were working
+in, and the README currently does exactly that.
+
+The possible mitigations:
+
+- Start the fetch from the per-prompt hook when there is no binary, detached, so the
+  first thing typed after installing begins the download without waiting on it.
+  Unchecked: whether a slash command fires that hook at all.
+- Have `cli.sh` start the fetch and wait for it within a bound when a command finds
+  no binary, as the first-use item under "Commands that mislead" describes.
+  `install.sh` already starts the daemon when the download lands, so starting the
+  daemon needs nothing further.
+- Let the session you installed from enter rooms without the session-start policy.
+  D-081 could not show that policy helping: in-block framing alone produced the
+  same refusal of a hostile turn. Rerunning that hostile-turn test in a session
+  that installed the plugin mid-session would say whether this is safe.
+- Otherwise, have `join` and `create` refuse in a session that never got the policy,
+  and offer `/clear`, which fires SessionStart but discards the conversation so far.
+  Everything before entering a room, such as pairing, `self-status` and `self-name`,
+  reads no room content and needs no policy, so the cost falls only on entering a
+  room. It needs a marker the SessionStart hook writes per session.
+- Shorten the wait with a smaller download, parked under "Needs somebody else".
+- Ship the binary inside the plugin, ruled out there for what it adds to the
+  history.
+
 **Whether to rebuild the post-quantum hedge.** D-104 removed the pre-shared key,
 which was the only quantum-resistant element in the stack. It could be rebuilt at
 our own layer from material the pairing exchange already produces — per peer, which
