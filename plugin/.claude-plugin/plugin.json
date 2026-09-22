@@ -3,6 +3,6 @@
   "version": "0.7.1",
   "description": "Work in a shared Claude Code conversation with a colleague. Your turns and theirs replicate directly between your machines, peer to peer, with no server holding the conversation.",
   "author": {
-    "name": "David Green"
+    "name": "David Foote"
   }
 }
