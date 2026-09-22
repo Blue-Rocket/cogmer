@@ -10,3 +10,7 @@ bin/
 /claude-team
 
 dist/
+
+# Personal, per-machine Claude Code settings. Tracked settings would impose
+# whatever tooling they name on anybody who clones this.
+.claude/settings.local.json
