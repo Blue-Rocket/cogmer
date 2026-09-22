@@ -5,6 +5,14 @@
 # will outlive any particular host; putting the files somewhere is not. When this
 # moves to a public release host, this script is what gets replaced and
 # release.sh is what does not.
+#
+# PRE-GA. The host below is a personally-operated droplet over plain HTTP, and it
+# is the one centralized component that fails D-115's benefit test: it serves us,
+# not the person installing. It exists only because a module path must match its
+# repository URL and there is no repository yet (§31, Phase 13). Retire it when a
+# public release host exists. Integrity does not depend on it -- plugin/checksums.txt
+# is what authorises a binary to run -- but the transport shows an observer which
+# version was fetched.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

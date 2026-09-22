@@ -27,8 +27,10 @@ encyclopedia — the last section says where to read instead.
 - Give every `§`, `D-NNN` and `B-NN` a few words — "D-054 (verification gates
   sync)", not "D-054" — in conversation as well as in files.
 - Say **person** or **colleague**, never "developer". Never describe the tool by a
-  count. Never call it **local-first** unqualified: rendezvous needs a relay
-  somebody else operates and D-029 makes recovery a refetch from peers.
+  count. Never call the project **local-first**: it claims
+  more than we deliver, since rendezvous needs a relay somebody else operates and
+  D-029 (losing a room database) makes recovery a refetch from peers. §3.1 (first,
+  do no harm) is the principle it was standing in for.
 
 **Where a thing gets written down.** Putting an answer in the wrong document is how
 they rot.
@@ -101,6 +103,12 @@ Not universal truths — the part of the possibility space this project selected
 - **A view is a separate program, never drawn inside the session** (D-038, D-039).
   A session is read closely and a room is glanced at. Do not propose a terminal
   pane; prefer an OS notification from the daemon for ambient awareness.
+- **As few centralized components as possible, and each one explicable** (D-115).
+  A compromise to privacy or decentralization must trace to a recorded decision, be
+  disclosed to the person affected, and benefit them rather than us. Failing a test
+  does not forbid the thing; it names what is missing. Three exist: the relay
+  (forced by NAT, two of three), the model provider (inherent, two of three), the
+  release host (pre-GA, one of three, retired when a public one exists).
 - **No network provider is required** (D-019). None belongs in room identity,
   membership or replication. Tailscale is one provider, never a prerequisite.
 - **No join tokens, and no join-by-name on a trusted network** (D-024, D-026).
@@ -118,8 +126,12 @@ Not universal truths — the part of the possibility space this project selected
 Violating one makes an otherwise reasonable change wrong, and none is obvious from
 reading a few files.
 
-- **Hooks must never break Claude Code** (§3.1). Every failure path exits 0 with
-  empty stdout. A dead daemon means no collaboration, never a broken session.
+- **First, do no harm** (§3.1) — the duty every other requirement is subordinate
+  to. A session must be no worse for having installed this: not broken, not
+  slowed, not noisy, not robbed of context budget, not made to take a turn. Every
+  hook failure path exits 0 with empty stdout, and a dead daemon means no
+  collaboration, never a broken session. It is a general duty, so an unlisted way
+  to degrade a session is forbidden as well.
 - **A remote event never drives an interactive session** (§3.7). It may be read at a
   turn the person started; it must never be the reason a turn ran. `sync.go`,
   `daemon.go`, `store.go` and `transcript.go` must not import `os/exec` or

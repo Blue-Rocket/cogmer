@@ -1,4 +1,4 @@
-Here’s the revised specification, replacing the central collaboration server with a **local-first peer-to-peer daemon**, while keeping the implementation deliberately simple for the first prototype.
+A **peer-to-peer daemon** replicating one Claude Code conversation between people working separately, with no central collaboration server and no account anywhere. Claude Code talks only to a daemon on the same machine. §3.1 governs everything after that: a person's session must be no worse for having installed this. The first prototype is deliberately simple.
 
 # Peer-to-Peer Shared Real-Time Collaboration for Claude Code
 
@@ -57,13 +57,50 @@ There is no canonical server-side copy.
 
 # 3\. Architecture Principles
 
-## 3.1 Local first
+## 3.1 First, do no harm
 
-A person's local daemon owns that person's immediate collaboration experience.
+A person's Claude Code session belongs to them, and this system is a guest in it.
+Before anything else it must not make that session worse. Collaboration is worth
+having and it is never worth degrading the session that hosts it, so every other
+requirement in this document is subordinate to this one.
 
-Claude Code communicates only with the local daemon.
+State it as a duty rather than a list, because a list invites the reading that an
+unlisted harm is permitted. These are its known cases, not its extent.
 
-For example:
+**It must not fail the session.** Claude Code must continue functioning normally
+when:
+
+- the daemon is not running, or dies mid-session;  
+- a hook cannot reach the daemon, or fails for any other reason;  
+- all other peers disappear;  
+- the network is unavailable;  
+- peer synchronization fails.
+
+Every hook failure path exits 0 with empty stdout. A dead daemon means no
+collaboration; it never means a broken session.
+
+**It must not slow the session.** Starting the daemon is the session-start hook's
+job and must not delay the first prompt: waiting on a daemon nobody asked for is
+worse than not having one.
+
+**It must not be noisy.** Failure is silent to the person at the keyboard. The
+daemon records its own troubles in its own log, where anybody who goes looking will
+find them, and says nothing to a person who did not ask.
+
+**It must not spend the context window carelessly.** Injected context consumes the
+budget the person is relying on for their own work, which is why injection is
+bounded (§21).
+
+**It must not take the session's turn.** A remote event never drives an interactive
+session (§3.7).
+
+**It must not draw inside the session.** A view is a separate program, so a busy
+room never costs a person the pane they are working in.
+
+The mechanism that makes most of this achievable is that **Claude Code communicates
+only with the local daemon**. A person's local daemon owns that person's immediate
+collaboration experience, and nothing remote sits in a path Claude Code could
+notice failing.
 
 ```
 Claude Code
@@ -77,12 +114,6 @@ claude-team daemon
      ├── context synchronization
      └── peer synchronization
 ```
-
-Claude Code should continue functioning normally if:
-
-- all other peers disappear;  
-- the network is unavailable;  
-- peer synchronization fails.
 
 ---
 
@@ -217,7 +248,7 @@ This is a rule, not an observation. The host offers ways to start Claude, so a d
 - a remote event must not cause an interactive session to consume queued context ahead of a locally initiated turn;  
 - any scheduled or triggered work affecting such a session must originate locally.
 
-The local-first principle says a person's session must survive every peer disappearing. This is its converse: a person's session must be undisturbed by every peer arriving.
+§3.1 says a person's session must survive every peer disappearing. This is its converse: a person's session must be undisturbed by every peer arriving.
 
 ### What this does not decide
 
@@ -2778,7 +2809,7 @@ begins carrying somebody else's conversation, so the question of whether that re
 is an acceptable dependency stops being theoretical.
 
 Three parts to it, and they have different answers. Whether depending on a relay
-nobody here operates is compatible with §3's local-first framing and §4's rule that
+nobody here operates is compatible with §4's rule that
 no transport is a prerequisite. What the relay observes — a relay cannot read what
 it carries, and does see which nodes are talking, when, and how much. And whether
 unconfigured use of somebody's free infrastructure is something to build a product

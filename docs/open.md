@@ -52,22 +52,6 @@ while verifying a named peer is worth telling the person about. It is not told, 
 cannot be while wrong keys are the expected outcome of most dials. Fixing the sweep
 is what makes the sentence true; nothing else needs writing.
 
-**"Local-first" claims more than we deliver, wherever it appears without §3's
-definition.** §3 defines it narrowly — a session survives every peer disappearing —
-and under that definition every use inside the spec is sound. Three uses reach
-people who will never see the definition and read as the ordinary, much stronger
-claim: the spec's own first line, `README.md:3`, and `plugin/README.md:4`. Against
-it: two peers behind NAT cannot meet without a relay operated by somebody else
-(recorded in D-105, the overlay transport); D-029 (losing a room database) makes
-recovery a refetch from peers, so the durable copy is distributed rather than local;
-nothing before the first invitation is captured at all (D-022); and offline is Phase
-5, unbuilt. Say peer-to-peer and serverless, which are true without qualification,
-and keep "local-first" where §3's meaning is on the page.
-
-**`plugin/README.md` still opens with "local-first".** `README.md` and the spec's
-first line are the other two unqualified uses; §3 defines the term narrowly and
-every use inside the spec is sound.
-
 **D-076 is cited three times and does not exist, and should not be written.** No
 commit in all 142 ever contained the heading; `323f46d` (2026-09-20) added the
 citations in code and did not touch `decisions.md`. It held that a room-scoped
@@ -122,6 +106,13 @@ this happens, and binding is what `BindSession` already knows about, so a second
 That is the one place a non-idempotent command could cheaply refuse a mistake it
 now makes in silence. The command's documentation warns against retrying, which is
 the weakest possible form of the check.
+
+**Retire the pre-GA release host.** `plugin/release-url.txt` is plain HTTP to a
+bare-IP droplet somebody here operates — the one centralized component failing
+D-115's benefit test, tagged rather than defended. It exists because a module path
+must match a repository URL and there is no repository, so the same event that
+unblocks Phase 13 retires this. `publish.sh` is the only script that changes;
+`release.sh` is host-agnostic by design.
 
 ## Undecided
 

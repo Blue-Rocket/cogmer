@@ -1,8 +1,9 @@
 # claude-team
 
 Work in a shared Claude Code conversation with a colleague. Your turns and theirs
-replicate directly between your machines — local-first, peer-to-peer, no server in
-between and no account anywhere.
+replicate directly between your machines — peer-to-peer, no server in between and
+no account anywhere. Claude Code talks only to a daemon on your own machine, and
+your session keeps working when the other one is offline.
 
 ## What it installs
 
