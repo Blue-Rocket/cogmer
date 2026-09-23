@@ -6694,3 +6694,41 @@ gets a slash command, and Windows, which has no `lsof`. All three are in `open.m
 **Revisit when** the daemon reports its version from `/healthz`. The installer can
 then use the same path to replace a daemon older than the binary it has just
 installed, which is the stale daemon people are more likely to meet.
+
+---
+
+## D-124 — The writing test reads documents as Markdown, through goldmark
+
+**Date:** 2026-09-23 · **Status:** active
+
+**Decision.** `cmd/cogmer/writing_test.go` parses each document with
+`github.com/yuin/goldmark` and checks only the prose it finds. Code spans and code
+blocks are skipped. Only tests import goldmark, so it is not part of the binary.
+
+**Support.**
+- The rules in `docs/writing.md` govern prose, and documents quote code that
+  breaks them. The decision template's own heading, with its em-dash, sits in a
+  fenced block. `docs/writing.md`, "Templates".
+- goldmark is pure Go, so every target still builds with `CGO_ENABLED=0`. D-001
+  (Go, with no cgo).
+- `go list -deps ./cmd/cogmer` does not list goldmark, and `go list -deps -test`
+  does. Checked on 09-23.
+- goldmark can split one sentence into several text nodes, and the split can fall
+  inside a banned phrase. The test joins a document's prose before matching a
+  phrase, and puts a separator at each block boundary and each piece of code.
+  `writingProblems` in `writing_test.go`, and its cases "phrase across a line wrap" and
+  "phrase across a code span", observed on 09-23.
+
+**Rejected.**
+- *Scanning lines with regular expressions and tracking code fences by hand.*
+  Indented code blocks, code spans and table cells would each need their own
+  handling, and each one missed reports a false problem in text the guide does not
+  govern.
+
+**Limits.** The test reports every use of a listed word. It cannot allow the uses
+the guide permits in its table, where a word contrasts with an accident or carries
+meaning rather than emphasis. Text inside HTML blocks is not checked.
+
+**Revisit when** `docs/writing.md` gains a rule about structure rather than words,
+such as the length of a sentence or an item. goldmark's tree can check it, and the
+test is where it belongs.

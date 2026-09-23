@@ -230,7 +230,18 @@ to them. Wrap at 72 columns. The body is usually 3 to 10 lines.
 
 ## Enforcement
 
-A test in `go test ./...` checks the words and marks listed above, and checks that
-every decision after the cutoff has **Decision.** and **Rejected.** or states why
-there was no alternative. Documents not yet rewritten are listed in the test and
-exempt, so that the list shrinks as the rewrite goes on.
+`TestDocumentsFollowWritingGuide`, in `cmd/cogmer/writing_test.go`, checks every
+document a person reads: the Markdown files at the repository root, in `docs/` and
+in `plugin/`. It reports each word and mark listed above, with its line. It reads
+the documents as Markdown and checks only prose, so code spans and code blocks are
+exempt (D-124, the writing test reads documents through goldmark). The files in
+`plugin/commands/` are instructions to the model and are not checked.
+
+Documents not yet rewritten are listed in `writingNotYetRewritten` and exempt. The
+test fails when a listed document passes, so that it comes off the list in the
+commit that rewrote it. This guide is never checked, because it quotes every word
+it bans.
+
+`TestLaterDecisionsFollowTemplate` checks that every decision after D-123 has
+**Date:**, **Decision.**, **Rejected.** and **Revisit when**. A tombstone is exempt.
+When no alternative was weighed, **Rejected.** says why there was none.
