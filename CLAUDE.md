@@ -12,7 +12,10 @@ encyclopedia — the last section says where to read instead.
 - **Read `docs/decisions.md` before proposing a change to how anything here works.**
   It records what was **rejected and why**, and several awkward-looking choices are
   load-bearing. Add an entry whenever a real alternative was weighed. Never
-  renumber; supersede.
+  renumber: a reversed decision becomes a tombstone, and the reason for reversing
+  it goes in a finding.
+- **Write every document, and every commit message, by `docs/writing.md`.** It
+  holds the rules and a template for each kind of item.
 - **Read the code before characterising it.** Paraphrasing a grep result produced a
   wrong account of two decisions in one session. Read the function, not the line
   that mentions it.
