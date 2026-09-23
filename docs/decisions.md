@@ -6719,8 +6719,8 @@ blocks are skipped. Only tests import goldmark, so it is not part of the binary.
   fenced block. `docs/writing.md`, "Templates".
 - goldmark is pure Go, so every target still builds with `CGO_ENABLED=0`. D-001
   (Go, with no cgo).
-- `go list -deps ./cmd/cogmer` does not list goldmark, and `go list -deps -test`
-  does. Checked on 09-23.
+- Only `writing_test.go` and `structure_test.go` import goldmark, and `go build`
+  compiles no test file, so the binary does not contain it.
 - goldmark can split one sentence into several text nodes, and the split can fall
   inside a banned phrase. The test joins a document's prose before matching a
   phrase, and puts a separator at each block boundary and each piece of code.
@@ -6769,7 +6769,7 @@ fails.
 - *Listing exceptions by file and line in the test.* A line number moves with every
   edit above it, and the reason would sit away from the word it excuses.
 
-**Limits.** A marker records that somebody decided a use stays. Nothing checks that
+**Limits.** A marker records that somebody decided to keep a use. Nothing checks that
 the reason is true, so a reader still has to judge it.
 
 **Revisit when** markers are common in rewritten documents. The table would then

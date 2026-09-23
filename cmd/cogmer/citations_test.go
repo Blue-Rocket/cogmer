@@ -24,6 +24,12 @@ var (
 	specNumberedPoint = regexp.MustCompile(`^(\d+)\. `)
 )
 
+var documentCheckTests = map[string]bool{
+	"cmd/cogmer/writing_test.go":   true,
+	"cmd/cogmer/citations_test.go": true,
+	"cmd/cogmer/structure_test.go": true,
+}
+
 // citationSources returns every file that may cite a decision, a section or
 // a behavior, relative to the repository root. The test files for the writing
 // and citation checks are left out, because their cases cite things that do not
@@ -32,7 +38,7 @@ func citationSources(t *testing.T) []string {
 	t.Helper()
 	var files []string
 	add := func(rel string) {
-		if rel != "cmd/cogmer/writing_test.go" && rel != "cmd/cogmer/citations_test.go" {
+		if !documentCheckTests[rel] {
 			files = append(files, rel)
 		}
 	}

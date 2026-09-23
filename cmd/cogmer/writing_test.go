@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -99,7 +98,7 @@ func TestDocumentsFollowWritingGuide(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		problems := writingProblems(doc, src)
+		problems := append(writingProblems(doc, src), structureProblems(doc, src)...)
 		switch {
 		case writingNotYetRewritten[doc] && len(problems) == 0:
 			t.Errorf("%s now follows docs/writing.md: remove it from writingNotYetRewritten", doc)
@@ -334,52 +333,5 @@ func TestWritingProblemsReportsTheLine(t *testing.T) {
 	got := writingProblems("x.md", []byte("Fine.\n\nAlso fine.\nNot — fine.\n"))
 	if len(got) != 1 || !strings.HasPrefix(got[0], "4: ") {
 		t.Errorf("got %q, want one problem on line 4", got)
-	}
-}
-
-// Every decision after decisionFormatAfter follows the decision template in
-// docs/writing.md. A tombstone, marked "**Status:** withdrawn", keeps only its
-// number and title.
-func TestLaterDecisionsFollowTemplate(t *testing.T) {
-	src, err := os.ReadFile("../../docs/decisions.md")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, p := range decisionTemplateProblems(string(src)) {
-		t.Error(p)
-	}
-}
-
-func decisionTemplateProblems(log string) []string {
-	var problems []string
-	for _, entry := range strings.Split(log, "\n## ")[1:] {
-		title, body, _ := strings.Cut(entry, "\n")
-		m := decisionTitle.FindStringSubmatch(title)
-		if m == nil {
-			continue
-		}
-		n, _ := strconv.Atoi(m[1])
-		if n <= decisionFormatAfter || strings.Contains(body, "**Status:** withdrawn") {
-			continue
-		}
-		for _, field := range []string{"**Date:**", "**Decision.**", "**Rejected.**", "**Revisit when**"} {
-			if !strings.Contains(body, field) {
-				problems = append(problems, fmt.Sprintf(
-					"D-%s has no %s field; docs/writing.md gives the template", m[1], field))
-			}
-		}
-	}
-	return problems
-}
-
-func TestDecisionTemplateProblemsCatchesMissingFields(t *testing.T) {
-	log := "# Log\n\n" +
-		"## D-123 — Before the cutoff\n\nAnything.\n\n" +
-		"## D-124 — Complete\n\n**Date:** d\n\n**Decision.** x\n\n**Rejected.** y\n\n**Revisit when** z.\n\n" +
-		"## D-125 — Withdrawn\n\n**Status:** withdrawn 2026-09-23. Replaced by D-126.\n\n" +
-		"## D-126 — No alternatives\n\n**Date:** d\n\n**Decision.** x\n\n**Revisit when** z.\n"
-	got := decisionTemplateProblems(log)
-	if len(got) != 1 || !strings.HasPrefix(got[0], "D-126 has no **Rejected.**") {
-		t.Errorf("got %q, want one problem naming D-126's missing Rejected field", got)
 	}
 }

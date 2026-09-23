@@ -134,13 +134,14 @@ An entry describes the decision as it stands now, so that a reader can understan
 what we do with as little to hold in mind as possible. It says nothing about what
 was there before: not what the system used to do, not what this replaced, not who
 asked or what happened on the way. Words that describe the system as it stood when
-the decision was made ("stays", "is kept", "continues to", "already") are history
-whatever their tense. A decision states only what it decides. Something decided
+the decision was made ("stays", "is kept", "continues to", "already", "no longer",
+"used to", "previously", "replaced") are history whatever their tense. A decision states only what it decides. Something decided
 elsewhere appears only when the reader needs it to apply this one, and then as a
 citation with a few words, not restated.
 
 Every item under **Support.** has a source, and the source is where the fact is
-kept. If the only record of a fact would be the decision itself, write the findings
+kept: a § section of the specification, a decision, a behaviour such as B04, a file
+named in backticks, or a URL. If the only record of a fact would be the decision itself, write the findings
 document first.
 
 **Rejected.** is required whenever a real alternative was weighed, which is the
@@ -179,8 +180,8 @@ If something is unknown, say what would answer it.>
 ```
 
 The opening sentence names the problem, not the fix: "`/cogmer:self-status` on
-first use fails instead of answering", not "Make cli.sh exit 0". Keep an item under
-about 25 lines. Delete it when it is done; never mark it done.
+first use fails instead of answering", not "Make cli.sh exit 0". Keep an item to 25
+lines or fewer. Delete it when it is done; never mark it done.
 
 ### A findings document (`docs/*-findings.md`)
 
@@ -267,6 +268,15 @@ numbered step in the specification, and each BNN an entry in the behaviour
 registry. No document is exempt. A decision that was withdrawn keeps its tombstone,
 so citations of it still resolve.
 
-`TestLaterDecisionsFollowTemplate` checks that every decision after D-123 has
-**Date:**, **Decision.**, **Rejected.** and **Revisit when**. A tombstone is exempt.
-When no alternative was weighed, **Rejected.** says why there was none.
+`structure_test.go` checks the structure the templates set. Bold appears only as a
+template's field names, in decisions and findings documents, and as the opening of
+an item in `open.md`. An `open.md` item is 25 lines or fewer. A findings document
+has **Run:**, **Result:** and the three sections its template names. These checks
+share the exemption list with the word check.
+
+`TestLaterDecisionsFollowTemplate` checks every decision after D-123. It must have
+**Date:**, **Decision.**, **Rejected.** and **Revisit when**, a source in each item
+under **Support.**, and none of the history words listed with the decision
+template. When no alternative was weighed, **Rejected.** says why there was none.
+Every tombstone, whatever its number, must hold only its status line, and its
+"Why:" must name a findings document and a heading that exist.

@@ -7,6 +7,13 @@ v0.7.1, installed from the marketplace in `Blue-Rocket/cogmer`. One test ran wit
 **Result:** Installing worked, but none of the first commands a new person runs gave
 a usable answer without a restart and manual cleanup.
 
+## What was run
+
+| run | how |
+|---|---|
+| interactive | installed from the marketplace with the two commands in the README, then the first commands a new person runs, in the same session |
+| `-p` | `claude -p --plugin-dir ./plugin` against a fresh `COGMER_HOME` |
+
 ## What we found
 
 ### The README's install block pastes as one command
