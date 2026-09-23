@@ -16,11 +16,9 @@ import (
 	"github.com/yuin/goldmark/text"
 )
 
-// The structural rules in docs/writing.md: where bold may appear, how long an
-// open.md item may be, and what each template requires.
-
-// openItemMaxLines is the longest an item in docs/open.md may be.
-const openItemMaxLines = 25
+// The structural rules in docs/writing.md: where bold may appear and what each
+// template requires. Length is not checked: a limit is met most cheaply by
+// compressing an explanation into an allusion, which the guide forbids.
 
 var (
 	findingsDocument = regexp.MustCompile(`^docs/[^/]+-findings\.md$`)
@@ -104,47 +102,6 @@ func structureProblems(doc string, src []byte) []string {
 			}
 		}
 	}
-	if doc == "docs/open.md" {
-		problems = append(problems, openItemProblems(root, src)...)
-	}
-	return problems
-}
-
-// openItemProblems reports an open.md item longer than openItemMaxLines. An
-// item runs from a paragraph that opens in bold to the next one, or to the
-// next heading.
-func openItemProblems(root ast.Node, src []byte) []string {
-	lineOf := func(offset int) int { return bytes.Count(src[:offset], []byte("\n")) + 1 }
-	var problems []string
-	start, title := 0, ""
-	closeItem := func(next int) {
-		if start == 0 {
-			return
-		}
-		// The item ends at its last non-blank line before next.
-		end := next - 1
-		lines := bytes.Split(src, []byte("\n"))
-		for end > start && len(bytes.TrimSpace(lines[end-1])) == 0 {
-			end--
-		}
-		if n := end - start + 1; n > openItemMaxLines {
-			problems = append(problems, fmt.Sprintf("%d: item %q is %d lines, over %d", start, title, n, openItemMaxLines))
-		}
-		start = 0
-	}
-	for c := root.FirstChild(); c != nil; c = c.NextSibling() {
-		switch c.(type) {
-		case *ast.Heading:
-			closeItem(lineOf(firstOffset(c)))
-		case *ast.Paragraph:
-			if e, ok := c.FirstChild().(*ast.Emphasis); ok && e.Level == 2 {
-				line := lineOf(firstOffset(c))
-				closeItem(line)
-				start, title = line, inlineText(e, src)
-			}
-		}
-	}
-	closeItem(bytes.Count(src, []byte("\n")) + 2)
 	return problems
 }
 
@@ -186,7 +143,6 @@ func firstOffset(n ast.Node) int {
 }
 
 func TestStructureProblemsCatchesEachRule(t *testing.T) {
-	longItem := "**A long item.** " + strings.Repeat("Line.\n", openItemMaxLines+1)
 	cases := []struct {
 		name string
 		doc  string
@@ -203,9 +159,7 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 		{"open.md item", "docs/open.md", "**The command fails.** It exits 1.\n", 0},
 		{"open.md bold mid-paragraph", "docs/open.md", "It **fails**.\n", 1},
 		{"open.md bold in a list", "docs/open.md", "- **Fails.** Yes.\n", 1},
-		{"open.md item at the limit", "docs/open.md", "**An item.** " + strings.Repeat("Line.\n", openItemMaxLines), 0},
-		{"open.md item over the limit", "docs/open.md", longItem, 1},
-		{"open.md item ended by a heading", "docs/open.md", "**An item.** One.\n\n## Next\n\n" + strings.Repeat("Line.\n", openItemMaxLines+5), 0},
+		{"a long open.md item", "docs/open.md", "**An item.** " + strings.Repeat("Line.\n", 60), 0},
 		{"complete findings", "docs/x-findings.md", "# T\n\n**Run:** a\n\n**Result:** b\n\n## What was run\n\nc\n\n## What we found\n\nd\n\n## What this does not show\n\ne\n", 0},
 		{"findings with no Run", "docs/x-findings.md", "# T\n\n**Result:** b\n\n## What was run\n\nc\n\n## What we found\n\nd\n\n## What this does not show\n\ne\n", 1},
 		{"findings with no limits", "docs/x-findings.md", "# T\n\n**Run:** a\n\n**Result:** b\n\n## What was run\n\nc\n\n## What we found\n\nd\n", 1},

@@ -60,6 +60,12 @@ Use headers only on sections long enough to need one. A three-line section does 
 
 Stop when the item has said what it needs to. Do not restate it in a closing sentence.
 
+Keep an item short by leaving out kinds of detail, never by compressing what
+belongs in it. Each template says what an item holds, and process, history and
+restated decisions are not among them. An item that holds only what belongs is not
+too long, whatever its length. An allusion or an aphorism in place of an
+explanation makes an item shorter and fails the reader.
+
 ## Words and marks to avoid
 
 These are the habits this repository overuses, counted on 09-22 across the five main
@@ -180,8 +186,10 @@ If something is unknown, say what would answer it.>
 ```
 
 The opening sentence names the problem, not the fix: "`/cogmer:self-status` on
-first use fails instead of answering", not "Make cli.sh exit 0". Keep an item to 25
-lines or fewer. Delete it when it is done; never mark it done.
+first use fails instead of answering", not "Make cli.sh exit 0". An item past about
+25 lines usually holds detail of another kind: what happened on the way belongs in
+a finding, and the reasoning for a choice in a decision. Delete an item when it is
+done; never mark it done.
 
 ### A findings document (`docs/*-findings.md`)
 
@@ -270,9 +278,11 @@ so citations of it still resolve.
 
 `structure_test.go` checks the structure the templates set. Bold appears only as a
 template's field names, in decisions and findings documents, and as the opening of
-an item in `open.md`. An `open.md` item is 25 lines or fewer. A findings document
+an item in `open.md`. A findings document
 has **Run:**, **Result:** and the three sections its template names. These checks
-share the exemption list with the word check.
+share the exemption list with the word check. Nothing checks length, because a
+limit is met most cheaply by compressing, which is the failure described under
+Rules.
 
 `TestLaterDecisionsFollowTemplate` checks every decision after D-123. It must have
 **Date:**, **Decision.**, **Rejected.** and **Revisit when**, a source in each item
