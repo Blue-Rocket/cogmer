@@ -297,11 +297,18 @@ so citations of it still resolve.
 
 `structure_test.go` checks the structure the templates set. Bold appears only as a
 template's field names, in decisions and findings documents, and as the opening of
-an item in `open.md`. A findings document
-has **Run:**, **Result:** and the three sections its template names. These checks
-share the exemption list with the word check. Nothing checks length, because a
-limit is met most cheaply by compressing, which is the failure described under
-Rules.
+an item in `open.md`. A findings document has **Run:**, **Result:** and the three
+sections its template names. No header sits over a section of three lines or
+fewer; a document's title and the headers a template defines are exempt. The
+specification carries no dates.
+These checks share the exemption list with the word check. No length limit is
+checked, because a limit is met most cheaply by compressing, which is the failure
+described under Rules. The header rule is not such a limit: what it asks for is
+removing the header.
+
+`TestBehaviorRelianceStartsWithWhatBreaks` checks that each behaviour's `Reliance`
+starts "If this changes". Behaviours written before that template are listed in
+`relianceNotRewritten`, which only shrinks.
 
 The rules no test can decide are reviewed by the `writing-review` skill in
 `.claude/skills/writing-review/` (D-126, rules that need a reader are reviewed by a
@@ -310,9 +317,12 @@ list, and on a change to a document before committing it. It runs the checks abo
 on the named documents whether or not they are exempt, reviews the rest, and
 reports findings without changing anything.
 
-`TestLaterDecisionsFollowTemplate` checks every decision after D-123. It must have
-**Date:**, **Decision.**, **Rejected.** and **Revisit when**, a source in each item
-under **Support.**, and none of the history words listed with the decision
+`TestLaterDecisionsFollowTemplate` checks every decision after D-123, reading the log
+as Markdown so that a field name inside code does not count as the field. It must
+open with a **Date:** line whose status is "active" or "not built", then have
+**Decision.**, **Support.** with a list under it, **Rejected.**, an optional
+**Limits.** and **Revisit when**, in that order. Each item under **Support.** needs
+a source, and the entry may use none of the history words listed with the decision
 template. When no alternative was weighed, **Rejected.** says why there was none.
 Every tombstone, whatever its number, must hold only its status line, and its
 "Why:" must name a findings document and a heading that exist.

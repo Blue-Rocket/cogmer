@@ -16,9 +16,11 @@ import (
 	"github.com/yuin/goldmark/text"
 )
 
-// The structural rules in docs/writing.md: where bold may appear and what each
-// template requires. Length is not checked: a limit is met most cheaply by
-// compressing an explanation into an allusion, which the guide forbids.
+// The structural rules in docs/writing.md: where bold may appear, where a header
+// is needed, and what each template requires. No length limit is checked: a
+// limit is met most cheaply by compressing an explanation into an allusion,
+// which the guide forbids. The header rule is not a limit on content, since
+// the fix it asks for is removing the header.
 
 var (
 	findingsDocument = regexp.MustCompile(`^docs/[^/]+-findings\.md$`)
@@ -35,9 +37,14 @@ var (
 	// specification, a decision, a behavior, a file, or a URL.
 	supportSource = regexp.MustCompile("§\\d|\\bD-\\d{3}\\b|\\bB\\d{2}\\b|https?://|`[^` ]*(/|\\.(md|go|sh|json|html))[^` ]*`")
 	// Words that describe the system as it stood when a decision was made.
-	historyWords = regexp.MustCompile(`(?i)\b(stays|stay|is kept|are kept|continues to|continue to|already|used to|previously|formerly|no longer|replaced|replaces)\b`)
-	tombstoneWhy = regexp.MustCompile("^\\*\\*Status:\\*\\* withdrawn \\d{4}-\\d{2}-\\d{2}\\. (?s:.*)Why:\\s+`(docs/[^`]+-findings\\.md)`,\\s+\"([^\"]+)\"\\.$")
+	historyWords   = regexp.MustCompile(`(?i)\b(stays|stay|is kept|are kept|continues to|continue to|already|used to|previously|formerly|no longer|replaced|replaces)\b`)
+	tombstoneWhy   = regexp.MustCompile("^\\*\\*Status:\\*\\* withdrawn \\d{4}-\\d{2}-\\d{2}\\. (?s:.*)Why:\\s+`(docs/[^`]+-findings\\.md)`,\\s+\"([^\"]+)\"\\.$")
+	decisionStatus = regexp.MustCompile(`^\*\*Date:\*\* \d{4}-\d{2}-\d{2} · \*\*Status:\*\* (active|not built)$`)
+	isoDate        = regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}\b`)
 )
+
+// specification is the one document that must carry no dates.
+const specification = "Shared Claude Sessions.md"
 
 // structureProblems returns each structural rule src breaks, as "line: problem".
 func structureProblems(doc string, src []byte) []string {
@@ -82,9 +89,47 @@ func structureProblems(doc string, src []byte) []string {
 				report(firstOffset(n), "bold %q, which only a template field or an open.md item's opening sentence may be", label)
 			}
 			return ast.WalkSkipChildren, nil
+		case *ast.Text:
+			if doc == specification {
+				for _, m := range isoDate.FindAllIndex(n.Segment.Value(src), -1) {
+					report(n.Segment.Start+m[0], "a date; the specification says what must be true, not when")
+				}
+			}
 		}
 		return ast.WalkContinue, nil
 	})
+
+	// A header over three lines or fewer is one the section does not need.
+	// Headers a template defines are exempt: a decision's, a findings
+	// document's sections, and each finding under "What we found".
+	for c := root.FirstChild(); c != nil; c = c.NextSibling() {
+		h, ok := c.(*ast.Heading)
+		if !ok {
+			continue
+		}
+		title := inlineText(h, src)
+		documentTitle := h.Level == 1 && c == root.FirstChild()
+		if documentTitle || decisionTitle.MatchString(title) || (findingsDocument.MatchString(doc) && (h.Level == 3 || isFindingsSection(title))) {
+			continue
+		}
+		first, last := 0, 0
+		for s := c.NextSibling(); s != nil; s = s.NextSibling() {
+			if _, heading := s.(*ast.Heading); heading {
+				break
+			}
+			lo, hi := sourceRange(s)
+			if lo < 0 {
+				continue
+			}
+			if first == 0 {
+				first = bytes.Count(src[:lo], []byte("\n")) + 1
+			}
+			last = bytes.Count(src[:hi-1], []byte("\n")) + 1
+		}
+		if first > 0 && last-first+1 <= 3 {
+			report(firstOffset(h), "header %q over %d lines; a section this short needs no header", title, last-first+1)
+		}
+	}
 
 	if findingsDocument.MatchString(doc) {
 		for f := range findingsFields {
@@ -103,6 +148,15 @@ func structureProblems(doc string, src []byte) []string {
 		}
 	}
 	return problems
+}
+
+func isFindingsSection(title string) bool {
+	for _, s := range findingsSections {
+		if s == title {
+			return true
+		}
+	}
+	return false
 }
 
 func opensTopLevelParagraph(n ast.Node) bool {
@@ -163,6 +217,17 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 		{"complete findings", "docs/x-findings.md", "# T\n\n**Run:** a\n\n**Result:** b\n\n## What was run\n\nc\n\n## What we found\n\nd\n\n## What this does not show\n\ne\n", 0},
 		{"findings with no Run", "docs/x-findings.md", "# T\n\n**Result:** b\n\n## What was run\n\nc\n\n## What we found\n\nd\n\n## What this does not show\n\ne\n", 1},
 		{"findings with no limits", "docs/x-findings.md", "# T\n\n**Run:** a\n\n**Result:** b\n\n## What was run\n\nc\n\n## What we found\n\nd\n", 1},
+		{"a short finding under its template heading", "docs/x-findings.md", "# T\n\n**Run:** a\n\n**Result:** b\n\n## What was run\n\nc\n\n## What we found\n\n### It failed\n\nd\n\n## What this does not show\n\ne\n", 0},
+		{"a document title over a short introduction", "x.md", "# T\n\nOne line.\n", 0},
+		{"header over one line", "x.md", "Intro.\n\n## T\n\nOne line.\n", 1},
+		{"header over four lines", "x.md", "Intro.\n\n## T\n\na\nb\nc\nd\n", 0},
+		{"header over a subsection", "x.md", "Intro.\n\n## T\n\n### U\n\na\nb\nc\nd\n", 0},
+		{"header over a short list", "x.md", "Intro.\n\n## T\n\n- a\n- b\n", 1},
+		{"a second level-1 header over one line", "x.md", "# T\n\na\nb\nc\nd\n\n# U\n\nOne line.\n", 1},
+		{"decision heading", "docs/decisions.md", "## D-124 — T\n\n**Date:** 2026-09-23 · **Status:** active\n", 0},
+		{"date in the specification", specification, "The daemon started on 2026-09-22 and\nis still running today, over\nseveral lines, with no header.\n", 1},
+		{"date in a code span in the specification", specification, "Write `2026-09-22` there.\n", 0},
+		{"date elsewhere", "x.md", "Run on 2026-09-22.\n", 0},
 	}
 	for _, c := range cases {
 		if got := structureProblems(c.doc, []byte(c.src)); len(got) != c.want {
@@ -200,77 +265,229 @@ func findingsHeadings(rel string) (map[string]bool, bool) {
 	return headings, true
 }
 
+// decisionProblems reads the log as Markdown, so that a field name inside a code
+// block or quoted in a sentence is not mistaken for the field (D-124, the writing
+// test reads documents through goldmark). An entry runs from its heading to the
+// next heading of level 2 or above.
 func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool)) []string {
+	src := []byte(log)
+	root := goldmark.New(goldmark.WithExtensions(extension.GFM)).Parser().Parse(text.NewReader(src))
 	var problems []string
 	report := func(id, format string, args ...any) {
 		problems = append(problems, id+" "+fmt.Sprintf(format, args...))
 	}
-	for _, entry := range strings.Split(log, "\n## ")[1:] {
-		title, body, _ := strings.Cut(entry, "\n")
-		m := decisionTitle.FindStringSubmatch(title)
-		if m == nil {
+
+	type entry struct {
+		id     string
+		number int
+		body   []ast.Node
+	}
+	var entries []*entry
+	var current *entry
+	for c := root.FirstChild(); c != nil; c = c.NextSibling() {
+		if h, ok := c.(*ast.Heading); ok && h.Level <= 2 {
+			current = nil
+			if m := decisionTitle.FindStringSubmatch(inlineText(h, src)); m != nil && h.Level == 2 {
+				n, _ := strconv.Atoi(m[1])
+				current = &entry{id: "D-" + m[1], number: n}
+				entries = append(entries, current)
+			}
 			continue
 		}
-		id := "D-" + m[1]
-		body = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(body), "---"))
+		if _, rule := c.(*ast.ThematicBreak); rule || current == nil {
+			continue
+		}
+		current.body = append(current.body, c)
+	}
 
-		if strings.HasPrefix(body, "**Status:** withdrawn") {
-			why := tombstoneWhy.FindStringSubmatch(body)
+	for _, e := range entries {
+		if len(e.body) > 0 && strings.HasPrefix(nodeSource(e.body[0], src), "**Status:** withdrawn") {
+			why := tombstoneWhy.FindStringSubmatch(nodeSource(e.body[0], src))
 			switch {
-			case strings.Contains(body, "\n\n"):
-				report(id, "is a tombstone and has more than its status line; the reason belongs in a finding")
+			case len(e.body) > 1:
+				report(e.id, "is a tombstone and has more than its status line; the reason belongs in a finding")
 			case why == nil:
-				report(id, "is a tombstone without \"Why: `docs/<topic>-findings.md`, \\\"<section>\\\".\"")
+				report(e.id, "is a tombstone without \"Why: `docs/<topic>-findings.md`, \\\"<section>\\\".\"")
 			default:
 				if headings, ok := headingsOf(why[1]); !ok {
-					report(id, "cites %s, which does not exist", why[1])
+					report(e.id, "cites %s, which does not exist", why[1])
 				} else if section := strings.Join(strings.Fields(why[2]), " "); !headings[section] {
-					report(id, "cites %q in %s, which has no such heading", section, why[1])
+					report(e.id, "cites %q in %s, which has no such heading", section, why[1])
 				}
 			}
 			continue
 		}
-
-		n, _ := strconv.Atoi(m[1])
-		if n <= decisionFormatAfter {
+		if e.number <= decisionFormatAfter {
 			continue
 		}
-		for _, field := range []string{"**Date:**", "**Decision.**", "**Rejected.**", "**Revisit when**"} {
-			if !strings.Contains(body, field) {
-				report(id, "has no %s field; docs/writing.md gives the template", field)
+
+		if len(e.body) == 0 || !decisionStatus.MatchString(nodeSource(e.body[0], src)) {
+			report(e.id, "has no **Date:** line whose status is active or not built; docs/writing.md gives the template")
+		}
+		next := 0
+		for i, c := range e.body {
+			label, ok := boldOpener(c, src)
+			if !ok {
+				continue
+			}
+			at := -1
+			for j, f := range decisionOrder {
+				if f.name == label {
+					at = j
+				}
+			}
+			if at < 0 {
+				continue // structureProblems reports any other bold
+			}
+			if at < next {
+				report(e.id, "has **%s** out of order; docs/writing.md gives the template", label)
+				continue
+			}
+			for _, f := range decisionOrder[next:at] {
+				if f.required {
+					report(e.id, "has no **%s** field; docs/writing.md gives the template", f.name)
+				}
+			}
+			next = at + 1
+			if label != "Support." {
+				continue
+			}
+			var list *ast.List
+			if i+1 < len(e.body) {
+				list, _ = e.body[i+1].(*ast.List)
+			}
+			if list == nil {
+				report(e.id, "has **Support.** with no list of facts under it")
+				continue
+			}
+			for item := list.FirstChild(); item != nil; item = item.NextSibling() {
+				if s := nodeSource(item, src); !supportSource.MatchString(s) {
+					report(e.id, "has a support item with no source: %q", firstWords(s))
+				}
 			}
 		}
-		for _, item := range supportItems(body) {
-			if !supportSource.MatchString(item) {
-				report(id, "has a support item with no source: %q", firstWords(item))
+		for _, f := range decisionOrder[next:] {
+			if f.required {
+				report(e.id, "has no **%s** field; docs/writing.md gives the template", f.name)
 			}
 		}
-		for _, w := range historyWords.FindAllString(body, -1) {
-			report(id, "says %q, which describes the system before the decision", w)
+		for _, c := range e.body {
+			for _, w := range historyWords.FindAllString(proseText(c, src), -1) {
+				report(e.id, "says %q, which describes the system before the decision", w)
+			}
 		}
 	}
 	return problems
 }
 
-// supportItems returns the items listed under **Support.**, each joined onto
-// one line.
-func supportItems(body string) []string {
-	_, rest, ok := strings.Cut(body, "**Support.**")
+// decisionOrder is the order of a decision's fields after its **Date:** line.
+var decisionOrder = []struct {
+	name     string
+	required bool
+}{
+	{"Decision.", true},
+	{"Support.", true},
+	{"Rejected.", true},
+	{"Limits.", false},
+	{"Revisit when", true},
+}
+
+// boldOpener returns the bold text a paragraph opens with.
+func boldOpener(n ast.Node, src []byte) (string, bool) {
+	p, ok := n.(*ast.Paragraph)
 	if !ok {
-		return nil
+		return "", false
 	}
-	var items []string
-	for _, line := range strings.Split(rest, "\n") {
+	e, ok := p.FirstChild().(*ast.Emphasis)
+	if !ok || e.Level != 2 {
+		return "", false
+	}
+	return inlineText(e, src), true
+}
+
+// nodeSource returns the Markdown source n covers, as written.
+func nodeSource(n ast.Node, src []byte) string {
+	lo, hi := sourceRange(n)
+	if lo < 0 {
+		return ""
+	}
+	return strings.TrimSpace(string(src[lo:hi]))
+}
+
+// sourceRange returns the first and last source offsets under n, or -1, -1.
+func sourceRange(n ast.Node) (int, int) {
+	lo, hi := -1, -1
+	ast.Walk(n, func(c ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		note := func(start, stop int) {
+			if lo < 0 || start < lo {
+				lo = start
+			}
+			if stop > hi {
+				hi = stop
+			}
+		}
+		if c.Type() == ast.TypeBlock {
+			for i := 0; i < c.Lines().Len(); i++ {
+				note(c.Lines().At(i).Start, c.Lines().At(i).Stop)
+			}
+		}
+		if t, ok := c.(*ast.Text); ok {
+			note(t.Segment.Start, t.Segment.Stop)
+		}
+		return ast.WalkContinue, nil
+	})
+	return lo, hi
+}
+
+// proseText returns the text under n with code spans and code blocks left out.
+func proseText(n ast.Node, src []byte) string {
+	var b strings.Builder
+	ast.Walk(n, func(c ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		switch c := c.(type) {
+		case *ast.CodeSpan, *ast.CodeBlock, *ast.FencedCodeBlock, *ast.HTMLBlock, *ast.RawHTML:
+			return ast.WalkSkipChildren, nil
+		case *ast.Text:
+			b.Write(c.Segment.Value(src))
+			b.WriteByte(' ')
+		}
+		return ast.WalkContinue, nil
+	})
+	return b.String()
+}
+
+// relianceNotRewritten lists the behaviours whose Reliance predates the
+// behaviour-registry template in docs/writing.md. It only shrinks.
+var relianceNotRewritten = map[string]bool{
+	"B01": true, "B02": true, "B03": true, "B04": true, "B05": true, "B06": true,
+	"B07": true, "B08": true, "B09": true, "B10": true, "B11": true, "B12": true,
+	"B13": true, "B14": true, "B15": true, "B16": true, "B17": true, "B18": true,
+	"B19": true, "B20": true, "B21": true, "B22": true, "B23": true,
+}
+
+// A behaviour's Reliance starts with what breaks, for somebody debugging at 2am.
+func TestBehaviorRelianceStartsWithWhatBreaks(t *testing.T) {
+	registered := map[string]bool{}
+	for _, b := range Behaviors {
+		registered[b.ID] = true
+		follows := strings.HasPrefix(b.Reliance, "If this changes")
 		switch {
-		case strings.HasPrefix(line, "**"):
-			return items
-		case strings.HasPrefix(line, "- "):
-			items = append(items, strings.TrimPrefix(line, "- "))
-		case strings.HasPrefix(line, "  ") && len(items) > 0:
-			items[len(items)-1] += " " + strings.TrimSpace(line)
+		case relianceNotRewritten[b.ID] && follows:
+			t.Errorf("%s's Reliance now follows docs/writing.md: remove it from relianceNotRewritten", b.ID)
+		case !relianceNotRewritten[b.ID] && !follows:
+			t.Errorf("%s's Reliance must start \"If this changes\": %q", b.ID, firstWords(b.Reliance))
 		}
 	}
-	return items
+	for id := range relianceNotRewritten {
+		if !registered[id] {
+			t.Errorf("relianceNotRewritten lists %s, which is not in the registry", id)
+		}
+	}
 }
 
 func firstWords(s string) string {
@@ -287,7 +504,9 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 		}
 		return nil, false
 	}
-	complete := "**Date:** d\n\n**Decision.** x\n\n**Support.**\n- A fact. `docs/x-findings.md`, \"Why it went\".\n- Another, over\n  two lines. D-001 (Go).\n\n**Rejected.** y\n\n**Revisit when** z.\n"
+	date := "**Date:** 2026-09-23 · **Status:** active\n\n"
+	support := "**Support.**\n- A fact. `docs/x-findings.md`, \"Why it went\".\n- Another, over\n  two lines. D-001 (Go).\n\n"
+	complete := date + "**Decision.** x\n\n" + support + "**Rejected.** y\n\n**Revisit when** z.\n"
 	tombstone := "**Status:** withdrawn 2026-09-20. Replaced by D-126 (words). Why:\n`docs/x-findings.md`, \"Why it went\".\n"
 	cases := []struct {
 		name  string
@@ -296,9 +515,18 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 	}{
 		{"before the cutoff", "## D-123 — Old\n\nAnything, already.\n", nil},
 		{"complete", "## D-124 — T\n\n" + complete, nil},
+		{"complete, with Limits", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Some.\n\n**Revisit when**", 1), nil},
+		{"not built", "## D-124 — T\n\n" + strings.Replace(complete, "active", "not built", 1), nil},
 		{"missing Rejected", "## D-124 — T\n\n" + strings.Replace(complete, "**Rejected.** y\n\n", "", 1), []string{"D-124 has no **Rejected.**"}},
+		{"missing Support", "## D-124 — T\n\n" + strings.Replace(complete, support, "", 1), []string{"D-124 has no **Support.**"}},
+		{"Support with no list", "## D-124 — T\n\n" + strings.Replace(complete, support, "**Support.** It is so.\n\n", 1), []string{"D-124 has **Support.** with no list"}},
+		{"superseded status", "## D-124 — T\n\n" + strings.Replace(complete, "active", "superseded by D-126", 1), []string{"D-124 has no **Date:** line whose status"}},
+		{"a date that is not one", "## D-124 — T\n\n" + strings.Replace(complete, "2026-09-23", "d", 1), []string{"D-124 has no **Date:** line whose status"}},
+		{"out of order", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when** z.", "**Revisit when** z.\n\n**Decision.** Again.", 1), []string{"D-124 has **Decision.** out of order"}},
+		{"a field only in a code block", "## D-124 — T\n\n" + strings.Replace(complete, "**Rejected.** y\n\n", "```\n**Rejected.** y\n```\n\n", 1), []string{"D-124 has no **Rejected.**"}},
 		{"support with no source", "## D-124 — T\n\n" + strings.Replace(complete, "D-001 (Go).", "It is so.", 1), []string{"D-124 has a support item with no source"}},
 		{"history word", "## D-124 — T\n\n" + strings.Replace(complete, "**Decision.** x", "**Decision.** It stays as it is.", 1), []string{"D-124 says \"stays\""}},
+		{"history word in code", "## D-124 — T\n\n" + strings.Replace(complete, "**Decision.** x", "**Decision.** Run `stays`.", 1), nil},
 		{"tombstone", "## D-076 — T\n\n" + tombstone + "\n---\n", nil},
 		{"tombstone with more", "## D-076 — T\n\n" + tombstone + "\nMore history.\n", []string{"D-076 is a tombstone and has more"}},
 		{"tombstone with no reason", "## D-076 — T\n\n**Status:** withdrawn 2026-09-20. Replaced by D-077 (words).\n", []string{"D-076 is a tombstone without"}},

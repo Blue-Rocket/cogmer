@@ -1,18 +1,18 @@
 # Decision log
 
-Decisions made while building this, with the alternatives that were rejected and
-why. The rejected options matter more than the chosen ones — without them, a
-later reader re-proposes something already ruled out, or "simplifies" code whose
-awkwardness was load-bearing.
+Each entry records one decision as it stands now: what we do, the facts that support
+it with their sources, the alternatives rejected and why, and the condition that
+would reopen it. The rejected alternatives stop a later reader from proposing
+something already ruled out. `docs/writing.md` gives the template.
 
-**Revisit when** ties each decision to the automated check that would invalidate
-it, where one exists (`cogmer doctor`, registry in `cmd/cogmer/behaviors.go`).
-A decision whose trigger fires is not automatically wrong — it is due for review.
+An entry's revisit condition names the automated check that would show it wrong,
+where one exists: `cogmer doctor`, or an entry in the behaviour registry in
+`cmd/cogmer/behaviors.go`. When that condition occurs, the decision is due for
+review. It is not automatically wrong.
 
-Commit bodies carry additional detail; `git log` is the long form of this file.
-
-Format: Context / Decision / Rejected / Revisit when. Add entries at the bottom,
-numbered, never renumber. Superseded entries stay, marked, with a pointer forward.
+Entries are added at the bottom and never renumbered. A reversed decision becomes a
+tombstone that keeps its number and title, and names the decision that replaced it
+and the finding that records why.
 
 ---
 
