@@ -29,7 +29,9 @@ encyclopedia — the last section says where to read instead.
   old text said.
 - Give every `§`, `D-NNN` and `B-NN` a few words — "D-054 (verification gates
   sync)", not "D-054" — in conversation as well as in files.
-- Say **person** or **colleague**, never "developer". Never describe the tool by a
+- Say **user** for someone using cogmer, **colleague** for another user in their
+  room, and **person** only for a human as distinct from the model or a program.
+  Never "developer": a user may not write code. Never describe the tool by a
   count. Never call the project **local-first**: it claims
   more than we deliver, since rendezvous needs a relay somebody else operates and
   D-029 (losing a room database) makes recovery a refetch from peers. §3.1 (first,

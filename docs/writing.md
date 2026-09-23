@@ -6,9 +6,14 @@ below. The rules before the templates apply to all of them.
 ## The reader
 
 The reader was not here when the work was done. They may be reading months later,
-with no memory of the session, looking for one answer. They may not write code. Say
-"person" or "colleague" for anyone using cogmer, and "maintainer" for someone
-changing it.
+with no memory of the session, looking for one answer. They may not write code.
+
+Say "user" for someone using cogmer, "colleague" for another user in the same room,
+and "maintainer" for someone changing cogmer. Say "person" only where what matters
+is a human as distinct from the model or a program: "a person sees only what the
+model says". Never say "developer", since a user may not write code. Where "user"
+could be read as the role of a message in a Claude Code conversation, as in a user
+turn, say which is meant.
 
 ## Rules
 
@@ -242,11 +247,11 @@ State one requirement per paragraph, in the present tense: "The daemon stops onl
 process it has identified as a cogmer daemon." Give at most one sentence of reason,
 and point to the decision for the rest. No findings, no history, no dates.
 
-Every requirement is grounded in a benefit to the person using cogmer or to the
-product owner, and its sentence of reason says what the benefit is and whose it is.
-A requirement that benefits neither does not belong in the specification. Where a
-requirement gives up privacy or decentralization, the benefit must be the
-person's, and a benefit to the product owner alone does not justify it (D-115, a
+Every requirement is grounded in a benefit to the user or to the product owner, and
+its sentence of reason says what the benefit is and whose it is. A requirement that
+benefits neither does not belong in the specification. Where a requirement gives up
+privacy or decentralization, the benefit must be the user's, and a benefit to the
+product owner alone does not justify it (D-115, a
 centralized component must trace to a disclosed tradeoff that benefits the
 person).
 
