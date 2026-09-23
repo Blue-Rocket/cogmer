@@ -24,12 +24,6 @@ var (
 	specNumberedPoint = regexp.MustCompile(`^(\d+)\. `)
 )
 
-// citedButUnwritten holds decisions that are cited and have no entry, each
-// with the reason. Writing the entry fails the test until it is removed here.
-var citedButUnwritten = map[string]string{
-	"D-076": "left unwritten in cb393f8: corrected within hours, and D-077 (every room has its own URL) states its surviving rule",
-}
-
 // citationSources returns every file that may cite a decision, a section or
 // a behavior, relative to the repository root. The test files for the writing
 // and citation checks are left out, because their cases cite things that do not
@@ -125,18 +119,13 @@ func TestCitationsNameThingsThatExist(t *testing.T) {
 			t.Errorf("%s:%s", rel, p)
 		}
 	}
-	for d, why := range citedButUnwritten {
-		if decisions[d] {
-			t.Errorf("%s now has an entry: remove it from citedButUnwritten (%s)", d, why)
-		}
-	}
 }
 
 func citationProblems(src string, decisions, sections, behaviors map[string]bool) []string {
 	var problems []string
 	for i, line := range strings.Split(src, "\n") {
 		for _, d := range decisionCitation.FindAllString(line, -1) {
-			if _, known := citedButUnwritten[d]; !decisions[d] && !known {
+			if !decisions[d] {
 				problems = append(problems, fmt.Sprintf("%d: cites %s, which has no entry in docs/decisions.md", i+1, d))
 			}
 		}
@@ -175,7 +164,6 @@ func TestCitationProblemsCatchesEachKind(t *testing.T) {
 		{"See §3.2.", 1},
 		{"See §36.2 and §36.3.", 1},
 		{"See B02.", 1},
-		{"D-076 is cited and unwritten on purpose.", 0},
 		{"D-0012 and XB01 and ED-001 are not citations.", 0},
 	}
 	for _, c := range cases {

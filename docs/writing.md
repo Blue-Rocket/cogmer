@@ -264,8 +264,8 @@ it bans.
 every citation in the documents, the Go sources, the scripts and the plugin. Each
 D-NNN must have an entry in `docs/decisions.md`, each § a numbered heading or
 numbered step in the specification, and each BNN an entry in the behaviour
-registry. No document is exempt. A decision that is cited and was never written is
-listed in `citedButUnwritten` with the reason.
+registry. No document is exempt. A decision that was withdrawn keeps its tombstone,
+so citations of it still resolve.
 
 `TestLaterDecisionsFollowTemplate` checks that every decision after D-123 has
 **Date:**, **Decision.**, **Rejected.** and **Revisit when**. A tombstone is exempt.
