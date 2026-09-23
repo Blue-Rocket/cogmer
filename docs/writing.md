@@ -42,6 +42,9 @@ appears in that item.
 Give every reference a few words. "D-054 (verification gates sync)", not "D-054".
 Cite only what you have checked exists.
 
+The mark § always names a section of the specification. Refer to a section of the
+same document in words: "section 4", not "§4".
+
 Use bullets only for real lists: options, steps in order, items to compare. Do not
 break an explanation into bullets.
 
@@ -73,10 +76,20 @@ keeps that structure and defeats the rule. Split the sentence instead.
 | em-dash (—) | 1,020 | usually two sentences; a colon only when what follows explains or lists what came before |
 | "load-bearing" | 18 | say what depends on it |
 | "honest", "honestly" | 18 | drop it; state the fact |
-| "precisely", "exactly" | 114 | drop it when it only adds emphasis |
+| "precisely", "exactly" | 114 | drop it when it only adds emphasis; a use that carries meaning takes a marker |
 | "the point", "is the point" | 19 | say what the thing is for |
 | "not merely" | 5 | "also", or two sentences |
-| "deliberately" | 39 | keep only where it contrasts with an accident |
+| "deliberately" | 39 | keep only where it contrasts with an accident, with a marker |
+
+A use of "precisely", "exactly" or "deliberately" that the table permits carries a
+marker directly after the word, giving the reason it stays. The marker is an HTML
+comment, so it does not show when the document is rendered:
+
+```markdown
+The relay was chosen deliberately<!-- writing: contrasts with an accident -->.
+```
+
+No other word takes a marker.
 
 Also avoid: leverage, utilize, robust, seamless, comprehensive, ensure, nuanced,
 testament, tapestry, delve, crucial. Say what actually happens.
@@ -237,10 +250,22 @@ the documents as Markdown and checks only prose, so code spans and code blocks a
 exempt (D-124, the writing test reads documents through goldmark). The files in
 `plugin/commands/` are instructions to the model and are not checked.
 
+A use of "precisely", "exactly" or "deliberately" passes only with a marker
+directly after it. The test also reports a marker that gives no reason, and a
+marker that follows no word it can excuse (D-125, a permitted use carries a
+marker).
+
 Documents not yet rewritten are listed in `writingNotYetRewritten` and exempt. The
 test fails when a listed document passes, so that it comes off the list in the
 commit that rewrote it. This guide is never checked, because it quotes every word
 it bans.
+
+`TestCitationsNameThingsThatExist`, in `cmd/cogmer/citations_test.go`, checks
+every citation in the documents, the Go sources, the scripts and the plugin. Each
+D-NNN must have an entry in `docs/decisions.md`, each § a numbered heading or
+numbered step in the specification, and each BNN an entry in the behaviour
+registry. No document is exempt. A decision that is cited and was never written is
+listed in `citedButUnwritten` with the reason.
 
 `TestLaterDecisionsFollowTemplate` checks that every decision after D-123 has
 **Date:**, **Decision.**, **Rejected.** and **Revisit when**. A tombstone is exempt.

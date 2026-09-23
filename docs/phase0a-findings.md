@@ -7,14 +7,14 @@ compaction never interrupts a turn, and slash commands never reach the room — 
 each worth more than the original hypothesis.
 
 One caveat governs all of it: **survival is summarizer behavior, not a contract.**
-See §9.
+See section 9.
 
 | | |
 |---|---|
 | Claude Code | 2.1.273 |
 | Platform | macOS 15 (darwin/arm64) |
 | Sessions driven | 3, session IDs pinned via `--session-id` |
-| Compactions observed | 2 manual; 0 automatic (see §8) |
+| Compactions observed | 2 manual; 0 automatic (see section 8) |
 
 ---
 
@@ -144,7 +144,7 @@ A single turn was driven to **378,916 tokens** against a configured
 Compaction is evaluated at turn boundaries, not during a turn. Turn reassembly is
 therefore safe from mid-turn compaction.
 
-## 9. Limitations — read these before trusting §4
+## 9. Limitations — read these before trusting section 4
 
 1. **Automatic compaction was never triggered.** `--autocompact` rejects anything
    below `100k`, and even a 378k-token session with a 100k threshold did not
@@ -153,7 +153,7 @@ therefore safe from mid-turn compaction.
    shared code path, but that is inference, not evidence.
 2. **Survival is model behavior, not a guarantee.** The summarizer chose to retain
    the teammate exchange. Nothing in the format *requires* it. A different model,
-   a longer conversation, or a heavier compression ratio could drop it. §4 says
+   a longer conversation, or a heavier compression ratio could drop it. Section 4 says
    this failure does not reproduce today — not that it cannot occur.
 3. **Single compaction cycle only.** Repeated compaction may erode teammate
    context progressively, each pass summarizing the previous summary. Untested.
@@ -168,9 +168,9 @@ therefore safe from mid-turn compaction.
 Phase 0a set out to find a silent failure and did not find one. The watermark
 design in the specification is sound as written, and Phase 1 is unblocked.
 
-The residual risk is entirely in §9.2 — survival depends on a summarizer's
+The residual risk is entirely in section 9, item 2 — survival depends on a summarizer's
 judgment, and the system has no way to detect it changing. That argues for
-recording `COMPACTION` events early (§5) so the signal exists before it is needed,
+recording `COMPACTION` events early (section 5) so the signal exists before it is needed,
 and for re-running Test B whenever the model or Claude Code version changes.
 
 The remaining genuine unknown is automatic compaction under real context pressure,

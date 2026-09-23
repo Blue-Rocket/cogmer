@@ -50,8 +50,12 @@ var writingNeverChecked = map[string]string{
 const decisionFormatAfter = 123
 
 var (
-	bannedWords = regexp.MustCompile(`(?i)\b(load-bearing|honest|honestly|precisely|exactly|not merely|deliberately|leverage|leveraged|leverages|utilise|utilised|utilize|utilized|utilizes|robust|robustly|seamless|seamlessly|comprehensive|ensure|ensured|ensures|ensuring|nuanced|testament|tapestry|delve|delves|delving|crucial|crucially)\b`)
-	thePoint    = regexp.MustCompile(`(?i)\bthe point\b`)
+	bannedWords = regexp.MustCompile(`(?i)\b(load-bearing|honest|honestly|not merely|leverage|leveraged|leverages|utilise|utilised|utilize|utilized|utilizes|robust|robustly|seamless|seamlessly|comprehensive|ensure|ensured|ensures|ensuring|nuanced|testament|tapestry|delve|delves|delving|crucial|crucially)\b`)
+	// The guide permits some uses of these, so a use can carry an exception
+	// marker, <!-- writing: <reason> -->, directly after the word.
+	judgementWords = regexp.MustCompile(`(?i)\b(deliberately|exactly|precisely)\b`)
+	writingMarker  = regexp.MustCompile(`(?s)^<!--\s*writing:(.*?)-->$`)
+	thePoint       = regexp.MustCompile(`(?i)\bthe point\b`)
 	// "the point at which" and "the point where" name a moment, not a purpose.
 	thePointOfTime = regexp.MustCompile(`(?i)^\s+(at which|where)\b`)
 	decoration     = regexp.MustCompile(`\b(Note|NOTE|Important|IMPORTANT):`)
@@ -134,13 +138,31 @@ func writingProblems(doc string, src []byte) []string {
 		prose = append(prose, 0)
 		offsets = append(offsets, -1)
 	}
+	type marker struct {
+		at, offset int // position in prose, offset in src
+		reason     string
+		used       bool
+	}
+	var markers []*marker
 	allowedDashes := 0
 	ast.Walk(root, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
 		}
 		switch n := n.(type) {
-		case *ast.CodeSpan, *ast.CodeBlock, *ast.FencedCodeBlock, *ast.HTMLBlock, *ast.RawHTML:
+		case *ast.RawHTML:
+			var html []byte
+			for i := 0; i < n.Segments.Len(); i++ {
+				seg := n.Segments.At(i)
+				html = append(html, seg.Value(src)...)
+			}
+			if m := writingMarker.FindSubmatch(html); m != nil {
+				markers = append(markers, &marker{
+					at: len(prose), offset: n.Segments.At(0).Start, reason: strings.TrimSpace(string(m[1]))})
+			}
+			separate()
+			return ast.WalkSkipChildren, nil
+		case *ast.CodeSpan, *ast.CodeBlock, *ast.FencedCodeBlock, *ast.HTMLBlock:
 			separate()
 			return ast.WalkSkipChildren, nil
 		case *ast.Heading:
@@ -173,9 +195,12 @@ func writingProblems(doc string, src []byte) []string {
 	})
 
 	var problems []string
-	report := func(at int, format string, args ...any) {
-		line := bytes.Count(src[:offsets[at]], []byte("\n")) + 1
+	reportOffset := func(offset int, format string, args ...any) {
+		line := bytes.Count(src[:offset], []byte("\n")) + 1
 		problems = append(problems, fmt.Sprintf("%d: %s", line, fmt.Sprintf(format, args...)))
+	}
+	report := func(at int, format string, args ...any) {
+		reportOffset(offsets[at], format, args...)
 	}
 	s := string(prose)
 	for i, r := range s {
@@ -188,6 +213,25 @@ func writingProblems(doc string, src []byte) []string {
 	}
 	for _, m := range bannedWords.FindAllStringIndex(s, -1) {
 		report(m[0], "%q", s[m[0]:m[1]])
+	}
+	for _, m := range judgementWords.FindAllStringIndex(s, -1) {
+		excused := false
+		for _, mk := range markers {
+			if mk.at >= m[1] && strings.TrimSpace(s[m[1]:mk.at]) == "" {
+				mk.used, excused = true, true
+			}
+		}
+		if !excused {
+			report(m[0], "%q, which needs rephrasing or a marker giving the reason it stays", s[m[0]:m[1]])
+		}
+	}
+	for _, mk := range markers {
+		switch {
+		case mk.reason == "":
+			reportOffset(mk.offset, "exception marker gives no reason")
+		case !mk.used:
+			reportOffset(mk.offset, "exception marker does not follow a word it can excuse")
+		}
 	}
 	for _, m := range thePoint.FindAllStringIndex(s, -1) {
 		if !thePointOfTime.MatchString(s[m[1]:]) {
@@ -269,6 +313,14 @@ func TestWritingProblemsCatchesEachRule(t *testing.T) {
 		{"status label", "x.md", "Note: this.\n", 1},
 		{"check mark", "x.md", "Done ✓\n", 1},
 		{"arrow", "x.md", "a → b\n", 0},
+		{"judgement word", "x.md", "Chosen deliberately.\n", 1},
+		{"judgement word with a marker", "x.md", "Chosen deliberately<!-- writing: not by accident --> here.\n", 0},
+		{"marker after a space", "x.md", "It is exactly <!-- writing: a measurement --> 16s.\n", 0},
+		{"marker with no reason", "x.md", "Chosen deliberately<!-- writing: --> here.\n", 1},
+		{"marker away from its word", "x.md", "Chosen deliberately, then kept<!-- writing: why --> here.\n", 2},
+		{"marker on a banned word", "x.md", "It is load-bearing<!-- writing: why -->.\n", 2},
+		{"marker in a code span", "x.md", "Chosen deliberately`<!-- writing: why -->`.\n", 1},
+		{"other comment", "x.md", "Chosen deliberately<!-- todo -->.\n", 1},
 	}
 	for _, c := range cases {
 		got := writingProblems(c.doc, []byte(c.src))

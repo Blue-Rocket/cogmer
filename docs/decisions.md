@@ -6725,10 +6725,44 @@ blocks are skipped. Only tests import goldmark, so it is not part of the binary.
   handling, and each one missed reports a false problem in text the guide does not
   govern.
 
-**Limits.** The test reports every use of a listed word. It cannot allow the uses
-the guide permits in its table, where a word contrasts with an accident or carries
-meaning rather than emphasis. Text inside HTML blocks is not checked.
+**Limits.** Text inside HTML blocks is not checked.
 
 **Revisit when** `docs/writing.md` gains a rule about structure rather than words,
 such as the length of a sentence or an item. goldmark's tree can check it, and the
 test is where it belongs.
+
+---
+
+## D-125 — A permitted use of a judgement word carries a marker with its reason
+
+**Date:** 2026-09-23 · **Status:** active
+
+**Decision.** The writing guide's table permits some uses of three words and bans
+the rest. The writing test fails every use of them unless an HTML comment of the
+form `<!-- writing: <reason> -->` follows the word directly. No other word takes a
+marker, and a marker with no reason, or one that follows no word it can excuse,
+fails.
+
+**Support.**
+- The table permits one word where it contrasts with an accident, and two where
+  they carry meaning rather than emphasis, and it says the test checks all three.
+  `docs/writing.md`, "Words and marks to avoid".
+- Nothing in the text separates a permitted use from an emphatic one, and the
+  three words had 153 uses on 09-22. `docs/writing.md`, the same table.
+- goldmark reads an inline HTML comment as raw HTML, and a rendered page does not
+  show it. `writingProblems` in `writing_test.go`, case "judgement word with a
+  marker".
+
+**Rejected.**
+- *Leaving the three words to a reader.* No check would cover them, and the guide
+  would say the test checks words that it does not.
+- *Failing every use.* The test would forbid what the guide permits, and each
+  exception would be made by editing the test.
+- *Listing exceptions by file and line in the test.* A line number moves with every
+  edit above it, and the reason would sit away from the word it excuses.
+
+**Limits.** A marker records that somebody decided a use stays. Nothing checks that
+the reason is true, so a reader still has to judge it.
+
+**Revisit when** markers are common in rewritten documents. The table would then
+permit more than it says, and should say so.
