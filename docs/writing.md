@@ -284,6 +284,13 @@ share the exemption list with the word check. Nothing checks length, because a
 limit is met most cheaply by compressing, which is the failure described under
 Rules.
 
+The rules no test can decide are reviewed by the `writing-review` skill in
+`.claude/skills/writing-review/` (D-126, rules that need a reader are reviewed by a
+skill a maintainer runs). Run it on a document before taking it off the exemption
+list, and on a change to a document before committing it. It runs the checks above
+on the named documents whether or not they are exempt, reviews the rest, and
+reports findings without changing anything.
+
 `TestLaterDecisionsFollowTemplate` checks every decision after D-123. It must have
 **Date:**, **Decision.**, **Rejected.** and **Revisit when**, a source in each item
 under **Support.**, and none of the history words listed with the decision

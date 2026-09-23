@@ -6774,3 +6774,44 @@ the reason is true, so a reader still has to judge it.
 
 **Revisit when** markers are common in rewritten documents. The table would then
 permit more than it says, and should say so.
+
+---
+
+## D-126 — Rules that need a reader are reviewed by a skill a maintainer runs
+
+**Date:** 2026-09-23 · **Status:** active
+
+**Decision.** The rules in `docs/writing.md` that no test can decide are reviewed by
+the `writing-review` skill, which a maintainer runs on a document, a diff or a
+commit message. It reports findings for a person to decide on and changes nothing.
+Every finding quotes the text it is about, and a test drops any finding whose quote
+is not in the file. The review never blocks a commit.
+
+**Support.**
+- The skill reads the guide in full each time it runs and restates none of its
+  rules, so the guide is the only statement of them.
+  `.claude/skills/writing-review/SKILL.md`, "Read the rules".
+- A model's review can name text that is not in the document.
+  `TestReviewFindingsQuoteTheirDocuments` in `review_test.go` keeps a finding only
+  when its quote is in the file, and reports every finding it drops.
+- A length limit is met most cheaply by compressing an explanation, so the skill
+  reports a long item by naming the kind of detail that does not belong, never by
+  proposing a shorter wording. `docs/writing.md`, "Rules", and `SKILL.md`,
+  "Length".
+- Tracked Claude Code settings impose their tooling on everybody who clones the
+  repository. `.gitignore`, the comment on `.claude/settings.local.json`.
+
+**Rejected.**
+- *Running the review in `go test`.* The suite would need the network and a model,
+  would cost money on every run, and would give different results from run to run.
+- *A hook that runs the review on every commit.* It would have to live in tracked
+  settings, which `.gitignore` keeps out of the repository.
+- *A review on each pull request.* The repository takes changes as commits, not
+  pull requests, and has no CI to run one.
+
+**Limits.** The review's judgement is not reproducible. The quote check proves that
+the text exists, not that the finding is right. Nothing runs the review unless
+somebody asks for it.
+
+**Revisit when** the repository takes changes by pull request or gains CI. A review
+on each pull request would then reach changes nobody thought to review.
