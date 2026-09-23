@@ -147,8 +147,14 @@ citation with a few words, not restated.
 
 Every item under **Support.** has a source, and the source is where the fact is
 kept: a § section of the specification, a decision, a behaviour such as B04, a file
-named in backticks, or a URL. If the only record of a fact would be the decision itself, write the findings
-document first.
+named in backticks, or a URL. If the only record of a fact would be the decision
+itself, write the findings document first.
+
+A support item states a fact that holds now. When the evidence is something that
+happened, such as a failure or an earlier design, the item states the fact it
+showed, and the finding it cites holds the event. "An environment variable has the
+same value in every session a machine starts", not "the variable made a command act
+on the wrong room".
 
 **Rejected.** is required whenever a real alternative was weighed, which is the
 reason for writing an entry at all. Omit **Limits.** when there are none.
@@ -235,6 +241,14 @@ The error the check returns says what changed and where to look next.
 State one requirement per paragraph, in the present tense: "The daemon stops only a
 process it has identified as a cogmer daemon." Give at most one sentence of reason,
 and point to the decision for the rest. No findings, no history, no dates.
+
+Every requirement is grounded in a benefit to the person using cogmer or to the
+product owner, and its sentence of reason says what the benefit is and whose it is.
+A requirement that benefits neither does not belong in the specification. Where a
+requirement gives up privacy or decentralization, the benefit must be the
+person's, and a benefit to the product owner alone does not justify it (D-115, a
+centralized component must trace to a disclosed tradeoff that benefits the
+person).
 
 ### A commit message
 
