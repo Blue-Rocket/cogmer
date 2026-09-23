@@ -14,8 +14,8 @@ encyclopedia — the last section says where to read instead.
   load-bearing. Add an entry whenever a real alternative was weighed. Never
   renumber: a reversed decision becomes a tombstone, and the reason for reversing
   it goes in a finding.
-- **Write every document, and every commit message, by `docs/writing.md`.** It
-  holds the rules and a template for each kind of item.
+- **Read `docs/writing.md` before writing any document or commit message**, and
+  follow it. It holds the rules and a template for each kind of item.
 - **Read the code before characterising it.** Paraphrasing a grep result produced a
   wrong account of two decisions in one session. Read the function, not the line
   that mentions it.
