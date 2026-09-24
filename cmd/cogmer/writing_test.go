@@ -54,7 +54,9 @@ var (
 	// marker, <!-- writing: <reason> -->, directly after the word.
 	judgementWords = regexp.MustCompile(`(?i)\b(deliberately|exactly|precisely)\b`)
 	writingMarker  = regexp.MustCompile(`(?s)^<!--\s*writing:(.*?)-->$`)
-	thePoint       = regexp.MustCompile(`(?i)\bthe point\b`)
+	// The words of W-21's table; the rest of bannedWords is W-23's list.
+	tableWords = regexp.MustCompile(`(?i)^(load-bearing|honest|honestly|not merely)$`)
+	thePoint   = regexp.MustCompile(`(?i)\bthe point\b`)
 	// "the point at which" and "the point where" name a moment, not a purpose.
 	thePointOfTime = regexp.MustCompile(`(?i)^\s+(at which|where)\b`)
 	decoration     = regexp.MustCompile(`\b(Note|NOTE|Important|IMPORTANT):`)
@@ -205,13 +207,17 @@ func writingProblems(doc string, src []byte) []string {
 	for i, r := range s {
 		switch {
 		case r == '—' && !allowed[i]:
-			report(i, "em-dash")
+			report(i, "em-dash (W-20)")
 		case isDecoration(r):
-			report(i, "status decoration %q", r)
+			report(i, "status decoration %q (W-24)", r)
 		}
 	}
 	for _, m := range bannedWords.FindAllStringIndex(s, -1) {
-		report(m[0], "%q", s[m[0]:m[1]])
+		if w := s[m[0]:m[1]]; tableWords.MatchString(w) {
+			report(m[0], "%q (W-21)", w)
+		} else {
+			report(m[0], "%q (W-23)", w)
+		}
 	}
 	for _, m := range judgementWords.FindAllStringIndex(s, -1) {
 		excused := false
@@ -221,24 +227,24 @@ func writingProblems(doc string, src []byte) []string {
 			}
 		}
 		if !excused {
-			report(m[0], "%q, which needs rephrasing or a marker giving the reason it stays", s[m[0]:m[1]])
+			report(m[0], "%q, which needs rephrasing or a marker giving the reason it stays (W-22)", s[m[0]:m[1]])
 		}
 	}
 	for _, mk := range markers {
 		switch {
 		case mk.reason == "":
-			reportOffset(mk.offset, "exception marker gives no reason")
+			reportOffset(mk.offset, "exception marker gives no reason (W-22)")
 		case !mk.used:
-			reportOffset(mk.offset, "exception marker does not follow a word it can excuse")
+			reportOffset(mk.offset, "exception marker does not follow a word it can excuse (W-22)")
 		}
 	}
 	for _, m := range thePoint.FindAllStringIndex(s, -1) {
 		if !thePointOfTime.MatchString(s[m[1]:]) {
-			report(m[0], "%q", s[m[0]:m[1]])
+			report(m[0], "%q (W-21)", s[m[0]:m[1]])
 		}
 	}
 	for _, m := range decoration.FindAllStringIndex(s, -1) {
-		report(m[0], "%q", s[m[0]:m[1]])
+		report(m[0], "%q (W-24)", s[m[0]:m[1]])
 	}
 	return problems
 }

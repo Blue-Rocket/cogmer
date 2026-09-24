@@ -86,13 +86,13 @@ func structureProblems(doc string, src []byte) []string {
 				seenFields[label] = true
 			case doc == "docs/open.md" && opensTopLevelParagraph(n):
 			default:
-				report(firstOffset(n), "bold %q, which only a template field or an open.md item's opening sentence may be", label)
+				report(firstOffset(n), "bold %q, which only a template field or an open.md item's opening sentence may be (W-14)", label)
 			}
 			return ast.WalkSkipChildren, nil
 		case *ast.Text:
 			if doc == specification {
 				for _, m := range isoDate.FindAllIndex(n.Segment.Value(src), -1) {
-					report(n.Segment.Start+m[0], "a date; the specification says what must be true, not when")
+					report(n.Segment.Start+m[0], "a date; the specification says what must be true, not when (W-81)")
 				}
 			}
 		}
@@ -127,14 +127,14 @@ func structureProblems(doc string, src []byte) []string {
 			last = bytes.Count(src[:hi-1], []byte("\n")) + 1
 		}
 		if first > 0 && last-first+1 <= 3 {
-			report(firstOffset(h), "header %q over %d lines; a section this short needs no header", title, last-first+1)
+			report(firstOffset(h), "header %q over %d lines; a section this short needs no header (W-15)", title, last-first+1)
 		}
 	}
 
 	if findingsDocument.MatchString(doc) {
 		for f := range findingsFields {
 			if !seenFields[f] {
-				report(0, "no **%s** field; docs/writing.md gives the findings template", f)
+				report(0, "no **%s** field; docs/writing.md gives the findings template (W-60)", f)
 			}
 		}
 		for _, want := range findingsSections {
@@ -143,7 +143,7 @@ func structureProblems(doc string, src []byte) []string {
 				found = found || s == want
 			}
 			if !found {
-				report(0, "no \"## %s\" section; docs/writing.md gives the findings template", want)
+				report(0, "no \"## %s\" section; docs/writing.md gives the findings template (W-60)", want)
 			}
 		}
 	}
@@ -305,14 +305,14 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 			why := tombstoneWhy.FindStringSubmatch(nodeSource(e.body[0], src))
 			switch {
 			case len(e.body) > 1:
-				report(e.id, "is a tombstone and has more than its status line; the reason belongs in a finding")
+				report(e.id, "is a tombstone and has more than its status line; the reason belongs in a finding (W-37)")
 			case why == nil:
-				report(e.id, "is a tombstone without \"Why: `docs/<topic>-findings.md`, \\\"<section>\\\".\"")
+				report(e.id, "is a tombstone without \"Why: `docs/<topic>-findings.md`, \\\"<section>\\\".\" (W-37)")
 			default:
 				if headings, ok := headingsOf(why[1]); !ok {
-					report(e.id, "cites %s, which does not exist", why[1])
+					report(e.id, "cites %s, which does not exist (W-37)", why[1])
 				} else if section := strings.Join(strings.Fields(why[2]), " "); !headings[section] {
-					report(e.id, "cites %q in %s, which has no such heading", section, why[1])
+					report(e.id, "cites %q in %s, which has no such heading (W-37)", section, why[1])
 				}
 			}
 			continue
@@ -322,7 +322,7 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 		}
 
 		if len(e.body) == 0 || !decisionStatus.MatchString(nodeSource(e.body[0], src)) {
-			report(e.id, "has no **Date:** line whose status is active or not built; docs/writing.md gives the template")
+			report(e.id, "has no **Date:** line whose status is active or not built (W-30)")
 		}
 		next := 0
 		for i, c := range e.body {
@@ -340,12 +340,12 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 				continue // structureProblems reports any other bold
 			}
 			if at < next {
-				report(e.id, "has **%s** out of order; docs/writing.md gives the template", label)
+				report(e.id, "has **%s** out of order (W-30)", label)
 				continue
 			}
 			for _, f := range decisionOrder[next:at] {
 				if f.required {
-					report(e.id, "has no **%s** field; docs/writing.md gives the template", f.name)
+					report(e.id, "has no **%s** field (%s)", f.name, fieldRule(f.name))
 				}
 			}
 			next = at + 1
@@ -357,23 +357,23 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 				list, _ = e.body[i+1].(*ast.List)
 			}
 			if list == nil {
-				report(e.id, "has **Support.** with no list of facts under it")
+				report(e.id, "has **Support.** with no list of facts under it (W-30)")
 				continue
 			}
 			for item := list.FirstChild(); item != nil; item = item.NextSibling() {
 				if s := nodeSource(item, src); !supportSource.MatchString(s) {
-					report(e.id, "has a support item with no source: %q", firstWords(s))
+					report(e.id, "has a support item with no source: %q (W-34)", firstWords(s))
 				}
 			}
 		}
 		for _, f := range decisionOrder[next:] {
 			if f.required {
-				report(e.id, "has no **%s** field; docs/writing.md gives the template", f.name)
+				report(e.id, "has no **%s** field (%s)", f.name, fieldRule(f.name))
 			}
 		}
 		for _, c := range e.body {
 			for _, w := range historyWords.FindAllString(proseText(c, src), -1) {
-				report(e.id, "says %q, which describes the system before the decision", w)
+				report(e.id, "says %q, which describes the system before the decision (W-33)", w)
 			}
 		}
 	}
@@ -390,6 +390,15 @@ var decisionOrder = []struct {
 	{"Rejected.", true},
 	{"Limits.", false},
 	{"Revisit when", true},
+}
+
+// fieldRule names the rule a missing field breaks: W-36 for **Rejected.**, which
+// every entry needs, and W-30 for the rest of the template.
+func fieldRule(name string) string {
+	if name == "Rejected." {
+		return "W-36"
+	}
+	return "W-30"
 }
 
 // boldOpener returns the bold text a paragraph opens with.
@@ -478,9 +487,9 @@ func TestBehaviorRelianceStartsWithWhatBreaks(t *testing.T) {
 		follows := strings.HasPrefix(b.Reliance, "If this changes")
 		switch {
 		case relianceNotRewritten[b.ID] && follows:
-			t.Errorf("%s's Reliance now follows docs/writing.md: remove it from relianceNotRewritten", b.ID)
+			t.Errorf("%s's Reliance now follows W-71: remove it from relianceNotRewritten", b.ID)
 		case !relianceNotRewritten[b.ID] && !follows:
-			t.Errorf("%s's Reliance must start \"If this changes\": %q", b.ID, firstWords(b.Reliance))
+			t.Errorf("%s's Reliance must start \"If this changes\": %q (W-71)", b.ID, firstWords(b.Reliance))
 		}
 	}
 	for id := range relianceNotRewritten {

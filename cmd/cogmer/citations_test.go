@@ -132,17 +132,17 @@ func citationProblems(src string, decisions, sections, behaviors map[string]bool
 	for i, line := range strings.Split(src, "\n") {
 		for _, d := range decisionCitation.FindAllString(line, -1) {
 			if !decisions[d] {
-				problems = append(problems, fmt.Sprintf("%d: cites %s, which has no entry in docs/decisions.md", i+1, d))
+				problems = append(problems, fmt.Sprintf("%d: cites %s, which has no entry in docs/decisions.md (W-09)", i+1, d))
 			}
 		}
 		for _, m := range sectionCitation.FindAllStringSubmatch(line, -1) {
 			if !sections[m[1]] {
-				problems = append(problems, fmt.Sprintf("%d: cites §%s, which is not a section of the specification", i+1, m[1]))
+				problems = append(problems, fmt.Sprintf("%d: cites §%s, which is not a section of the specification (W-10)", i+1, m[1]))
 			}
 		}
 		for _, b := range behaviorCitation.FindAllString(line, -1) {
 			if !behaviors[b] {
-				problems = append(problems, fmt.Sprintf("%d: cites %s, which is not in the behavior registry", i+1, b))
+				problems = append(problems, fmt.Sprintf("%d: cites %s, which is not in the behavior registry (W-09)", i+1, b))
 			}
 		}
 	}

@@ -3,69 +3,129 @@
 How every document in this repository is written. Each kind of item has a template
 below. The rules before the templates apply to all of them.
 
+Every rule has an ID, and a failing check ends its message with the ID of the rule
+it enforces, so a failure leads to the rule. Each rule is either checked, meaning a
+test fails when the rule is broken, or judgement, meaning no program can tell and
+the writer applies it. The `writing-review` skill reviews the judgement rules. IDs
+are grouped by section, with gaps, so that a new rule never renumbers an old one.
+
+## Rule index
+
+| ID | rule | enforcement |
+|---|---|---|
+| W-01 | the words for the people involved | judgement |
+| W-02 | put the answer first | judgement |
+| W-03 | plain, complete sentences, one idea each | judgement |
+| W-04 | state the fact, not a saying about it | judgement |
+| W-05 | leave out the process | judgement |
+| W-06 | describe the system, not the change | judgement |
+| W-07 | numbers with units, dates for observations | judgement |
+| W-08 | name a mechanism by what it does | judgement |
+| W-09 | cite only what exists | checked |
+| W-10 | § names a section of the specification | checked |
+| W-11 | give every reference a few words | judgement |
+| W-12 | bullets only for real lists | judgement |
+| W-13 | backticks only for code | judgement |
+| W-14 | bold only for template fields and `open.md` openers | checked |
+| W-15 | no header over a section of three lines or fewer | checked |
+| W-16 | do not restate in a closing sentence | judgement |
+| W-17 | keep an item short by leaving out kinds of detail | judgement |
+| W-20 | no em-dash | checked |
+| W-21 | none of the words in the table | checked |
+| W-22 | a permitted judgement word carries a marker | checked |
+| W-23 | none of the other listed words | checked |
+| W-24 | no status decoration | checked |
+| W-30 | a decision has its fields, in order | checked |
+| W-31 | a decision's title states the decision | judgement |
+| W-32 | a decision describes only the present | judgement |
+| W-33 | a decision uses none of the history words | checked |
+| W-34 | every supporting fact names a source | checked |
+| W-35 | a supporting fact holds now | judgement |
+| W-36 | a decision always has **Rejected.** | checked |
+| W-37 | a reversed decision becomes a tombstone | checked |
+| W-38 | a partial change rewrites the earlier entry | judgement |
+| W-39 | a rewrite keeps every fact | judgement |
+| W-40 | an entry records one decision | judgement |
+| W-50 | an `open.md` item names the problem | judgement |
+| W-51 | a long `open.md` item holds detail of another kind | judgement |
+| W-52 | delete a finished `open.md` item | judgement |
+| W-60 | a findings document has its fields and sections | checked |
+| W-61 | findings record what was seen | judgement |
+| W-70 | a behaviour's `Title` is an observed fact | judgement |
+| W-71 | a behaviour's `Reliance` starts with what breaks | checked |
+| W-72 | a behaviour check's error says what changed | judgement |
+| W-80 | one requirement per paragraph of the specification | judgement |
+| W-81 | the specification carries no dates | checked |
+| W-82 | every requirement is grounded in a benefit | judgement |
+| W-90 | the form of a commit message | judgement |
+
 ## The reader
 
 The reader was not here when the work was done. They may be reading months later,
 with no memory of the session, looking for one answer. They may not write code.
 
-Say "user" for someone using cogmer, "colleague" for another user in the same room,
-and "maintainer" for someone changing cogmer. Say "person" only where what matters
-is a human as distinct from the model or a program: "a person sees only what the
-model says". Never say "developer", since a user may not write code. Where "user"
-could be read as the role of a message in a Claude Code conversation, as in a user
-turn, say which is meant.
+W-01. Say "user" for someone using cogmer, "colleague" for another user in the same
+room, and "maintainer" for someone changing cogmer. Say "person" only where what
+matters is a human as distinct from the model or a program: "a person sees only
+what the model says". Never say "developer", since a user may not write code. Where
+"user" could be read as the role of a message in a Claude Code conversation, as in
+a user turn, say which is meant.
 
 ## Rules
 
-Put the answer first. The first sentence of any item says what is true, what was
-decided or what is wrong. Background, evidence and history come after it, and only
-if the reader needs them to trust or apply the answer.
+W-02. Put the answer first. The first sentence of any item says what is true, what
+was decided or what is wrong. Background, evidence and history come after it, and
+only if the reader needs them to trust or apply the answer.
 
-Write plain, complete sentences in paragraphs. Use one idea per sentence and the
-active voice. When a
-sentence needs a second reading, split it.
+W-03. Write plain, complete sentences in paragraphs. Use one idea per sentence and
+the active voice. When a sentence needs a second reading, split it.
 
-State the fact rather than a saying about it. "A check that cannot fail reads as
-protection" makes the reader work out the rule. "Every behaviour check has a test
-that makes it fail" states the rule.
+W-04. State the fact rather than a saying about it. "A check that cannot fail reads
+as protection" makes the reader work out the rule. "Every behaviour check has a
+test that makes it fail" states the rule.
 
-Leave out the process. Do not describe how you got to the answer ("Asked whether…",
-"Reading it closely turned up…", "The honest result is…"). If the route matters,
-because something was tried and failed, record what was tried and what happened.
+W-05. Leave out the process. Do not describe how you got to the answer ("Asked
+whether…", "Reading it closely turned up…", "The honest result is…"). If the route
+matters, because something was tried and failed, record what was tried and what
+happened.
 
-Describe what the system is, not what you changed. "The parser reads the config at
-startup", not "Updated the parser to read the config at startup". Change history
-belongs in commit messages.
+W-06. Describe what the system is, not what you changed. "The parser reads the
+config at startup", not "Updated the parser to read the config at startup". Change
+history belongs in commit messages.
 
-Give numbers with units, and dates for observations. "16s on 09-22", not "a few
-seconds". Say whether something was observed or only read from the code.
+W-07. Give numbers with units, and dates for observations. "16s on 09-22", not "a
+few seconds". Say whether something was observed or only read from the code.
 
-Name a mechanism by what it does, not by our word for it. If a term of our own has
-to appear ("watermark", "fence", "the view"), say what it is the first time it
-appears in that item.
+W-08. Name a mechanism by what it does, not by our word for it. If a term of our
+own has to appear ("watermark", "fence", "the view"), say what it is the first time
+it appears in that item.
 
-Give every reference a few words. "D-054 (verification gates sync)", not "D-054".
-Cite only what you have checked exists.
+W-09. Cite only what you have checked exists.
 
-The mark § always names a section of the specification. Refer to a section of the
-same document in words: "section 4", not "§4".
+W-10. The mark § always names a section of the specification. Refer to a section of
+the same document in words: "section 4", not "§4".
 
-Use bullets only for real lists: options, steps in order, items to compare. Do not
-break an explanation into bullets.
+W-11. Give every reference a few words. "D-054 (verification gates sync)", not
+"D-054".
 
-Use backticks only for things that appear in code or at a terminal: identifiers,
-file names, commands, environment variables. Not for emphasis.
+W-12. Use bullets only for real lists: options, steps in order, items to compare.
+Do not break an explanation into bullets.
 
-Use bold only for an item's opening sentence in `open.md`, and for the field names
-the templates define. Nowhere else. In particular, do not open a paragraph with a
-bold label and a fragment ("**Where the code lives.** Signalling needs…"). If a
-thing needs a name and an explanation, write a sentence.
+W-13. Use backticks only for things that appear in code or at a terminal:
+identifiers, file names, commands, environment variables. Not for emphasis.
 
-Use headers only on sections long enough to need one. A three-line section does not.
+W-14. Use bold only for an item's opening sentence in `open.md`, and for the field
+names the templates define. Nowhere else. In particular, do not open a paragraph
+with a bold label and a fragment ("**Where the code lives.** Signalling needs…").
+If a thing needs a name and an explanation, write a sentence.
 
-Stop when the item has said what it needs to. Do not restate it in a closing sentence.
+W-15. Use headers only on sections long enough to need one. A three-line section
+does not.
 
-Keep an item short by leaving out kinds of detail, never by compressing what
+W-16. Stop when the item has said what it needs to. Do not restate it in a closing
+sentence.
+
+W-17. Keep an item short by leaving out kinds of detail, never by compressing what
 belongs in it. Each template says what an item holds, and process, history and
 restated decisions are not among them. An item that holds only what belongs is not
 too long, whatever its length. An allusion or an aphorism in place of an
@@ -74,27 +134,30 @@ explanation makes an item shorter and fails the reader.
 ## Words and marks to avoid
 
 These are the habits this repository overuses, counted on 09-22 across the five main
-documents; the counts include every use. The enforcement test checks for them. The
-one em-dash allowed is the one in a decision's heading, `## D-NNN — <title>`.
+documents; the counts include every use.
 
-The em-dash is banned for what it usually does here: it lets a finished sentence
-carry a second idea, often as a twist or a reveal ("handshakes — seconds of work"),
-or holds a sentence open around an aside. Replacing it with a comma or a semicolon
-keeps that structure and defeats the rule. Split the sentence instead.
+W-20. Do not use an em-dash. The one allowed is the one in a decision's heading,
+`## D-NNN — <title>`. The em-dash is banned for what it usually does here: it lets
+a finished sentence carry a second idea, often as a twist or a reveal ("handshakes
+— seconds of work"), or holds a sentence open around an aside. Replacing it with a
+comma or a semicolon keeps that structure and defeats the rule. Split the sentence
+instead. It appeared 1,020 times; use two sentences, or a colon only when what
+follows explains or lists what came before.
+
+W-21. Do not use the words in this table.
 
 | avoid | count | use instead |
 |---|---|---|
-| em-dash (—) | 1,020 | usually two sentences; a colon only when what follows explains or lists what came before |
 | "load-bearing" | 18 | say what depends on it |
 | "honest", "honestly" | 18 | drop it; state the fact |
-| "precisely", "exactly" | 114 | drop it when it only adds emphasis; a use that carries meaning takes a marker |
 | "the point", "is the point" | 19 | say what the thing is for |
 | "not merely" | 5 | "also", or two sentences |
-| "deliberately" | 39 | keep only where it contrasts with an accident, with a marker |
 
-A use of "precisely", "exactly" or "deliberately" that the table permits carries a
-marker directly after the word, giving the reason it stays. The marker is an HTML
-comment, so it does not show when the document is rendered:
+W-22. Use "precisely" and "exactly" (114 uses) only where the word carries meaning,
+and "deliberately" (39 uses) only where it contrasts with an accident; otherwise
+drop it. A use that stays carries a marker directly after the word, giving the
+reason it stays. The marker is an HTML comment, so it does not show when the
+document is rendered:
 
 ```markdown
 The relay was chosen deliberately<!-- writing: contrasts with an accident -->.
@@ -102,10 +165,10 @@ The relay was chosen deliberately<!-- writing: contrasts with an accident -->.
 
 No other word takes a marker.
 
-Also avoid: leverage, utilize, robust, seamless, comprehensive, ensure, nuanced,
-testament, tapestry, delve, crucial. Say what actually happens.
+W-23. Also avoid: leverage, utilize, robust, seamless, comprehensive, ensure,
+nuanced, testament, tapestry, delve, crucial. Say what actually happens.
 
-No status decoration: no check marks, emoji, "Note:" or "Important:".
+W-24. No status decoration: no check marks, emoji, "Note:" or "Important:".
 
 ## Templates
 
@@ -138,33 +201,42 @@ what is left open and where it is tracked.>
 **Revisit when** <a condition somebody could observe>.
 ```
 
-The title is the decision, not the topic: "`stop` finds a daemon by the addresses
-it holds", not "Stopping the daemon".
+W-30. An entry follows this template: a **Date:** line whose status is "active" or
+"not built", then **Decision.**, **Support.** with a list under it, **Rejected.**,
+an optional **Limits.** and **Revisit when**, in that order. Omit **Limits.** when
+there are none.
 
-An entry describes the decision as it stands now, so that a reader can understand
-what we do with as little to hold in mind as possible. It says nothing about what
-was there before: not what the system used to do, not what this replaced, not who
-asked or what happened on the way. Words that describe the system as it stood when
-the decision was made ("stays", "is kept", "continues to", "already", "no longer",
-"used to", "previously", "replaced") are history whatever their tense. A decision states only what it decides. Something decided
-elsewhere appears only when the reader needs it to apply this one, and then as a
-citation with a few words, not restated.
+W-31. The title is the decision, not the topic: "`stop` finds a daemon by the
+addresses it holds", not "Stopping the daemon".
 
-Every item under **Support.** has a source, and the source is where the fact is
-kept: a § section of the specification, a decision, a behaviour such as B04, a file
-named in backticks, or a URL. If the only record of a fact would be the decision
-itself, write the findings document first.
+W-32. An entry describes the decision as it stands now, so that a reader can
+understand what we do with as little to hold in mind as possible. It says nothing
+about what was there before: not what the system used to do, not what this
+replaced, not who asked or what happened on the way. A decision states only what it
+decides. Something decided elsewhere appears only when the reader needs it to apply
+this one, and then as a citation with a few words, not restated.
 
-A support item states a fact that holds now. When the evidence is something that
-happened, such as a failure or an earlier design, the item states the fact it
+W-33. Words that describe the system as it stood when the decision was made
+("stays", "is kept", "continues to", "already", "no longer", "used to",
+"previously", "replaced") are history whatever their tense, and an entry uses none
+of them.
+
+W-34. Every item under **Support.** has a source, and the source is where the fact
+is kept: a § section of the specification, a decision, a behaviour such as B04, a
+file named in backticks, or a URL. If the only record of a fact would be the
+decision itself, write the findings document first.
+
+W-35. A support item states a fact that holds now. When the evidence is something
+that happened, such as a failure or an earlier design, the item states the fact it
 showed, and the finding it cites holds the event. "An environment variable has the
 same value in every session a machine starts", not "the variable made a command act
 on the wrong room".
 
-**Rejected.** is required whenever a real alternative was weighed, which is the
-reason for writing an entry at all. Omit **Limits.** when there are none.
+W-36. **Rejected.** is required whenever a real alternative was weighed, which is
+the reason for writing an entry at all. When no alternative was weighed,
+**Rejected.** says why there was none.
 
-When a decision reverses an earlier one, the earlier entry is replaced by a
+W-37. When a decision reverses an earlier one, the earlier entry is replaced by a
 tombstone, and the reason for the reversal is recorded as a finding. The new
 decision cites neither: it stands on its own support. A tombstone keeps the number
 and the title, so that references to it still resolve, and nothing else:
@@ -178,13 +250,23 @@ and the title, so that references to it still resolve, and nothing else:
 
 The finding says what the withdrawn decision was, what showed it wrong, and the
 evidence, so that nobody has to reconstruct the argument to avoid repeating it.
-When a later decision changes only part of an earlier one, rewrite the earlier
+
+W-38. When a later decision changes only part of an earlier one, rewrite the earlier
 entry so that it states only what still holds, and record the removed part's
 reason as a finding in the same way.
 
-When rewriting an entry, keep every fact, reference and number from the original,
-either in the entry or in the findings document it now cites. Remove one only by
-saying in the commit message what was removed and why.
+W-39. When rewriting an entry, keep every fact, reference and number from the
+original, either in the entry or in the findings document it now cites. Remove one
+only by saying in the commit message what was removed and why.
+
+W-40. An entry records one decision. A second decision, one that has alternatives
+of its own and could be reversed without reversing the first, gets its own entry.
+Two signs that an entry holds more than one: a title joining two statements with a
+semicolon or "and", and a paragraph opening with a bold statement that is not a
+template field. When an entry is split, the decision most citations mean keeps the
+number, each other decision takes a new number at the bottom of the log, and every
+citation of the old number is checked against its few words (W-11) and pointed at
+the entry that now holds what it describes.
 
 ### An item in `docs/open.md`
 
@@ -196,11 +278,14 @@ now, observed or read from the code, with the date. Who it affects and how.>
 If something is unknown, say what would answer it.>
 ```
 
-The opening sentence names the problem, not the fix: "`/cogmer:self-status` on
-first use fails instead of answering", not "Make cli.sh exit 0". An item past about
-25 lines usually holds detail of another kind: what happened on the way belongs in
-a finding, and the reasoning for a choice in a decision. Delete an item when it is
-done; never mark it done.
+W-50. The opening sentence names the problem, not the fix: "`/cogmer:self-status`
+on first use fails instead of answering", not "Make cli.sh exit 0".
+
+W-51. An item past about 25 lines usually holds detail of another kind: what
+happened on the way belongs in a finding, and the reasoning for a choice in a
+decision.
+
+W-52. Delete an item when it is done; never mark it done.
 
 ### A findings document (`docs/*-findings.md`)
 
@@ -227,33 +312,37 @@ decision reference.>
 <The limits of the test.>
 ```
 
-Findings record what was seen. The requirement a finding justifies goes in the
-specification, and a finding about someone else's software goes in the behaviour
-registry.
+W-60. A findings document has **Run:**, **Result:** and the three sections this
+template names.
+
+W-61. Findings record what was seen. The requirement a finding justifies goes in
+the specification, and a finding about someone else's software goes in the
+behaviour registry.
 
 ### A behaviour-registry entry (`cmd/cogmer/behaviors.go`)
 
-`Title` states the behaviour as an observed fact, in the present tense:
+W-70. `Title` states the behaviour as an observed fact, in the present tense:
 "UserPromptSubmit stdout is injected into the pending turn".
 
-`Reliance` is for somebody debugging at 2am. It starts with what breaks: "If this
-changes, <what breaks>. <How it shows up, or that it fails silently>."
+W-71. `Reliance` is for somebody debugging at 2am. It starts with what breaks: "If
+this changes, <what breaks>. <How it shows up, or that it fails silently>."
 
-The error the check returns says what changed and where to look next.
+W-72. The error the check returns says what changed and where to look next.
 
 ### A requirement in the specification (`Shared Claude Sessions.md`)
 
-State one requirement per paragraph, in the present tense: "The daemon stops only a
-process it has identified as a cogmer daemon." Give at most one sentence of reason,
-and point to the decision for the rest. No findings, no history, no dates.
+W-80. State one requirement per paragraph, in the present tense: "The daemon stops
+only a process it has identified as a cogmer daemon." Give at most one sentence of
+reason, and point to the decision for the rest. No findings and no history.
 
-Every requirement is grounded in a benefit to the user or to the product owner, and
-its sentence of reason says what the benefit is and whose it is. A requirement that
-benefits neither does not belong in the specification. Where a requirement gives up
-privacy or decentralization, the benefit must be the user's, and a benefit to the
-product owner alone does not justify it (D-115, a
-centralized component must trace to a disclosed tradeoff that benefits the
-person).
+W-81. The specification carries no dates.
+
+W-82. Every requirement is grounded in a benefit to the user or to the product
+owner, and its sentence of reason says what the benefit is and whose it is. A
+requirement that benefits neither does not belong in the specification. Where a
+requirement gives up privacy or decentralization, the benefit must be the user's,
+and a benefit to the product owner alone does not justify it (D-115, a centralized
+component must trace to a disclosed tradeoff that benefits the person).
 
 ### A commit message
 
@@ -266,8 +355,8 @@ checked, if it was.>
 Co-Authored-By: …
 ```
 
-Write for somebody reading `git log` who wants to know whether this commit matters
-to them. Wrap at 72 columns. The body is usually 3 to 10 lines.
+W-90. Write for somebody reading `git log` who wants to know whether this commit
+matters to them. Wrap at 72 columns. The body is usually 3 to 10 lines.
 
 ## Enforcement
 
@@ -300,15 +389,25 @@ template's field names, in decisions and findings documents, and as the opening 
 an item in `open.md`. A findings document has **Run:**, **Result:** and the three
 sections its template names. No header sits over a section of three lines or
 fewer; a document's title and the headers a template defines are exempt. The
-specification carries no dates.
-These checks share the exemption list with the word check. No length limit is
-checked, because a limit is met most cheaply by compressing, which is the failure
-described under Rules. The header rule is not such a limit: what it asks for is
-removing the header.
+specification carries no dates. These checks share the exemption list with the
+word check. No length limit is checked, because a limit is met most cheaply by
+compressing, which is the failure W-17 describes. The header rule is not such a
+limit: what it asks for is removing the header.
 
-`TestBehaviorRelianceStartsWithWhatBreaks` checks that each behaviour's `Reliance`
-starts "If this changes". Behaviours written before that template are listed in
-`relianceNotRewritten`, which only shrinks.
+`TestBehaviorRelianceStartsWithWhatBreaks`, in `structure_test.go`, checks that
+each behaviour's `Reliance` starts "If this changes". Behaviours written before that
+template are listed in `relianceNotRewritten`, which only shrinks.
+
+`TestLaterDecisionsFollowTemplate`, in `structure_test.go`, checks every decision
+after D-123, reading the log as Markdown so that a field name inside code does not
+count as the field. It checks W-30, W-33, W-34 and W-36 on each. Every tombstone,
+whatever its number, must hold only its status line, and its "Why:" must name a
+findings document and a heading that exist.
+
+`TestWritingRulesAreIndexed`, in `cmd/cogmer/writingrules_test.go`, checks that
+the rule index above and the checks agree. Every rule in the index has a paragraph
+starting with its ID. Every rule marked checked is cited by some check's message,
+and every ID a check cites is in the index and marked checked.
 
 The rules no test can decide are reviewed by the `writing-review` skill in
 `.claude/skills/writing-review/` (D-126, rules that need a reader are reviewed by a
@@ -316,13 +415,3 @@ skill a maintainer runs). Run it on a document before taking it off the exemptio
 list, and on a change to a document before committing it. It runs the checks above
 on the named documents whether or not they are exempt, reviews the rest, and
 reports findings without changing anything.
-
-`TestLaterDecisionsFollowTemplate` checks every decision after D-123, reading the log
-as Markdown so that a field name inside code does not count as the field. It must
-open with a **Date:** line whose status is "active" or "not built", then have
-**Decision.**, **Support.** with a list under it, **Rejected.**, an optional
-**Limits.** and **Revisit when**, in that order. Each item under **Support.** needs
-a source, and the entry may use none of the history words listed with the decision
-template. When no alternative was weighed, **Rejected.** says why there was none.
-Every tombstone, whatever its number, must hold only its status line, and its
-"Why:" must name a findings document and a heading that exist.

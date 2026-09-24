@@ -38,14 +38,16 @@ go test ./cmd/cogmer -run 'TestCitations|TestLaterDecisions' -count=1
 
 The first runs the word, mark and structure checks on the named files even when
 they are exempt. Report its output under its own heading, as test results, and do
-not report those problems again as findings. The "Enforcement" section of the guide
-lists what the tests cover; everything else in the guide is this review's job.
+not report those problems again as findings. The guide's rule index marks each rule
+checked or judgement; the checked rules are the tests' job, and every judgement
+rule is this review's.
 
 ## 4. Review
 
-Read each document whole before judging any part of it. For each rule the tests do
-not cover, look for places the text breaks it. Report a finding only when you can
-point to the sentence of the guide that the text breaks. When a reading is
+Read each document whole before judging any part of it. For each rule the guide's
+index marks judgement, look for places the text breaks it. Report a finding only
+when you can name the rule's ID and point to the sentence of the guide that the
+text breaks. When a reading is
 arguable, report it as a question rather than a finding.
 
 Check every citation's few words against what it cites. Open the decision, the
@@ -80,7 +82,7 @@ Write the findings to a temporary file as a JSON array:
   {
     "file": "docs/open.md",
     "quote": "text copied exactly from the source, Markdown included",
-    "rule": "the sentence of docs/writing.md it breaks, quoted",
+    "rule": "the rule's ID from the guide's index, then the sentence it breaks, quoted",
     "problem": "what is wrong, in one or two sentences",
     "suggestion": "optional replacement text"
   }
@@ -105,7 +107,8 @@ discard it.
 ## 6. Report
 
 Report from `<path>.verified`, grouped by file and in line order. Give each finding
-its location as `file:line`, the quote, the rule, the problem and any suggestion.
+its location as `file:line`, the quote, the rule's ID and sentence, the problem
+and any suggestion.
 Put the test results and any questions after the findings. Say how many findings
 were dropped in step 5, so the person knows the review's error rate.
 
