@@ -1123,7 +1123,8 @@ func postLocal(path string, body, out any) error {
 // to invent one for somebody whose name they obviously know. A GUESSED name is
 // never carried: `Ec2-user` travelling as though somebody picked it is worse than
 // carrying nothing, because the derived name is at least honest about being
-// machine-made (D-095).
+// machine-made (D-097, a pairing string carries a chosen name, never a guessed
+// one).
 //
 // The name is a claim by whoever sent the string, and a substituted string carries
 // a substituted name. That is safe here only because the label is written after the

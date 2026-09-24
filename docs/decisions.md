@@ -2528,7 +2528,8 @@ live outside the session, the vocabulary should separate peer onboarding from ro
 operations rather than leave them interleaved.
 
 That is the right cut, and it was already the data model: §12 has kept **known peers**
-(per machine, durable) and **a room's guests** (per room) as two lists since D-024.
+(per machine, durable) and **a room's guests** (per room) as two lists since D-025
+(the guest list, specified).
 The commands did not reflect it. `allow` said only that something had been permitted
 and never which of the two, and sat in a flat list beside `invite`, which is a
 different act at a different scope.
@@ -3700,9 +3701,10 @@ them what to do instead. The explanation lives where it is shown to a person rat
 than inside an error value that tests compare and logs decorate.
 
 **And the slash command is told not to condense it.** `/room-join` relays the whole
-explanation rather than summarising, for the same reason the view is not summarised
-(D-070's sibling concern): a one-line "cannot join" is exactly the unhelpful form
-this replaces, and a model paraphrasing helpfully would reproduce it.
+explanation rather than summarising, for the same reason `/cogmer:room-status` gives
+the watch address verbatim (`plugin/commands/room-status.md`): a one-line "cannot
+join" is exactly the unhelpful form this replaces, and a model paraphrasing
+helpfully would reproduce it.
 
 **Revisit when** anything else refuses a person for an invariant's sake. The pattern
 generalises: state the mechanism, say what is impossible to undo, and give the route
@@ -4881,7 +4883,7 @@ offered as a choice would be a lie.
 
 **The derived name is doing a job it was never given.** Its actual jobs are
 momentary — disambiguate a collision, anchor an alarm. Neither asks anybody to
-remember it. D-042 already calls it "a mnemonic for an identity already verified",
+remember it. D-021 (peer names are derived from the identity) calls it "a mnemonic for an identity already verified",
 and a mnemonic nobody chose, for a key they will never look at, is not much of one.
 
 **And the unverified marker was on every remote turn.** `uiEvent` had no verified
@@ -4921,8 +4923,9 @@ letter capitalised, fixed at identity creation, with no way to change it. Asked 
 the natural point is for somebody to choose their own.
 
 **The name has one function: to be seen by other people.** You never see yourself
-labelled — D-021 keeps the derived name off your own turns, and your turns are marked
-as yours. So there is no moment when its owner notices it is wrong, which is exactly
+labelled — the view leaves the derived name off your own turns, because it exists to
+identify other peers (D-021, peer names are derived from the identity), and your
+turns are marked as yours. So there is no moment when its owner notices it is wrong, which is exactly
 why `Ec2-user` could travel for weeks.
 
 **So the moment is the first time it travels**, and that is one place:
@@ -5976,8 +5979,9 @@ two marked streams read as two topics, or as two people. That is the false
 affordance this project already refuses in the view, appearing as a data field
 rather than as a control.
 
-**Consistent with how identity is displayed elsewhere.** D-021 suppresses the
-derived name on your own turns, where it identifies nothing you did not know, and
+**Consistent with how identity is displayed elsewhere.** The view leaves the derived
+name off your own turns, where it identifies nothing you did not know, since it
+exists to identify other peers (D-021, peer names are derived from the identity), and
 D-099 prefers the label because a word pair means nothing to a person weeks later.
 A session discriminator is the same kind of thing: an identifier the machine can
 derive and the reader cannot use.
@@ -6649,8 +6653,9 @@ document, not a third section in one of these two.
 **Date:** 2026-09-22 · **Status:** active (specified, not built)
 
 **Context.** D-041 (ship as a plugin; the session-start hook starts the daemon)
-required the daemon to be discoverable and stoppable, and D-080 (there is no
-current room) put its lifecycle at the terminal. Nothing stops it. On 09-22 that
+required the daemon to be discoverable and stoppable, and D-080 (a terminal command
+exists to be tested or to work when the plugin cannot) put its lifecycle at the
+terminal. Nothing stops it. On 09-22 that
 cost a first run: a daemon left from a test, with its own `COGMER_HOME` and its
 hooks moved to 4799 but its peer sync on the default 4783, held that port when the
 real daemon started. The real one exited with "held by something that is not a

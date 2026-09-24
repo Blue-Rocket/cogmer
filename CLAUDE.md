@@ -130,7 +130,8 @@ Not universal truths — the part of the possibility space this project selected
   Desktop much later (D-110) — and naming them licenses nothing.
 - **A view is a separate program, never drawn inside the session** (D-038, D-039).
   A session is read closely and a room is glanced at. Do not propose a terminal
-  pane; prefer an OS notification from the daemon for ambient awareness.
+  pane; prefer an OS notification from the daemon for ambient awareness (D-037,
+  Claude Code is launched and used unchanged).
 - **As few centralized components as possible, and each one explicable** (D-115).
   A compromise to privacy or decentralization must trace to a recorded decision, be
   disclosed to the person affected, and benefit them rather than us. Failing a test

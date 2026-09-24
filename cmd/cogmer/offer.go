@@ -44,7 +44,8 @@ type offerRequest struct {
 
 // offerBytes is a signing scheme of its own rather than a reuse of the sync one.
 // Two messages that mean different things must not be interchangeable under one
-// signature, or a captured offer could be replayed as something else (D-058).
+// signature, or a captured offer could be replayed as something else (D-042,
+// every signature carries a purpose tag).
 func offerBytes(peerID, roomID, roomName, endpoint, ts, nonce string) []byte {
 	var b strings.Builder
 	put := func(s string) {
