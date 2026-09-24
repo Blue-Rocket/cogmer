@@ -65,6 +65,45 @@ PATH, so from a terminal they have to type `~/.cogmer/bin/cogmer stop`. The thir
 Windows, which has no `lsof`. `netstat -ano` gives the pid there, or `stop` can
 report the port and fall back to moving this daemon aside.
 
+**Most decision entries hold more than one decision, or history, and none is split
+yet.** W-40 in `docs/writing.md` says an entry records one decision. Reading all 126
+entries in full on 09-23 gave this, with the number of decisions in parentheses.
+`docs/decision-log-findings.md` holds the detail for each entry: where each decision
+sits, the alternative each extra one has, which keeps the number, what moves out,
+and which citations need repointing.
+
+- split (59): D-002 (2), D-008 (2), D-010 (2), D-014 (2), D-015 (2), D-016 (2),
+  D-017 (4), D-018 (2), D-019 (3), D-020 (2), D-021 (4), D-023 (4), D-025 (3),
+  D-030 (2), D-032 (2), D-033 (2), D-035 (2), D-036 (2), D-037 (2), D-040 (2),
+  D-041 (3), D-042 (4), D-043 (4), D-045 (2), D-046 (4), D-050 (2), D-052 (4),
+  D-053 (3), D-056 (2), D-057 (3), D-059 (2), D-060 (2), D-061 (4), D-062 (2),
+  D-066 (2), D-067 (3), D-069 (2), D-074 (2), D-075 (2), D-077 (2), D-080 (3),
+  D-081 (2), D-082 (2), D-084 (2), D-086 (2), D-088 (3), D-090 (2), D-091 (2),
+  D-093 (2), D-094 (2), D-095 (3), D-096 (2), D-098 (2), D-100 (2), D-101 (2),
+  D-104 (3), D-106 (3), D-117 (3), D-121 (2);
+- a tombstone (3): D-028, which D-029 reversed; D-047; D-076, which is one already;
+- one decision, with history or findings to move out (53): every entry not listed
+  here;
+- one decision and nothing to move (11): D-005, D-007, D-009, D-012, D-013, D-027,
+  D-112, D-113, D-124, D-125, D-126.
+
+Splitting all 59 adds up to 87 entries and means checking about 134 citations
+against their few words. Some counts may be one too high, where an extra decision
+is an implementation detail. Four questions come before any split:
+
+- whether an extra decision that repeats an existing entry folds into it instead of
+  taking a number: D-080's prefix rule into D-096, D-020's guest-list preference
+  into D-024, D-023's verification step into D-054, D-056's rule into D-016;
+- whether D-002, D-062, D-070 and D-078 become tombstones or are rewritten to what
+  still holds (W-37, W-38), since later entries hold most of what they decided;
+- which decision keeps the number where most citations mean one the title does not
+  name, as in D-043, whose citations mostly mean "no adapter machinery for a second
+  host", and D-080, split 8 to 7;
+- whether D-018, D-024 and D-025 are rewritten for what D-026 (no join token)
+  reversed before they are split.
+
+Five entries lack a **Decision.** field: D-068, D-083, D-086, D-088 and D-089.
+
 ## Commands that mislead
 
 **`/cogmer:self-status` on first use fails instead of answering.** It is the first
@@ -266,6 +305,22 @@ move it resembles.
 dropped in favour of naming the person.
 
 `/cogmer:room-list` and `/cogmer:self-status` were both named without confirmation.
+
+**Two comments describe the current-room pointer D-080 removed.** `main.go:878` and
+`membership.go:686-688` still explain a machine-wide current room. D-080 (a terminal
+command exists to be tested or to work when the plugin cannot) deleted
+`SetCurrentRoom` and `CurrentRoom`, so a maintainer reading either comment is told
+about a mechanism that does not exist. Found on 09-23, reading every decision for
+the split list.
+
+**`TestTheThreeEndingsOfAPairing` fails about one run in four.** Its subtest
+"matched writes the name and the verification" fails at cleanup with "TempDir
+RemoveAll cleanup: unlinkat …/.cogmer: directory not empty", so something is still
+writing into the test's state directory after the subtest returns, most likely a
+goroutine the pairing starts. It failed 2 of 8 runs on 09-23 on committed code, so
+it is not caused by a recent change. A flaky test trains a maintainer to rerun
+failures instead of reading them. The fix is to make the test wait for whatever
+writes, or to stop that writer before the subtest returns.
 
 ## Needs somebody else
 
