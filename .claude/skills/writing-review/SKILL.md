@@ -53,7 +53,9 @@ arguable, report it as a question rather than a finding.
 Check every citation's few words against what it cites. Open the decision, the
 section or the file and confirm the words describe it and the fact attributed to
 it is there. A citation that resolves but says something the source does not
-support is a finding; the tests only prove the number exists.
+support is a W-18 finding; the tests only prove the number exists. Check counts,
+line numbers and quotations the same way, against the version the document says it
+describes.
 
 ### Length
 

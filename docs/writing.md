@@ -30,6 +30,7 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-15 | no header over a section of three lines or fewer | checked |
 | W-16 | do not restate in a closing sentence | judgement |
 | W-17 | keep an item short by leaving out kinds of detail | judgement |
+| W-18 | every claim is true of what it names | judgement |
 | W-20 | no em-dash | checked |
 | W-21 | none of the words in the table | checked |
 | W-22 | a permitted judgement word carries a marker | checked |
@@ -50,7 +51,7 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-51 | a long `open.md` item holds detail of another kind | judgement |
 | W-52 | delete a finished `open.md` item | judgement |
 | W-60 | a findings document has its fields and sections | checked |
-| W-61 | findings record what was seen | judgement |
+| W-61 | findings are observations, never instructions | judgement |
 | W-70 | a behaviour's `Title` is an observed fact | judgement |
 | W-71 | a behaviour's `Reliance` starts with what breaks | checked |
 | W-72 | a behaviour check's error says what changed | judgement |
@@ -130,6 +131,12 @@ belongs in it. Each template says what an item holds, and process, history and
 restated decisions are not among them. An item that holds only what belongs is not
 too long, whatever its length. An allusion or an aphorism in place of an
 explanation makes an item shorter and fails the reader.
+
+W-18. Every claim is true of what it names. A count, a line number, a quotation, and
+what a citation says its source holds must each match the source. When the source
+can change, as a line number or a count can, say which version the claim describes:
+a commit, or a date. A citation that resolves to a real entry but attributes to it
+something it does not say breaks this rule, although W-09's test passes.
 
 ## Words and marks to avoid
 
@@ -315,9 +322,12 @@ decision reference.>
 W-60. A findings document has **Run:**, **Result:** and the three sections this
 template names.
 
-W-61. Findings record what was seen. The requirement a finding justifies goes in
-the specification, and a finding about someone else's software goes in the
-behaviour registry.
+W-61. Findings record what was seen. They are observations, never instructions: a
+finding says what is true, and what to do about it goes in `docs/open.md`, where
+it is deleted when done. A classification counts as an observation when it applies
+a rule the guide states, such as "this entry holds two decisions" under W-40. The
+requirement a finding justifies goes in the specification, and a finding about
+someone else's software goes in the behaviour registry.
 
 ### A behaviour-registry entry (`cmd/cogmer/behaviors.go`)
 

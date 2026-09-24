@@ -67,33 +67,34 @@ report the port and fall back to moving this daemon aside.
 
 **Most decision entries hold more than one decision, or history, and none is split
 yet.** W-40 in `docs/writing.md` says an entry records one decision. Reading all 126
-entries in full on 09-23 gave this, with the number of decisions in parentheses.
-`docs/decision-log-findings.md` holds the detail for each entry: where each decision
-sits, the alternative each extra one has, which keeps the number, what moves out,
-and which citations need repointing.
+entries in full, as they stood at commit `f11e871`, gave this, with the number of
+decisions in parentheses. `docs/decision-log-findings.md` holds the observations for
+each entry: where each decision sits, the alternative each extra one has, the parts
+that are not decisions, and what each citation means.
 
-- split (59): D-002 (2), D-008 (2), D-010 (2), D-014 (2), D-015 (2), D-016 (2),
-  D-017 (4), D-018 (2), D-019 (3), D-020 (2), D-021 (4), D-023 (4), D-025 (3),
-  D-030 (2), D-032 (2), D-033 (2), D-035 (2), D-036 (2), D-037 (2), D-040 (2),
-  D-041 (3), D-042 (4), D-043 (4), D-045 (2), D-046 (4), D-050 (2), D-052 (4),
-  D-053 (3), D-056 (2), D-057 (3), D-059 (2), D-060 (2), D-061 (4), D-062 (2),
-  D-066 (2), D-067 (3), D-069 (2), D-074 (2), D-075 (2), D-077 (2), D-080 (3),
-  D-081 (2), D-082 (2), D-084 (2), D-086 (2), D-088 (3), D-090 (2), D-091 (2),
-  D-093 (2), D-094 (2), D-095 (3), D-096 (2), D-098 (2), D-100 (2), D-101 (2),
-  D-104 (3), D-106 (3), D-117 (3), D-121 (2);
-- a tombstone (3): D-028, which D-029 reversed; D-047; D-076, which is one already;
-- one decision, with history or findings to move out (53): every entry not listed
+- split (60): D-002 (2), D-008 (2), D-010 (2), D-014 (2), D-015 (2), D-016 (2),
+  D-017 (4), D-018 (2), D-019 (3), D-020 (2), D-021 (4), D-023 (3), D-024 (2),
+  D-025 (3), D-030 (2), D-032 (2), D-033 (2), D-035 (2), D-036 (2), D-037 (2),
+  D-040 (2), D-041 (3), D-042 (4), D-043 (4), D-045 (2), D-046 (4), D-050 (2),
+  D-052 (4), D-053 (3), D-056 (2), D-057 (3), D-059 (2), D-060 (2), D-061 (4),
+  D-062 (2), D-066 (2), D-067 (3), D-069 (2), D-074 (2), D-075 (2), D-077 (2),
+  D-080 (3), D-081 (2), D-082 (2), D-084 (2), D-086 (2), D-088 (3), D-090 (2),
+  D-091 (2), D-093 (2), D-094 (2), D-095 (3), D-096 (2), D-098 (2), D-100 (2),
+  D-101 (2), D-104 (3), D-106 (3), D-117 (3), D-121 (2);
+- become tombstones under W-37 (a reversed decision becomes a tombstone): D-028,
+  which D-029 reversed, and D-047, which D-055 reversed; D-076 is one already;
+- one decision, with history or findings to move out (56): every entry not listed
   here;
-- one decision and nothing to move (11): D-005, D-007, D-009, D-012, D-013, D-027,
-  D-112, D-113, D-124, D-125, D-126.
+- one decision and nothing to move (9): D-005, D-007, D-009, D-012, D-013, D-112,
+  D-124, D-125, D-126.
 
-Splitting all 59 adds up to 87 entries and means checking about 134 citations
-against their few words. Some counts may be one too high, where an extra decision
-is an implementation detail. Four questions come before any split:
+Splitting all 60 adds 87 entries, and 140 citations of them mean something other
+than the first decision, so each needs checking against its few words. Four
+questions come before any split:
 
 - whether an extra decision that repeats an existing entry folds into it instead of
   taking a number: D-080's prefix rule into D-096, D-020's guest-list preference
-  into D-024, D-023's verification step into D-054, D-056's rule into D-016;
+  into D-024, D-056's rule into D-016;
 - whether D-002, D-062, D-070 and D-078 become tombstones or are rewritten to what
   still holds (W-37, W-38), since later entries hold most of what they decided;
 - which decision keeps the number where most citations mean one the title does not
