@@ -41,6 +41,9 @@ var (
 	tombstoneWhy   = regexp.MustCompile("^\\*\\*Status:\\*\\* withdrawn \\d{4}-\\d{2}-\\d{2}\\. (?s:.*)Why:\\s+`(docs/[^`]+-findings\\.md)`,\\s+\"([^\"]+)\"\\.$")
 	decisionStatus = regexp.MustCompile(`^\*\*Date:\*\* \d{4}-\d{2}-\d{2} · \*\*Status:\*\* (active|not built)$`)
 	isoDate        = regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}\b`)
+	// Open work a decision must not point to: the repository's list, and the
+	// task URLs of the trackers a project is likely to use.
+	openWork = regexp.MustCompile(`\bopen\.md\b|app\.clickup\.com/t/\S+|github\.com/[\w.-]+/[\w.-]+/issues/\d+|atlassian\.net/browse/\S+|linear\.app/\S+/issue/\S+`)
 )
 
 // specification is the one document that must carry no dates.
@@ -375,6 +378,9 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 			for _, w := range historyWords.FindAllString(proseText(c, src), -1) {
 				report(e.id, "says %q, which describes the system before the decision (W-33)", w)
 			}
+			for _, w := range openWork.FindAllString(nodeSource(c, src), -1) {
+				report(e.id, "points to open work, %q, which goes stale when it is resolved; state the decision's scope instead (W-41)", w)
+			}
 		}
 	}
 	return problems
@@ -536,6 +542,10 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 		{"support with no source", "## D-124 — T\n\n" + strings.Replace(complete, "D-001 (Go).", "It is so.", 1), []string{"D-124 has a support item with no source"}},
 		{"history word", "## D-124 — T\n\n" + strings.Replace(complete, "**Decision.** x", "**Decision.** It stays as it is.", 1), []string{"D-124 says \"stays\""}},
 		{"history word in code", "## D-124 — T\n\n" + strings.Replace(complete, "**Decision.** x", "**Decision.** Run `stays`.", 1), nil},
+		{"Limits pointing at open.md", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Three questions are open in `docs/open.md`.\n\n**Revisit when**", 1), []string{"D-124 points to open work"}},
+		{"Limits pointing at a tracker task", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Tracked in https://app.clickup.com/t/86abc123.\n\n**Revisit when**", 1), []string{"D-124 points to open work"}},
+		{"Limits stating scope", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** It does not decide whether stop restarts the daemon.\n\n**Revisit when**", 1), nil},
+		{"open work before the cutoff", "## D-123 — Old\n\nLeft open in `docs/open.md`.\n", nil},
 		{"tombstone", "## D-076 — T\n\n" + tombstone + "\n---\n", nil},
 		{"tombstone with more", "## D-076 — T\n\n" + tombstone + "\nMore history.\n", []string{"D-076 is a tombstone and has more"}},
 		{"tombstone with no reason", "## D-076 — T\n\n**Status:** withdrawn 2026-09-20. Replaced by D-077 (words).\n", []string{"D-076 is a tombstone without"}},

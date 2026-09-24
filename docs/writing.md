@@ -47,6 +47,7 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-38 | a partial change rewrites the earlier entry | judgement |
 | W-39 | a rewrite keeps every fact | judgement |
 | W-40 | an entry records one decision | judgement |
+| W-41 | a decision never points to open work | checked |
 | W-50 | an `open.md` item names the problem | judgement |
 | W-51 | a long `open.md` item holds detail of another kind | judgement |
 | W-52 | delete a finished `open.md` item | judgement |
@@ -202,8 +203,8 @@ make sense on its own.>
 - *<Alternative.>* <Why not, in one or two sentences, citing a source where one
   exists.>
 
-**Limits.** <What this does not cover, what it assumes that nothing checks, and
-what is left open and where it is tracked.>
+**Limits.** <What this does not cover or decide, and what it assumes that nothing
+checks.>
 
 **Revisit when** <a condition somebody could observe>.
 ```
@@ -274,6 +275,14 @@ template field. When an entry is split, the decision most citations mean keeps t
 number, each other decision takes a new number at the bottom of the log, and every
 citation of the old number is checked against its few words (W-11) and pointed at
 the entry that now holds what it describes.
+
+W-41. A decision never points to open work: not to `docs/open.md`, and not to a task
+in a tracker. Open work is deleted or closed when it is resolved, so a pointer to it
+is written knowing it will go stale. **Limits.** states the decision's scope, what it
+does not decide, which stays true after a later decision settles the question. The
+open item points the other way, citing the decision it concerns: "D-123 (finding a
+daemon by the addresses it holds) leaves undecided whether…". The same holds for the
+specification and for findings, which W-80 and W-61 already keep free of plans.
 
 ### An item in `docs/open.md`
 
@@ -410,7 +419,9 @@ template are listed in `relianceNotRewritten`, which only shrinks.
 
 `TestLaterDecisionsFollowTemplate`, in `structure_test.go`, checks every decision
 after D-123, reading the log as Markdown so that a field name inside code does not
-count as the field. It checks W-30, W-33, W-34 and W-36 on each. Every tombstone,
+count as the field. It checks W-30, W-33, W-34, W-36 and W-41 on each; for W-41 it
+rejects a mention of `open.md` or a link to a ClickUp, GitHub issue, Jira or Linear
+task. Every tombstone,
 whatever its number, must hold only its status line, and its "Why:" must name a
 findings document and a heading that exist.
 
