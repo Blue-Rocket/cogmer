@@ -134,7 +134,8 @@ Claude Code ships as a native binary and a colleague may have no Node installed.
 |---|---|
 | [`Shared Claude Sessions.md`](Shared%20Claude%20Sessions.md) | the specification: what must be true |
 | [`docs/decisions.md`](docs/decisions.md) | why, and what was rejected — read before proposing a simplification, because some of the awkwardness is load-bearing |
-| [`docs/open.md`](docs/open.md) | what is unfinished, what is undecided, where things stand |
+| [`docs/open.md`](docs/open.md) | actions not yet taken, decisions not yet made |
+| [`docs/phases.md`](docs/phases.md) | the phases the work was planned in, and how each ended |
 | [`docs/relied-on-behaviors.md`](docs/relied-on-behaviors.md) | what Claude Code does that this depends on, generated from the registry |
 | [`docs/spec-review.md`](docs/spec-review.md) | the spec evaluated against what the implementation established |
 

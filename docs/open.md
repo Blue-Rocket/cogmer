@@ -1,37 +1,12 @@
 # Open
 
-Work and unanswered questions. Nothing here is durable: every item either becomes a
-decision, a change to the specification, or code — and is then **deleted**, not
-marked done. The record of why lives in `decisions.md` and the record of what the
-system is lives in the specification, so an item that has earned a permanent home
-does not need one here too.
+Actions not yet taken and decisions not yet made. Nothing here is durable: every item
+either becomes a decision, a change to the specification, or code — and is then
+**deleted**, not marked done. The record of why lives in `decisions.md` and the
+record of what the system is lives in the specification, so an item that has earned a
+permanent home does not need one here too. Nothing here records status.
 
 Being scratch is the point. Be untidy in it.
-
-**Where things stand** is the exception: it is edited rather than emptied, because
-there is always a current phase. It lives here so that nothing which goes stale with
-every week of work sits in a file loaded into every session.
-
-## Where things stand
-
-Every numbered phase in §31 is complete or deliberately dissolved. Phase 5 closed
-review finding B2 (injection order) by verification, which one live peer could never
-have exercised: the injected block then holds only that peer's turns, already in
-sequence.
-
-**Phase 13 — somebody else uses it — is the live one, and it is no longer blocked on
-anything here.** The repository exists, is public, carries the marketplace manifest
-beside the plugin, and serves releases the installer verifies against its pins
-(D-121). What it needs is a person who did not write this: installing, pairing,
-joining, working, and saying what they hit in the order they hit it. It is the only
-phase that can fail in a way none of the others detect, and the failure looks like
-somebody quietly not using it again.
-
-Outstanding beneath that: local network discovery, and a host approving an
-unsolicited join request — the second undecided rather than pending (§12a, D-051).
-
-The `cogmer` binary is **not** tracked — `bin/` is ignored, because it is 17MB
-per commit and `go build` reproduces it.
 
 ## Decided and not built
 
@@ -215,6 +190,38 @@ and would need to follow.
 
 ## Undecided
 
+**Whether decisions move to one file per record before the log is split.** Every
+citation of a decision is prose: a number and a few words typed at each use. Checking
+them showed four costs, recorded in `docs/decision-log-findings.md`. A citation says
+nothing about how it relates to what it cites, so what each of 146 citations means
+needs a reader. Its few words are retyped each time and drift from the title. Finding
+every citation of an entry takes a grep that also hits test fixtures, code comments
+and quotations. A line-number citation moves with every edit above it.
+
+The options, each with its cost:
+
+- keep one file, and write citations as links to stable anchors: cheap, and GitHub
+  resolves them, but the relation between records stays untyped;
+- one file per decision, such as `docs/decisions/D-054.md`, with a front-matter
+  header for the ID, title, status, date, the entry that replaced it, and typed links
+  (supports, restates, reverses), and prose below it: the integrity checks become
+  exact, a split becomes a new file and edited links, and each record gets its own
+  history, at the cost of moving 126 entries and changing every tool that reads the
+  log;
+- decisions as data, with the Markdown generated for reading, as `behaviors.go` and
+  `docs/relied-on-behaviors.md` already work: the most checkable, and the least
+  pleasant to write in.
+
+Whichever is chosen comes before any split. Splitting 59 entries and repointing their
+citations in the present format would be redone in the new one. The choice also
+decides what the decision log's table of contents is: a generated block in one file,
+or a generated index file for a directory.
+
+**Whether a host approves an unsolicited join request.** A person who is not on a
+room's guest list cannot ask to be let in; §12a (room membership) and D-051 (stranger
+pairing is not a supported case) leave open whether they should be able to, and
+nothing is built for it.
+
 **Asking for a new session to finish an install is too much.** After `/plugin
 install` the person believes it is installed, and Claude Code agrees: since
 v2.1.221 a plugin installed mid-session is live in that session, with its commands
@@ -324,6 +331,14 @@ failures instead of reading them. The fix is to make the test wait for whatever
 writes, or to stop that writer before the subtest returns.
 
 ## Needs somebody else
+
+**Somebody who did not write cogmer uses it.** Phase 13 in `docs/phases.md`. The
+repository is public, carries the marketplace manifest beside the plugin, and serves
+releases the installer verifies against its pins (D-121, the repository is both the
+release host and the marketplace). What it needs is a colleague installing, pairing,
+joining, working, and saying what they hit in the order they hit it. It is the only
+remaining work that can fail in a way nothing else detects, and the failure looks like
+somebody quietly not using it again.
 
 **NAT to NAT, with a real colleague on a real home router.** The last unknown in the
 transport, and not testable alone.

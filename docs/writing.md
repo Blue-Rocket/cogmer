@@ -59,6 +59,7 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-80 | one requirement per paragraph of the specification | judgement |
 | W-81 | the specification carries no dates | checked |
 | W-82 | every requirement is grounded in a benefit | judgement |
+| W-83 | the specification carries no status and no plan | judgement |
 | W-90 | the form of a commit message | judgement |
 
 ## The reader
@@ -355,6 +356,13 @@ only a process it has identified as a cogmer daemon." Give at most one sentence 
 reason, and point to the decision for the rest. No findings and no history.
 
 W-81. The specification carries no dates.
+
+W-83. The specification carries no status and no plan. Nothing in it says what is
+built, finished, partial, deferred or next, and nothing orders the work: the phases
+the work was planned in are in `docs/phases.md`, actions not yet taken are in
+`docs/open.md`, and what has been built is the code. A requirement is stated the same
+way whether or not it is met yet. Status in the specification goes stale with every
+commit, and a reader cannot tell a requirement from a report.
 
 W-82. Every requirement is grounded in a benefit to the user or to the product
 owner, and its sentence of reason says what the benefit is and whose it is. A

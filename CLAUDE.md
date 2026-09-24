@@ -46,14 +46,16 @@ they rot.
 | `docs/decisions.md` | why, and what was rejected |
 | `docs/*-findings.md` | what we observed when we tried it |
 | `cmd/cogmer/behaviors.go` | what someone else's software does that we rely on |
-| `docs/open.md` | what is to do, what is undecided, where things stand |
+| `docs/open.md` | actions not yet taken, decisions not yet made |
+| `docs/phases.md` | the phases the work was planned in, and how each ended |
 | `README.md` | what somebody who has not installed it needs (D-122) |
 | `plugin/README.md` | what somebody who has installed it needs |
 
 - A finding never goes in the spec — put the requirement it justifies there.
 - A finding about someone else's software goes in the behaviour registry, the only
   one of the five that tests itself.
-- Current state goes in `open.md` and is deleted when done, never marked done.
+- An open item is deleted when it is done, never marked done. Nothing records status
+  except the phase table in `docs/phases.md`.
 - A decision that changes what the system *is* updates the spec in the same pass
   (D-098).
 

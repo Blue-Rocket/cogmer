@@ -33,6 +33,7 @@ var writingNotYetRewritten = map[string]bool{
 	"docs/phase0a-findings.md":     true,
 	"docs/phase2-experiment.md":    true,
 	"docs/phase5-findings.md":      true,
+	"docs/phases.md":               true,
 	"docs/relied-on-behaviors.md":  true, // generated: rewrite behaviors.go
 	"docs/spec-review.md":          true,
 	"docs/what-leaves-findings.md": true,
