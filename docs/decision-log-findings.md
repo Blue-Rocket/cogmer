@@ -5,12 +5,14 @@ D-126. Every count, line number and quotation below describes `f11e871`, for eve
 file it names, and later commits move them. Four readers each read about 31 entries
 in full and applied W-40 in `docs/writing.md` (an entry records one decision).
 
-**Result:** 60 of the 126 entries hold more than one decision. D-076 is a tombstone,
+**Result:** 59 of the 126 entries hold more than one decision. D-076 (a command inside
+a session acts on that session's room) is a tombstone,
 an entry reduced to its number, its title and a line naming what replaced it (W-37,
-a reversed decision becomes a tombstone). Of the 65 entries that hold one decision,
-56 also hold history, findings or other content that is not a decision, and 9 hold
-nothing else. Two of the 56, D-028 and D-047, hold a decision that a later entry
-reversed, and keep their full text.
+a reversed decision becomes a tombstone). Of the 66 entries that hold one decision,
+57 also hold history, findings or other content that is not a decision, and 9 hold
+nothing else. Two of the 57, D-028 (losing a room database ends that peer's
+membership) and D-047 (the fingerprint is the only manual link), hold a decision that
+a later entry reversed, and keep their full text.
 
 ## What was run
 
@@ -61,21 +63,21 @@ of two decisions, the row gives both counts.
 | D-011 | 1 | finding | 0 |
 | D-012 | 1 | none | 0 |
 | D-013 | 1 | none | 0 |
-| D-014 | 2 | history, finding | 4 |
+| D-014 | 2 | history, finding | 4, or 5 with `CLAUDE.md:238` |
 | D-015 | 2 | history, reversed in part by D-016 (presence is not membership), pointer | 4 |
-| D-016 | 2 | history | 0, or 1 with `CLAUDE.md:239` |
+| D-016 | 2 | history, reversed in part by D-056 (a session's room is fixed at first sight) | 2, or 3 with `CLAUDE.md:239` |
 | D-017 | 4 | history | 7 |
 | D-018 | 2 | finding, reversed in part by D-026 (no join token) | 3 |
-| D-019 | 3 | history, finding, reversed in part by D-063 (the first pair is remote) and D-026 (no join token) | 9 |
-| D-020 | 2 | history, reversed in part by D-026 (no join token) | 2 |
+| D-019 | 3 | history, finding, reversed in part by D-063 (the first pair is remote) and D-026 (no join token) | 9, or 10 with `CLAUDE.md:241` |
+| D-020 | 2 | history, reversed in part by D-026 (no join token) | 4 |
 | D-021 | 4 | finding, history | 5 |
 | D-022 | 1 | history | 0 |
-| D-023 | 3 | history, a pointer to D-054 (verification gates sync) | 0 |
-| D-024 | 2 | history, second decision reversed by D-026 (no join token) | 3 |
+| D-023 | 3 | history, a requirement with no alternative weighed, decided by D-054 (verification gates sync) | 0 |
+| D-024 | 2 | history, second decision reversed by D-026 (no join token) | 4 |
 | D-025 | 3 | history, reversed in part by D-026 (no join token) | 3 |
 | D-026 | 1 | history | 0 |
 | D-027 | 1 | history | 0 |
-| D-028 | 1 | reversed by D-029 (losing a room database does not end membership) | 0 |
+| D-028 | 1 | reversed by D-029 (losing a room database does not end membership), history | 0 |
 | D-029 | 1 | history | 0 |
 | D-030 | 2 | history | 0 |
 | D-031 | 1 | history, finding, pointer | 0 |
@@ -99,18 +101,18 @@ of two decisions, the row gives both counts.
 | D-049 | 1 | history, finding | 0 |
 | D-050 | 2 | history, finding | 2, and 1 in part |
 | D-051 | 1 | history, open questions | 1 |
-| D-052 | 4 | history, limit | 4 |
+| D-052 | 4 | history, limit | 5 |
 | D-053 | 3 | history, reversed in part by D-054 (verification gates sync) | 3 |
 | D-054 | 1 | history, finding | 0 |
 | D-055 | 1 | history, finding | 1 |
 | D-056 | 2 | history, finding | 3 |
 | D-057 | 3 | history, current state, finding held by B21, restatement of D-080 (no current room), open question | 0 |
-| D-058 | 1 | history | 1 |
+| D-058 | 1 | history, restatement of D-043 (the wire format is defined separately from the stored row) | 1 |
 | D-059 | 2 | history, finding | 0 |
 | D-060 | 2 | history, finding, a separate fix | 0, and 2 in part |
 | D-061 | 4 | history, finding | 1 |
-| D-062 | 2 | history, finding, restatement of D-019 (no provider required), D-026 (no join token) and D-063 (the first pair is remote), restatement of D-020 (a guest list replaces the join secret only once peer identity is cryptographic) | 3 |
-| D-063 | 1 | history, finding, restated decisions | 6 |
+| D-062 | 2 | history, finding, restatement of D-019 (no provider required), D-026 (no join token) and D-063 (the first pair is remote), restatement of D-042 (peer identity is an Ed25519 key pair) | 3 |
+| D-063 | 1 | history, restated decisions | 6 |
 | D-064 | 1 | history | 1 |
 | D-065 | 1 | history, current state | 0 |
 | D-066 | 2 | history, finding, current state | 3 |
@@ -130,7 +132,7 @@ of two decisions, the row gives both counts.
 | D-080 | 3 | history, finding, partial change by D-086 (the terminal is not a user experience) | 7 |
 | D-081 | 2 | history, finding, open question | 3 |
 | D-082 | 2 | history, finding | 0 |
-| D-083 | 1 | open questions answered by D-088 (the pairing ceremony lives in the view), current state | 2 |
+| D-083 | 1 | open questions answered by D-088 (the pairing ceremony lives in the view), current state | 3 |
 | D-084 | 2 | history, finding | 0 |
 | D-085 | 1 | history, finding, current state | 0 |
 | D-086 | 2 | history, current state, restated decisions | 5 |
@@ -146,9 +148,9 @@ of two decisions, the row gives both counts.
 | D-096 | 2 | history | 4, or 5 with `CLAUDE.md:243` |
 | D-097 | 1 | history | 0 |
 | D-098 | 2 | finding, history, a limit under Revisit when | 0 |
-| D-099 | 1 | history, finding | 0 |
+| D-099 | 1 | history, finding | 1 |
 | D-100 | 2 | history, finding | 0 |
-| D-101 | 2 | history | 0, or 1 with `CLAUDE.md:241` |
+| D-101 | 1 | history | 0 |
 | D-102 | 1 | history, finding | 0 |
 | D-103 | 1 | finding, history | 1 |
 | D-104 | 3 | finding, history | 7, or 8 with `CLAUDE.md:241` |
@@ -175,10 +177,13 @@ of two decisions, the row gives both counts.
 | D-125 | 1 | none | 0 |
 | D-126 | 1 | none | 0 |
 
-### Nine citations credited an entry with something it does not hold
+### Nine citations that commit 738a6ff corrected
 
-At `f11e871`, nine citations named an entry that exists but credited it with words
-or a fact it does not hold, and commit `738a6ff` corrected them. For five of them,
+Commit `738a6ff` corrected nine citations that, at `f11e871`, named an entry that
+exists but credited it with words or a fact it does not hold. Other citations of that
+kind remain at `f11e871`, and the entries below count them in the table's last column,
+such as `docs/decisions.md:451` under D-015 (rooms are scoped to sessions) and
+`docs/spec-review.md:571` under D-024 (admission is a guest list). For five of them,
 another entry holds what the citation described. One gave D-080 (there is no current
 room) the few words of its other decision. One credited D-070 (slash commands carry a
 distinctive prefix) with a precedent that `plugin/commands/room-status.md` holds.
@@ -382,9 +387,12 @@ What testing the failure path showed is a finding. The Decision paragraph's
 and the Context clause "an expired or lost reply meant the daemon recorded delivery".
 
 At `f11e871`, 10 lines outside the entry cite D-014. Six mean the first decision
-alone. `cmd/cogmer/behaviors.go:226`, and `docs/relied-on-behaviors.md:67` generated
+alone, and one of those, `CLAUDE.md:238`, is the reading-list row "capture,
+reassembly, injection", which could mean either decision.
+`cmd/cogmer/behaviors.go:226`, and `docs/relied-on-behaviors.md:67` generated
 from it, cite D-014 for "Delivery confirmation" and describe the degraded path in
-their Reliance text, so they mean both decisions. So does `docs/spec-review.md:48`: "with a
+their Reliance text, so they mean both decisions. So does `docs/spec-review.md:48`:
+"with a
 set rather than a watermark and a fallback gated on B20 failing".
 `docs/spec-review.md:560`, "The delivery fallback re-created the bug it fixed
 (D-014)", means the Consequence paragraph's account of the first implementation,
@@ -436,7 +444,8 @@ refused once teammate context has been injected." The entry argues that one room
 a time follows from the event model, so it weighs no alternative to it. Both rejected
 alternatives about binding, "*Allowing a session into a second room with a warning*"
 and "*Binding a session to one room for its entire life, with no exception*",
-concern the move rule. The binding and the move rule are therefore one decision. The second makes presence separate from membership: membership
+concern the move rule. The binding and the move rule are therefore one decision. The
+second makes presence separate from membership: membership
 lasts until explicit departure or room closure, presence lapses when a process exits,
 and a room closes on explicit departure by all members or after long dormancy. It
 sits in the paragraphs "Presence is not membership.", "Leaving is always explicit.
@@ -451,11 +460,16 @@ the room". A later paragraph says "§35's existing presence display … already 
 this distinction; the specification simply had not stated it". The Status "Closes the
 open question in D-015" and the Context paragraph are history as well. The clause
 "the session persists and resumes under the same ID (verified in Phase 0a, checked by
-B14)" is support, and it names its source.
+B14)" is support, and it names its source. D-056 (a session's room is fixed at first
+sight) reverses the first decision in part: it removes the exception that lets a
+session that has received no teammate context move to another room.
 
-At `f11e871`, seven lines outside the entry cite D-016. Six mean the first decision,
-the room binding: `CLAUDE.md:201`, `cmd/cogmer/commandinvocation_test.go:14`,
-`docs/open.md:260`, and `docs/decisions.md:373`, `:1170` and `:6429`. The seventh,
+At `f11e871`, seven lines outside the entry cite D-016. Four mean the first decision,
+the room binding: `cmd/cogmer/commandinvocation_test.go:14`, `docs/open.md:260`, and
+`docs/decisions.md:373` and `:1170`. Two credit D-016 with fixing a session's room at
+its first prompt, which is what D-056 decided: `CLAUDE.md:201`, "is fixed at its
+first prompt and never changes (D-016)", and `docs/decisions.md:6429`, "D-016 fixes
+that at the first prompt". The seventh,
 `CLAUDE.md:239`, is the reading-list row "rooms, membership, session binding", which
 could mean either decision.
 
@@ -572,7 +586,9 @@ discovery is now the shorter path" is history and a finding.
 At `f11e871`, 20 lines outside the entry cite D-019. Eleven mean the first decision,
 that no provider is required and a transport sits under everything. They include
 `CLAUDE.md:140` and `:241`, `cmd/cogmer/tailcat.go:38`, and `docs/decisions.md:3060`,
-`:3063`, `:3147` and `:3173`. Six mean the second decision, local discovery, and
+`:3063`, `:3147` and `:3173`. `CLAUDE.md:241` is the reading-list row "addresses,
+transport, reachability", which could mean either decision. Six mean the second
+decision, local discovery, and
 three mean the build order that D-063 reverses. Those nine are:
 
 - `docs/open.md:51`, "Local network discovery (D-019's zero-configuration path) is not
@@ -615,11 +631,15 @@ The paragraph "Finding: not with identity as it stands." is the reasoning for th
 first decision despite its label, and its bold opener is not a template field. "This
 closes review item C7." is history.
 
-At `f11e871`, 11 lines outside the entry cite D-020. Nine mean the first decision,
-cryptographic identity, Ed25519 and event signing: `cmd/cogmer/peername.go:57`,
-`cmd/cogmer/tailcat.go:46`, `docs/spec-review.md:382` and `:497`,
-`docs/decisions.md:709`, `:760`, `:885` and `:3076`, and `Shared Claude
-Sessions.md:2778`. Two mean something else:
+At `f11e871`, 11 lines outside the entry cite D-020. Seven mean the first decision,
+cryptographic identity and event signing: `cmd/cogmer/peername.go:57`,
+`docs/spec-review.md:382` and `:497`, `docs/decisions.md:709`, `:760` and `:885`, and
+`Shared Claude Sessions.md:2778`. Four mean something else:
+
+- `docs/decisions.md:3076`, "a `peerId`, which is an Ed25519 key (D-020)", and
+  `cmd/cogmer/tailcat.go:45` to `:46`, "an Ed25519 key that signs events and is what
+  two people compare two words against (D-020)", credit D-020 with Ed25519, which
+  D-020 never names; D-042 (peer identity is an Ed25519 key pair) decides it.
 
 - `docs/decisions.md:723`, "It comes from D-020's known peers", which means the second
   decision.
@@ -702,11 +722,13 @@ which the entry answers with "Deliberate - a key that never leaves the machine t
 made it". Either could change with the first decision intact. The third exchanges
 identities on joining, with no directory, in the paragraph "How a guest's identifier
 is obtained: it is not, in advance." Its own alternative is "*A directory of peer
-identifiers*". The paragraph "Self-certifying is not self-authenticating. … Verifying once, over a
+identifiers*". The paragraph "Self-certifying is not self-authenticating. … Verifying
+once, over a
 channel the invitation did not travel on, closes that" states that a key accepted at
 first contact is verified once, over another channel. The entry weighs no alternative
-for it, so under the test this document applies it is a pointer, not a fourth
-decision. D-054 (verification gates synchronization and injection) makes verification
+for it, so under the test this document applies it is a requirement, not a fourth
+decision. D-023 does not cite D-054, which is a later entry. D-054 (verification gates
+synchronization and injection) makes verification
 a condition of synchronization, and D-055 (one way to verify a peer) holds the
 comparison that performs it.
 
@@ -733,15 +755,16 @@ bullet "*Removing codes entirely*". D-026 (no join token) reversed the second de
 and left the first standing, a partial change of the kind W-38 (a partial change
 rewrites the earlier entry) covers, and adopted that alternative.
 
-The rest of the entry holds history. The history is "The error was conflating two claims. … I
+The rest of the entry holds history. The history is "The error was conflating two
+claims. … I
 treated it as though it did"; the Status "Corrects the emphasis of D-018, D-020"; and
 the Context sentence "The specification conceded in one sentence". The paragraph
 "Unchanged by this. The ordering from D-023 still governs" restates the ordering that
 D-023 (a peer identifier must be safe to know) holds, and describes it as unchanged,
 which is history under W-32 (a decision describes only the present).
 
-At `f11e871`, 10 lines outside the entry cite D-024. Seven mean the first decision.
-Three mean something else:
+At `f11e871`, 10 lines outside the entry cite D-024. Six mean the first decision.
+Four mean something else:
 
 - `docs/decisions.md:2531`, "known peers … and a room's guests … as two lists since
   D-024", which means the first decision of D-025 (the guest list, specified), its
@@ -750,6 +773,8 @@ Three mean something else:
   D-024", which means the second decision.
 - `docs/spec-review.md:571`, "The bearer token was never necessary (D-024, D-025)",
   which credits D-024 with what D-026 decided, since D-024 keeps the code.
+- `CLAUDE.md:142`, "No join tokens, and no join-by-name on a trusted network (D-024,
+  D-026)", which credits D-024 with D-026's decision in the same way.
 
 ### D-025: The guest list, specified: two scopes, a signed challenge, and approval in the moment
 
@@ -828,7 +853,9 @@ cheaper than the sequence epoch this entry rejected." Under W-37 (a reversed dec
 becomes a tombstone), a tombstone holds only the number, the title and a status line.
 The body holds what D-028 decided, the sequence-epoch analysis, and the paragraph "An
 inversion worth knowing", that losing identity is the safe failure, which D-029
-depends on.
+depends on. "Under the project-scoped model this decision replaced, the same event
+would have cost months" is history under W-32 (a decision describes only the
+present).
 
 At `f11e871`, seven lines outside the entry cite D-028, and all seven mean the
 withdrawn decision. `docs/spec-review.md:227`, "D-028 says its membership ends",
@@ -1002,7 +1029,8 @@ by the paragraph opening "The principle is now scoped to interactive sessions: a
 session a person is working in takes a turn when that person asks it to, and at no
 other time." The second is that the principle is guarded by a structural test, which
 forbids the files handling peer traffic from importing `os/exec` or `syscall` or
-calling the probe, and which is stricter than the principle. It sits in the paragraph
+calling `RunProbe`, the only function that starts a Claude run, and which is stricter
+than the principle. It sits in the paragraph
 opening "Guarded structurally rather than by review." The entry names its alternatives
 in that paragraph: review, and checking call graphs, as in "Checking imports rather
 than call graphs is crude, and deliberately<!-- writing: quotes the decision log -->
@@ -1072,7 +1100,8 @@ written." is history too. The paragraph opening "On searching for an undocumente
 display seam." is a finding: it reports that the installed artifact is a native
 binary, that "Channels" does not appear in this version, and that `claude plugin
 details` reports a projected token cost. Declining the seam is a rejected alternative
-of the first decision. The sentence opening "Confirmed independently three times:
+of the first decision as well as one of the second decision's own alternatives. The
+sentence opening "Confirmed independently three times:
 D-033 (hooks display nothing), D-036 (MCP logging is never rendered)" restates a
 finding that `CLAUDE.md` holds under "Facts that are not obvious from the code". The
 paragraph opening "If a display primitive is ever wanted from Anthropic, the request
@@ -1182,9 +1211,10 @@ ran before the listeners". The sentence "The plugin surface is real and includes
 `install`, `uninstall`, `update`, `validate`, `init`, and `marketplace`." is a
 finding. D-121 (the repository is both the release host and the marketplace) changes
 this entry in part, at `docs/decisions.md:6566` to `6571`: the install is two lines
-rather than one, and "D-041's count is superseded; nothing else in it is". Under W-38
-(a partial change rewrites the earlier entry), D-041 therefore still states the
-one-line install. The paragraph opening "Deliberately<!-- writing: quotes the decision
+rather than one, and "D-041's count is superseded; nothing else in it is". W-38
+(a partial change rewrites the earlier entry) describes a rewrite that D-041 has not
+had, and at `f11e871` it still states the one-line install. The paragraph opening
+"Deliberately<!-- writing: quotes the decision
 log --> not encoded: which surfaces this reaches." is a rejected alternative, a
 surface matrix, or a limit of the first decision, and not a separate decision. The
 Status line, "active (specified; not implemented)", is current state, and at
@@ -1290,7 +1320,7 @@ the number as a string. One means the first decision: `docs/decisions.md:3277` "
 writing: quotes the decision log --> so a column added for local bookkeeping cannot
 become protocol". Nine mean the second decision, no adapter machinery for a second
 host. One of them, `docs/decisions.md:5831`, names the first decision in its few words
-while meaning the second. Eight of the nine are:
+while meaning the second. The nine are:
 
 - `CLAUDE.md:127` "No adapter machinery for a second host (D-043, D-113)"
 - `CLAUDE.md:238`, the reading-map row "capture, reassembly, injection"
@@ -1300,9 +1330,7 @@ while meaning the second. Eight of the nine are:
 - `docs/decisions.md:5814` "alters neither D-043 nor D-086"
 - `docs/decisions.md:5831` "D-043 (the wire format is not the database row) forbids `source`/adapter machinery"
 - `docs/decisions.md:5848` "the ones D-043 named as non-generalising"
-
-The total is nine, and the ninth is `docs/decisions.md:5966` "without naming the agent
-(D-043)".
+- `docs/decisions.md:5966` "without naming the agent (D-043)"
 
 ### D-044: Sync requests are signed; authentication is not admission
 
@@ -1427,7 +1455,8 @@ decision becomes a tombstone) this entry is a reversed decision. The sentence
 entry is findings and history. The substitution demonstration, "an attacker
 substituted her own identifier in transit" ending "Zero refusals.", is a finding, and
 it is the fact D-054 (verification gates sync) rests on. D-055 (one way to verify a
-peer) cites the reading finding below as its reason for the reversal. The grinding measurements are a finding: "three
+peer) cites the reading finding below in the second of its three reasons, the paragraph
+opening "It is a downgrade path.". The grinding measurements are a finding: "three
 characters fell in 339,297 tries and under a second; four take about thirty seconds;
 eight are 2^48", and sixteen are 2^96. The sentence "Show someone forty-three
 characters of base64 to check over a telephone and they will read the first group, the
@@ -1575,7 +1604,8 @@ verification only when "its own user has asked for one", and otherwise answers 4
 displays nothing, so no inbound request creates anything. It sits in the paragraph
 opening "Both sides run it, and that is what keeps §12a's open question closed." Its
 own alternative is an inbound verification request that prompts the host, which the
-entry calls "a prompt that can be trained away". Verification could be its own act
+entry rules out in the words "no prompt that can be trained away". Verification could
+be its own act
 while inbound requests were accepted. The third is that only a person's confirmation
 records a verification (`MarkVerified`), a mismatch records nothing, and a verified
 peer loses the `unverified` marker, the tag injected text carries for a peer not yet
@@ -1601,8 +1631,10 @@ rate-limits attempts.", is a limit. The entry has no Rejected. field, which W-36
 decision always has Rejected.) requires.
 
 At f11e871, 9 lines outside the entry cite D-052. None is a test fixture that uses the
-number as a string. Five mean the first decision, the separate act:
-`docs/decisions.md:2144`, `2171`, `2228`, `2231` and `4034`. Four mean other parts:
+number as a string. Four mean the first decision, the separate act:
+`docs/decisions.md:2144`, `2171`, `2228` and `2231`. Five mean other parts:
+
+- `docs/decisions.md:4034` "(D-052, §29)" for "interactive, blocking on another person, and the compared words must reach a person's eyes unaltered", which D-052 does not state; those words are in D-053 (`pair` is machine scope and `invite` is room scope)
 
 - `cmd/cogmer/daemon.go:82` "held only while a person has asked for one. Nothing here is created by an incoming request (D-052)", which means the second decision
 - `cmd/cogmer/daemon.go:499` "a peer verified over a recognising channel (D-052) is not marked", which means the third decision
@@ -1632,8 +1664,8 @@ want) records, a split of commands between a session and a terminal.
 The Status line's "except its gating position, reversed by D-054 the same day" and the
 paragraph opening "Gating - see D-054. The warnings this entry added" record a part
 that D-054 (verification gates sync) reversed. Under W-38 (a partial change rewrites
-the earlier entry), D-053 is an entry a later decision changed in part, and it still
-carries the reversed position. The paragraph opening "§12 is retitled from "Session
+the earlier entry), D-053 is an entry a later decision changed in part, and its Status
+line records the reversal. The paragraph opening "§12 is retitled from "Session
 Pairing" to "Forming a Room"" is history under W-32 (a decision describes only the
 present). The sentence opening "`verify` previously found a peer only through
 addresses learned from room membership" is history, and so is "the sequence is now
@@ -1768,8 +1800,10 @@ wrapper, never a reimplementation (D-057)".
 ### D-058: Signature schemes are kept, never replaced
 
 D-058 holds one decision. It is that an event records the signature scheme it was
-signed under and is verified under that scheme, that old schemes are added beside and
-never edited, and that an unknown scheme is refused as a version problem. It sits in
+signed under and is verified under that scheme, that a new scheme is added beside the
+old ones, that an
+old one is never edited, and that an unknown scheme is refused as a version problem.
+It sits in
 the Decision paragraph, which opens "Decision. An event records the scheme it was
 signed under". "Zero means v2", "The version is not covered by the signature" and "An
 unknown scheme is refused as a version problem, not a forgery" are details of its
@@ -1925,9 +1959,13 @@ history, and so is the paragraph opening "The DERP objection also weakens for th
 pair specifically"; both restate D-063 (the first pair is remote, so cross-network
 reach comes first). The sentence "And it lands exactly<!-- writing: quotes the
 decision log --> where D-019 said a transport must" and the paragraphs opening "Two
-distinctions to hold" restate D-019 (no network provider is required), D-026 (there is no join token at
-all) for the `tc…` address, and D-020 (a guest list replaces the join secret only once
-peer identity is cryptographic) for tailcat's own WireGuard keypair. The distinction between the transport key and `peerId` is a limit of the
+distinctions to hold" restate D-019 (no network provider is required), D-026 (there is
+no join token at
+all) for the `tc…` address, and D-042 (peer identity is an Ed25519 key pair) for
+tailcat's own
+WireGuard keypair. D-062 cites D-020 (a guest list replaces the join secret only once
+peer identity is cryptographic) for that fact, and D-020 never names Ed25519. The
+distinction between the transport key and `peerId` is a limit of the
 first decision or of D-068. The Context sentence "Every cross-network run so far -
 Phase 2's and Phase 5's - used an SSH tunnel" is history. The entry has no Rejected.
 field, which W-36 (a decision always has Rejected.) requires.
@@ -2361,12 +2399,13 @@ databases written before the first decision, and could change without changing t
 first.
 
 Three parts are not decisions. The paragraph that opens "Nothing implemented that
-alarm" is history: it quotes the message `pair` prints at `f11e871`, at
-`main.go:1391` ("if this key changes, that is an alarm"), against what the code did. The paragraph that opens "And it passed
-silently." is a finding: a second row was created, `peers` listed two alices, and
-`resolvePeer` returned the first. The paragraph that opens "What this does not do."
-is the limit. The Context paragraph is support: it describes how an identity is
-created and why a new key is a new peer.
+alarm" is history, since it says no code acted on the alarm; it also holds support: a
+`peerId` is a key, so a new key is a peer this machine has never seen. The paragraph
+that opens "And it passed silently." is a finding: a second row was created, `peers`
+listed two alices, and `resolvePeer` returned the first. The paragraph that opens
+"What this does not do." is the limit. The Context paragraph is support: it describes
+how an identity is created, and it quotes the message `pair` prints at `f11e871`, at
+`main.go:1391` ("if this key changes, that is an alarm").
 
 At f11e871, 8 lines outside the entry cite D-074. None is a test fixture, and all
 eight mean the first decision. `cmd/cogmer/main.go:573` sits in `resolvePeer`'s
@@ -2418,10 +2457,11 @@ seven all mean the withdrawn decision, which is the only thing the number names.
 Four mean its ranking of an environment variable above the session's own room, the
 part that was withdrawn: `docs/room-choice-findings.md` lines 9 and 23, and
 `docs/decisions.md` lines 3219, in D-064 (a session's room is the one chosen inside
-it), and 3899, in D-077. Three mean its rule that a command inside a session acts on
+it), and 3899, in D-077. Two mean its rule that a command inside a session acts on
 that session's room, which `docs/room-choice-findings.md` records under "The rest of
 D-076 survived": `cmd/cogmer/membership_test.go:697` and
-`docs/room-choice-findings.md` lines 37 and 41.
+`docs/room-choice-findings.md:37`. One, `docs/room-choice-findings.md:41`, means the
+machine-level pointer that D-076 kept as a fallback.
 
 ### D-077: Every room has its own URL, and no ambient value picks one
 
@@ -2691,13 +2731,14 @@ yet implemented" is current state, and at f11e871 it no longer holds.
 re-verification, and nothing opens it at room creation. This was read from the code,
 not observed.
 
-At f11e871, 4 lines outside the entry cite D-083. None is a test fixture. Two mean
+At f11e871, 4 lines outside the entry cite D-083. None is a test fixture. One means
 the decision: `docs/decisions.md:4358`, in D-086 (the terminal is not a user
 experience), "D-083 already placed the first opening of the view at a first
-pairing", and `docs/decisions.md:4329`, in D-085 (a line telling somebody to run
-`cogmer` fails), "That belongs with D-083, not here", whose subject is a pairing
-surface that shows the words. Two mean the list "Not settled here:", and both are
-history text in the entries that hold them:
+pairing". Three mean the list "Not settled here:". One is
+`docs/decisions.md:4329`, in D-085 (a line telling somebody to run `cogmer` fails),
+"That belongs with D-083, not here", whose subject is pairing from a surface that
+shows the words, an item of that list. The other two are history text in the entries
+that hold them:
 
 - `docs/decisions.md:4394`, in D-086, "Open questions from D-083 remain open"
 - `docs/decisions.md:4521`, in D-088, "Also settled from D-083's open list:"
@@ -2936,8 +2977,10 @@ finding. The paragraph that opens "Still open, and not fixed here:" is an open
 question, the view's similar visual weight for the two names, and at f11e871 it is
 an item in `docs/open.md` at line 219. The paragraphs that open "The derived name
 (`quiet-otter`) can collide and that is accepted" and "The local label you assign is
-settled by D-074" restate D-050 (room names may collide locally) and D-074 (a name
-means one key) and decide nothing here.
+settled by D-074" restate D-021 (peer names are derived from the identity), which
+records how often derived names collide, and D-074 (a name means one key), and decide
+nothing here. The first also cites D-050 (room names may collide locally) and D-017
+for the principle that names may collide and identities do not.
 
 At f11e871, 6 lines outside the entry cite D-090. None is a test fixture. Five mean
 the first decision: `CLAUDE.md:237`, `cmd/cogmer/daemon.go:396`,
@@ -3063,11 +3106,12 @@ the second decision, and one could mean either:
 
 ### D-094: The name you chose leads the view; the unverified marker becomes a fact
 
-D-094 holds two decisions. The first decides that the view, the browser page the
-daemon serves where a user watches the room, leads with the label the user gave a
-colleague at pairing, with the derived name (a word pair computed from the
-colleague's key) beside it, and that a label equal to the derived name counts as
-absent. It sits at "The label now leads, with the derived name kept beside it". The
+D-094 holds two decisions. The first decides that the view leads with the label the
+user gave a colleague at pairing, with the derived name beside it. The view is the
+browser page the daemon serves where a user watches the room, and the derived name is
+a word pair computed from the colleague's key. A label equal to the derived name
+counts as absent. It sits at "The label now leads, with the derived name kept beside
+it". The
 second decides that the view carries whether a turn's peer is verified as a field,
 and shows the unverified marker, a mark on a turn whose peer has not been verified,
 only when that field says so. It sits at "And the
@@ -3092,7 +3136,8 @@ work left undone, which D-095 (a name is chosen or guessed) and D-097 (a pairing
 string carries a chosen name) have decided since. Within it, the account of
 `UserDisplayName` as `$USER` capitalised with no way to change it describes the code
 before D-095, which is history, and "which is why two daemons asserted the same one
-during the first two-peer run" records an observed event, which is a finding. The Revisit when names a condition that D-095 and D-097 have met, so it is
+during the first two-peer run" records an observed event, which is a finding. The
+Revisit when names a condition that D-095 and D-097 have met, so it is
 history too, as is the status line's "with one half deliberately<!-- writing: quotes
 the decision log --> deferred".
 
@@ -3115,7 +3160,8 @@ unblocked". All six places are history themselves.
 
 D-095 holds three decisions. The first decides that whether the display name was
 chosen is recorded as a flag, `NameChosen`, which is false at creation, is set by
-any deliberate set, and is never inferred by comparing the name with the guess. It
+any deliberate set, and is never inferred by comparing the name with the guess, the
+name computed from `$USER`. It
 sits at "Chosen is recorded, not inferred." The second decides that a user is offered
 the choice of name where their identity first travels, in `printPairingInvitation`,
 and that `whoami` shows the name plainly, with a line saying it was guessed only
@@ -3180,7 +3226,8 @@ name is the command namespace) has changed what the second decision rests on, si
 Claude Code owns `/help` but not `/cogmer:help`.
 
 The status line's "Corrects D-095" and the Context paragraph, which says what D-095
-(a name is chosen or guessed) wrote and that the error was pointed out, are history under
+(a name is chosen or guessed) wrote and that the error was pointed out, are history
+under
 W-32 (a decision describes only the present). So are "That was a rule bent to fit an
 exception, and the exception was the defect.", "It replaces nothing, because until
 now there was no slash command for your own identity at all" and
@@ -3266,8 +3313,9 @@ cites no decision.
 
 D-099 holds one decision and history. The decision is that the injected block, the
 block of colleagues' turns the daemon adds to a user's prompt as context, carries the
-label beside `speaker` and `peerName`, omitted when absent, and that its framing says
-the label is the name to prefer. It sits at "The framing says what the field is
+label, the name the user gave that colleague at pairing, beside `speaker` and
+`peerName`, omitted when absent, and that its framing says the label is the name to
+prefer. It sits at "The framing says what the field is
 for.", "All three travel." and "An absent label is an absent field". The `PeerFacts`
 interface, at "`PeerFacts` groups the two lookups", is how the lookup reaches
 `FormatTeamContext`. It is the mechanism of this decision, not a second one.
@@ -3281,10 +3329,12 @@ initially scanned the whole block and matched the framing's own use of the word,
 which is a reminder that a test over rendered text should read the payload."
 records what happened when a test was written, which is a finding.
 
-At f11e871, 5 lines outside the entry cite D-099. None is a test fixture, and all
-five mean the decision: `cmd/cogmer/transcript_test.go:318`,
-`cmd/cogmer/daemon.go:447`, `cmd/cogmer/daemon.go:473`, `docs/decisions.md:5981`
-and `CLAUDE.md:237`, a row of the reading list in `CLAUDE.md`.
+At f11e871, 5 lines outside the entry cite D-099. None is a test fixture. Four mean
+the decision: `cmd/cogmer/transcript_test.go:318`, `cmd/cogmer/daemon.go:447`,
+`cmd/cogmer/daemon.go:473` and `CLAUDE.md:237`, a row of the reading list in
+`CLAUDE.md`. `docs/decisions.md:5981`, "D-099 prefers the label because a word pair
+means nothing to a person weeks later", credits D-099 with a reason it does not give;
+the reason is in D-094's Context.
 
 ### D-100: Each document answers one question, and a finding is not a commitment
 
@@ -3321,7 +3371,7 @@ At f11e871, no line outside the entry cites D-100.
 
 ### D-101: Peer connections are TLS pinned to the key already verified
 
-D-101 holds two decisions. The first decides that every peer connection, over every
+D-101 holds one decision. It decides that every peer connection, over every
 transport including the overlay (the tailcat network, which reaches a peer on
 another network through a tunnel), is TLS with a required client certificate, and
 that each side accepts only a key this machine has recorded: the named peer's key
@@ -3329,14 +3379,14 @@ when verifying, and any recorded peer's key when syncing. It sits in the title a
 the subsections "What TLS changes", "What "pinned" means", "The two situations a dial
 can be in" and "Why the URL scheme is …". "The test is that the key is recorded, not
 that it is verified" is part of this decision, and its rejected alternative, pinning
-to verified keys, deadlocks. The second decides that no setting disables encryption
-between peers. It sits at the last sentence of the subsection "Why this superseded
-the interim guard": "There is now no setting that disables encryption, which is …: a
-security property with an off switch is one somebody eventually switches off." The
-alternative it weighs is an escape hatch, an environment variable that turns the
-check off, and the entry weighs it only inside that subsection's account of the
-interim guard, which is history. The second could be reversed without reversing the
-first: an off switch could be added for testing and TLS pinning would stand.
+to verified keys, deadlocks. The last sentence of the subsection "Why this superseded
+the interim guard" states that no setting disables encryption between peers: "There is
+now no setting that disables encryption, which is …: a security property with an off
+switch is one somebody eventually switches off." The environment variable that
+subsection describes turned off the interim guard, the rule refusing bare-TCP
+connections to other machines, and never disabled encryption. The entry weighs no
+alternative of its own for the rule, so under the test this document applies it is
+part of the decision.
 
 The subsection "What was wrong" says what peer connections were before, plain HTTP,
 which is history under W-32 (a decision describes only the present). So are the
@@ -3358,7 +3408,7 @@ mean the first decision: `cmd/cogmer/transport.go:89`, `cmd/cogmer/transport.go:
 `docs/decisions.md:5377`. Of these, `cmd/cogmer/peertls_test.go:60` and `:76` and
 `cmd/cogmer/offer_test.go:77` mean the part that pins to a recorded key rather than
 a verified one. `CLAUDE.md:241` is a row of the reading list in `CLAUDE.md` and names
-the entry as a whole. None means the second decision.
+the entry as a whole.
 
 ### D-102: The reveal step tolerates a peer that has already finished
 
@@ -3367,8 +3417,8 @@ two-word comparison, in which each side first sends a commit (a hash that binds 
 a random value, its nonce, without showing it) and then a reveal (the nonce itself),
 inside a loop that repeats until a ninety-second deadline. A reveal that finds the
 other side no longer expecting a verification goes back to the loop, as a failed
-commit does, so that the inbound check at the top of the loop, which looks for a
-nonce the other side has already revealed, finds the nonce the finished side sent. It
+commit does. At the top of the loop, the inbound check looks for a nonce the other
+side has already revealed. It finds the nonce the finished side sent. It
 sits at "It recovers by looping rather than by retrying that call."
 
 The Context (TLS changed the timing, and a test "failed about one run in six") is
@@ -3423,7 +3473,8 @@ genuinely lost, and is recoverable elsewhere." The second decides that the overl
 admits only recorded peers, through the library's allow-list of client node keys,
 which is rebuilt from the peer list and updated without a restart. It sits at "So the
 access-control half moves to a list, where it is better." The alternative it weighs
-is the pre-shared key as the means of admission, in the table comparing the two. It could be
+is the pre-shared key as the means of admission, in the table comparing the two. It
+could be
 reversed without reversing the first: without the allow-list the address would stay
 public and stable. The third decides that the overlay's relay region is chosen once
 and stored with the node key. It sits at "Also pin the region." The alternative it
@@ -3548,10 +3599,10 @@ D-108 (pairing is not how an address is updated) that is history. Two mean the
 reversed address write, and both sit in D-108's status line and Context:
 `docs/decisions.md:5722` ("Supersedes part of D-107") and
 `docs/decisions.md:5724` ("D-107 made a pairing string offered for an already-paired
-peer update the stored address"). One, `docs/decisions.md:6081` in D-114 (§3.1 is a
-duty not to harm the session),
-says that "silence toward the person" is a rule "`common.sh` and D-107 both attribute
-to §3.1" (§3.1, first, do no harm), and D-107 at f11e871 cites no § section.
+peer update the stored address"). One is `docs/decisions.md:6081`, in D-114 (§3.1 is a
+duty not to harm the session). It says that `common.sh` and D-107 both attribute
+"silence toward the person" to §3.1 (first, do no harm). D-107 cites no § section at
+f11e871.
 
 ### D-108: Pairing is not how an address is updated
 
@@ -3681,7 +3732,8 @@ at "Decision. §3.1 is First, do no harm." and "Stated as a duty, not a list".
 
 "Twelve citations of §3.1 across the repository are about hooks (6), silence toward
 the person (4)" records a count made at a date, and "the section did not contain what
-they cite" records what that count was compared with. Both are findings. "§3.1 was titled "Local first" and said two things"
+they cite" records what that count was compared with. Both are findings. "§3.1 was
+titled "Local first" and said two things"
 and "(now including a dead daemon and a failed hook)" say what §3.1 was before, which
 is history under W-32 (a decision describes only the present).
 
@@ -3949,5 +4001,12 @@ decision.
 ## What this does not show
 
 Each range had one reader, and whether a choice counts as a second decision is a
-judgement another reader could make differently. A grep finds a citation only by its
+judgement another reader could make differently. Three writing reviews applied the
+same test to
+every entry, and for five they still read it differently: the unsigned `have` map in D-044 (sync requests are signed), the unsigned version number in D-058 (signature schemes are
+kept), the fetch-back check in `publish.sh` in D-067 (release assets are served from
+the droplet), the operator-surface exemption in D-092 (an address is learned once, out of band), and the §30 result leading
+`README.md` in D-122 (the two READMEs are split by whether you have installed it).
+Each could be read as one more decision than this document counts. A grep finds a
+citation only by its
 number, so a citation that names an entry by its title alone is not counted.

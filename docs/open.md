@@ -72,7 +72,7 @@ decisions in parentheses. `docs/decision-log-findings.md` holds the observations
 each entry: where each decision sits, the alternative each extra one has, the parts
 that are not decisions, and what each citation means.
 
-- split (60): D-002 (2), D-008 (2), D-010 (2), D-014 (2), D-015 (2), D-016 (2),
+- split (59): D-002 (2), D-008 (2), D-010 (2), D-014 (2), D-015 (2), D-016 (2),
   D-017 (4), D-018 (2), D-019 (3), D-020 (2), D-021 (4), D-023 (3), D-024 (2),
   D-025 (3), D-030 (2), D-032 (2), D-033 (2), D-035 (2), D-036 (2), D-037 (2),
   D-040 (2), D-041 (3), D-042 (4), D-043 (4), D-045 (2), D-046 (4), D-050 (2),
@@ -80,15 +80,15 @@ that are not decisions, and what each citation means.
   D-062 (2), D-066 (2), D-067 (3), D-069 (2), D-074 (2), D-075 (2), D-077 (2),
   D-080 (3), D-081 (2), D-082 (2), D-084 (2), D-086 (2), D-088 (3), D-090 (2),
   D-091 (2), D-093 (2), D-094 (2), D-095 (3), D-096 (2), D-098 (2), D-100 (2),
-  D-101 (2), D-104 (3), D-106 (3), D-117 (3), D-121 (2);
+  D-104 (3), D-106 (3), D-117 (3), D-121 (2);
 - become tombstones under W-37 (a reversed decision becomes a tombstone): D-028,
   which D-029 reversed, and D-047, which D-055 reversed; D-076 is one already;
-- one decision, with history or findings to move out (56): every entry not listed
+- one decision, with history or findings to move out (57): every entry not listed
   here;
 - one decision and nothing to move (9): D-005, D-007, D-009, D-012, D-013, D-112,
   D-124, D-125, D-126.
 
-Splitting all 60 adds 87 entries, and 140 citations of them mean something other
+Splitting all 59 adds 86 entries, and 146 citations of them mean something other
 than the first decision, so each needs checking against its few words. Four
 questions come before any split:
 
