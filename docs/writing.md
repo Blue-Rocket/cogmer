@@ -238,10 +238,7 @@ A decision entry is a log of what was decided and what supports it. It is not th
 story of how the decision was reached, and what was observed on the way is cited
 under W-42.
 
-A decision sits beneath the specification. It fills in what is too fine for a
-requirement, such as an implementation detail, or sets out a necessary exception to
-one, and it need not relate to any requirement. W-84 says why the specification
-cites no decision.
+W-84 says how a decision relates to the specification.
 
 ```markdown
 ## D-NNN — <what was decided, as a statement>
@@ -468,10 +465,14 @@ the work was planned in are in `docs/phases.md`, actions not yet taken are in
 way whether or not it is met yet. Status in the specification goes stale with every
 commit, and a reader cannot tell a requirement from a report.
 
-W-84. The specification cites no decision. It describes the system as the user
-experiences it, its boundaries and the harms it avoids, in words a reader can apply
-without the decision log. A decision that extends a requirement or makes an exception
-to one cites the requirement's § section instead. A requirement that pointed to a
+W-84. The specification is upstream of the decisions, and cites none of them. It is
+more concerned with describing the system as the user experiences it, constraining
+the system's boundaries, and avoiding negative outcomes. Decisions are smaller
+grained: they fill in what is too mundane for the specification, or too concerned
+with minute technical detail. A decision need not relate to the specification; one
+that does extends a requirement's implementation detail or details a necessary
+exception to it, and cites the requirement's § section. Nothing in this rule requires
+detail to be moved out of the specification. A requirement that pointed to a
 decision for its reason would read as unfinished wherever the log says more, and
 would point at a tombstone once the decision was withdrawn. Restating decisions in
 the specification instead fills it with detail no user experiences, and the two
