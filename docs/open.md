@@ -466,7 +466,48 @@ deleted on the strength of a reading from earlier in the session, and being
 untracked there is no copy. `/cogmer:peer-pair` repeated on a completed pairing was
 worked in D-107 and D-108, which may or may not be what it said.
 
-## Older, from the specification review
+## The specification lags what was decided
 
-**A1** — §19 still does not say when delivery advances. Reopened because the
-implementation settled it and the specification never caught up.
+**§19 (incremental context injection) does not say when a session's delivery state
+advances.** Its fifth step is "update the session's incorporated-event state", bound
+to nothing, and it never says whether an event counts as delivered when it is offered
+to the hook or when it is seen in the session. D-014 (derive delivery state from
+transcript evidence) decides the second, and the code does it, but a second
+implementation reading §19 would advance delivery at injection and lose an event
+whenever the hook times out or the daemon dies before it replies. The fix is a sentence in §19: delivery advances only on
+evidence that the session received the injection.
+
+**§19 does not say whether a user's own turns are excluded by session or by peer.**
+"Exclude Alice's own Claude conversation where it would duplicate existing context"
+supports either. Excluding by peer would hide each of a user's two sessions in one
+room from the other. The code excludes by `claudeSessionId`, and a test checks that a
+second session on the same machine still sees a peer's events. The fix is to name
+`claudeSessionId` in §19.
+
+**Nothing in the specification says it depends on Claude Code behaviours that are
+undocumented.** `cmd/cogmer/behaviors.go` lists them and `cogmer doctor` checks them
+against the installed version, but a second implementation would not know to. The fix
+is a requirement that the relied-on behaviours are listed and checked against the
+installed Claude Code, and that a failed check disables the feature rather than
+breaking the session.
+
+**The specification never mentions that Claude Code compacts a session.** §21
+(context window management) covers only injection limits. §3.4 (preserve actual
+conversation) says "Do not replace conversations with summaries" and §21 "Do not
+initially introduce AI summarization", yet compaction summarizes a colleague's
+injected turns inside the session whatever cogmer does. The room's own history stays
+verbatim, which is what both sections protect. The fix is to state in §21 what a
+compaction leaves intact (the session id, the transcript, which B14 to B17 check),
+and to scope both prohibitions to the room and its replication, since what a session
+keeps after a compaction is outside cogmer's control.
+
+**D-007 (record `COMPACTION` events as observability) is not built, and §7 lists the
+type as one to design for later.** No code records a compaction, so a change in what
+the summarizer keeps would leave no trace in a room's history. Either the event is
+built and §7 moves it to the minimum types, or D-007 is withdrawn.
+
+**§25 (security) does not set out in one place where a room's data goes.** §28 says
+injection carries a colleague's turns to another user's model provider under that
+user's account, and §12a covers admission, but §25 stops at the network boundary.
+Nothing scopes what may be shared once a peer is admitted: admission is all or
+nothing for a room.

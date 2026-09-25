@@ -277,7 +277,7 @@ reuses a guarantee already verified by B11.
 ## D-014 — Derive delivery state from transcript evidence, not from recorded intent
 
 **Date:** 2026-09-16 · **Status:** active · **Supersedes** the advance-at-injection
-behavior reviewed as A1 in `spec-review.md`
+behavior reviewed as A1 in `db1744c:docs/spec-review.md`
 
 **Context.** §19 says to "update the session's incorporated-event state" without
 saying when, or what counts as incorporated. Advancing it at injection commits
@@ -322,7 +322,7 @@ that duplicate context costs more than the loss it prevents.
 ## D-015 — Rooms are scoped to sessions, not to projects
 
 **Date:** 2026-09-16 · **Status:** active · **Supersedes** the project-scoped room
-model throughout the specification; **dissolves** A2 in `spec-review.md`
+model throughout the specification; **dissolves** A2 in `db1744c:docs/spec-review.md`
 
 **Context.** A2 found §5, §22 and §28 mutually inconsistent about how a hook call
 resolves to a room, and the proposed fix was a `cwd` → project-config → room
@@ -6121,7 +6121,7 @@ one duty with six known cases.
   nothing about what a person does get.
 - *Sweep "local-first" out of `decisions.md` too.* Entries there record reasoning
   as it stood and referring to a principle by the name it had then is accurate.
-  `spec-review.md` likewise. The term survives once in the spec, at §11's
+  The specification review likewise. The term survives once in the spec, at §11's
   "local-first CRDT such as Automerge", where it names a category of software and
   makes no claim about this one.
 

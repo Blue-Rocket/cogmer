@@ -138,7 +138,6 @@ Claude Code ships as a native binary and a colleague may have no Node installed.
 | [`docs/open.md`](docs/open.md) | actions not yet taken, decisions not yet made |
 | [`docs/phases.md`](docs/phases.md) | the phases the work was planned in, and how each ended |
 | [`docs/relied-on-behaviors.md`](docs/relied-on-behaviors.md) | what Claude Code does that this depends on, generated from the registry |
-| [`docs/spec-review.md`](docs/spec-review.md) | the spec evaluated against what the implementation established |
 
 Earlier runs the design rests on are kept in history as of commit `84a0751`: the
 integration spike in [`phase0-findings.md`](https://github.com/Blue-Rocket/cogmer/blob/84a0751/docs/phase0-findings.md), the compaction

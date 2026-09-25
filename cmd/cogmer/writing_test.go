@@ -31,7 +31,6 @@ var writingNotYetRewritten = map[string]bool{
 	"docs/open.md":                true,
 	"docs/phases.md":              true,
 	"docs/relied-on-behaviors.md": true, // generated: rewrite behaviors.go
-	"docs/spec-review.md":         true,
 	"plugin/README.md":            true,
 }
 
