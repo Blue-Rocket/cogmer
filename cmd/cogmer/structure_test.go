@@ -102,8 +102,9 @@ func structureProblems(doc string, src []byte) []string {
 			switch {
 			case fields[label]:
 			case doc == "docs/open.md" && opensTopLevelParagraph(n):
+			case doc == "CLAUDE.md" && opensParagraphOrItem(n):
 			default:
-				report(firstOffset(n), "bold %q, which only a template field or an open.md item's opening sentence may be (W-14)", label)
+				report(firstOffset(n), "bold %q, which only a template field, or the opening sentence of an item in open.md or CLAUDE.md, may be (W-14)", label)
 			}
 			return ast.WalkSkipChildren, nil
 		case *ast.Text:
@@ -225,6 +226,25 @@ func opensTopLevelParagraph(n ast.Node) bool {
 	return top
 }
 
+// opensParagraphOrItem reports whether n opens a top-level paragraph or a list
+// item, the only bold CLAUDE.md may hold.
+func opensParagraphOrItem(n ast.Node) bool {
+	p := n.Parent()
+	switch p.(type) {
+	case *ast.Paragraph, *ast.TextBlock:
+	default:
+		return false
+	}
+	if p.FirstChild() != n {
+		return false
+	}
+	switch p.Parent().(type) {
+	case *ast.Document, *ast.ListItem:
+		return true
+	}
+	return false
+}
+
 // inlineText returns the text under n, with code spans kept as written.
 func inlineText(n ast.Node, src []byte) string {
 	var b strings.Builder
@@ -270,6 +290,10 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 		{"open.md item", "docs/open.md", "**The command fails.** It exits 1.\n", 0},
 		{"open.md bold mid-paragraph", "docs/open.md", "It **fails**.\n", 1},
 		{"open.md bold in a list", "docs/open.md", "- **Fails.** Yes.\n", 1},
+		{"CLAUDE.md opening a paragraph", "CLAUDE.md", "**Read the code first.** Always.\n", 0},
+		{"CLAUDE.md opening a list item", "CLAUDE.md", "- **Read the code first.** Always.\n- **Cite only what exists.** Check.\n", 0},
+		{"CLAUDE.md bold mid-sentence", "CLAUDE.md", "Say **user** for someone using it.\n", 1},
+		{"CLAUDE.md bold mid-item", "CLAUDE.md", "- Say **user** for someone using it.\n", 1},
 		{"a long open.md item", "docs/open.md", "**An item.** " + strings.Repeat("Line.\n", 60), 0},
 		{"a document title over a short introduction", "x.md", "# T\n\nOne line.\n", 0},
 		{"header over one line", "x.md", "Intro.\n\n## T\n\nOne line.\n", 1},

@@ -26,7 +26,7 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-11 | give every reference a few words | judgement |
 | W-12 | bullets only for real lists | judgement |
 | W-13 | backticks only for code | judgement |
-| W-14 | bold only for template fields and `open.md` openers | checked |
+| W-14 | bold only for template fields, and openers in `open.md` and `CLAUDE.md` | checked |
 | W-15 | no header over a section of three lines or fewer | checked |
 | W-16 | do not restate in a closing sentence | judgement |
 | W-17 | keep an item short by leaving out kinds of detail | judgement |
@@ -133,10 +133,14 @@ Do not break an explanation into bullets.
 W-13. Use backticks only for things that appear in code or at a terminal:
 identifiers, file names, commands, environment variables. Not for emphasis.
 
-W-14. Use bold only for an item's opening sentence in `open.md`, and for the field
-names the templates define. Nowhere else. In particular, do not open a paragraph
-with a bold label and a fragment ("**Where the code lives.** Signalling needs…").
-If a thing needs a name and an explanation, write a sentence.
+W-14. Use bold only for an item's opening sentence in `open.md`, for the opening
+sentence of a paragraph or a list item in `CLAUDE.md`, and for the field names the
+templates define. Nowhere else. In particular, do not open a paragraph with a bold
+label and a fragment ("**Where the code lives.** Signalling needs…"), and do not use
+bold for emphasis inside a sentence. If a thing needs a name and an explanation,
+write a sentence. `CLAUDE.md` is read by the model at the start of every session,
+and a bold opening sentence lets the model and a maintainer who skims pick out each
+rule from its reasons.
 
 W-15. Use headers only on sections long enough to need one. A three-line section
 does not.
@@ -542,8 +546,8 @@ registry, and each `<commit>:<path>` a file that commit holds. No document is ex
 so citations of it still resolve.
 
 `structure_test.go` checks the structure the templates set. Bold appears only as a
-template's field names, in decisions and working material, and as the opening of an
-item in `open.md`. No header sits over a section of three
+template's field names, in decisions and working material, as the opening of an item
+in `open.md`, and as the opening of a paragraph or list item in `CLAUDE.md`. No header sits over a section of three
 lines or fewer; a document's title and the headers a template defines are exempt.
 The specification carries no dates and cites no decision. No document other than `open.md` and working
 material cites `docs/work/`. The patterns document names no decision, section,
