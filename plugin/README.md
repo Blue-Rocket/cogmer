@@ -1,64 +1,66 @@
 # cogmer
 
-Work in a shared Claude Code conversation with a colleague. Your turns and theirs
-replicate directly between your machines — peer-to-peer, no server in between and
-no account anywhere. Claude Code talks only to a daemon on your own machine, and
-your session keeps working when the other one is offline.
+This is the reference for the cogmer plugin once it is installed. What cogmer is,
+and how to install it, are in the repository's `README.md`.
 
-## What it installs
+## What it adds to a session
 
-Hooks and slash commands, listed below. Nothing about how Claude Code starts changes,
-and nothing here replaces or wraps it.
+The plugin adds three hooks and the commands below. It changes nothing about how
+Claude Code starts, and it replaces or wraps nothing.
 
-| | |
+| hook | what it does |
 |---|---|
-| `SessionStart` | starts the daemon if it is not already running |
-| `UserPromptSubmit` | captures your prompt; injects teammate turns you have not seen |
+| `SessionStart` | starts the daemon if it is not running, and fetches the binary in the background if it has not been fetched |
+| `UserPromptSubmit` | captures your prompt, and injects the colleagues' turns this session has not seen |
 | `Stop` | captures the completed response |
 
-| Command | |
+## Commands
+
+Claude Code puts a plugin's name in front of every command the plugin provides, so
+each command starts with `cogmer:`. After that, `room-` commands act on one room,
+`peer-` commands act on this machine's relationships with other peers, which outlast
+every room, and `self-` commands act on you.
+
+| command | what it does |
 |---|---|
 | `/cogmer:room-create` | create a room and put this session in it |
 | `/cogmer:room-join <invitation>` | join a room you were invited to |
-| `/cogmer:room-leave` | take this session out of its room; it may rejoin |
-| `/cogmer:room-invite <peer>` | admit a peer you have paired with |
+| `/cogmer:room-leave` | take this session out of its room; it may rejoin the same room later |
+| `/cogmer:room-invite <peer>` | admit a peer you have paired with to this room |
 | `/cogmer:room-revoke <peer>` | withdraw a peer's admission to this room |
-| `/cogmer:room-status` | which room this session is in, and who may enter |
+| `/cogmer:room-status` | the room this session is in, and who is in it |
 | `/cogmer:room-log` | the room's conversation so far |
-| `/cogmer:room-conflicts` | quarantined events, if a peer's sequence went backwards |
-| `/cogmer:room-list` | rooms this machine holds, and which one this session is in |
-| `/cogmer:peer-list` | peers this machine knows, and whether each is verified |
-| `/cogmer:peer-forget <peer>` | discard a peer and every admission it held |
-| `/cogmer:peer-pair [string] [name]` | pair with a colleague: the two-word check, in your browser |
-| `/cogmer:self-status` | who you are, what you send colleagues, whether they can reach you |
-| `/cogmer:self-name [name]` | show or set the name other people see |
+| `/cogmer:room-conflicts` | events set aside because a peer's sequence counter went backwards |
+| `/cogmer:room-list` | the rooms on this machine, and any waiting for you to accept |
+| `/cogmer:peer-list` | the peers this machine knows, and whether each is verified |
+| `/cogmer:peer-forget <peer>` | discard a peer and every room admission it held |
+| `/cogmer:peer-pair [their pairing string] [what you call them]` | pair with a colleague by comparing two words in your browser |
+| `/cogmer:self-status` | who you are, what you send colleagues, and whether they can reach you |
+| `/cogmer:self-name [what people should call you]` | show or set the name other people see for you |
 
-Three prefixes because there are three targets: `room-` acts on one room, `peer-` on
-this machine's relationships, which outlast every room, and `self-` on you.
+## Pairing happens in your browser, not through the model
 
-The `cogmer:` in front of all of them is not ours. Claude Code namespaces a command
-by the plugin manifest's name and offers no unprefixed form, so `cogmer:` is what you
-type whatever we would have preferred. The `room-`/`peer-`/`self-` prefixes are kept
-on top of it because they name a target, not because anything would collide.
+`/cogmer:peer-pair` does what a command can do, then opens a page the daemon serves.
+On that page you and your colleague compare two words, on a call. The words reach you
+without passing through the model, because the model reads room content from peers
+that may not be verified, and two words it relayed would prove nothing. On a machine
+that cannot open a browser, the comparison happens at the terminal instead.
 
-## The binary
+## Nothing is exchanged with an unverified peer
 
-The hooks call a `cogmer` binary, looked for in this order: `$COGMER_BIN`,
-`~/.cogmer/bin/cogmer`, this plugin's `bin/`, then `PATH`. If none is
-found, every hook exits silently and Claude Code is unaffected — a missing binary
-means no collaboration, never a broken session.
+Admitting a peer to a room says that its key may enter. Verifying the peer, by
+comparing the two words, says that the key is your colleague's. A key substituted in
+transit passes every check except the comparison, so a room exchanges turns only with
+peers that are both admitted and verified. A room whose only other member is
+unverified looks quiet rather than broken, and `/cogmer:room-status` marks that
+member as unverified.
 
-## Two things the model does not do for you
+## Where the hooks look for the binary
 
-**The pairing ceremony does not pass through the model.** It is interactive, it
-blocks on another person, and the two words you compare must reach your eyes without
-passing through a model that is reading room content from unverified peers. So
-`/cogmer:peer-pair` does the part a command can do and then opens a page the daemon
-serves, where the two words are; a machine that cannot open a browser falls back to a
-terminal. Nothing about the comparison is reported by the model, and two words it
-told you would mean nothing.
-
-**Nothing synchronizes with an unverified peer.** Admission says a key may enter;
-verification says the key is your colleague's. Every check but the last passes
-equally well for a key substituted in transit, so both are required. A room with an
-unverified member looks quiet rather than broken, which is why the commands say so.
+The hooks run a `cogmer` binary, and look for it in this order: `$COGMER_BIN`, then
+`~/.cogmer/bin/cogmer` (under `$COGMER_HOME` instead, if that is set), then the
+plugin's own `bin/`, then `PATH`. If none is found, the prompt and response hooks
+exit without output, and the session carries on as if the plugin were not installed:
+you lose collaboration, and nothing else. The session-start hook tells the model why
+there is no binary yet, such as a download still running or one that failed, so that
+it can say so when a command does not work.

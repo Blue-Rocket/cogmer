@@ -435,18 +435,17 @@ W-72. The error the check returns says what changed and where to look next.
 
 ### The two READMEs
 
-W-75. `README.md` is what somebody who has not installed cogmer needs, in this order:
-what it is, the two lines that install it, pairing, a room, why it might be worth it,
-what it does not do, and then how to work on it. Why it might be worth it is the
-two-peer result, stated with its limit: it happened between two sessions one person
-was watching. It comes before the commands, because somebody deciding whether to
-install it reads the first screen and stops. A README that serves both audiences
-serves neither in its first screen, since one reader wants the install lines and the
-other wants what is unfinished.
+W-75. `README.md` is for somebody who has not installed cogmer and is deciding
+whether to. It must say what cogmer is, how to install it, what it does not do, and
+why it might be worth it: the two-peer result, stated with its limit, that it
+happened between two sessions one person was watching. A README that serves both
+audiences serves neither in its first screen, since one reader wants the install
+lines and the other wants what is unfinished.
 
-W-76. `plugin/README.md` is what somebody who has installed cogmer needs: the command
-reference and where the binary lives. Neither README repeats the other, and neither
-says what is built or unfinished, which is in `open.md` (W-25).
+W-76. `plugin/README.md` is for somebody who has installed cogmer. It must include
+the command reference and where the hooks look for the binary. Neither README
+repeats the other, and neither says what is built or unfinished, which is in
+`open.md` (W-25).
 
 ### A requirement in the specification (`Shared Claude Sessions.md`)
 

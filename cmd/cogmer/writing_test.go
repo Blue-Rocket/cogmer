@@ -31,7 +31,6 @@ var writingNotYetRewritten = map[string]bool{
 	"docs/open.md":                true,
 	"docs/phases.md":              true,
 	"docs/relied-on-behaviors.md": true, // generated: rewrite behaviors.go
-	"plugin/README.md":            true,
 }
 
 // writingNeverChecked holds documents the word check cannot apply to.
