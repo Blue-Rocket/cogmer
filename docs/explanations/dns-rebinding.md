@@ -1,11 +1,10 @@
 # How a web page attacks a local service, and what stops it
 
-Written 2026-09-24 against `cmd/cogmer/localguard.go` at commit 5e35257 and D-087
-(the local API requires a header a web page cannot send). The scenarios follow from
-the code and from how browsers are specified to behave; none was reproduced in a
-browser. `curl -H 'Host: evil.example:4782'` against the installed 0.7.1 daemon got
-200 from both `/` and `/healthz`, so the daemon answers a request whose `Host` names
-another site.
+Written 2026-09-24 against `cmd/cogmer/localguard.go` at commit 5e35257. The
+scenarios follow from the code and from how browsers are specified to behave; none
+was reproduced in a browser. `curl -H 'Host: evil.example:4782'` against the
+installed 0.7.1 daemon got 200 from both `/` and `/healthz`, so the daemon answers a
+request whose `Host` names another site.
 
 ## The cast
 
@@ -27,7 +26,7 @@ none.
 
 ---
 
-## Scenario 1: a cross-site POST, before D-087
+## Scenario 1: a cross-site POST, against a daemon that checks nothing
 
 1. The user visits `https://evil.example`.
 2. The attacker's page runs a script that sends
@@ -44,9 +43,10 @@ none.
 7. The browser refuses to show the daemon's reply to the script. That refusal
    doesn't matter, because the peer is already verified.
 
-**Result:** the attack works. D-087 demonstrated this.
+**Result:** the attack works. It was demonstrated against the daemon before the
+custom header check existed.
 
-## Scenario 2: the same attack against the daemon with D-087's custom header check
+## Scenario 2: the same attack against the daemon with the custom header check
 
 The daemon now refuses any state-changing request that lacks the header
 `X-Cogmer: 1`.
@@ -102,9 +102,9 @@ permission because the origins differ.
     script can then send the conversation to the attacker.
 
 **Result:** the custom header does nothing, because the browser never asked
-permission. The `Origin` check, which D-087 treats as a minor second layer, is the
-only thing stopping writes. Nothing stops reads, as long as the attacker's page can
-learn a room's address. That part hasn't been confirmed.
+permission. The `Origin` check, which the design treats as a minor second layer, is
+the only thing stopping writes. Nothing stops reads, as long as the attacker's page
+can learn a room's address. That part hasn't been confirmed.
 
 ## Scenario 4: DNS rebinding against a daemon that checks `Host`
 
