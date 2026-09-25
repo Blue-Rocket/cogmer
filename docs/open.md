@@ -87,6 +87,20 @@ against a 100k threshold, so `84a0751:docs/phase0a-findings.md` shows only that 
 started during that turn. Nobody has checked what turn reassembly does with a compaction
 marker and summary record in the middle of the turn it reassembles.
 
+**§19 (incremental context injection) reads as if a turn is delivered once it is
+injected.** Its steps run "inject them into Claude", then "update the session's
+incorporated-event state", so a reader takes delivery to advance at injection. A
+turn counted that way is lost for good whenever the hook times out or the daemon
+dies before it replies, and the user's session never sees it. D-014 (derive delivery
+state from transcript evidence) counts a turn only once the session's transcript
+shows it arrived. The requirement §19 should state is the user's: a colleague's turn
+is never counted as delivered to a session that did not receive it.
+
+**D-007 (record `COMPACTION` events as observability) is not built.** No code records
+a compaction, so if the summarizer stops keeping a colleague's turns, a room's
+history shows nothing at the moment it happened. §7 lists the event type among those
+to design for later. Either the event is built, or D-007 is withdrawn.
+
 **Re-pick the overlay relay when it cannot be reached.** D-104 pins it so the
 address is stable. Nothing re-picks, so a machine that relocates past its pinned
 relay is unreachable and nothing says so. Change driven by failure, never by
@@ -139,6 +153,10 @@ that are not decisions, and what each citation means.
   here;
 - one decision and nothing to move (9): D-005, D-007, D-009, D-012, D-013, D-112,
   D-124, D-125, D-126.
+
+D-098, D-100, D-122, D-124, D-125 and D-126 were moved into `docs/writing.md` as rules
+on 2026-09-25 (W-28, the decision log holds only decisions about the system), so they
+need no split. The counts here describe `f11e871` and include them.
 
 Splitting all 59 adds 86 entries, and 146 citations of them mean something other
 than the first decision, so each needs checking against its few words. Four
@@ -465,49 +483,3 @@ An item on **idempotency** was in `residual-concerns.md` and is gone: the file w
 deleted on the strength of a reading from earlier in the session, and being
 untracked there is no copy. `/cogmer:peer-pair` repeated on a completed pairing was
 worked in D-107 and D-108, which may or may not be what it said.
-
-## The specification lags what was decided
-
-**§19 (incremental context injection) does not say when a session's delivery state
-advances.** Its fifth step is "update the session's incorporated-event state", bound
-to nothing, and it never says whether an event counts as delivered when it is offered
-to the hook or when it is seen in the session. D-014 (derive delivery state from
-transcript evidence) decides the second, and the code does it, but a second
-implementation reading §19 would advance delivery at injection and lose an event
-whenever the hook times out or the daemon dies before it replies. The fix is a sentence in §19: delivery advances only on
-evidence that the session received the injection.
-
-**§19 does not say whether a user's own turns are excluded by session or by peer.**
-"Exclude Alice's own Claude conversation where it would duplicate existing context"
-supports either. Excluding by peer would hide each of a user's two sessions in one
-room from the other. The code excludes by `claudeSessionId`, and a test checks that a
-second session on the same machine still sees a peer's events. The fix is to name
-`claudeSessionId` in §19.
-
-**Nothing in the specification says it depends on Claude Code behaviours that are
-undocumented.** `cmd/cogmer/behaviors.go` lists them and `cogmer doctor` checks them
-against the installed version, but a second implementation would not know to. The fix
-is a requirement that the relied-on behaviours are listed and checked against the
-installed Claude Code, and that a failed check disables the feature rather than
-breaking the session.
-
-**The specification never mentions that Claude Code compacts a session.** §21
-(context window management) covers only injection limits. §3.4 (preserve actual
-conversation) says "Do not replace conversations with summaries" and §21 "Do not
-initially introduce AI summarization", yet compaction summarizes a colleague's
-injected turns inside the session whatever cogmer does. The room's own history stays
-verbatim, which is what both sections protect. The fix is to state in §21 what a
-compaction leaves intact (the session id, the transcript, which B14 to B17 check),
-and to scope both prohibitions to the room and its replication, since what a session
-keeps after a compaction is outside cogmer's control.
-
-**D-007 (record `COMPACTION` events as observability) is not built, and §7 lists the
-type as one to design for later.** No code records a compaction, so a change in what
-the summarizer keeps would leave no trace in a room's history. Either the event is
-built and §7 moves it to the minimum types, or D-007 is withdrawn.
-
-**§25 (security) does not set out in one place where a room's data goes.** §28 says
-injection carries a colleague's turns to another user's model provider under that
-user's account, and §12a covers admission, but §25 stops at the network boundary.
-Nothing scopes what may be shared once a peer is admitted: admission is all or
-nothing for a room.

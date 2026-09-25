@@ -40,8 +40,10 @@ var (
 	// specification, a decision, a behavior, a file, or a URL.
 	supportSource = regexp.MustCompile("§\\d|\\bD-\\d{3}\\b|\\bB\\d{2}\\b|https?://|`[^` ]*(/|\\.(md|go|sh|json|html))[^` ]*`")
 	// Words that describe the system as it stood when a decision was made.
-	historyWords   = regexp.MustCompile(`(?i)\b(stays|stay|is kept|are kept|continues to|continue to|already|used to|previously|formerly|no longer|replaced|replaces)\b`)
-	tombstoneWhy   = regexp.MustCompile("^\\*\\*Status:\\*\\* withdrawn \\d{4}-\\d{2}-\\d{2}\\. (?s:.*)Why:\\s+`([0-9a-f]{7,40})(?::([^`]+))?`(?:,\\s+\"([^\"]+)\")?\\.$")
+	historyWords = regexp.MustCompile(`(?i)\b(stays|stay|is kept|are kept|continues to|continue to|already|used to|previously|formerly|no longer|replaced|replaces)\b`)
+	tombstoneWhy = regexp.MustCompile("^\\*\\*Status:\\*\\* withdrawn \\d{4}-\\d{2}-\\d{2}\\. (?s:.*)Why:\\s+`([0-9a-f]{7,40})(?::([^`]+))?`(?:,\\s+\"([^\"]+)\")?\\.$")
+	// A decision placed in docs/writing.md names the rule or the section that holds it.
+	movedTo        = regexp.MustCompile("^\\*\\*Status:\\*\\* moved \\d{4}-\\d{2}-\\d{2} to `docs/writing\\.md`,\\s+(?:(W-\\d{2})\\s+\\((?s:[^)]+)\\)|\"((?s:[^\"]+))\")\\.$")
 	decisionStatus = regexp.MustCompile(`^\*\*Date:\*\* \d{4}-\d{2}-\d{2} · \*\*Status:\*\* (active|not built)$`)
 	isoDate        = regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}\b`)
 	// What a pattern may not name: this project's decisions, sections of its
@@ -101,6 +103,9 @@ func structureProblems(doc string, src []byte) []string {
 			if doc == specification {
 				for _, m := range isoDate.FindAllIndex(n.Segment.Value(src), -1) {
 					report(n.Segment.Start+m[0], "a date; the specification says what must be true, not when (W-81)")
+				}
+				for _, m := range decisionCitation.FindAllIndex(n.Segment.Value(src), -1) {
+					report(n.Segment.Start+m[0], "cites a decision; a requirement states what must be true without the log (W-84)")
 				}
 			}
 		}
@@ -268,6 +273,8 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 		{"date in the specification", specification, "The daemon started on 2026-09-22 and\nis still running today, over\nseveral lines, with no header.\n", 1},
 		{"date in a code span in the specification", specification, "Write `2026-09-22` there.\n", 0},
 		{"date elsewhere", "x.md", "Run on 2026-09-22.\n", 0},
+		{"a decision cited in the specification", specification, "Names collide, so a room is keyed on its id (D-017).\n", 1},
+		{"a decision in a code span in the specification", specification, "Write `D-017` there.\n", 0},
 		{"a durable record citing working material", "x.md", "Taken from `docs/work/split.md`.\n", 1},
 		{"open.md citing working material", "docs/open.md", "**Split the log.** See `docs/work/split.md`.\n", 0},
 		{"working material with the findings fields", "docs/work/split.md", "# T\n\n**Run:** a\n\n**Result:** b\n", 0},
@@ -304,9 +311,16 @@ func TestLaterDecisionsFollowTemplate(t *testing.T) {
 
 // committedHeadings returns the headings of a file as a commit holds it, named
 // as <commit>:<path>, or of a commit's message and diff when named by the commit
-// alone, or false if the commit or the file does not exist.
+// alone, or false if the commit or the file does not exist. For docs/writing.md
+// it reads the tree, and includes each rule's ID.
 func committedHeadings(ref string) (map[string]bool, bool) {
-	src, err := exec.Command("git", "-C", "../..", "show", ref).Output()
+	var src []byte
+	var err error
+	if ref == "docs/writing.md" {
+		src, err = os.ReadFile("../../" + ref)
+	} else {
+		src, err = exec.Command("git", "-C", "../..", "show", ref).Output()
+	}
 	if err != nil {
 		return nil, false
 	}
@@ -315,13 +329,19 @@ func committedHeadings(ref string) (map[string]bool, bool) {
 		if strings.HasPrefix(line, "#") {
 			headings[strings.TrimSpace(strings.TrimLeft(line, "#"))] = true
 		}
+		// A rule of the writing guide is a paragraph opening with its ID.
+		if m := ruleOpening.FindStringSubmatch(line); m != nil {
+			headings[m[1]] = true
+		}
 	}
 	return headings, true
 }
 
+var ruleOpening = regexp.MustCompile(`^(W-\d{2})\. `)
+
 // decisionProblems reads the log as Markdown, so that a field name inside a code
-// block or quoted in a sentence is not mistaken for the field (D-124, the writing
-// test reads documents through goldmark). An entry runs from its heading to the
+// block or quoted in a sentence is not mistaken for the field (docs/writing.md,
+// "Enforcement"). An entry runs from its heading to the
 // next heading of level 2 or above.
 func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool)) []string {
 	src := []byte(log)
@@ -355,6 +375,21 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 	}
 
 	for _, e := range entries {
+		if len(e.body) > 0 && strings.HasPrefix(nodeSource(e.body[0], src), "**Status:** moved") {
+			moved := movedTo.FindStringSubmatch(nodeSource(e.body[0], src))
+			guide, _ := headingsOf("docs/writing.md")
+			switch {
+			case len(e.body) > 1:
+				report(e.id, "is a tombstone and has more than its status line (W-37)")
+			case moved == nil:
+				report(e.id, "is a moved tombstone without \"to `docs/writing.md`, W-NN (<words>).\" or a quoted heading (W-37)")
+			case moved[1] != "" && !guide[moved[1]]:
+				report(e.id, "moved to %s, which docs/writing.md does not hold (W-37)", moved[1])
+			case moved[2] != "" && !guide[strings.Join(strings.Fields(moved[2]), " ")]:
+				report(e.id, "moved to %q, which is not a heading of docs/writing.md (W-37)", moved[2])
+			}
+			continue
+		}
 		if len(e.body) > 0 && strings.HasPrefix(nodeSource(e.body[0], src), "**Status:** withdrawn") {
 			why := tombstoneWhy.FindStringSubmatch(nodeSource(e.body[0], src))
 			switch {
@@ -568,12 +603,17 @@ func firstWords(s string) string {
 }
 
 func TestDecisionProblemsCatchesEachRule(t *testing.T) {
+	// Built at run time, so that the rule index check does not read these
+	// samples as rules this test enforces.
+	rule := "W-"
 	headings := func(rel string) (map[string]bool, bool) {
 		switch rel {
 		case "84a0751:docs/x-findings.md":
 			return map[string]bool{"Why it went": true}, true
 		case "05f89c4":
 			return map[string]bool{}, true
+		case "docs/writing.md":
+			return map[string]bool{rule + "42": true, "Enforcement": true}, true
 		}
 		return nil, false
 	}
@@ -612,6 +652,11 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 		{"tombstone citing a commit's message", "## D-076 — T\n\n**Status:** withdrawn 2026-09-20. Replaced by D-077 (words). Why: `05f89c4`.\n", nil},
 		{"tombstone citing a missing commit", "## D-076 — T\n\n**Status:** withdrawn 2026-09-20. Replaced by D-077 (words). Why: `1234567`.\n", []string{"D-076 cites 1234567, which does not exist"}},
 		{"tombstone citing a file with no heading", "## D-076 — T\n\n" + strings.Replace(tombstone, ", \"Why it went\"", "", 1), []string{"D-076 is a tombstone without"}},
+		{"moved to a rule", "## D-128 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, " + rule + "42\n(evidence is cited).\n", nil},
+		{"moved to a section", "## D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, \"Enforcement\".\n", nil},
+		{"moved to a missing rule", "## D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, " + rule + "99 (x).\n", []string{"D-124 moved to " + rule + "99"}},
+		{"moved to a missing section", "## D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, \"Elsewhere\".\n", []string{"D-124 moved to \"Elsewhere\""}},
+		{"moved with more", "## D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, \"Enforcement\".\n\nMore.\n", []string{"D-124 is a tombstone and has more"}},
 		{"tombstone citing a file in the tree", "## D-076 — T\n\n" + strings.Replace(tombstone, "84a0751:", "", 1), []string{"D-076 is a tombstone without"}},
 		{"tombstone citing a missing heading", "## D-076 — T\n\n" + strings.Replace(tombstone, "Why it went", "Elsewhere", 1), []string{"D-076 cites \"Elsewhere\""}},
 	}

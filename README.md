@@ -133,7 +133,7 @@ Claude Code ships as a native binary and a colleague may have no Node installed.
 
 | | |
 |---|---|
-| [`Shared Claude Sessions.md`](Shared%20Claude%20Sessions.md) | the specification: what must be true |
+| [`Shared Claude Sessions.md`](Shared%20Claude%20Sessions.md) | the specification: the system as a user experiences it |
 | [`docs/decisions.md`](docs/decisions.md) | why, and what was rejected — read before proposing a simplification, because some of the awkwardness is load-bearing |
 | [`docs/open.md`](docs/open.md) | actions not yet taken, decisions not yet made |
 | [`docs/phases.md`](docs/phases.md) | the phases the work was planned in, and how each ended |

@@ -37,6 +37,11 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-22 | a permitted judgement word carries a marker | checked |
 | W-23 | none of the other listed words | checked |
 | W-24 | no status decoration | checked |
+| W-25 | each fact is written in one document | judgement |
+| W-26 | a file loaded every session holds what no check covers | judgement |
+| W-27 | a present defect is written only in `open.md` | judgement |
+| W-28 | the decision log holds only decisions about the system | judgement |
+| W-29 | a rule says what to do and why | judgement |
 | W-30 | a decision has its fields, in order | checked |
 | W-31 | a decision's title states the decision | judgement |
 | W-32 | a decision describes only the present | judgement |
@@ -49,6 +54,7 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-39 | a rewrite keeps every fact | judgement |
 | W-40 | an entry records one decision | judgement |
 | W-41 | a decision never points to open work | checked |
+| W-42 | evidence is cited by the commit that recorded it | judgement |
 | W-50 | an `open.md` item names the problem | judgement |
 | W-51 | a long `open.md` item holds detail of another kind | judgement |
 | W-52 | delete a finished `open.md` item | judgement |
@@ -61,10 +67,14 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-70 | a behaviour's `Title` is an observed fact | judgement |
 | W-71 | a behaviour's `Reliance` starts with what breaks | checked |
 | W-72 | a behaviour check's error says what changed | judgement |
+| W-75 | `README.md` is for somebody who has not installed it | judgement |
+| W-76 | `plugin/README.md` is for somebody who has | judgement |
 | W-80 | one requirement per paragraph of the specification | judgement |
 | W-81 | the specification carries no dates | checked |
 | W-82 | every requirement is grounded in a benefit | judgement |
 | W-83 | the specification carries no status and no plan | judgement |
+| W-84 | the specification cites no decision | checked |
+| W-85 | a change to what the user experiences changes the specification with it | judgement |
 | W-90 | the form of a commit message | judgement |
 | W-91 | a commit that records evidence says how it was run | judgement |
 
@@ -155,28 +165,25 @@ open item before it is deleted.
 
 ## Words and marks to avoid
 
-These are the habits this repository overuses, counted on 09-22 across the five main
-documents; the counts include every use.
-
 W-20. Do not use an em-dash. The one allowed is the one in a decision's heading,
 `## D-NNN — <title>`. The em-dash is banned for what it usually does here: it lets
 a finished sentence carry a second idea, often as a twist or a reveal ("handshakes
 — seconds of work"), or holds a sentence open around an aside. Replacing it with a
 comma or a semicolon keeps that structure and defeats the rule. Split the sentence
-instead. It appeared 1,020 times; use two sentences, or a colon only when what
-follows explains or lists what came before.
+instead: use two sentences, or a colon only when what follows explains or lists what
+came before.
 
 W-21. Do not use the words in this table.
 
-| avoid | count | use instead |
-|---|---|---|
-| "load-bearing" | 18 | say what depends on it |
-| "honest", "honestly" | 18 | drop it; state the fact |
-| "the point", "is the point" | 19 | say what the thing is for |
-| "not merely" | 5 | "also", or two sentences |
+| avoid | use instead |
+|---|---|
+| "load-bearing" | say what depends on it |
+| "honest", "honestly" | drop it; state the fact |
+| "the point", "is the point" | say what the thing is for |
+| "not merely" | "also", or two sentences |
 
-W-22. Use "precisely" and "exactly" (114 uses) only where the word carries meaning,
-and "deliberately" (39 uses) only where it contrasts with an accident; otherwise
+W-22. Use "precisely" and "exactly" only where the word carries meaning, and
+"deliberately" only where it contrasts with an accident; otherwise
 drop it. A use that stays carries a marker directly after the word, giving the
 reason it stays. The marker is an HTML comment, so it does not show when the
 document is rendered:
@@ -185,22 +192,56 @@ document is rendered:
 The relay was chosen deliberately<!-- writing: contrasts with an accident -->.
 ```
 
-No other word takes a marker.
+No other word takes a marker. Nothing in the text separates a permitted use from an
+emphatic one, so without a marker the test could only fail every use or none. A list
+of exceptions by file and line in the test would move with every edit above them,
+and would keep the reason away from the word it excuses. Nothing checks that a
+marker's reason is true.
 
 W-23. Also avoid: leverage, utilize, robust, seamless, comprehensive, ensure,
 nuanced, testament, tapestry, delve, crucial. Say what actually happens.
 
 W-24. No status decoration: no check marks, emoji, "Note:" or "Important:".
 
+## Where a thing is written
+
+The table in `CLAUDE.md`, "Where a thing gets written down", names each document and
+the question it answers.
+
+W-25. Write each fact in the one document whose question it answers, and nowhere
+else.
+
+W-26. A file loaded into every session, such as `CLAUDE.md`, holds only what no check
+covers: a prohibition, a judgement, a residual risk. Where a test or a behaviour
+check covers a fact, the file points at the check and states the rule that depends
+on it, because the unchecked copy is the one that goes wrong without anybody seeing.
+
+W-27. A defect in the present code is written only in `open.md`. A sentence about
+what the code gets wrong is false once the defect is fixed, and in a decision or the
+specification it makes the text around it false with it.
+
+W-28. The decision log holds only decisions about the system: what it does, and the
+detail beneath the specification. How a document is written, where a thing is
+written, and how the documents are checked are rules in this guide, where a rule and
+its reason can be corrected together.
+
+W-29. A rule in this guide states what to do. It gives a reason only where the rule
+would surprise a reader, and the reason says what the rule protects, in general
+terms, never what happened while the rule was absent. It names an alternative only
+where a maintainer would otherwise be likely to propose it again, in one sentence.
+
 ## Templates
 
 ### A decision (`docs/decisions.md`)
 
 A decision entry is a log of what was decided and what supports it. It is not the
-story of how the decision was reached. What was observed, measured or tried is
-recorded in a commit, and the decision cites the commit (D-128, evidence of a past
-run is cited by the commit that recorded it). What someone else's software does is a
-behaviour in `cmd/cogmer/behaviors.go`, and what cogmer's own code does is a test.
+story of how the decision was reached, and what was observed on the way is cited
+under W-42.
+
+A decision sits beneath the specification. It fills in what is too fine for a
+requirement, such as an implementation detail, or sets out a necessary exception to
+one, and it need not relate to any requirement. W-84 says why the specification
+cites no decision.
 
 ```markdown
 ## D-NNN — <what was decided, as a statement>
@@ -277,6 +318,14 @@ The cited commit's message, or a file it holds cited as `<commit>:<path>`,
 "<heading>", says what the withdrawn decision was, what showed it wrong, and the
 evidence, so that nobody has to reconstruct the argument to avoid repeating it.
 
+A decision that W-28 places in this guide becomes a tombstone of a second kind,
+naming the rule that holds it, or the section when no one rule does:
+
+```markdown
+**Status:** moved YYYY-MM-DD to `docs/writing.md`, W-NN (<words>).
+**Status:** moved YYYY-MM-DD to `docs/writing.md`, "<heading>".
+```
+
 W-38. When a later decision changes only part of an earlier one, rewrite the earlier
 entry so that it states only what still holds, and record the removed part's
 reason in a commit in the same way.
@@ -301,6 +350,15 @@ does not decide, which stays true after a later decision settles the question. T
 open item points the other way, citing the decision it concerns: "D-123 (finding a
 daemon by the addresses it holds) leaves undecided whether…". The same holds for the
 specification, which W-83 keeps free of plans.
+
+W-42. Evidence of a past run is cited by the commit that recorded it, as
+`<commit>:<path>` for a file or `<commit>` for a message, and no document retells it.
+What someone else's software does is a behaviour in `cmd/cogmer/behaviors.go`, and
+what cogmer's own code does is a test. A commit never changes, so a citation of it
+needs no upkeep, while a retelling is a new set of claims about the run that every
+edit has to check against the original again. A findings document kept in the tree
+is that retelling. A reader has to run `git show` to read the evidence, and evidence
+has to be committed before anything can cite it.
 
 ### An item in `docs/open.md`
 
@@ -378,11 +436,28 @@ this changes, <what breaks>. <How it shows up, or that it fails silently>."
 
 W-72. The error the check returns says what changed and where to look next.
 
+### The two READMEs
+
+W-75. `README.md` is what somebody who has not installed cogmer needs, in this order:
+what it is, the two lines that install it, pairing, a room, why it might be worth it,
+what it does not do, and then how to work on it. Why it might be worth it is the
+two-peer result, stated with its limit: it happened between two sessions one person
+was watching. It comes before the commands, because somebody deciding whether to
+install it reads the first screen and stops. A README that serves both audiences
+serves neither in its first screen, since one reader wants the install lines and the
+other wants what is unfinished.
+
+W-76. `plugin/README.md` is what somebody who has installed cogmer needs: the command
+reference and where the binary lives. Neither README repeats the other, and neither
+says what is built or unfinished, which is in `open.md` (W-25).
+
 ### A requirement in the specification (`Shared Claude Sessions.md`)
 
 W-80. State one requirement per paragraph, in the present tense: "The daemon stops
 only a process it has identified as a cogmer daemon." Give at most one sentence of
-reason, and point to the decision for the rest. No evidence and no history.
+reason. No evidence and no history. Evidence has a method, a date and a version,
+and a requirement has none, so evidence written as a requirement reads as timeless
+and goes stale without anything in the sentence saying so.
 
 W-81. The specification carries no dates.
 
@@ -392,6 +467,18 @@ the work was planned in are in `docs/phases.md`, actions not yet taken are in
 `docs/open.md`, and what has been built is the code. A requirement is stated the same
 way whether or not it is met yet. Status in the specification goes stale with every
 commit, and a reader cannot tell a requirement from a report.
+
+W-84. The specification cites no decision. It describes the system as the user
+experiences it, its boundaries and the harms it avoids, in words a reader can apply
+without the decision log. A decision that extends a requirement or makes an exception
+to one cites the requirement's § section instead. A requirement that pointed to a
+decision for its reason would read as unfinished wherever the log says more, and
+would point at a tombstone once the decision was withdrawn. Restating decisions in
+the specification instead fills it with detail no user experiences, and the two
+copies drift apart.
+
+W-85. A change to what the user experiences changes the specification in the same
+commit as the decision or the code that makes it.
 
 W-82. Every requirement is grounded in a benefit to the user or to the product
 owner, and its sentence of reason says what the benefit is and whose it is. A
@@ -423,15 +510,22 @@ observations, never instructions: what to do about them goes in `docs/open.md`.
 
 `TestDocumentsFollowWritingGuide`, in `cmd/cogmer/writing_test.go`, checks every
 document a person reads: the Markdown files at the repository root, in `docs/` and
-in `plugin/`. It reports each word and mark listed above, with its line. It reads
-the documents as Markdown and checks only prose, so code spans and code blocks are
-exempt (D-124, the writing test reads documents through goldmark). The files in
-`plugin/commands/` are instructions to the model and are not checked.
+in `plugin/`. It reports each word and mark listed above, with its line. The files
+in `plugin/commands/` are instructions to the model and are not checked.
+
+The test parses each document with `github.com/yuin/goldmark` and checks only the
+prose, because the rules govern prose and the documents quote code that breaks them:
+the decision template's own heading, with its em-dash, sits in a fenced block. Code
+spans, code blocks and text inside HTML blocks are not checked. goldmark is pure Go,
+so every target still builds with `CGO_ENABLED=0`, and only test files import it, so
+the binary does not contain it. goldmark can split one sentence into several text
+nodes, so the test joins a document's prose before matching a phrase. Scanning lines
+with regular expressions would need its own handling for indented code, code spans
+and table cells, and each one missed reports a problem in text no rule governs.
 
 A use of "precisely", "exactly" or "deliberately" passes only with a marker
-directly after it. The test also reports a marker that gives no reason, and a
-marker that follows no word it can excuse (D-125, a permitted use carries a
-marker).
+directly after it (W-22). The test also reports a marker that gives no reason, and a
+marker that follows no word it can excuse.
 
 Documents not yet rewritten are listed in `writingNotYetRewritten` and exempt. The
 test fails when a listed document passes, so that it comes off the list in the
@@ -451,7 +545,7 @@ so citations of it still resolve.
 template's field names, in decisions and working material, and as the opening of an
 item in `open.md`. No header sits over a section of three
 lines or fewer; a document's title and the headers a template defines are exempt.
-The specification carries no dates. No document other than `open.md` and working
+The specification carries no dates and cites no decision. No document other than `open.md` and working
 material cites `docs/work/`. The patterns document names no decision, section,
 behaviour or the project itself, and no document other than `CLAUDE.md` names the
 values or patterns document. These checks share the exemption list with the
@@ -468,8 +562,9 @@ after D-123, reading the log as Markdown so that a field name inside code does n
 count as the field. It checks W-30, W-33, W-34, W-36 and W-41 on each; for W-41 it
 rejects a mention of `open.md` or `docs/work/`, or a link to a ClickUp, GitHub issue,
 Jira or Linear task. Every tombstone,
-whatever its number, must hold only its status line, and its "Why:" must name a
-commit that exists, or a file in a commit and a heading that file holds there.
+whatever its number, must hold only its status line. A withdrawn entry's "Why:" must
+name a commit that exists, or a file in a commit and a heading that file holds
+there. A moved entry must name a rule or a heading this guide holds.
 
 `TestWritingRulesAreIndexed`, in `cmd/cogmer/writingrules_test.go`, checks that
 the rule index above and the checks agree. Every rule in the index has a paragraph
@@ -477,8 +572,14 @@ starting with its ID. Every rule marked checked is cited by some check's message
 and every ID a check cites is in the index and marked checked.
 
 The rules no test can decide are reviewed by the `writing-review` skill in
-`.claude/skills/writing-review/` (D-126, rules that need a reader are reviewed by a
-skill a maintainer runs). Run it on a document before taking it off the exemption
-list, and on a change to a document before committing it. It runs the checks above
-on the named documents whether or not they are exempt, reviews the rest, and
-reports findings without changing anything.
+`.claude/skills/writing-review/`, which a maintainer runs. Run it on a document
+before taking it off the exemption list, and on a change to a document before
+committing it. It runs the checks above on the named documents whether or not they
+are exempt, reviews the rest, and reports findings without changing anything. It
+reads this guide in full each time and restates none of its rules. Every finding
+quotes the text it is about, and `TestReviewFindingsQuoteTheirDocuments` in
+`review_test.go` drops any finding whose quote is not in the file, because a model's
+review can name text that does not exist. The review is not part of `go test`,
+because it would need the network and a model, cost money on every run, and give
+different results from run to run. Its judgement is not reproducible, and nothing
+runs it unless somebody asks.

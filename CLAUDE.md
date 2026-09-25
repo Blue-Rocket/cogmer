@@ -42,17 +42,18 @@ they rot.
 
 | document | answers |
 |---|---|
-| `Shared Claude Sessions.md` | what must be true |
+| `Shared Claude Sessions.md` | the system as the user experiences it: its boundaries, and the harms it avoids |
 | `docs/values.md` | what this project holds itself to |
 | `docs/patterns.md` | architectural patterns that apply beyond this project |
-| `docs/decisions.md` | why, and what was rejected |
-| a commit, cited as `<commit>:<path>` or `<commit>` (D-128) | what we observed when we tried it, where no test can hold the evidence |
+| `docs/decisions.md` | the detail beneath the spec, and exceptions to it: why, and what was rejected |
+| `docs/writing.md` | how a document is written, where a thing goes, and how the documents are checked |
+| a commit, cited as `<commit>:<path>` or `<commit>` (W-42 in `docs/writing.md`) | what we observed when we tried it, where no test can hold the evidence |
 | `cmd/cogmer/behaviors.go` | what someone else's software does that we rely on |
 | `docs/open.md` | actions not yet taken, decisions not yet made |
 | `docs/phases.md` | the phases the work was planned in, and how each ended |
 | `docs/work/` | material for one open item, deleted with it; nothing durable cites it |
 | `docs/explanations/` | how something works, walked through for a reader who has forgotten; cites nothing, and no other writing rule applies |
-| `README.md` | what somebody who has not installed it needs (D-122) |
+| `README.md` | what somebody who has not installed it needs (W-75) |
 | `plugin/README.md` | what somebody who has installed it needs |
 
 - Evidence never goes in the spec — put the requirement it justifies there.
@@ -60,8 +61,10 @@ they rot.
   itself, and what our own code does is a test. Neither is retold anywhere else.
 - An open item is deleted when it is done, never marked done. Nothing records status
   except the phase table in `docs/phases.md`.
-- A decision that changes what the system *is* updates the spec in the same pass
-  (D-098).
+- A change to what the user experiences changes the spec in the same commit (W-85).
+- `docs/decisions.md` holds only decisions about the system. How documents are
+  written, where a thing goes and how they are checked are rules in
+  `docs/writing.md` (W-28).
 
 ## The local physics
 

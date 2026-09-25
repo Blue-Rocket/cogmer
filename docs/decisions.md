@@ -5053,60 +5053,9 @@ separator with two jobs and wants a real encoding.
 
 ## D-098 — A decision that changes what the system is updates the specification in the same pass
 
-**Date:** 2026-09-20 · **Status:** active (spec pass done)
+**Status:** moved 2026-09-25 to `docs/writing.md`, W-85 (a change to what the user
+experiences changes the specification with it).
 
-**Context.** Asked whether the answers to two open concerns had ended up in the
-specification or only in this log. Only here — and checking found that nine
-decisions recorded in one day had produced no specification edits at all, while the
-specification had gone on stating the opposite.
-
-**The worst of it was stated as a requirement, not as description.** §29 said *"A
-slash command may point at them. It must not perform them"* of pairing and
-verification, which is precisely what was built. §31 said pairing and verification
-stay at a terminal. Somebody reading the specification first — which CLAUDE.md
-instructs, and which section numbers throughout the code invite — would have
-concluded the implementation was wrong.
-
-**The division of labour was right and incompletely applied.** This log records why,
-including what was rejected; the specification records what the system is. What was
-missing is that a decision changing what the system *is* has to update the
-specification in the same pass. Recording the rationale felt like finishing, and it
-is half.
-
-**This is the same failure as review finding A1**, reopened because the
-implementation settled when delivery advances and §19 never caught up. Two instances
-of one pattern is a pattern.
-
-**What the pass changed**, with no superseded text left in place:
-
-- **§6** gains three names and what each is for, the distinction between a chosen
-  display name and an inferred one, and when a person is offered the choice.
-- **§12** gains the third part of a pairing string, the requirement that pairing
-  takes a name before the comparison rather than after, and the three endings of an
-  attempt. Its worked example and its list of operations were both stale.
-- **§20** replaces an interpolated-markup example with the encoded form, and states
-  that a fact the receiving side knows is a field of its own rather than text beside
-  a claim.
-- **§25** gains the local API boundary: loopback is not a boundary against a page in
-  this machine's own browser, the requirement is a header such a page cannot send,
-  and the referrer is recorded as rejected so it is not added later.
-- **§29** replaces two homes with three, retracts the prohibition on a slash command
-  performing the ceremony, and states the prefix rule and why there is no command
-  named after the system.
-- **§31** corrects the phase note that said the ceremony stays at a terminal.
-
-**The specification says what the system is, and nothing about what it was.** The
-first version of this pass annotated each correction with the reasoning it replaced
-— "this specification previously concluded that they did" — on the theory that the
-old rule had been sound and a reader deserved to know why it changed. That is
-exactly the burden the no-superseded-text rule exists to remove. These documents are
-hard enough to read without carrying every way the system might have worked and
-does not, and a reader who wants that has this log, where tracking alternatives is
-the whole job. Corrections are clean replacements; the archaeology stays here.
-
-**Revisit when:** never — this is a working rule rather than a decision with a
-condition. If it lapses, the symptom is a specification that contradicts the code,
-and the check is `git log --name-only` over a day's decisions.
 
 ## D-099 — The injected block carries the label, and says it is the name to use
 
@@ -5151,63 +5100,8 @@ change only.
 
 ## D-100 — Each document answers one question, and a finding is not a commitment
 
-**Date:** 2026-09-20 · **Status:** active · **Generalises** D-098
+**Status:** moved 2026-09-25 to `docs/writing.md`, "Where a thing is written".
 
-**Context.** Asked whether findings belong in the specification, in the course of
-deciding what a rewritten D-091 should contain. They do not, and working out why
-produced a rule that covers more than findings.
-
-**A finding is evidence; a specification statement is a commitment.** Evidence has a
-method, a date and a version. A commitment has none of those and is true because it
-is required. "Injected context survives compaction" was true of one Claude Code
-version under one test; written into the specification it reads as timeless, and
-nothing in the sentence says otherwise. The choice then is to let it rot quietly or
-to stamp the specification with versions and dates, which turns it into a laboratory
-notebook with requirements scattered through it.
-
-The requirement a finding justifies has no such problem. "The delivery watermark is
-keyed on session id and does not rewind at compaction" stays true until it is
-deliberately changed.
-
-**Review finding C2 is valid and is not asking for this.** It observes that
-compaction findings live only in a findings document — and the gap it names is that
-the specification makes **no commitment at all** about compaction while the
-implementation depends on several. State the requirements; cite the finding only
-where a requirement would otherwise look arbitrary. "Findings do not belong in the
-specification" and "C2 is a real gap" are both true, because C2 is about the missing
-commitment rather than the missing evidence.
-
-**A finding about someone else's software belongs in the behaviour registry.** It is
-the only one of these documents that **tests itself**, so a fact recorded there
-cannot rot silently — which is the exact failure that makes findings dangerous in a
-specification. That is review finding C1 approached from the other side.
-
-**Current-state defects belong in none of them.** This was caught in the draft of
-D-091, which listed what the code gets wrong today as evidence for its rule. Those
-sentences are false the moment the defects are fixed, and they take the surrounding
-entry down with them. A decision states the rule and may say once that the code does
-not implement it; the defects are work, and work dies when it is done.
-
-**`CLAUDE.md` is not an exception, though it was first written as one.** The
-argument for exempting it — that it loads itself every session, so a duplicate there
-is a warning where warnings work — justifies any duplicate anywhere, and its only
-real support was that the recitals already existed.
-
-The rule that actually holds is sharper: **what earns a place in an always-loaded
-file is what no check covers.** A prohibition, a judgement call, a residual risk.
-Where `doctor` already checks a fact, point at the behaviour and state the rule that
-depends on it, because the unchecked copy is the one that goes quietly wrong.
-
-Applying it removed fifteen lines and left the file more useful. Two sections
-reciting `Stop` and compaction behaviour became statements of what the code does and
-why, pointing at B04, B05, B09 and the compaction tier. What survived unchanged is
-the one part nothing can assert — that context surviving a compaction is the
-summarizer's judgement rather than a format guarantee. The MCP section survived for
-the same reason: it records an **absence**, and an absence has no assertion, so the
-claim has nowhere else to live.
-
-**Revisit when:** a fifth kind of document appears, at which point the question to
-ask of it is which question it answers that none of the others do.
 
 ## D-101 — Peer connections are TLS pinned to the key already verified
 
@@ -6599,52 +6493,9 @@ as a 404 and a source build, not as a message saying the convention changed.
 
 ## D-122 — The two READMEs are split by whether you have installed it
 
-**Date:** 2026-09-22 · **Status:** active (implemented)
+**Status:** moved 2026-09-25 to `docs/writing.md`, W-75 (`README.md` is for somebody who
+has not installed it).
 
-**Context.** Until the repository was public the only reader of `README.md` was the
-person writing it, so a lab notebook was the right document: it opened with §30's
-question being answered affirmatively, then phase status, then findings links, then
-how to build from source and register hooks by hand. The audience changed the moment
-the repository was pushed. The first reader is now the colleague who was handed the
-repository's name, and Phase 13 is about that person specifically.
-
-**The second reason is rot, and it had already happened.** The table above governing
-where a thing gets written down gives `open.md` "what is to do, what is undecided,
-where things stand" — and the README's status section was exactly that, in a second
-place. It claimed "blocked on the repository" until it was hand-edited, and removing
-it exposed that `open.md` had drifted the other way, still calling Phase 5 next long
-after Phase 5, 7 and everything else had finished. Two documents owning one fact is
-how both end up wrong.
-
-**Decision.** `README.md` is what somebody who has not installed it needs: what it
-is, the two lines that install it, pairing, a room, why it might be worth it, what it
-does not do, and — below all of that — how to work on it. `plugin/README.md` is what
-somebody who has installed it needs: the command reference and where the binary
-lives. Neither repeats the other, and current state lives in `open.md`.
-
-**What was deliberately kept at the top rather than buried.** The §30 result — a
-second session resolving a referent from the first, disagreeing with it, and finding
-a defect it had missed — is the most persuasive thing in the repository and the only
-reason anybody would spend ten minutes on the install. A user-first README that led
-with commands would lose the reader deciding whether to bother. It is stated with its
-limit attached: it happened between two sessions one person was watching, and whether
-it holds when the second person is somebody else is the thing Phase 13 exists to find
-out.
-
-**Rejected.**
-- *One README serving both.* It is what we had. The two audiences want opposite
-  things in the first screen — one wants the two lines that install it, the other
-  wants to know what is unfinished — and satisfying both means the first screen
-  serves neither.
-- *A user README that drops the findings.* Install steps alone answer "how" for a
-  person who has not decided "whether". The §30 experiment is the answer to
-  "whether", so removing it would cost more readers than the phase status ever did.
-- *Keeping a status section and promising to update it.* That promise was already
-  made and already broken, in both directions at once.
-
-**Revisit when** a third audience appears that is neither of these — somebody
-packaging this, or an organisation deciding whether to allow it. That is a third
-document, not a third section in one of these two.
 
 ---
 
@@ -6712,114 +6563,23 @@ installed, which is the stale daemon people are more likely to meet.
 
 ## D-124 — The writing test reads documents as Markdown, through goldmark
 
-**Date:** 2026-09-23 · **Status:** active
+**Status:** moved 2026-09-25 to `docs/writing.md`, "Enforcement".
 
-**Decision.** `cmd/cogmer/writing_test.go` parses each document with
-`github.com/yuin/goldmark` and checks only the prose it finds. Code spans and code
-blocks are skipped. Only tests import goldmark, so it is not part of the binary.
-
-**Support.**
-- The rules in `docs/writing.md` govern prose, and documents quote code that
-  breaks them. The decision template's own heading, with its em-dash, sits in a
-  fenced block. `docs/writing.md`, "Templates".
-- goldmark is pure Go, so every target still builds with `CGO_ENABLED=0`. D-001
-  (Go, with no cgo).
-- Only `writing_test.go` and `structure_test.go` import goldmark, and `go build`
-  compiles no test file, so the binary does not contain it.
-- goldmark can split one sentence into several text nodes, and the split can fall
-  inside a banned phrase. The test joins a document's prose before matching a
-  phrase, and puts a separator at each block boundary and each piece of code.
-  `writingProblems` in `writing_test.go`, and its cases "phrase across a line wrap" and
-  "phrase across a code span", observed on 09-23.
-
-**Rejected.**
-- *Scanning lines with regular expressions and tracking code fences by hand.*
-  Indented code blocks, code spans and table cells would each need their own
-  handling, and each one missed reports a false problem in text the guide does not
-  govern.
-
-**Limits.** Text inside HTML blocks is not checked.
-
-**Revisit when** `docs/writing.md` gains a rule about structure rather than words,
-such as the length of a sentence or an item. goldmark's tree can check it, and the
-test is where it belongs.
 
 ---
 
 ## D-125 — A permitted use of a judgement word carries a marker with its reason
 
-**Date:** 2026-09-23 · **Status:** active
+**Status:** moved 2026-09-25 to `docs/writing.md`, W-22 (a permitted judgement word
+carries a marker).
 
-**Decision.** The writing guide's table permits some uses of three words and bans
-the rest. The writing test fails every use of them unless an HTML comment of the
-form `<!-- writing: <reason> -->` follows the word directly. No other word takes a
-marker, and a marker with no reason, or one that follows no word it can excuse,
-fails.
-
-**Support.**
-- The table permits one word where it contrasts with an accident, and two where
-  they carry meaning rather than emphasis, and it says the test checks all three.
-  `docs/writing.md`, "Words and marks to avoid".
-- Nothing in the text separates a permitted use from an emphatic one, and the
-  three words had 153 uses on 09-22. `docs/writing.md`, the same table.
-- goldmark reads an inline HTML comment as raw HTML, and a rendered page does not
-  show it. `writingProblems` in `writing_test.go`, case "judgement word with a
-  marker".
-
-**Rejected.**
-- *Leaving the three words to a reader.* No check would cover them, and the guide
-  would say the test checks words that it does not.
-- *Failing every use.* The test would forbid what the guide permits, and each
-  exception would be made by editing the test.
-- *Listing exceptions by file and line in the test.* A line number moves with every
-  edit above it, and the reason would sit away from the word it excuses.
-
-**Limits.** A marker records that somebody decided to keep a use. Nothing checks that
-the reason is true, so a reader still has to judge it.
-
-**Revisit when** markers are common in rewritten documents. The table would then
-permit more than it says, and should say so.
 
 ---
 
 ## D-126 — Rules that need a reader are reviewed by a skill a maintainer runs
 
-**Date:** 2026-09-23 · **Status:** active
+**Status:** moved 2026-09-25 to `docs/writing.md`, "Enforcement".
 
-**Decision.** The rules in `docs/writing.md` that no test can decide are reviewed by
-the `writing-review` skill, which a maintainer runs on a document, a diff or a
-commit message. It reports findings for a person to decide on and changes nothing.
-Every finding quotes the text it is about, and a test drops any finding whose quote
-is not in the file. The review never blocks a commit.
-
-**Support.**
-- The skill reads the guide in full each time it runs and restates none of its
-  rules, so the guide is the only statement of them.
-  `.claude/skills/writing-review/SKILL.md`, "Read the rules".
-- A model's review can name text that is not in the document.
-  `TestReviewFindingsQuoteTheirDocuments` in `review_test.go` keeps a finding only
-  when its quote is in the file, and reports every finding it drops.
-- A length limit is met most cheaply by compressing an explanation, so the skill
-  reports a long item by naming the kind of detail that does not belong, never by
-  proposing a shorter wording. `docs/writing.md`, "Rules", and `SKILL.md`,
-  "Length".
-- Tracked Claude Code settings impose their tooling on everybody who clones the
-  repository. `.gitignore`, the comment on `.claude/settings.local.json`.
-
-**Rejected.**
-- *Running the review in `go test`.* The suite would need the network and a model,
-  would cost money on every run, and would give different results from run to run.
-- *A hook that runs the review on every commit.* It would have to live in tracked
-  settings, which `.gitignore` keeps out of the repository.
-- *A review on each pull request.* The repository takes changes as commits, not
-  pull requests, and has no CI to run one.
-
-**Limits.** The review's judgement is not reproducible. The quote check proves that
-the text exists, not that the finding is right. Nothing runs the review unless
-somebody asks for it.
-
-**Revisit when** the repository takes changes by pull request or gains CI. A review
-on each pull request would then reach changes nobody thought to review.
 
 ---
 
@@ -6860,35 +6620,5 @@ rebuilding a table, such as a change to the data a store holds.
 
 ## D-128 — Evidence of a past run is cited by the commit that recorded it
 
-**Date:** 2026-09-25 · **Status:** active
-
-**Decision.** No document records findings. A decision or a tombstone that rests on
-something observed cites the commit that recorded it, as
-`<commit>:<path>` for a file in that commit, with the heading where one applies. What
-someone else's software does is a behaviour in `cmd/cogmer/behaviors.go`, and what
-cogmer's own code does is a test.
-
-**Support.**
-- A commit's content never changes, so a citation of it is true for as long as the
-  commit is reachable, and nobody has to keep it in step. `https://git-scm.com/book/en/v2/Git-Internals-Git-Objects`.
-- A behaviour check runs whenever `cogmer doctor` does, which happens by itself
-  when a room is formed under a Claude Code version it has not checked. `cmd/cogmer/doctor.go`.
-- The hook payloads, transcript records and compaction markers the first two spikes
-  observed are checked by B01 to B18. `cmd/cogmer/behaviors.go`.
-- The citation test fails for a `<commit>:<path>` citation that does not resolve,
-  and the tombstone check fails when the cited file at that commit lacks the cited
-  heading. `cmd/cogmer/citations_test.go` and `cmd/cogmer/structure_test.go`.
-
-**Rejected.**
-- *A findings document, maintained in the tree.* Each run it retells becomes a set
-  of claims about the run, and every edit to the document has to check them against
-  the original again. `docs/writing.md`, W-18 (every claim is true of what it names).
-- *One findings document per test.* It has the same cost, spread over more files.
-  Eight such files held the findings at commit `84a0751`.
-
-**Limits.** A reader has to run `git show` to read the evidence, and cannot browse it
-as a document. Evidence that no commit holds yet has to be committed, usually in a
-commit message, before a decision can cite it.
-
-**Revisit when** a reader needs to browse past runs rather than follow a citation to
-one, or a citation's commit becomes unreachable, such as after a history rewrite.
+**Status:** moved 2026-09-25 to `docs/writing.md`, W-42 (evidence is cited by the commit
+that recorded it).
