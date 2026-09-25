@@ -397,7 +397,7 @@ is worth fixing before Phase 2 rather than after.
 None are contractual, several fail silently, and one of them (§15's) would be
 broken by an upstream *bugfix*.
 
-The specification treats Claude Code as a stable platform. §36 tells the
+The specification treats Claude Code as a stable platform. §36 told the
 implementer to inspect the installed version once, at the start, which was good
 instinct — but a one-time inspection does not survive upgrades.
 

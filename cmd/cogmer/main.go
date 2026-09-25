@@ -509,7 +509,7 @@ func runHook(kind string) {
 	os.Exit(0)
 }
 
-// runSeed inserts a simulated teammate exchange (§36 step 6) so cross-session
+// runSeed inserts a simulated teammate exchange (Phase 0, docs/phases.md) so cross-session
 // injection can be exercised on one machine, before any networking exists.
 func runSeed() {
 	store, _, room := openLocal()

@@ -216,8 +216,8 @@ The other five are `cmd/cogmer/ui.go:16`, `docs/decisions.md:256`, `:1450` and
 
 D-002 holds two decisions. The first puts a compaction phase before any daemon work,
 in the paragraph "Decision. Stop as instructed, then add Phase 0a". Stopping is what
-§36.10 (stop after the integration spike) required, so it is not a choice this entry
-makes. The second labels the new phase "0a" rather than renumbering the phases. It
+the specification's instructions for the integration spike required at `f11e871`, so
+it is not a choice this entry makes. The second labels the new phase "0a" rather than renumbering the phases. It
 sits in the Rejected. bullet that weighs its own alternative: "*Renumber the
 phases* - '0a' avoids churn in a specification already referenced by section number".
 The

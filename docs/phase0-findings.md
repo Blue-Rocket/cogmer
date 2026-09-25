@@ -1,8 +1,8 @@
 # Phase 0 — Claude Code Integration Spike: Findings
 
 **Verdict: both required directions work.** Conversation capture and cross-session
-context injection are reliable against the installed Claude Code. Per §36.10 the
-spike stops here; peer networking is not built.
+context injection are reliable against the installed Claude Code. The spike's
+instructions said to stop here and report, so peer networking is not built.
 
 | | |
 |---|---|
@@ -90,7 +90,7 @@ So the reassembler takes every `assistant` record following the last
 ## 4. Context injection (§18–§20) — works, and this was the critical unknown
 
 **`UserPromptSubmit` stdout is injected into the pending turn.** Confirmed with
-§36.8's exact test: a simulated teammate exchange was seeded into the daemon, then
+the test the spike's instructions set: a simulated teammate exchange was seeded into the daemon, then
 a prompt was submitted whose referent existed *only* in that injected text —
 
 > "I don't think her explanation is right. Check the retry path instead."
@@ -127,7 +127,9 @@ rather than burning the 3 s timeout.
 
 1. **`--settings` was used to isolate probes.** Hooks registered mid-session were
    not tested for hot-reload; the daemon's install path should assume a restart.
-2. **Compaction (§36.9) was not exercised.** `PreCompact` never fired. Unknown how
+2. **Compaction was not exercised**: Claude Code's compaction, which summarises the
+   earlier turns of a session when its context window fills, never ran, although the
+   spike's instructions asked for its interaction with the session to be documented. `PreCompact` never fired. Unknown how
    compaction interacts with the §19 delivery watermark — a compacted session has
    lost injected context it is still marked as having received. **This is the most
    likely source of surprise in Phase 4.**

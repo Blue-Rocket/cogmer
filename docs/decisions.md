@@ -53,8 +53,8 @@ plain JS + server-sent events.
 
 **Date:** 2026-09-16 · **Status:** active
 
-**Context.** Specification §36.10 says to stop after the integration spike and
-report. Phase 0 proved capture and injection, but never exercised compaction —
+**Context.** The specification's instructions for the integration spike said to stop
+after it and report. Phase 0 proved capture and injection, but never exercised compaction —
 `PreCompact` did not fire.
 
 **Decision.** Stop as instructed, then add **Phase 0a** to the specification

@@ -2520,65 +2520,8 @@ This should be derived from the complete conversational record rather than repla
 
 # 36\. First Task for Claude Code
 
-Do not begin by implementing the complete architecture.
-
-Perform an integration spike first.
-
-1. Inspect the **currently installed Claude Code version** and its current hook/session capabilities rather than assuming particular APIs from this specification.  
-     
-2. Determine exactly how to capture:  
-     
-   - submitted user prompts;  
-   - completed assistant responses;  
-   - session IDs;  
-   - tool activity if readily available.
-
-   
-
-3. Determine exactly how a user-prompt hook can inject additional external context into the pending Claude turn.  
-     
-4. Create a minimal local `cogmer` daemon listening only on localhost.  
-     
-5. Demonstrate:
-
-```
-Claude Code
-     │
- prompt/response
-     ▼
-cogmer
-     │
-     ▼
-SQLite
-```
-
-6. Insert a simulated teammate conversation into the daemon.  
-     
-7. On the next local Claude prompt, inject that simulated conversation.  
-     
-8. Verify that Claude correctly understands a referential prompt such as:
-
-```
-I don't think his explanation is right. Check the retry path instead.
-```
-
-where "his explanation" exists **only in the injected teammate conversation**.
-
-9. Document:  
-     
-   - exact Claude Code hooks/APIs used;  
-   - limitations;  
-   - latency;  
-   - context-injection behavior;  
-   - any unexpected interaction with Claude Code compaction/session management.
-
-   
-
-10. Stop after the integration spike and report the results.
-
-Do not build peer networking until this experiment demonstrates that both **conversation capture** and **cross-session context injection** work reliably.
-
-One change I think is particularly important is **Phase 0 now explicitly tells Claude Code to inspect its installed version rather than trusting our assumptions about the hook API**. If capture or reinjection behaves differently than expected, you want to discover that before any networking code exists.  
+This section held the instructions for the first integration spike. The spike is
+Phase 0 in `docs/phases.md`, and `docs/phase0-findings.md` records what it found.
 
 ---
 
