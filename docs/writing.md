@@ -48,7 +48,7 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-33 | a decision uses none of the history words | checked |
 | W-34 | every supporting fact names a source | checked |
 | W-35 | a supporting fact holds now | judgement |
-| W-36 | a decision always has **Rejected.** | checked |
+| W-36 | **Rejected.** names only an alternative likely to be proposed again | judgement |
 | W-37 | a reversed decision becomes a tombstone | checked |
 | W-38 | a partial change rewrites the earlier entry | judgement |
 | W-39 | a rewrite keeps every fact | judgement |
@@ -267,9 +267,9 @@ checks.>
 ```
 
 W-30. An entry follows this template: a **Date:** line whose status is "active" or
-"not built", then **Decision.**, **Support.** with a list under it, **Rejected.**,
-an optional **Limits.** and **Revisit when**, in that order. Omit **Limits.** when
-there are none.
+"not built", then **Decision.**, **Support.** with a list under it, an optional
+**Rejected.**, an optional **Limits.** and **Revisit when**, in that order. Omit an
+optional field when it has nothing to hold.
 
 W-31. The title is the decision, not the topic: "`stop` finds a daemon by the
 addresses it holds", not "Stopping the daemon".
@@ -299,24 +299,24 @@ showed, and the commit it cites holds the event. "An environment variable has th
 same value in every session a machine starts", not "the variable made a command act
 on the wrong room".
 
-W-36. **Rejected.** is required whenever a real alternative was weighed, which is
-the reason for writing an entry at all. When no alternative was weighed,
-**Rejected.** says why there was none.
+W-36. **Rejected.** names an alternative only where a maintainer would otherwise be
+likely to propose it again, which is the test W-29 sets for a rule. An alternative
+that nobody would propose again is left out, and an entry with none omits the field.
 
 W-37. When a decision reverses an earlier one, the earlier entry is replaced by a
-tombstone, and the reason for the reversal is recorded in a commit. The new
-decision cites neither: it stands on its own support. A tombstone keeps the number
-and the title, so that references to it still resolve, and nothing else:
+tombstone. A tombstone keeps the number and the title, so that references to it
+still resolve, and nothing else:
 
 ```markdown
 ## D-NNN — <original title>
 
-**Status:** withdrawn YYYY-MM-DD. Replaced by D-MMM (<words>). Why: `<commit>`.
+**Status:** withdrawn YYYY-MM-DD. Replaced by D-MMM (<words>).
 ```
 
-The cited commit's message, or a file it holds cited as `<commit>:<path>`,
-"<heading>", says what the withdrawn decision was, what showed it wrong, and the
-evidence, so that nobody has to reconstruct the argument to avoid repeating it.
+The replacing decision's **Rejected.** names the withdrawn approach in words, not
+by its number, and says why it does not hold, citing the evidence under W-42. A
+withdrawn decision is the alternative most likely to be proposed again, and the
+reason against it has to stay where it can be corrected.
 
 A decision that W-28 places in this guide becomes a tombstone of a second kind,
 naming the rule that holds it, or the section when no one rule does:
@@ -327,8 +327,8 @@ naming the rule that holds it, or the section when no one rule does:
 ```
 
 W-38. When a later decision changes only part of an earlier one, rewrite the earlier
-entry so that it states only what still holds, and record the removed part's
-reason in a commit in the same way.
+entry so that it states only what still holds, and name the removed part in the
+later decision's **Rejected.** in the same way.
 
 W-39. When rewriting an entry, keep every fact, reference and number from the
 original, either in the entry or in the commit it now cites. Remove one
@@ -559,12 +559,12 @@ template are listed in `relianceNotRewritten`, which only shrinks.
 
 `TestLaterDecisionsFollowTemplate`, in `structure_test.go`, checks every decision
 after D-123, reading the log as Markdown so that a field name inside code does not
-count as the field. It checks W-30, W-33, W-34, W-36 and W-41 on each; for W-41 it
+count as the field. It checks W-30, W-33, W-34 and W-41 on each; for W-41 it
 rejects a mention of `open.md` or `docs/work/`, or a link to a ClickUp, GitHub issue,
 Jira or Linear task. Every tombstone,
-whatever its number, must hold only its status line. A withdrawn entry's "Why:" must
-name a commit that exists, or a file in a commit and a heading that file holds
-there. A moved entry must name a rule or a heading this guide holds.
+whatever its number, must hold only its status line. A withdrawn entry must name the
+decision that replaced it, and that decision must have a **Rejected.**. A moved
+entry must name a rule or a heading this guide holds.
 
 `TestWritingRulesAreIndexed`, in `cmd/cogmer/writingrules_test.go`, checks that
 the rule index above and the checks agree. Every rule in the index has a paragraph

@@ -10,10 +10,11 @@ encyclopedia — the last section says where to read instead.
 ## How we work
 
 - **Read `docs/decisions.md` before proposing a change to how anything here works.**
-  It records what was **rejected and why**, and several awkward-looking choices are
-  load-bearing. Add an entry whenever a real alternative was weighed. Never
+  It records why each choice was made, and the alternatives somebody would be likely
+  to propose again, and several awkward-looking choices are load-bearing. Add an
+  entry whenever a real choice about the system is made. Never
   renumber: a reversed decision becomes a tombstone, and the reason for reversing
-  it goes in the message of the commit that withdraws it.
+  it goes in the replacing decision's **Rejected.**.
 - **Read `docs/writing.md` before writing any document or commit message**, and
   follow it. It holds the rules and a template for each kind of item.
 - **Read the code before characterising it.** Paraphrasing a grep result produced a
@@ -45,7 +46,7 @@ they rot.
 | `Shared Claude Sessions.md` | the system as the user experiences it: its boundaries, and the harms it avoids |
 | `docs/values.md` | what this project holds itself to |
 | `docs/patterns.md` | architectural patterns that apply beyond this project |
-| `docs/decisions.md` | the detail beneath the spec, and exceptions to it: why, and what was rejected |
+| `docs/decisions.md` | the detail beneath the spec, and exceptions to it, and why |
 | `docs/writing.md` | how a document is written, where a thing goes, and how the documents are checked |
 | a commit, cited as `<commit>:<path>` or `<commit>` (W-42 in `docs/writing.md`) | what we observed when we tried it, where no test can hold the evidence |
 | `cmd/cogmer/behaviors.go` | what someone else's software does that we rely on |

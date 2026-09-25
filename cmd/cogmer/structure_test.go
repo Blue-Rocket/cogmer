@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -41,7 +40,9 @@ var (
 	supportSource = regexp.MustCompile("§\\d|\\bD-\\d{3}\\b|\\bB\\d{2}\\b|https?://|`[^` ]*(/|\\.(md|go|sh|json|html))[^` ]*`")
 	// Words that describe the system as it stood when a decision was made.
 	historyWords = regexp.MustCompile(`(?i)\b(stays|stay|is kept|are kept|continues to|continue to|already|used to|previously|formerly|no longer|replaced|replaces)\b`)
-	tombstoneWhy = regexp.MustCompile("^\\*\\*Status:\\*\\* withdrawn \\d{4}-\\d{2}-\\d{2}\\. (?s:.*)Why:\\s+`([0-9a-f]{7,40})(?::([^`]+))?`(?:,\\s+\"([^\"]+)\")?\\.$")
+	// A withdrawn decision names the one that replaced it, whose **Rejected.**
+	// holds the reason.
+	withdrawnBy = regexp.MustCompile(`^\*\*Status:\*\* withdrawn \d{4}-\d{2}-\d{2}\.\s+Replaced\s+by\s+(D-\d{3})\s+\((?s:[^)]+)\)\.$`)
 	// A decision placed in docs/writing.md names the rule or the section that holds it.
 	movedTo        = regexp.MustCompile("^\\*\\*Status:\\*\\* moved \\d{4}-\\d{2}-\\d{2} to `docs/writing\\.md`,\\s+(?:(W-\\d{2})\\s+\\((?s:[^)]+)\\)|\"((?s:[^\"]+))\")\\.$")
 	decisionStatus = regexp.MustCompile(`^\*\*Date:\*\* \d{4}-\d{2}-\d{2} · \*\*Status:\*\* (active|not built)$`)
@@ -298,29 +299,21 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 
 // Every decision after decisionFormatAfter follows the decision template in
 // docs/writing.md, and every tombstone, whatever its number, keeps only its
-// status line and cites the commit that says why.
+// status line. A withdrawn one names the decision whose **Rejected.** says why.
 func TestLaterDecisionsFollowTemplate(t *testing.T) {
 	src, err := os.ReadFile("../../docs/decisions.md")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, p := range decisionProblems(string(src), committedHeadings) {
+	for _, p := range decisionProblems(string(src), guideHeadings) {
 		t.Error(p)
 	}
 }
 
-// committedHeadings returns the headings of a file as a commit holds it, named
-// as <commit>:<path>, or of a commit's message and diff when named by the commit
-// alone, or false if the commit or the file does not exist. For docs/writing.md
-// it reads the tree, and includes each rule's ID.
-func committedHeadings(ref string) (map[string]bool, bool) {
-	var src []byte
-	var err error
-	if ref == "docs/writing.md" {
-		src, err = os.ReadFile("../../" + ref)
-	} else {
-		src, err = exec.Command("git", "-C", "../..", "show", ref).Output()
-	}
+// guideHeadings returns the headings of docs/writing.md, and the ID of each rule,
+// which a moved tombstone may name.
+func guideHeadings(rel string) (map[string]bool, bool) {
+	src, err := os.ReadFile(filepath.Join("../..", rel))
 	if err != nil {
 		return nil, false
 	}
@@ -329,7 +322,6 @@ func committedHeadings(ref string) (map[string]bool, bool) {
 		if strings.HasPrefix(line, "#") {
 			headings[strings.TrimSpace(strings.TrimLeft(line, "#"))] = true
 		}
-		// A rule of the writing guide is a paragraph opening with its ID.
 		if m := ruleOpening.FindStringSubmatch(line); m != nil {
 			headings[m[1]] = true
 		}
@@ -374,6 +366,19 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 		current.body = append(current.body, c)
 	}
 
+	hasRejected := func(entries []*entry, id string) bool {
+		for _, e := range entries {
+			if e.id != id {
+				continue
+			}
+			for _, c := range e.body {
+				if label, ok := boldOpener(c, src); ok && label == "Rejected." {
+					return true
+				}
+			}
+		}
+		return false
+	}
 	for _, e := range entries {
 		if len(e.body) > 0 && strings.HasPrefix(nodeSource(e.body[0], src), "**Status:** moved") {
 			moved := movedTo.FindStringSubmatch(nodeSource(e.body[0], src))
@@ -391,22 +396,14 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 			continue
 		}
 		if len(e.body) > 0 && strings.HasPrefix(nodeSource(e.body[0], src), "**Status:** withdrawn") {
-			why := tombstoneWhy.FindStringSubmatch(nodeSource(e.body[0], src))
+			by := withdrawnBy.FindStringSubmatch(nodeSource(e.body[0], src))
 			switch {
 			case len(e.body) > 1:
-				report(e.id, "is a tombstone and has more than its status line; the reason belongs in a finding (W-37)")
-			case why == nil, why[2] == "" && why[3] != "", why[2] != "" && why[3] == "":
-				report(e.id, "is a tombstone without \"Why: `<commit>`.\" or \"Why: `<commit>:<path>`, \\\"<heading>\\\".\" (W-37)")
-			default:
-				ref := why[1]
-				if why[2] != "" {
-					ref += ":" + why[2]
-				}
-				if headings, ok := headingsOf(ref); !ok {
-					report(e.id, "cites %s, which does not exist (W-37)", ref)
-				} else if section := strings.Join(strings.Fields(why[3]), " "); why[2] != "" && !headings[section] {
-					report(e.id, "cites %q in %s, which has no such heading (W-37)", section, ref)
-				}
+				report(e.id, "is a tombstone and has more than its status line; the reason belongs in the replacing decision's **Rejected.** (W-37)")
+			case by == nil:
+				report(e.id, "is a tombstone whose status line is not \"withdrawn YYYY-MM-DD. Replaced by D-MMM (<words>).\" (W-37)")
+			case !hasRejected(entries, by[1]):
+				report(e.id, "is replaced by %s, which has no **Rejected.** saying why (W-37)", by[1])
 			}
 			continue
 		}
@@ -438,7 +435,7 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 			}
 			for _, f := range decisionOrder[next:at] {
 				if f.required {
-					report(e.id, "has no **%s** field (%s)", f.name, fieldRule(f.name))
+					report(e.id, "has no **%s** field (W-30)", f.name)
 				}
 			}
 			next = at + 1
@@ -461,7 +458,7 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 		}
 		for _, f := range decisionOrder[next:] {
 			if f.required {
-				report(e.id, "has no **%s** field (%s)", f.name, fieldRule(f.name))
+				report(e.id, "has no **%s** field (W-30)", f.name)
 			}
 		}
 		for _, c := range e.body {
@@ -483,18 +480,9 @@ var decisionOrder = []struct {
 }{
 	{"Decision.", true},
 	{"Support.", true},
-	{"Rejected.", true},
+	{"Rejected.", false},
 	{"Limits.", false},
 	{"Revisit when", true},
-}
-
-// fieldRule names the rule a missing field breaks: W-36 for **Rejected.**, which
-// every entry needs, and W-30 for the rest of the template.
-func fieldRule(name string) string {
-	if name == "Rejected." {
-		return "W-36"
-	}
-	return "W-30"
 }
 
 // boldOpener returns the bold text a paragraph opens with.
@@ -607,12 +595,7 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 	// samples as rules this test enforces.
 	rule := "W-"
 	headings := func(rel string) (map[string]bool, bool) {
-		switch rel {
-		case "84a0751:docs/x-findings.md":
-			return map[string]bool{"Why it went": true}, true
-		case "05f89c4":
-			return map[string]bool{}, true
-		case "docs/writing.md":
+		if rel == "docs/writing.md" {
 			return map[string]bool{rule + "42": true, "Enforcement": true}, true
 		}
 		return nil, false
@@ -620,7 +603,9 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 	date := "**Date:** 2026-09-23 · **Status:** active\n\n"
 	support := "**Support.**\n- A fact. `84a0751:docs/x-findings.md`, \"Why it went\".\n- Another, over\n  two lines. D-001 (Go).\n\n"
 	complete := date + "**Decision.** x\n\n" + support + "**Rejected.** y\n\n**Revisit when** z.\n"
-	tombstone := "**Status:** withdrawn 2026-09-20. Replaced by D-126 (words). Why:\n`84a0751:docs/x-findings.md`, \"Why it went\".\n"
+	tombstone := "**Status:** withdrawn 2026-09-20. Replaced by D-126\n(words).\n"
+	// The decision that replaced the tombstone's, which holds the reason.
+	replacement := "\n---\n\n## D-126 — R\n\n" + complete
 	cases := []struct {
 		name  string
 		entry string
@@ -630,13 +615,13 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 		{"complete", "## D-124 — T\n\n" + complete, nil},
 		{"complete, with Limits", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Some.\n\n**Revisit when**", 1), nil},
 		{"not built", "## D-124 — T\n\n" + strings.Replace(complete, "active", "not built", 1), nil},
-		{"missing Rejected", "## D-124 — T\n\n" + strings.Replace(complete, "**Rejected.** y\n\n", "", 1), []string{"D-124 has no **Rejected.**"}},
+		{"no Rejected", "## D-124 — T\n\n" + strings.Replace(complete, "**Rejected.** y\n\n", "", 1), nil},
 		{"missing Support", "## D-124 — T\n\n" + strings.Replace(complete, support, "", 1), []string{"D-124 has no **Support.**"}},
 		{"Support with no list", "## D-124 — T\n\n" + strings.Replace(complete, support, "**Support.** It is so.\n\n", 1), []string{"D-124 has **Support.** with no list"}},
 		{"superseded status", "## D-124 — T\n\n" + strings.Replace(complete, "active", "superseded by D-126", 1), []string{"D-124 has no **Date:** line whose status"}},
 		{"a date that is not one", "## D-124 — T\n\n" + strings.Replace(complete, "2026-09-23", "d", 1), []string{"D-124 has no **Date:** line whose status"}},
 		{"out of order", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when** z.", "**Revisit when** z.\n\n**Decision.** Again.", 1), []string{"D-124 has **Decision.** out of order"}},
-		{"a field only in a code block", "## D-124 — T\n\n" + strings.Replace(complete, "**Rejected.** y\n\n", "```\n**Rejected.** y\n```\n\n", 1), []string{"D-124 has no **Rejected.**"}},
+		{"a field only in a code block", "## D-124 — T\n\n" + strings.Replace(complete, "**Decision.** x\n\n", "```\n**Decision.** x\n```\n\n", 1), []string{"D-124 has no **Decision.**"}},
 		{"support with no source", "## D-124 — T\n\n" + strings.Replace(complete, "D-001 (Go).", "It is so.", 1), []string{"D-124 has a support item with no source"}},
 		{"history word", "## D-124 — T\n\n" + strings.Replace(complete, "**Decision.** x", "**Decision.** It stays as it is.", 1), []string{"D-124 says \"stays\""}},
 		{"history word in code", "## D-124 — T\n\n" + strings.Replace(complete, "**Decision.** x", "**Decision.** Run `stays`.", 1), nil},
@@ -645,20 +630,16 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 		{"Limits pointing at working material", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Detail in `docs/work/split.md`.\n\n**Revisit when**", 1), []string{"D-124 points to open work"}},
 		{"Limits stating scope", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** It does not decide whether stop restarts the daemon.\n\n**Revisit when**", 1), nil},
 		{"open work before the cutoff", "## D-123 — Old\n\nLeft open in `docs/open.md`.\n", nil},
-		{"tombstone", "## D-076 — T\n\n" + tombstone + "\n---\n", nil},
-		{"tombstone with more", "## D-076 — T\n\n" + tombstone + "\nMore history.\n", []string{"D-076 is a tombstone and has more"}},
-		{"tombstone with no reason", "## D-076 — T\n\n**Status:** withdrawn 2026-09-20. Replaced by D-077 (words).\n", []string{"D-076 is a tombstone without"}},
-		{"tombstone citing a missing file", "## D-076 — T\n\n" + strings.Replace(tombstone, "x-findings", "y-findings", 1), []string{"D-076 cites 84a0751:docs/y-findings.md, which does not exist"}},
-		{"tombstone citing a commit's message", "## D-076 — T\n\n**Status:** withdrawn 2026-09-20. Replaced by D-077 (words). Why: `05f89c4`.\n", nil},
-		{"tombstone citing a missing commit", "## D-076 — T\n\n**Status:** withdrawn 2026-09-20. Replaced by D-077 (words). Why: `1234567`.\n", []string{"D-076 cites 1234567, which does not exist"}},
-		{"tombstone citing a file with no heading", "## D-076 — T\n\n" + strings.Replace(tombstone, ", \"Why it went\"", "", 1), []string{"D-076 is a tombstone without"}},
+		{"tombstone", "## D-076 — T\n\n" + tombstone + replacement, nil},
+		{"tombstone with more", "## D-076 — T\n\n" + tombstone + "\nMore history.\n" + replacement, []string{"D-076 is a tombstone and has more"}},
+		{"tombstone with a Why", "## D-076 — T\n\n**Status:** withdrawn 2026-09-20. Replaced by D-126 (words). Why: `05f89c4`.\n" + replacement, []string{"D-076 is a tombstone whose status line"}},
+		{"replacement with no Rejected", "## D-076 — T\n\n" + tombstone + strings.Replace(replacement, "**Rejected.** y\n\n", "", 1), []string{"D-076 is replaced by D-126, which has no **Rejected.**"}},
+		{"replacement missing", "## D-076 — T\n\n" + tombstone, []string{"D-076 is replaced by D-126, which has no **Rejected.**"}},
 		{"moved to a rule", "## D-128 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, " + rule + "42\n(evidence is cited).\n", nil},
 		{"moved to a section", "## D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, \"Enforcement\".\n", nil},
 		{"moved to a missing rule", "## D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, " + rule + "99 (x).\n", []string{"D-124 moved to " + rule + "99"}},
 		{"moved to a missing section", "## D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, \"Elsewhere\".\n", []string{"D-124 moved to \"Elsewhere\""}},
 		{"moved with more", "## D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, \"Enforcement\".\n\nMore.\n", []string{"D-124 is a tombstone and has more"}},
-		{"tombstone citing a file in the tree", "## D-076 — T\n\n" + strings.Replace(tombstone, "84a0751:", "", 1), []string{"D-076 is a tombstone without"}},
-		{"tombstone citing a missing heading", "## D-076 — T\n\n" + strings.Replace(tombstone, "Why it went", "Elsewhere", 1), []string{"D-076 cites \"Elsewhere\""}},
 	}
 	for _, c := range cases {
 		got := decisionProblems("# Log\n\n"+c.entry, headings)

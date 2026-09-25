@@ -3883,8 +3883,7 @@ failure case truthful, which is the case that matters anyway.
 ## D-076 — A command inside a session acts on that session's room
 
 **Status:** withdrawn 2026-09-20. Replaced by D-077 (every room has its own URL, and
-no ambient value picks one). Why: `84a0751:docs/room-choice-findings.md`, "An ambient
-variable ranked above the session answers for every session".
+no ambient value picks one).
 
 ---
 
@@ -3926,6 +3925,13 @@ state that answers "which room" is wrong wherever a session could have been aske
 once in the view, once in `where`, once in `currentRoom`. Each time it looked like a
 convenience and behaved like a silent wrong answer. A session is the unit of
 membership (§22), so anything that can ask a session must.
+
+**Rejected.**
+- *Ranking a room named in an environment variable above the session's own room.* An
+  exported variable has the same value in every session a machine starts, so it
+  would choose one room for all of them, and a command run in one room would act on
+  another without an error. `84a0751:docs/room-choice-findings.md`, "An ambient
+  variable ranked above the session answers for every session".
 
 **Revisit when** a terminal command needs a room and there are several. Today the
 fallback answers; the honest alternative is to require naming it, and the friction
