@@ -127,10 +127,10 @@ rather than burning the 3 s timeout.
 
 1. **`--settings` was used to isolate probes.** Hooks registered mid-session were
    not tested for hot-reload; the daemon's install path should assume a restart.
-2. **Compaction was not exercised**: Claude Code's compaction, which summarises the
-   earlier turns of a session when its context window fills, never ran, although the
-   spike's instructions asked for its interaction with the session to be documented. `PreCompact` never fired. Unknown how
-   compaction interacts with the §19 delivery watermark — a compacted session has
+2. **Compaction was not exercised**, although the spike's instructions asked for its
+   interaction with the session to be documented. Claude Code's compaction summarises
+   the earlier turns of a session when its context window fills, and in this spike
+   `PreCompact` never fired. Unknown how compaction interacts with the §19 delivery watermark — a compacted session has
    lost injected context it is still marked as having received. **This is the most
    likely source of surprise in Phase 4.**
 3. **Windows is unverified.** All findings are macOS. Hook shell invocation,
