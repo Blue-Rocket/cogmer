@@ -206,7 +206,7 @@ func RunProbe(deep bool) (*Probe, error) {
 	p.InjectedText = inject
 
 	hooks := map[string]any{}
-	for _, h := range []string{"UserPromptSubmit", "Stop", "PreToolUse", "PostToolUse", "PreCompact", "SessionStart"} {
+	for _, h := range []string{"UserPromptSubmit", "Stop", "PreCompact", "SessionStart"} {
 		hooks[h] = []any{map[string]any{"hooks": []any{map[string]any{
 			"type": "command", "command": quoteCmd(self, "probe-hook", h, dir)}}}}
 	}
@@ -255,7 +255,7 @@ func RunProbe(deep bool) (*Probe, error) {
 		p.PostCompactAnswer = ans
 
 		// Reload hooks so compaction-tier payloads are present, then refresh the
-		// raw transcript so B16/B17 see the boundary records. Session-tier
+		// raw transcript so B17 sees the summary record. Session-tier
 		// evidence frozen above is deliberately not recomputed.
 		p.loadHooks()
 		if v, ok := p.field("PreCompact", "_transcript_bytes"); ok {
@@ -314,7 +314,7 @@ func toFloat(v any) float64 {
 // loadHooks reads back every payload the probe hooks have captured so far.
 func (p *Probe) loadHooks() {
 	p.Hooks = map[string][]map[string]any{}
-	for _, h := range []string{"UserPromptSubmit", "Stop", "PreToolUse", "PostToolUse", "PreCompact", "SessionStart"} {
+	for _, h := range []string{"UserPromptSubmit", "Stop", "PreCompact", "SessionStart"} {
 		data, err := os.ReadFile(filepath.Join(p.Dir, h+".jsonl"))
 		if err != nil {
 			continue

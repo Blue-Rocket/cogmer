@@ -91,13 +91,11 @@ func TestB15DetectsTranscriptRewrite(t *testing.T) {
 	mustPass(t, "B15", &Probe{PreCompactBytes: 5000, PostCompactBytes: 7000})
 }
 
-func TestB16And17DetectBoundaryChanges(t *testing.T) {
-	mustDetect(t, "B16", &Probe{rawTranscript: []map[string]any{rec(`{"type":"user"}`)}}, "loss of the compact_boundary marker")
+func TestB17DetectsASummaryThatLooksLikeAPrompt(t *testing.T) {
 	good := []map[string]any{
 		rec(`{"type":"system","subtype":"compact_boundary"}`),
 		rec(`{"type":"user","isCompactSummary":true}`),
 	}
-	mustPass(t, "B16", &Probe{rawTranscript: good})
 	mustPass(t, "B17", &Probe{rawTranscript: good})
 	// The dangerous variant: reassembly would anchor on the summary.
 	mustDetect(t, "B17", &Probe{rawTranscript: []map[string]any{

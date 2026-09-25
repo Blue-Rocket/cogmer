@@ -554,8 +554,7 @@ compressing, which is the failure W-17 describes. The header rule is not such a
 limit: what it asks for is removing the header.
 
 `TestBehaviorRelianceStartsWithWhatBreaks`, in `structure_test.go`, checks that
-each behaviour's `Reliance` starts "If this changes". Behaviours written before that
-template are listed in `relianceNotRewritten`, which only shrinks.
+each behaviour's `Reliance` starts "If this changes".
 
 `TestLaterDecisionsFollowTemplate`, in `structure_test.go`, checks every decision
 after D-123, reading the log as Markdown so that a field name inside code does not

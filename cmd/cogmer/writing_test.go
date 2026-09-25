@@ -24,12 +24,11 @@ import (
 // docs/writing.md. It only shrinks. A listed document that passes fails the
 // test, so that it comes off the list in the same commit that fixed it.
 var writingNotYetRewritten = map[string]bool{
-	"CLAUDE.md":                   true,
-	"Shared Claude Sessions.md":   true,
-	"docs/decisions.md":           true,
-	"docs/open.md":                true,
-	"docs/phases.md":              true,
-	"docs/relied-on-behaviors.md": true, // generated: rewrite behaviors.go
+	"CLAUDE.md":                 true,
+	"Shared Claude Sessions.md": true,
+	"docs/decisions.md":         true,
+	"docs/open.md":              true,
+	"docs/phases.md":            true,
 }
 
 // writingNeverChecked holds documents the word check cannot apply to.

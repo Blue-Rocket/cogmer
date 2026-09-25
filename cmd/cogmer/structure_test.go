@@ -55,6 +55,12 @@ var (
 	openWork = regexp.MustCompile(`\bopen\.md\b|docs/work/|app\.clickup\.com/t/\S+|github\.com/[\w.-]+/[\w.-]+/issues/\d+|atlassian\.net/browse/\S+|linear\.app/\S+/issue/\S+`)
 )
 
+// behaviourDocument is generated from the behaviour registry, one heading per
+// behaviour, and behaviourTitle is the heading MarkdownReport writes for each.
+const behaviourDocument = "docs/relied-on-behaviors.md"
+
+var behaviourTitle = regexp.MustCompile(`^B\d{2}: `)
+
 // specification is the one document that must carry no dates.
 const specification = "Shared Claude Sessions.md"
 
@@ -184,7 +190,8 @@ func structureProblems(doc string, src []byte) []string {
 		}
 		title := inlineText(h, src)
 		documentTitle := h.Level == 1 && c == root.FirstChild()
-		if documentTitle || decisionTitle.MatchString(title) || (workDocument.MatchString(doc) && h.Level == 3) {
+		behaviourEntry := doc == behaviourDocument && behaviourTitle.MatchString(title)
+		if documentTitle || decisionTitle.MatchString(title) || behaviourEntry || (workDocument.MatchString(doc) && h.Level == 3) {
 			continue
 		}
 		first, last := 0, 0
@@ -271,6 +278,8 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 		{"header over a short list", "x.md", "Intro.\n\n## T\n\n- a\n- b\n", 1},
 		{"a second level-1 header over one line", "x.md", "# T\n\na\nb\nc\nd\n\n# U\n\nOne line.\n", 1},
 		{"decision heading", "docs/decisions.md", "## D-124 — T\n\n**Date:** 2026-09-23 · **Status:** active\n", 0},
+		{"behaviour heading", behaviourDocument, "Intro.\n\n### B01: A behaviour\n\nIf this changes, it breaks.\n", 0},
+		{"behaviour heading elsewhere", "x.md", "Intro.\n\n### B01: A behaviour\n\nIf this changes, it breaks.\n", 1},
 		{"date in the specification", specification, "The daemon started on 2026-09-22 and\nis still running today, over\nseveral lines, with no header.\n", 1},
 		{"date in a code span in the specification", specification, "Write `2026-09-22` there.\n", 0},
 		{"date elsewhere", "x.md", "Run on 2026-09-22.\n", 0},
@@ -554,31 +563,11 @@ func proseText(n ast.Node, src []byte) string {
 	return b.String()
 }
 
-// relianceNotRewritten lists the behaviours whose Reliance predates the
-// behaviour-registry template in docs/writing.md. It only shrinks.
-var relianceNotRewritten = map[string]bool{
-	"B01": true, "B02": true, "B03": true, "B04": true, "B05": true, "B06": true,
-	"B07": true, "B08": true, "B09": true, "B10": true, "B11": true, "B12": true,
-	"B13": true, "B14": true, "B15": true, "B16": true, "B17": true, "B18": true,
-	"B19": true, "B20": true, "B21": true, "B22": true, "B23": true,
-}
-
 // A behaviour's Reliance starts with what breaks, for somebody debugging at 2am.
 func TestBehaviorRelianceStartsWithWhatBreaks(t *testing.T) {
-	registered := map[string]bool{}
 	for _, b := range Behaviors {
-		registered[b.ID] = true
-		follows := strings.HasPrefix(b.Reliance, "If this changes")
-		switch {
-		case relianceNotRewritten[b.ID] && follows:
-			t.Errorf("%s's Reliance now follows W-71: remove it from relianceNotRewritten", b.ID)
-		case !relianceNotRewritten[b.ID] && !follows:
+		if !strings.HasPrefix(b.Reliance, "If this changes") {
 			t.Errorf("%s's Reliance must start \"If this changes\": %q (W-71)", b.ID, firstWords(b.Reliance))
-		}
-	}
-	for id := range relianceNotRewritten {
-		if !registered[id] {
-			t.Errorf("relianceNotRewritten lists %s, which is not in the registry", id)
 		}
 	}
 }
