@@ -45,6 +45,9 @@ var (
 	tombstoneWhy   = regexp.MustCompile("^\\*\\*Status:\\*\\* withdrawn \\d{4}-\\d{2}-\\d{2}\\. (?s:.*)Why:\\s+`(docs/[^`]+-findings\\.md)`,\\s+\"([^\"]+)\"\\.$")
 	decisionStatus = regexp.MustCompile(`^\*\*Date:\*\* \d{4}-\d{2}-\d{2} · \*\*Status:\*\* (active|not built)$`)
 	isoDate        = regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}\b`)
+	// What a pattern may not name: this project's decisions, sections of its
+	// specification, its behaviours, or the project itself (W-56).
+	projectName = regexp.MustCompile(`\bD-\d{3}\b|§\d|\bB\d{2}\b|(?i)\bcogmer\b`)
 	// Open work a decision must not point to: the repository's list, and the
 	// task URLs of the trackers a project is likely to use.
 	openWork = regexp.MustCompile(`\bopen\.md\b|docs/work/|app\.clickup\.com/t/\S+|github\.com/[\w.-]+/[\w.-]+/issues/\d+|atlassian\.net/browse/\S+|linear\.app/\S+/issue/\S+`)
@@ -52,6 +55,9 @@ var (
 
 // specification is the one document that must carry no dates.
 const specification = "Shared Claude Sessions.md"
+
+// patternsDocument holds the patterns that apply beyond this project.
+const patternsDocument = "docs/patterns.md"
 
 // structureProblems returns each structural rule src breaks, as "line: problem".
 func structureProblems(doc string, src []byte) []string {
@@ -120,6 +126,25 @@ func structureProblems(doc string, src []byte) []string {
 				if workCitation.MatchString(nodeSource(n, src)) {
 					lo, _ := sourceRange(n)
 					report(lo, "cites working material, which is deleted with its open item; cite a durable record instead (W-19)")
+				}
+				return ast.WalkSkipChildren, nil
+			}
+			return ast.WalkContinue, nil
+		})
+	}
+
+	// A pattern names nothing in this repository (W-56), read from each block's
+	// Markdown as written so a name in backticks counts.
+	if doc == patternsDocument {
+		ast.Walk(root, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+			if !entering {
+				return ast.WalkContinue, nil
+			}
+			switch n.(type) {
+			case *ast.Paragraph, *ast.TextBlock, *ast.Heading:
+				for _, m := range projectName.FindAllString(nodeSource(n, src), -1) {
+					lo, _ := sourceRange(n)
+					report(lo, "a pattern names %q, part of this project; state it for any project (W-56)", m)
 				}
 				return ast.WalkSkipChildren, nil
 			}
@@ -261,6 +286,11 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 		{"open.md citing working material", "docs/open.md", "**Split the log.** See `docs/work/split.md`.\n", 0},
 		{"working material with the findings fields", "docs/work/split.md", "# T\n\n**Run:** a\n\n**Result:** b\n", 0},
 		{"working material citing itself", "docs/work/split.md", "Also in `docs/work/other.md`.\n", 0},
+		{"a general pattern", patternsDocument, "P-01. Key on stable identifiers. Names collide.\n", 0},
+		{"a pattern citing a decision", patternsDocument, "P-01. Key on stable identifiers (D-017).\n", 1},
+		{"a pattern naming the project", patternsDocument, "P-01. Cogmer keys on stable identifiers.\n", 1},
+		{"a pattern citing a section in backticks", patternsDocument, "P-01. Fail open, as `§3.1` says.\n", 1},
+		{"a decision elsewhere is fine", "x.md", "As D-017 decides.\n", 0},
 	}
 	for _, c := range cases {
 		if got := structureProblems(c.doc, []byte(c.src)); len(got) != c.want {

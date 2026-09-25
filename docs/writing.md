@@ -52,6 +52,9 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-50 | an `open.md` item names the problem | judgement |
 | W-51 | a long `open.md` item holds detail of another kind | judgement |
 | W-52 | delete a finished `open.md` item | judgement |
+| W-55 | a pattern applies beyond this project, and this project follows it | judgement |
+| W-56 | a pattern names nothing in this repository | checked |
+| W-57 | a pattern states one rule, then its reason | judgement |
 | W-60 | a findings document has its fields and sections | checked |
 | W-61 | findings are observations, never instructions | judgement |
 | W-70 | a behaviour's `Title` is an observed fact | judgement |
@@ -312,6 +315,26 @@ decision.
 
 W-52. Delete an item when it is done; never mark it done.
 
+### A pattern (`docs/patterns.md`)
+
+```markdown
+P-NN. <The rule, as an instruction any project could follow.> <Why it holds, in
+general terms.>
+```
+
+W-55. A pattern belongs in the list only if it applies beyond this project and this
+project follows it. A choice that makes sense only here is a decision, in
+`docs/decisions.md`. A pattern this project does not follow belongs in no list of
+its.
+
+W-56. A pattern names nothing in this repository: no decision, no section of the
+specification, no behaviour, and not the project's name. A pattern stated in this
+project's terms goes stale when those terms change, and cannot be read in another
+project.
+
+W-57. A pattern states one rule, as an instruction, and then the reason it holds,
+never an example from this project. Its ID is never renumbered or reused.
+
 ### A findings document (`docs/*-findings.md`)
 
 ```markdown
@@ -425,7 +448,8 @@ as the opening of an item in `open.md`. A findings document has **Run:**, **Resu
 and the three sections its template names. No header sits over a section of three
 lines or fewer; a document's title and the headers a template defines are exempt.
 The specification carries no dates. No document other than `open.md` and working
-material cites `docs/work/`. These checks share the exemption list with the
+material cites `docs/work/`. The patterns document names no decision, section,
+behaviour or the project itself. These checks share the exemption list with the
 word check. No length limit is checked, because a limit is met most cheaply by
 compressing, which is the failure W-17 describes. The header rule is not such a
 limit: what it asks for is removing the header.

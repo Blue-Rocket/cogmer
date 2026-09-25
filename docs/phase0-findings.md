@@ -85,7 +85,7 @@ Two things rule out the obvious approaches:
 
 So the reassembler takes every `assistant` record following the last
 `promptSource`-bearing user record. `thinking` blocks are never published;
-`isSidechain: true` records (subagent traffic) are excluded per §3.5.
+`isSidechain: true` records (subagent traffic) are excluded per §15.
 
 ## 4. Context injection (§18–§20) — works, and this was the critical unknown
 

@@ -314,7 +314,7 @@ dropped in favour of naming the person.
 
 `/cogmer:room-list` and `/cogmer:self-status` were both named without confirmation.
 
-**Six citations in `docs/decisions.md` credit an entry with something it does not
+**Seven citations in `docs/decisions.md` credit an entry with something it does not
 hold.** Each resolves, so the citation test passes, but the source says something
 else. "D-016 fixes that at the first prompt" describes what D-056 (a session's room
 is fixed at first sight) decided. D-017's Context says "D-015 gave rooms a generated
@@ -323,8 +323,9 @@ from D-017" names a format D-017 does not hold. "Already decided (D-052, §29):
 interactive, blocking on another person…" quotes words D-053 holds. "D-099 prefers
 the label because a word pair means nothing to a person weeks later" gives a reason
 D-094 holds. "`common.sh` and D-107 both attribute to §3.1" is untrue of D-107,
-which cites no § section. These are fixed when the entries that hold them are
-rewritten.
+which cites no § section. D-110 calls the thinking-block exclusion "§3.5's", but
+§15 (capturing Claude responses) holds it. These are fixed when the entries that hold
+them are rewritten.
 
 **Three decisions' Status lines report what is no longer so.** D-041 (ship as a Claude
 Code plugin) says "specified; not implemented", D-057 (a slash command is a thin

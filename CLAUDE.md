@@ -43,6 +43,7 @@ they rot.
 | document | answers |
 |---|---|
 | `Shared Claude Sessions.md` | what must be true |
+| `docs/patterns.md` | architectural patterns that apply beyond this project |
 | `docs/decisions.md` | why, and what was rejected |
 | `docs/*-findings.md` | what we observed when we tried it |
 | `cmd/cogmer/behaviors.go` | what someone else's software does that we rely on |
@@ -119,100 +120,19 @@ holds. Hooks keep it fresh, but they only fire for edits this session made.
 - `publish.sh` reads `plugin/VERSION`, requires `dist/`, and ships to the host in
   `plugin/release-url.txt`.
 
-## Choices this project has made
+## Patterns
 
-Not universal truths — the part of the possibility space this project selected.
+The architectural patterns this project follows, stated for any project. This
+project's own choices are in `docs/decisions.md`, and the specification says what must
+be true.
 
-- **Two people is the target, and nothing rules out more** (D-109). Spend no effort
-  on a third. O(n) work is a cost and is fine; a design that *cannot* extend past
-  two is a ceiling and must be argued for. Events are immutable, so a ceiling in an
-  event format is permanent.
-- **No adapter machinery for a second host** (D-043, D-086). Capture generalises and
-  injection does not, so the abstraction that looks safe on the capture side is not
-  safe on the injection side. Hosts are ordered — Claude Code, CoWork soon, ChatGPT
-  Desktop much later (D-110) — and naming them licenses nothing.
-- **A view is a separate program, never drawn inside the session** (D-038, D-039).
-  A session is read closely and a room is glanced at. Do not propose a terminal
-  pane; prefer an OS notification from the daemon for ambient awareness (D-037,
-  Claude Code is launched and used unchanged).
-- **As few centralized components as possible, and each one explicable** (D-115).
-  A compromise to privacy or decentralization must trace to a recorded decision, be
-  disclosed to the person affected, and benefit them rather than us. Failing a test
-  does not forbid the thing; it names what is missing. Three exist: the relay
-  (forced by NAT, two of three), the model provider (inherent, two of three), the
-  release host (pre-GA, one of three, retired when a public one exists).
-- **No network provider is required** (D-019). None belongs in room identity,
-  membership or replication. Tailscale is one provider, never a prerequisite.
-- **No join tokens, and no join-by-name on a trusted network** (D-024, D-026).
-  Nothing a person can hold admits them, and names are guessable by design.
-- **Migrate, do not orphan.** `CREATE TABLE IF NOT EXISTS` ignores an existing
-  table, so a column added later is missing from every older room and fails at first
-  query rather than at open. `migrate()` runs on open; adding it there is the job.
-- **No CRDT** until testing proves it necessary (§11).
-- A command prefix names its target: `peer-` somebody else, `room-` a room, `self-`
-  you (D-095, D-096). **Claude Code prefixes every command with the plugin manifest
-  name and offers no unprefixed form** (D-118), so a person types
-  `/cogmer:room-create`. The manifest `name` is therefore not cosmetic: changing it
-  renames every command at once. The `room-`/`peer-`/`self-` prefixes are kept on
-  top of it because they name a target, not to avoid collisions — the namespace
-  does that now.
-
-## Boundaries
-
-Violating one makes an otherwise reasonable change wrong, and none is obvious from
-reading a few files.
-
-- **First, do no harm** (§3.1) — the duty every other requirement is subordinate
-  to. A session must be no worse for having installed this: not broken, not
-  slowed, not noisy, not robbed of context budget, not made to take a turn. Every
-  hook failure path exits 0 with empty stdout, and a dead daemon means no
-  collaboration, never a broken session. It is a general duty, so an unlisted way
-  to degrade a session is forbidden as well.
-- **A remote event never drives an interactive session** (§3.7). It may be read at a
-  turn the person started; it must never be the reason a turn ran. `sync.go`,
-  `daemon.go`, `store.go` and `transcript.go` must not import `os/exec` or
-  `syscall`, or call `RunProbe`/`EnsureVerified`/`runDoctor` — a test enforces it.
-  An MCP server must not expose sampling, for the same reason.
-- **Room content is untrusted.** It comes from peers. `ui.html` escapes before
-  applying markup and a test asserts that order; the injected block carries a
-  per-injection fence, strips that fence from content, and restates its framing
-  *after* the turns (D-040). Frame by classification, never by asserting authority.
-  Never a static delimiter.
-- **The local API is reachable from this machine's browser**; loopback is not a
-  boundary (D-087). State-changing routes require `X-Cogmer: 1` — require, not
-  refuse, which is what makes it fail closed. `Origin` is a second layer. Never
-  `Referer`. Reads stay unguarded, because CORS already withholds them.
-- **The private key lives in `identity.key` and never in `identity.json`**, which
-  `whoami` prints. A test asserts it never marshals.
-- **Verification gates synchronization** (D-054). Authentication, admission and
-  verification answer three different questions and must not be collapsed — every
-  one but the last passes equally well for a key substituted in transit. An
-  unverified peer's events are refused at their **origin**, so a verified relay
-  cannot launder an unverified author, and are **held, never dropped**.
-- **Events are immutable** (§7). Never rewrite `eventId`, `peerId` or
-  `peerSequence`; transitive relay depends on it. Signature schemes are added,
-  never edited (D-058) — an event cannot be re-signed and refetching history is a
-  recovery path, so add `signingBytesV4` beside `signingBytesV3` and bump
-  `currentSigVersion`.
-- **Durability precedes publication** (§23), and **reserve a sequence before
-  publishing the event that uses it** (D-029). The reverse publishes a number with
-  no record of it.
-- **Never publish `thinking` blocks**, exclude `isSidechain` records (§3.5), and do
-  not summarize conversation (§3.4) — store the actual text. Injected context is
-  attributed, never disguised as local (§20).
-- **Key on `roomId`, never on `roomName`** — names collide by design (D-017).
-  Nothing derives a room from a directory, repository or project. A session's room
-  is fixed at its first prompt and never changes (D-056), because injected context
-  cannot be withdrawn from a context window.
-- **`mergeTail` is not an append.** It detects the superset case rather than
-  assuming it; if `last_assistant_message` ever widens to the whole turn, blind
-  appending duplicates every pre-tool block and silently corrupts the room.
-- **Delivery is confirmed by observation**, never marked at injection time (D-014).
-  The daemon's reply can be lost, and committing then discards context permanently
-  and silently.
+@docs/patterns.md
 
 ## Facts that are not obvious from the code
 
+- **Claude Code prefixes every plugin command with the plugin manifest's `name`, and
+  offers no unprefixed form** (D-118). A user types `/cogmer:room-create`, so changing
+  the manifest name renames every command at once.
 - **Every Claude Code extension point delivers to the model, and nothing displays to
   a person** (D-033, D-036). A person sees only what the model then says. MCP as a
   display channel was tested exhaustively and surfaces nowhere anybody looks — do

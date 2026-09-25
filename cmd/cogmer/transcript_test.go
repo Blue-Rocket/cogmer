@@ -60,7 +60,7 @@ func TestNoDuplicateWhenTranscriptAlreadyFlushed(t *testing.T) {
 	}
 }
 
-// Subagent traffic belongs to a nested session, not the room (§3.5).
+// Subagent traffic belongs to a nested session, not the room (§15).
 func TestSidechainExcluded(t *testing.T) {
 	withSide := raceTranscript + "\n" +
 		`{"type":"assistant","isSidechain":true,"message":{"role":"assistant","content":[{"type":"text","text":"SUBAGENT"}]}}`

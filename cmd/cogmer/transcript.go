@@ -95,7 +95,7 @@ func ReassembleLastTurn(path, lastMessage string) (*AssistantTurn, error) {
 	turn := &AssistantTurn{}
 	var parts []string
 	for _, r := range records[start+1:] {
-		// Subagent traffic belongs to a nested session, not the room (§3.5).
+		// Subagent traffic belongs to a nested session, not the room (§15).
 		if r.Type != "assistant" || r.IsSidechain {
 			continue
 		}
