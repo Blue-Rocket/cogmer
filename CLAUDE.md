@@ -127,7 +127,7 @@ Not universal truths — the part of the possibility space this project selected
   on a third. O(n) work is a cost and is fine; a design that *cannot* extend past
   two is a ceiling and must be argued for. Events are immutable, so a ceiling in an
   event format is permanent.
-- **No adapter machinery for a second host** (D-043, D-113). Capture generalises and
+- **No adapter machinery for a second host** (D-043, D-086). Capture generalises and
   injection does not, so the abstraction that looks safe on the capture side is not
   safe on the injection side. Hosts are ordered — Claude Code, CoWork soon, ChatGPT
   Desktop much later (D-110) — and naming them licenses nothing.
@@ -202,7 +202,7 @@ reading a few files.
   attributed, never disguised as local (§20).
 - **Key on `roomId`, never on `roomName`** — names collide by design (D-017).
   Nothing derives a room from a directory, repository or project. A session's room
-  is fixed at its first prompt and never changes (D-016), because injected context
+  is fixed at its first prompt and never changes (D-056), because injected context
   cannot be withdrawn from a context window.
 - **`mergeTail` is not an append.** It detects the superset case rather than
   assuming it; if `last_assistant_message` ever widens to the whole turn, blind

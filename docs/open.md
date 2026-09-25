@@ -314,25 +314,17 @@ dropped in favour of naming the person.
 
 `/cogmer:room-list` and `/cogmer:self-status` were both named without confirmation.
 
-**Citations credit an entry with something it does not hold.** Each resolves, so the
-citation test passes, but the source says something else:
-
-- `CLAUDE.md`, "No adapter machinery for a second host (D-043, D-113)": D-113 does not
-  state it; D-110 (host order) does.
-- `CLAUDE.md`, "is fixed at its first prompt and never changes (D-016)", and
-  `docs/decisions.md`, "D-016 fixes that at the first prompt": D-056 (a session's
-  room is fixed at first sight) decided that.
-- `CLAUDE.md`, "No join tokens, and no join-by-name on a trusted network (D-024,
-  D-026)", and `docs/spec-review.md`, "The bearer token was never necessary (D-024,
-  D-025)": D-024 keeps a join code, and D-026 (no join token) removed it.
-- `cmd/cogmer/tailcat.go`, "a peerId is an Ed25519 key … (D-020)": D-020 never names
-  Ed25519; D-042 (peer identity is an Ed25519 key pair) decides it.
-- In `docs/decisions.md`: D-017's Context, "D-015 gave rooms a generated id plus a
-  human-chosen label", though D-015 holds no label; "The invitation format from D-017",
-  though D-017 holds no invitation format; "Already decided (D-052, §29): interactive,
-  blocking on another person…", words D-053 holds; "D-099 prefers the label because a
-  word pair means nothing to a person weeks later", a reason D-094 gives; and
-  "`common.sh` and D-107 both attribute to §3.1", though D-107 cites no § section.
+**Six citations in `docs/decisions.md` credit an entry with something it does not
+hold.** Each resolves, so the citation test passes, but the source says something
+else. "D-016 fixes that at the first prompt" describes what D-056 (a session's room
+is fixed at first sight) decided. D-017's Context says "D-015 gave rooms a generated
+id plus a human-chosen label", though D-015 holds no label. "The invitation format
+from D-017" names a format D-017 does not hold. "Already decided (D-052, §29):
+interactive, blocking on another person…" quotes words D-053 holds. "D-099 prefers
+the label because a word pair means nothing to a person weeks later" gives a reason
+D-094 holds. "`common.sh` and D-107 both attribute to §3.1" is untrue of D-107,
+which cites no § section. These are fixed when the entries that hold them are
+rewritten.
 
 **Three decisions' Status lines report what is no longer so.** D-041 (ship as a Claude
 Code plugin) says "specified; not implemented", D-057 (a slash command is a thin

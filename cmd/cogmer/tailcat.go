@@ -43,7 +43,7 @@ import (
 //
 // Two identities, two jobs, never to be conflated: tailcat holds a WireGuard key
 // for its tunnel, and a peerId is an Ed25519 key that signs events and is what two
-// people compare two words against (D-020).
+// people compare two words against (D-042).
 //
 // Confined to this file on purpose. Tailcat promises no API stability -- "the Go
 // API, CLI flags and output, and wire format may all change" -- so what that buys
