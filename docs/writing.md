@@ -59,6 +59,7 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-59 | nothing cites a value or a pattern | checked |
 | W-60 | a findings document has its fields and sections | checked |
 | W-61 | findings are observations, never instructions | judgement |
+| W-65 | an explanation cites nothing | checked |
 | W-70 | a behaviour's `Title` is an observed fact | judgement |
 | W-71 | a behaviour's `Reliance` starts with what breaks | checked |
 | W-72 | a behaviour check's error says what changed | judgement |
@@ -389,6 +390,16 @@ a rule the guide states, such as "this entry holds two decisions" under W-40. Th
 requirement a finding justifies goes in the specification, and a finding about
 someone else's software goes in the behaviour registry.
 
+### An explanation (`docs/explanations/`)
+
+An explanation walks a reader through how something works, in whatever form
+teaches it best. W-65 is the only rule in this guide that applies to it.
+
+W-65. An explanation cites nothing: no decision, no section of the specification
+and no behaviour. It says what the cited entry would have held instead. A citation
+has to be kept in step with the entry it names, and an explanation is written once
+and read long after.
+
 ### A behaviour-registry entry (`cmd/cogmer/behaviors.go`)
 
 W-70. `Title` states the behaviour as an observed fact, in the present tense:
@@ -452,9 +463,9 @@ marker).
 Documents not yet rewritten are listed in `writingNotYetRewritten` and exempt. The
 test fails when a listed document passes, so that it comes off the list in the
 commit that rewrote it. This guide is never checked, because it quotes every word
-it bans. Nothing in `docs/explanations/` is checked, and none of these rules applies
-to it: an explanation walks a reader through how something works, in whatever form
-teaches it best.
+it bans. The word and structure checks skip `docs/explanations/`.
+`TestExplanationsCiteNothing`, in `structure_test.go`, checks only W-65 there,
+reading code spans as well as prose.
 
 `TestCitationsNameThingsThatExist`, in `cmd/cogmer/citations_test.go`, checks
 every citation in the documents, the Go sources, the scripts and the plugin. Each

@@ -654,3 +654,45 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 		}
 	}
 }
+
+// explanationCitations returns each citation in an explanation, as "line: citation".
+// Code spans count: a citation in backticks goes stale the same way.
+func explanationCitations(src []byte) []string {
+	var found []string
+	for i, line := range strings.Split(string(src), "\n") {
+		for _, re := range []*regexp.Regexp{decisionCitation, sectionCitation, behaviorCitation} {
+			for _, m := range re.FindAllString(line, -1) {
+				found = append(found, fmt.Sprintf("%d: %s", i+1, m))
+			}
+		}
+	}
+	return found
+}
+
+// An explanation cites nothing, so nothing in it has to be kept in step with the
+// entry it cites (W-65).
+func TestExplanationsCiteNothing(t *testing.T) {
+	matches, err := filepath.Glob("../../docs/explanations/*.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range matches {
+		src, err := os.ReadFile(m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rel, _ := filepath.Rel("../..", m)
+		for _, c := range explanationCitations(src) {
+			t.Errorf("%s:%s: an explanation cites nothing; say what the cited entry holds instead (W-65)", filepath.ToSlash(rel), c)
+		}
+	}
+}
+
+func TestExplanationCitationsCatchesEachKind(t *testing.T) {
+	src := []byte("The header check (D-087) holds.\nSee §25 and `B09`.\nNothing here.\n")
+	got := explanationCitations(src)
+	want := []string{"1: D-087", "2: §25", "2: B09"}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("explanationCitations = %q, want %q", got, want)
+	}
+}
