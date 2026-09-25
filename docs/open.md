@@ -23,6 +23,29 @@ and need no removal. `TestTeammateContentCannotEscapeTheBlock` in
 change rewrites that part of it under W-38 (a partial change rewrites the earlier
 entry).
 
+**A web page can read the local API, and only the `Origin` check keeps it from
+writing, once its site's name points at 127.0.0.1.** A site can load its page from
+its own address on port 4782, then point its name at 127.0.0.1 (DNS rebinding). The
+browser then treats the page's requests to the daemon as same-origin, so it sends
+`X-Cogmer` without asking and lets the page read the replies. `/`, `/events` and
+`/stream` have no check, so the page can read a room once it knows the room's
+address, which was not checked. The state-changing routes are refused only because
+`guardLocal` in `cmd/cogmer/localguard.go` rejects the page's `Origin`, a check that
+passes a request with no `Origin` at all. The daemon answers a request whose `Host`
+names another site: on 2026-09-24, `curl -H 'Host: evil.example:4782'` got 200 from
+`/` and `/healthz`. None of this was reproduced in a browser.
+`docs/explanations/dns-rebinding.md` walks through each scenario.
+
+The fix is to refuse, on every local route, any request whose `Host` is not
+`127.0.0.1`, `localhost` or `[::1]` with the daemon's port. A page can reach the
+daemon under its own name, or name the daemon in `Host` and be treated as another
+origin, but not both. Demonstrate it before and after, as D-087 (the local API
+requires a header a web page cannot send) was demonstrated: a hosts-file entry
+pointing a made-up name at 127.0.0.1 reproduces the end state of rebinding. D-087
+calls the header check the one the defence rests on and the `Origin` check a second
+layer, so the change rewrites that part of it under W-38 (a partial change rewrites
+the earlier entry).
+
 **No test fails when a change to the signing bytes or the wire format stops an
 existing record from being read.** Every signing test in `cmd/cogmer/keys_test.go`
 signs a fresh event and then verifies it, so an edit to `signingBytesV3` or
