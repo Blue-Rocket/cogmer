@@ -55,6 +55,8 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-55 | a pattern applies beyond this project, and this project follows it | judgement |
 | W-56 | a pattern names nothing in this repository | checked |
 | W-57 | a pattern states one rule, then its reason | judgement |
+| W-58 | a value states a commitment, not a technique | judgement |
+| W-59 | nothing cites a value or a pattern | checked |
 | W-60 | a findings document has its fields and sections | checked |
 | W-61 | findings are observations, never instructions | judgement |
 | W-70 | a behaviour's `Title` is an observed fact | judgement |
@@ -318,12 +320,15 @@ W-52. Delete an item when it is done; never mark it done.
 ### A pattern (`docs/patterns.md`)
 
 ```markdown
-P-NN. <The rule, as an instruction any project could follow.> <Why it holds, in
-general terms.>
+<The rule, as an instruction any project could follow.> <Why it holds, in general
+terms.>
 ```
 
-W-55. A pattern belongs in the list only if it applies beyond this project and this
-project follows it. A choice that makes sense only here is a decision, in
+W-55. A pattern belongs in the list only if it could apply to hundreds of other
+projects and this project follows it. It is stated in neutral, general terms. A
+pattern is a technique: a way of building, with a mechanism a reader can apply to code
+or data. A commitment about whom the project serves is a
+value, in `docs/values.md`. A choice that makes sense only here is a decision, in
 `docs/decisions.md`. A pattern this project does not follow belongs in no list of
 its.
 
@@ -333,7 +338,21 @@ project's terms goes stale when those terms change, and cannot be read in anothe
 project.
 
 W-57. A pattern states one rule, as an instruction, and then the reason it holds,
-never an example from this project. Its ID is never renumbered or reused.
+never an example from this project. A pattern has no ID.
+
+### A value (`docs/values.md`)
+
+```markdown
+<The commitment, as a statement of what this project holds itself to.>
+```
+
+W-58. A value states a commitment about whom this project serves and what it owes
+them. It is not a technique, so no mechanism follows from it alone, and it may name
+this project. A value has no ID.
+
+W-59. Nothing cites a value or a pattern. No decision, finding, specification
+section, open item or line of code refers to one: `CLAUDE.md` imports both files, so
+every session reads them whole.
 
 ### A findings document (`docs/*-findings.md`)
 
@@ -449,7 +468,8 @@ and the three sections its template names. No header sits over a section of thre
 lines or fewer; a document's title and the headers a template defines are exempt.
 The specification carries no dates. No document other than `open.md` and working
 material cites `docs/work/`. The patterns document names no decision, section,
-behaviour or the project itself. These checks share the exemption list with the
+behaviour or the project itself, and no document other than `CLAUDE.md` names the
+values or patterns document. These checks share the exemption list with the
 word check. No length limit is checked, because a limit is met most cheaply by
 compressing, which is the failure W-17 describes. The header rule is not such a
 limit: what it asks for is removing the header.

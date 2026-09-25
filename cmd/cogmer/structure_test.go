@@ -59,6 +59,9 @@ const specification = "Shared Claude Sessions.md"
 // patternsDocument holds the patterns that apply beyond this project.
 const patternsDocument = "docs/patterns.md"
 
+// valuesOrPatterns is how a citation of either document would name it (W-59).
+var valuesOrPatterns = regexp.MustCompile(`\b(values|patterns)\.md\b`)
+
 // structureProblems returns each structural rule src breaks, as "line: problem".
 func structureProblems(doc string, src []byte) []string {
 	root := goldmark.New(goldmark.WithExtensions(extension.GFM)).Parser().Parse(text.NewReader(src))
@@ -126,6 +129,27 @@ func structureProblems(doc string, src []byte) []string {
 				if workCitation.MatchString(nodeSource(n, src)) {
 					lo, _ := sourceRange(n)
 					report(lo, "cites working material, which is deleted with its open item; cite a durable record instead (W-19)")
+				}
+				return ast.WalkSkipChildren, nil
+			}
+			return ast.WalkContinue, nil
+		})
+	}
+
+	// Nothing cites a value or a pattern (W-59); CLAUDE.md imports both, and the
+	// two documents may describe themselves.
+	if doc != "CLAUDE.md" && doc != patternsDocument && doc != "docs/values.md" {
+		ast.Walk(root, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+			if !entering {
+				return ast.WalkContinue, nil
+			}
+			switch n.(type) {
+			case *ast.FencedCodeBlock, *ast.CodeBlock, *ast.HTMLBlock:
+				return ast.WalkSkipChildren, nil
+			case *ast.Paragraph, *ast.TextBlock, *ast.Heading:
+				if valuesOrPatterns.MatchString(nodeSource(n, src)) {
+					lo, _ := sourceRange(n)
+					report(lo, "cites the values or patterns document, which nothing cites; CLAUDE.md imports both (W-59)")
 				}
 				return ast.WalkSkipChildren, nil
 			}
@@ -291,6 +315,10 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 		{"a pattern naming the project", patternsDocument, "P-01. Cogmer keys on stable identifiers.\n", 1},
 		{"a pattern citing a section in backticks", patternsDocument, "P-01. Fail open, as `§3.1` says.\n", 1},
 		{"a decision elsewhere is fine", "x.md", "As D-017 decides.\n", 0},
+		{"a findings document citing a pattern", "docs/x-findings.md", "# T\n\n**Run:** a, per `docs/patterns.md`\n\n**Result:** b\n\n## What was run\n\nc\n\n## What we found\n\nd\n\n## What this does not show\n\ne\n", 1},
+		{"an open item citing a value", "docs/open.md", "**Fix it.** As `docs/values.md` says.\n", 1},
+		{"CLAUDE.md importing both", "CLAUDE.md", "Read them.\n\n@docs/values.md\n\n@docs/patterns.md\n", 0},
+		{"the values document naming itself", "docs/values.md", "# Values\n\nThis file, values.md, holds them.\n", 0},
 	}
 	for _, c := range cases {
 		if got := structureProblems(c.doc, []byte(c.src)); len(got) != c.want {

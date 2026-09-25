@@ -43,6 +43,7 @@ they rot.
 | document | answers |
 |---|---|
 | `Shared Claude Sessions.md` | what must be true |
+| `docs/values.md` | what this project holds itself to |
 | `docs/patterns.md` | architectural patterns that apply beyond this project |
 | `docs/decisions.md` | why, and what was rejected |
 | `docs/*-findings.md` | what we observed when we tried it |
@@ -120,11 +121,11 @@ holds. Hooks keep it fresh, but they only fire for edits this session made.
 - `publish.sh` reads `plugin/VERSION`, requires `dist/`, and ships to the host in
   `plugin/release-url.txt`.
 
-## Patterns
+## Values
 
-The architectural patterns this project follows, stated for any project. This
-project's own choices are in `docs/decisions.md`, and the specification says what must
-be true.
+@docs/values.md
+
+## Patterns
 
 @docs/patterns.md
 
