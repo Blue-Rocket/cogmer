@@ -10,6 +10,34 @@ Being scratch is the point. Be untidy in it.
 
 ## Decided and not built
 
+**The boundary around injected turns is removed from their text, when it could be
+chosen to be absent from it.** `FormatTeamContext` in `cmd/cogmer/daemon.go` generates
+a random value for the boundary, then deletes any copy of that value from each
+colleague's turn, so a turn that contains it arrives altered. A random 20-character
+value almost never occurs in a turn, so the effect is rare, but the text is changed
+when it does. Choosing a value that occurs in none of the turns in the block, and
+generating another in the rare case that one does, would leave every turn as written
+and need no removal. `TestTeammateContentCannotEscapeTheBlock` in
+`cmd/cogmer/transcript_test.go` checks the boundary and should pass unchanged. D-040
+(the injected block is fenced with an unforgeable value) records the removal, so the
+change rewrites that part of it under W-38 (a partial change rewrites the earlier
+entry).
+
+**No test fails when a change to the signing bytes or the wire format stops an
+existing record from being read.** Every signing test in `cmd/cogmer/keys_test.go`
+signs a fresh event and then verifies it, so an edit to `signingBytesV3` or
+`eventBytes` changes the signer and the verifier together and every test still
+passes (read from the code on 2026-09-24). An event signed under scheme v3 before the
+edit, held on a colleague's machine, would then fail to verify, with an error that
+reads as a forgery. D-058 (signature schemes are kept, never replaced) depends on
+that edit never happening, and nothing detects it. The wire format has the same gap:
+nothing decodes a sync message written at `minWireVersion` with the current code.
+
+The fix is a v3 event signed once and checked in, as a constant or a file under
+`cmd/cogmer/testdata/`, with a test that `Verify` accepts it, and the same for a sync
+message at each version `speaks` accepts. Each new scheme or wire version adds its
+own frozen record when it ships.
+
 **Re-pick the overlay relay when it cannot be reached.** D-104 pins it so the
 address is stable. Nothing re-picks, so a machine that relocates past its pinned
 relay is unreachable and nothing says so. Change driven by failure, never by
