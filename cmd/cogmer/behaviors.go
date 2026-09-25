@@ -31,7 +31,8 @@ func (t Tier) String() string {
 // Behavior is an undocumented Claude Code behavior this project depends on.
 //
 // None of these are contractual. They were established empirically against a
-// specific version (see docs/phase0-findings.md and docs/phase0a-findings.md),
+// specific version (the runs are in 84a0751:docs/phase0-findings.md and
+// 84a0751:docs/phase0a-findings.md),
 // and a Claude Code upgrade can change any of them without notice. Several fail
 // SILENTLY -- the room keeps accepting events while quietly recording the wrong
 // thing -- which is why they are checked rather than assumed.
@@ -82,7 +83,7 @@ var Behaviors = []Behavior{
 		Check: func(p *Probe) error {
 			s, _ := p.Turn1Stop["last_assistant_message"].(string)
 			if strings.Contains(s, "ALPHA") {
-				return fmt.Errorf("last_assistant_message now includes pre-tool text (contains ALPHA) -- it is no longer final-block-only; mergeTail handles this, but docs/phase0-findings.md §3 is out of date")
+				return fmt.Errorf("last_assistant_message now includes pre-tool text (contains ALPHA) -- it is no longer final-block-only; mergeTail handles this, but B04's Title and Reliance are out of date")
 			}
 			return nil
 		},
@@ -97,7 +98,7 @@ var Behaviors = []Behavior{
 				if r.Type == "assistant" {
 					for _, b := range blocksOf(r) {
 						if b.Type == "text" && strings.Contains(b.Text, p.Sentinel) {
-							return fmt.Errorf("final block WAS already flushed at Stop time -- the race appears fixed; reassembly is still correct but docs/phase0-findings.md §3 is out of date")
+							return fmt.Errorf("final block WAS already flushed at Stop time -- the race appears fixed; reassembly is still correct but B05's Title and Reliance are out of date")
 						}
 					}
 				}
@@ -383,7 +384,7 @@ var Behaviors = []Behavior{
 	{
 		ID:       "B19",
 		Title:    "Injected teammate context survives compaction",
-		Reliance: "Why no watermark rewind exists. If this fails, sessions are marked as having incorporated context they can no longer see, and the referent is lost silently. Remediation is documented in docs/phase0a-findings.md §5.",
+		Reliance: "Why no watermark rewind exists. If this fails, sessions are marked as having incorporated context they can no longer see, and the referent is lost silently. The compaction runs are in 84a0751:docs/phase0a-findings.md, including Test B, in which context that was incidental to the conversation survived.",
 		Tier:     TierCompaction,
 		Check: func(p *Probe) error {
 			if !strings.Contains(p.PostCompactAnswer, p.Sentinel) {

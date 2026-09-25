@@ -61,6 +61,32 @@ The fix is a v3 event signed once and checked in, as a constant or a file under
 message at each version `speaks` accepts. Each new scheme or wire version adds its
 own frozen record when it ships.
 
+**What leaves the machine is recorded only for 0.6.0.**
+`84a0751:docs/what-leaves-findings.md` read every outbound path on 2026-09-21, at 0.6.0.
+Two have changed since: releases come from GitHub (`plugin/release-url.txt`), and peers
+reach each other through Tailscale's DERP relays, choosing a region in
+`loadTailcatRegion` in `cmd/cogmer/tailcat.go`, which may fetch a relay map from a
+server nobody has named (read on 2026-09-25, not traced further). D-115 (a centralized
+component must trace to a disclosed tradeoff) rests on that record. Reading every
+outbound path again at the current version, including where `loadTailcatRegion` fetches
+from, would say what leaves now. Three of the properties that do not leave are kept only
+by the absence of code, and each could be a test instead, such as one that the embedded
+view holds no absolute URL.
+
+**B19 checks a colleague's turn that was the conversation's subject, never one that was
+incidental.** The probe in `cmd/cogmer/probe.go` injects "The codeword for this check is
+…" and asks for the codeword after compacting. Test B in
+`84a0751:docs/phase0a-findings.md` showed that a turn the conversation never discussed
+survived too, which is the case a real room produces, and only a person re-running it by
+hand checks it again. A `--deep` probe that runs unrelated turns between injecting and
+compacting would check it, at the cost of more turns in a check that takes about 40s.
+
+**Whether automatic compaction can start during a turn is unknown.** Automatic
+compaction never fired in the compaction probe of 2026-09-16, even at 378,916 tokens
+against a 100k threshold, so `84a0751:docs/phase0a-findings.md` shows only that none
+started during that turn. Nobody has checked what turn reassembly does with a compaction
+marker and summary record in the middle of the turn it reassembles.
+
 **Re-pick the overlay relay when it cannot be reached.** D-104 pins it so the
 address is stable. Nothing re-picks, so a machine that relocates past its pinned
 relay is unreachable and nothing says so. Change driven by failure, never by

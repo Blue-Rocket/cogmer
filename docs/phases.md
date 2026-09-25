@@ -1,7 +1,7 @@
 # Phases
 
 The phases the work was planned in, what each set out to do, and how each ended.
-Phase numbers are referred to throughout the decision log, the findings documents and
+Phase numbers are referred to throughout the decision log, the findings documents in history and
 the code, so they are never reused or reassigned.
 
 ## Status
@@ -16,7 +16,7 @@ Where a later phase supersedes an earlier one, the earlier is marked rather than
 | Phase 2 — Two-peer synchronization | **complete**, ahead of Phase 1 and not over Tailscale |
 | Phase 3 — Real-time push | **will not be built** as written; polling is the decided mechanism for peers |
 | Phase 4 — Cross-Claude context | **complete**, in Phase 0 |
-| Phase 5 — Offline/reconnection | **complete** — verified in-process and across two machines; see `docs/phase5-findings.md` |
+| Phase 5 — Offline/reconnection | **complete** — verified in-process and across two machines; see `84a0751:docs/phase5-findings.md` |
 | Phase 6 — Three-peer/transitive | deferred |
 | Phase 7 — Hardening | **complete** — the outbound queue was dissolved by pull rather than built |
 | Phase 11 — Installation | **complete** — plugin, hooks, commands, and a verified binary fetch (D-066, D-067) |

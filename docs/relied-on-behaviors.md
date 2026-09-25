@@ -102,5 +102,5 @@ re-verifies them against the installed version.
 
 ### B19 — Injected teammate context survives compaction
 
-**Relied on for:** Why no watermark rewind exists. If this fails, sessions are marked as having incorporated context they can no longer see, and the referent is lost silently. Remediation is documented in docs/phase0a-findings.md §5.
+**Relied on for:** Why no watermark rewind exists. If this fails, sessions are marked as having incorporated context they can no longer see, and the referent is lost silently. The compaction runs are in 84a0751:docs/phase0a-findings.md, including Test B, in which context that was incidental to the conversation survived.
 

@@ -57,8 +57,6 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-57 | a pattern states one rule, then its reason | judgement |
 | W-58 | a value states a commitment, not a technique | judgement |
 | W-59 | nothing cites a value or a pattern | checked |
-| W-60 | a findings document has its fields and sections | checked |
-| W-61 | findings are observations, never instructions | judgement |
 | W-65 | an explanation cites nothing | checked |
 | W-70 | a behaviour's `Title` is an observed fact | judgement |
 | W-71 | a behaviour's `Reliance` starts with what breaks | checked |
@@ -68,6 +66,7 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-82 | every requirement is grounded in a benefit | judgement |
 | W-83 | the specification carries no status and no plan | judgement |
 | W-90 | the form of a commit message | judgement |
+| W-91 | a commit that records evidence says how it was run | judgement |
 
 ## The reader
 
@@ -149,7 +148,7 @@ something it does not say breaks this rule, although W-09's test passes.
 
 W-19. Working material lives in `docs/work/`. It serves one open item, such as a
 checkpoint of a rewrite in progress, and is deleted with that item. It may use the
-findings template's **Run:** and **Result:** fields. Nothing durable cites it, because
+**Run:** and **Result:** fields to record a run. Nothing durable cites it, because
 the citation would outlive it: only `docs/open.md` and other working material may.
 A fact in it that stays true after its item is done moves to a durable record or an
 open item before it is deleted.
@@ -198,8 +197,10 @@ W-24. No status decoration: no check marks, emoji, "Note:" or "Important:".
 ### A decision (`docs/decisions.md`)
 
 A decision entry is a log of what was decided and what supports it. It is not the
-story of how the decision was reached. What was observed, measured or tried goes in
-a findings document, and the decision cites it.
+story of how the decision was reached. What was observed, measured or tried is
+recorded in a commit, and the decision cites the commit (D-128, evidence of a past
+run is cited by the commit that recorded it). What someone else's software does is a
+behaviour in `cmd/cogmer/behaviors.go`, and what cogmer's own code does is a test.
 
 ```markdown
 ## D-NNN — <what was decided, as a statement>
@@ -211,7 +212,7 @@ make sense on its own.>
 
 **Support.**
 - <A fact the decision rests on.> <Its source: a specification section, another
-  decision, a findings document and section, a file and function, or external
+  decision, a commit, a file and function, or external
   documentation with its URL.>
 
 **Rejected.**
@@ -246,12 +247,14 @@ of them.
 
 W-34. Every item under **Support.** has a source, and the source is where the fact
 is kept: a § section of the specification, a decision, a behaviour such as B04, a
-file named in backticks, or a URL. If the only record of a fact would be the
-decision itself, write the findings document first.
+file named in backticks, a commit, or a URL. A commit is cited as `<commit>` for its
+message, or as `<commit>:<path>` for a file as that commit holds it. If the only
+record of a fact would be the decision itself, commit it first, usually in a commit
+message under W-91, and cite that commit.
 
 W-35. A support item states a fact that holds now. When the evidence is something
 that happened, such as a failure or an earlier design, the item states the fact it
-showed, and the finding it cites holds the event. "An environment variable has the
+showed, and the commit it cites holds the event. "An environment variable has the
 same value in every session a machine starts", not "the variable made a command act
 on the wrong room".
 
@@ -260,26 +263,26 @@ the reason for writing an entry at all. When no alternative was weighed,
 **Rejected.** says why there was none.
 
 W-37. When a decision reverses an earlier one, the earlier entry is replaced by a
-tombstone, and the reason for the reversal is recorded as a finding. The new
+tombstone, and the reason for the reversal is recorded in a commit. The new
 decision cites neither: it stands on its own support. A tombstone keeps the number
 and the title, so that references to it still resolve, and nothing else:
 
 ```markdown
 ## D-NNN — <original title>
 
-**Status:** withdrawn YYYY-MM-DD. Replaced by D-MMM (<words>). Why:
-`docs/<topic>-findings.md`, "<section>".
+**Status:** withdrawn YYYY-MM-DD. Replaced by D-MMM (<words>). Why: `<commit>`.
 ```
 
-The finding says what the withdrawn decision was, what showed it wrong, and the
+The cited commit's message, or a file it holds cited as `<commit>:<path>`,
+"<heading>", says what the withdrawn decision was, what showed it wrong, and the
 evidence, so that nobody has to reconstruct the argument to avoid repeating it.
 
 W-38. When a later decision changes only part of an earlier one, rewrite the earlier
 entry so that it states only what still holds, and record the removed part's
-reason as a finding in the same way.
+reason in a commit in the same way.
 
 W-39. When rewriting an entry, keep every fact, reference and number from the
-original, either in the entry or in the findings document it now cites. Remove one
+original, either in the entry or in the commit it now cites. Remove one
 only by saying in the commit message what was removed and why.
 
 W-40. An entry records one decision. A second decision, one that has alternatives
@@ -297,7 +300,7 @@ is written knowing it will go stale. **Limits.** states the decision's scope, wh
 does not decide, which stays true after a later decision settles the question. The
 open item points the other way, citing the decision it concerns: "D-123 (finding a
 daemon by the addresses it holds) leaves undecided whether…". The same holds for the
-specification and for findings, which W-80 and W-61 already keep free of plans.
+specification, which W-83 keeps free of plans.
 
 ### An item in `docs/open.md`
 
@@ -313,7 +316,7 @@ W-50. The opening sentence names the problem, not the fix: "`/cogmer:self-status
 on first use fails instead of answering", not "Make cli.sh exit 0".
 
 W-51. An item past about 25 lines usually holds detail of another kind: what
-happened on the way belongs in a finding, and the reasoning for a choice in a
+happened on the way belongs in a commit message, and the reasoning for a choice in a
 decision.
 
 W-52. Delete an item when it is done; never mark it done.
@@ -351,44 +354,9 @@ W-58. A value states a commitment about whom this project serves and what it owe
 them. It is not a technique, so no mechanism follows from it alone, and it may name
 this project. A value has no ID.
 
-W-59. Nothing cites a value or a pattern. No decision, finding, specification
+W-59. Nothing cites a value or a pattern. No decision, specification
 section, open item or line of code refers to one: `CLAUDE.md` imports both files, so
 every session reads them whole.
-
-### A findings document (`docs/*-findings.md`)
-
-```markdown
-# <What was tested>
-
-**Run:** <date, machines and platforms, versions, anything unusual about the setup>
-
-**Result:** <one sentence.>
-
-## What was run
-
-<A table or numbered steps, enough to repeat it.>
-
-## What we found
-
-### <Each finding, as a statement>
-
-<What was seen, what caused it, and what was done about it, with a commit or
-decision reference.>
-
-## What this does not show
-
-<The limits of the test.>
-```
-
-W-60. A findings document has **Run:**, **Result:** and the three sections this
-template names.
-
-W-61. Findings record what was seen. They are observations, never instructions: a
-finding says what is true, and what to do about it goes in `docs/open.md`, where
-it is deleted when done. A classification counts as an observation when it applies
-a rule the guide states, such as "this entry holds two decisions" under W-40. The
-requirement a finding justifies goes in the specification, and a finding about
-someone else's software goes in the behaviour registry.
 
 ### An explanation (`docs/explanations/`)
 
@@ -414,7 +382,7 @@ W-72. The error the check returns says what changed and where to look next.
 
 W-80. State one requirement per paragraph, in the present tense: "The daemon stops
 only a process it has identified as a cogmer daemon." Give at most one sentence of
-reason, and point to the decision for the rest. No findings and no history.
+reason, and point to the decision for the rest. No evidence and no history.
 
 W-81. The specification carries no dates.
 
@@ -446,6 +414,11 @@ Co-Authored-By: …
 W-90. Write for somebody reading `git log` who wants to know whether this commit
 matters to them. Wrap at 72 columns. The body is usually 3 to 10 lines.
 
+W-91. A commit that records evidence for a decision to cite says, in its message or
+in a file it adds, when the run happened and on what machines and versions, what was
+done, enough to repeat it, what was seen, and what the run does not show. It records
+observations, never instructions: what to do about them goes in `docs/open.md`.
+
 ## Enforcement
 
 `TestDocumentsFollowWritingGuide`, in `cmd/cogmer/writing_test.go`, checks every
@@ -470,14 +443,13 @@ reading code spans as well as prose.
 `TestCitationsNameThingsThatExist`, in `cmd/cogmer/citations_test.go`, checks
 every citation in the documents, the Go sources, the scripts and the plugin. Each
 D-NNN must have an entry in `docs/decisions.md`, each § a numbered heading or
-numbered step in the specification, and each BNN an entry in the behaviour
-registry. No document is exempt. A decision that was withdrawn keeps its tombstone,
+numbered step in the specification, each BNN an entry in the behaviour
+registry, and each `<commit>:<path>` a file that commit holds. No document is exempt. A decision that was withdrawn keeps its tombstone,
 so citations of it still resolve.
 
 `structure_test.go` checks the structure the templates set. Bold appears only as a
-template's field names, in decisions, findings documents and working material, and
-as the opening of an item in `open.md`. A findings document has **Run:**, **Result:**
-and the three sections its template names. No header sits over a section of three
+template's field names, in decisions and working material, and as the opening of an
+item in `open.md`. No header sits over a section of three
 lines or fewer; a document's title and the headers a template defines are exempt.
 The specification carries no dates. No document other than `open.md` and working
 material cites `docs/work/`. The patterns document names no decision, section,
@@ -497,7 +469,7 @@ count as the field. It checks W-30, W-33, W-34, W-36 and W-41 on each; for W-41 
 rejects a mention of `open.md` or `docs/work/`, or a link to a ClickUp, GitHub issue,
 Jira or Linear task. Every tombstone,
 whatever its number, must hold only its status line, and its "Why:" must name a
-findings document and a heading that exist.
+commit that exists, or a file in a commit and a heading that file holds there.
 
 `TestWritingRulesAreIndexed`, in `cmd/cogmer/writingrules_test.go`, checks that
 the rule index above and the checks agree. Every rule in the index has a paragraph

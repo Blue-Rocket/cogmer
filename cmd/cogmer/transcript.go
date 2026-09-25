@@ -9,7 +9,7 @@ import (
 
 // transcriptRecord is the subset of a Claude Code transcript JSONL line that
 // turn reassembly needs. Field names verified empirically against Claude Code
-// 2.1.273 -- see docs/phase0-findings.md.
+// 2.1.273; B06 to B09 in behaviors.go check them against the installed version.
 type transcriptRecord struct {
 	Type         string `json:"type"`
 	UUID         string `json:"uuid"`

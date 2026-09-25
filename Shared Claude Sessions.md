@@ -2521,7 +2521,7 @@ This should be derived from the complete conversational record rather than repla
 # 36\. First Task for Claude Code
 
 This section held the instructions for the first integration spike. The spike is
-Phase 0 in `docs/phases.md`, and `docs/phase0-findings.md` records what it found.
+Phase 0 in `docs/phases.md`, and `84a0751:docs/phase0-findings.md` records what it found.
 
 ---
 

@@ -26,7 +26,7 @@ rules; this skill says how to review against them, never what they are. If
 something here seems to disagree with the guide, the guide wins, and say so in the
 report.
 
-Identify the kind of each document (decision, `open.md` item, findings document,
+Identify the kind of each document (decision, `open.md` item,
 specification, README, commit message) and read the guide's template for it.
 
 ## 3. Run the deterministic checks

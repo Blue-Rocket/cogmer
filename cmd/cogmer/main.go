@@ -229,7 +229,7 @@ func sessionRoom(m *Membership) Room {
 // `membership.db` rather than a name in `config.json`. It read the old config for
 // longer than that was true, so `log` reported an empty room called "default"
 // while a live room held seven events -- and an empty room reads as a quiet one,
-// which is why the staleness went unnoticed (Phase 5 findings).
+// which is why the staleness went unnoticed until the partition run of 2026-09-18.
 // sessionID is the Claude Code session a command was invoked from, empty at a
 // terminal. Claude Code exports it into every tool call's environment and it is
 // the same id the hooks report (B21), so a slash command that shells out needs to

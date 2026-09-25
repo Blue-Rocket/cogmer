@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -11,14 +12,16 @@ import (
 	"testing"
 )
 
-// Every D-NNN, §N and BNN cited anywhere in the repository names something that
-// exists. A number allocated while writing and never followed by its entry reads
+// Every D-NNN, §N, BNN and <commit>:<path> cited anywhere in the repository
+// names something that exists. A number allocated while writing and never followed by its entry reads
 // as a source, so a citation is checked, not trusted.
 
 var (
-	decisionCitation  = regexp.MustCompile(`\bD-\d{3}\b`)
-	sectionCitation   = regexp.MustCompile(`§(\d+[a-z]?(?:\.\d+)*)`)
-	behaviorCitation  = regexp.MustCompile(`\bB\d{2}\b`)
+	decisionCitation = regexp.MustCompile(`\bD-\d{3}\b`)
+	sectionCitation  = regexp.MustCompile(`§(\d+[a-z]?(?:\.\d+)*)`)
+	behaviorCitation = regexp.MustCompile(`\bB\d{2}\b`)
+	// A file as a commit holds it, the form evidence of a past run is cited in.
+	committedCitation = regexp.MustCompile(`\b[0-9a-f]{7,40}:[\w./-]+\.(?:md|go|sh|json|html)\b`)
 	decisionHeading   = regexp.MustCompile(`(?m)^## (D-\d{3}) — `)
 	specHeading       = regexp.MustCompile(`^#+ (\d+[a-z]?(?:\.\d+)*)\\?\.?(?:\s|$)`)
 	specNumberedPoint = regexp.MustCompile(`^(\d+)\. `)
@@ -120,14 +123,17 @@ func TestCitationsNameThingsThatExist(t *testing.T) {
 			len(decisions), len(sections), len(behaviors))
 	}
 
+	committed := func(ref string) bool {
+		return exec.Command("git", "-C", "../..", "cat-file", "-e", ref).Run() == nil
+	}
 	for _, rel := range citationSources(t) {
-		for _, p := range citationProblems(read(rel), decisions, sections, behaviors) {
+		for _, p := range citationProblems(read(rel), decisions, sections, behaviors, committed) {
 			t.Errorf("%s:%s", rel, p)
 		}
 	}
 }
 
-func citationProblems(src string, decisions, sections, behaviors map[string]bool) []string {
+func citationProblems(src string, decisions, sections, behaviors map[string]bool, committed func(string) bool) []string {
 	var problems []string
 	for i, line := range strings.Split(src, "\n") {
 		for _, d := range decisionCitation.FindAllString(line, -1) {
@@ -143,6 +149,11 @@ func citationProblems(src string, decisions, sections, behaviors map[string]bool
 		for _, b := range behaviorCitation.FindAllString(line, -1) {
 			if !behaviors[b] {
 				problems = append(problems, fmt.Sprintf("%d: cites %s, which is not in the behavior registry (W-09)", i+1, b))
+			}
+		}
+		for _, ref := range committedCitation.FindAllString(line, -1) {
+			if !committed(ref) {
+				problems = append(problems, fmt.Sprintf("%d: cites %s, which no commit holds (W-09)", i+1, ref))
 			}
 		}
 	}
@@ -171,9 +182,13 @@ func TestCitationProblemsCatchesEachKind(t *testing.T) {
 		{"See §36.2 and §36.3.", 1},
 		{"See B02.", 1},
 		{"D-0012 and XB01 and ED-001 are not citations.", 0},
+		{"See `84a0751:docs/a.md`.", 0},
+		{"See `84a0751:docs/b.md`.", 1},
+		{"Run `git show 84a0751` and read docs/a.md.", 0},
 	}
+	committed := func(ref string) bool { return ref == "84a0751:docs/a.md" }
 	for _, c := range cases {
-		if got := citationProblems(c.src, decisions, sections, behaviors); len(got) != c.want {
+		if got := citationProblems(c.src, decisions, sections, behaviors, committed); len(got) != c.want {
 			t.Errorf("%q: got %d problems %q, want %d", c.src, len(got), got, c.want)
 		}
 	}

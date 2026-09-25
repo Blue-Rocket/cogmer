@@ -2956,7 +2956,7 @@ member being reachable, and teammate turns may be injected a second time.
 holding nothing reports low watermarks, and peers resend. What was missing was only
 that the peer not corrupt the room on its way back.
 
-**Also fixed, from the Phase 5 findings.** `log`, `conflicts` and `seed` resolved a
+**Also fixed, from the partition run of 2026-09-18.** `log`, `conflicts` and `seed` resolved a
 room through `config.json`, which D-046 replaced. During a live room holding seven
 events, `cogmer log` printed `ROOM DEFAULT -- 0 events`. They now use the
 current room from `membership.db`. `whoami` deliberately does **not**: who you are
@@ -3883,7 +3883,7 @@ failure case truthful, which is the case that matters anyway.
 ## D-076 — A command inside a session acts on that session's room
 
 **Status:** withdrawn 2026-09-20. Replaced by D-077 (every room has its own URL, and
-no ambient value picks one). Why: `docs/room-choice-findings.md`, "An ambient
+no ambient value picks one). Why: `84a0751:docs/room-choice-findings.md`, "An ambient
 variable ranked above the session answers for every session".
 
 ---
@@ -6201,7 +6201,7 @@ user-facing documentation: `plugin/README.md`, the browser view and terminal out
 are the only surfaces reaching a person, none mentions what is transmitted, and the
 files in `plugin/commands/` are prompts rather than documentation (D-086). So this
 rule presently creates an obligation nothing can meet, which is a fact about the
-project rather than a defect in the rule. `docs/what-leaves-findings.md` is the
+project rather than a defect in the rule. `84a0751:docs/what-leaves-findings.md` is the
 evidence any disclosure would be written from.
 
 **What this does not do.** It does not forbid a version check, which is the
@@ -6854,3 +6854,41 @@ opens only freshly created stores cannot see a column missing from an older one.
 
 **Revisit when** a change to a stored format needs more than adding columns or
 rebuilding a table, such as a change to the data a store holds.
+
+
+---
+
+## D-128 — Evidence of a past run is cited by the commit that recorded it
+
+**Date:** 2026-09-25 · **Status:** active
+
+**Decision.** No document records findings. A decision or a tombstone that rests on
+something observed cites the commit that recorded it, as
+`<commit>:<path>` for a file in that commit, with the heading where one applies. What
+someone else's software does is a behaviour in `cmd/cogmer/behaviors.go`, and what
+cogmer's own code does is a test.
+
+**Support.**
+- A commit's content never changes, so a citation of it is true for as long as the
+  commit is reachable, and nobody has to keep it in step. `https://git-scm.com/book/en/v2/Git-Internals-Git-Objects`.
+- A behaviour check runs whenever `cogmer doctor` does, which happens by itself
+  when a room is formed under a Claude Code version it has not checked. `cmd/cogmer/doctor.go`.
+- The hook payloads, transcript records and compaction markers the first two spikes
+  observed are checked by B01 to B18. `cmd/cogmer/behaviors.go`.
+- The citation test fails for a `<commit>:<path>` citation that does not resolve,
+  and the tombstone check fails when the cited file at that commit lacks the cited
+  heading. `cmd/cogmer/citations_test.go` and `cmd/cogmer/structure_test.go`.
+
+**Rejected.**
+- *A findings document, maintained in the tree.* Each run it retells becomes a set
+  of claims about the run, and every edit to the document has to check them against
+  the original again. `docs/writing.md`, W-18 (every claim is true of what it names).
+- *One findings document per test.* It has the same cost, spread over more files.
+  Eight such files held the findings at commit `84a0751`.
+
+**Limits.** A reader has to run `git show` to read the evidence, and cannot browse it
+as a document. Evidence that no commit holds yet has to be committed, usually in a
+commit message, before a decision can cite it.
+
+**Revisit when** a reader needs to browse past runs rather than follow a citation to
+one, or a citation's commit becomes unreachable, such as after a history rewrite.

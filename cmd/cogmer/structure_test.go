@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -23,9 +24,8 @@ import (
 // the fix it asks for is removing the header.
 
 var (
-	findingsDocument = regexp.MustCompile(`^docs/[^/]+-findings\.md$`)
-	// Working material for an open item. It may use the findings fields, and
-	// nothing durable may cite it, because it is deleted with its item (W-19).
+	// Working material for an open item. It may use the fields a run is recorded
+	// with, and	// nothing durable may cite it, because it is deleted with its item (W-19).
 	workDocument = regexp.MustCompile(`^docs/work/[^/]+\.md$`)
 	workCitation = regexp.MustCompile(`docs/work/`)
 	// The field names the templates define, which are the only bold text
@@ -34,15 +34,14 @@ var (
 		"Date:": true, "Status:": true, "Decision.": true, "Support.": true,
 		"Rejected.": true, "Limits.": true, "Revisit when": true,
 	}
-	findingsFields   = map[string]bool{"Run:": true, "Result:": true}
-	findingsSections = []string{"What was run", "What we found", "What this does not show"}
+	workFields = map[string]bool{"Run:": true, "Result:": true}
 
 	// A support item names where its fact is kept: a section of the
 	// specification, a decision, a behavior, a file, or a URL.
 	supportSource = regexp.MustCompile("§\\d|\\bD-\\d{3}\\b|\\bB\\d{2}\\b|https?://|`[^` ]*(/|\\.(md|go|sh|json|html))[^` ]*`")
 	// Words that describe the system as it stood when a decision was made.
 	historyWords   = regexp.MustCompile(`(?i)\b(stays|stay|is kept|are kept|continues to|continue to|already|used to|previously|formerly|no longer|replaced|replaces)\b`)
-	tombstoneWhy   = regexp.MustCompile("^\\*\\*Status:\\*\\* withdrawn \\d{4}-\\d{2}-\\d{2}\\. (?s:.*)Why:\\s+`(docs/[^`]+-findings\\.md)`,\\s+\"([^\"]+)\"\\.$")
+	tombstoneWhy   = regexp.MustCompile("^\\*\\*Status:\\*\\* withdrawn \\d{4}-\\d{2}-\\d{2}\\. (?s:.*)Why:\\s+`([0-9a-f]{7,40})(?::([^`]+))?`(?:,\\s+\"([^\"]+)\")?\\.$")
 	decisionStatus = regexp.MustCompile(`^\*\*Date:\*\* \d{4}-\d{2}-\d{2} · \*\*Status:\*\* (active|not built)$`)
 	isoDate        = regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}\b`)
 	// What a pattern may not name: this project's decisions, sections of its
@@ -75,11 +74,9 @@ func structureProblems(doc string, src []byte) []string {
 	switch {
 	case doc == "docs/decisions.md":
 		fields = decisionFields
-	case findingsDocument.MatchString(doc), workDocument.MatchString(doc):
-		fields = findingsFields
+	case workDocument.MatchString(doc):
+		fields = workFields
 	}
-	seenFields := map[string]bool{}
-	var sections []string
 
 	ast.Walk(root, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
@@ -88,10 +85,6 @@ func structureProblems(doc string, src []byte) []string {
 		switch n := n.(type) {
 		case *ast.CodeSpan, *ast.CodeBlock, *ast.FencedCodeBlock, *ast.HTMLBlock, *ast.RawHTML:
 			return ast.WalkSkipChildren, nil
-		case *ast.Heading:
-			if n.Level == 2 {
-				sections = append(sections, inlineText(n, src))
-			}
 		case *ast.Emphasis:
 			if n.Level != 2 {
 				return ast.WalkContinue, nil
@@ -99,7 +92,6 @@ func structureProblems(doc string, src []byte) []string {
 			label := inlineText(n, src)
 			switch {
 			case fields[label]:
-				seenFields[label] = true
 			case doc == "docs/open.md" && opensTopLevelParagraph(n):
 			default:
 				report(firstOffset(n), "bold %q, which only a template field or an open.md item's opening sentence may be (W-14)", label)
@@ -177,8 +169,8 @@ func structureProblems(doc string, src []byte) []string {
 	}
 
 	// A header over three lines or fewer is one the section does not need.
-	// Headers a template defines are exempt: a decision's, a findings
-	// document's sections, and each finding under "What we found".
+	// Headers a template defines are exempt: a decision's, and each finding in
+	// working material.
 	for c := root.FirstChild(); c != nil; c = c.NextSibling() {
 		h, ok := c.(*ast.Heading)
 		if !ok {
@@ -186,8 +178,7 @@ func structureProblems(doc string, src []byte) []string {
 		}
 		title := inlineText(h, src)
 		documentTitle := h.Level == 1 && c == root.FirstChild()
-		shaped := findingsDocument.MatchString(doc) || workDocument.MatchString(doc)
-		if documentTitle || decisionTitle.MatchString(title) || (shaped && (h.Level == 3 || isFindingsSection(title))) {
+		if documentTitle || decisionTitle.MatchString(title) || (workDocument.MatchString(doc) && h.Level == 3) {
 			continue
 		}
 		first, last := 0, 0
@@ -209,32 +200,7 @@ func structureProblems(doc string, src []byte) []string {
 		}
 	}
 
-	if findingsDocument.MatchString(doc) {
-		for f := range findingsFields {
-			if !seenFields[f] {
-				report(0, "no **%s** field; docs/writing.md gives the findings template (W-60)", f)
-			}
-		}
-		for _, want := range findingsSections {
-			found := false
-			for _, s := range sections {
-				found = found || s == want
-			}
-			if !found {
-				report(0, "no \"## %s\" section; docs/writing.md gives the findings template (W-60)", want)
-			}
-		}
-	}
 	return problems
-}
-
-func isFindingsSection(title string) bool {
-	for _, s := range findingsSections {
-		if s == title {
-			return true
-		}
-	}
-	return false
 }
 
 func opensTopLevelParagraph(n ast.Node) bool {
@@ -292,10 +258,6 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 		{"open.md bold mid-paragraph", "docs/open.md", "It **fails**.\n", 1},
 		{"open.md bold in a list", "docs/open.md", "- **Fails.** Yes.\n", 1},
 		{"a long open.md item", "docs/open.md", "**An item.** " + strings.Repeat("Line.\n", 60), 0},
-		{"complete findings", "docs/x-findings.md", "# T\n\n**Run:** a\n\n**Result:** b\n\n## What was run\n\nc\n\n## What we found\n\nd\n\n## What this does not show\n\ne\n", 0},
-		{"findings with no Run", "docs/x-findings.md", "# T\n\n**Result:** b\n\n## What was run\n\nc\n\n## What we found\n\nd\n\n## What this does not show\n\ne\n", 1},
-		{"findings with no limits", "docs/x-findings.md", "# T\n\n**Run:** a\n\n**Result:** b\n\n## What was run\n\nc\n\n## What we found\n\nd\n", 1},
-		{"a short finding under its template heading", "docs/x-findings.md", "# T\n\n**Run:** a\n\n**Result:** b\n\n## What was run\n\nc\n\n## What we found\n\n### It failed\n\nd\n\n## What this does not show\n\ne\n", 0},
 		{"a document title over a short introduction", "x.md", "# T\n\nOne line.\n", 0},
 		{"header over one line", "x.md", "Intro.\n\n## T\n\nOne line.\n", 1},
 		{"header over four lines", "x.md", "Intro.\n\n## T\n\na\nb\nc\nd\n", 0},
@@ -306,7 +268,7 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 		{"date in the specification", specification, "The daemon started on 2026-09-22 and\nis still running today, over\nseveral lines, with no header.\n", 1},
 		{"date in a code span in the specification", specification, "Write `2026-09-22` there.\n", 0},
 		{"date elsewhere", "x.md", "Run on 2026-09-22.\n", 0},
-		{"a durable record citing working material", "docs/x-findings.md", "# T\n\n**Run:** a\n\n**Result:** b, from `docs/work/split.md`.\n\n## What was run\n\nc\n\n## What we found\n\nd\n\n## What this does not show\n\ne\n", 1},
+		{"a durable record citing working material", "x.md", "Taken from `docs/work/split.md`.\n", 1},
 		{"open.md citing working material", "docs/open.md", "**Split the log.** See `docs/work/split.md`.\n", 0},
 		{"working material with the findings fields", "docs/work/split.md", "# T\n\n**Run:** a\n\n**Result:** b\n", 0},
 		{"working material citing itself", "docs/work/split.md", "Also in `docs/work/other.md`.\n", 0},
@@ -315,7 +277,7 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 		{"a pattern naming the project", patternsDocument, "P-01. Cogmer keys on stable identifiers.\n", 1},
 		{"a pattern citing a section in backticks", patternsDocument, "P-01. Fail open, as `§3.1` says.\n", 1},
 		{"a decision elsewhere is fine", "x.md", "As D-017 decides.\n", 0},
-		{"a findings document citing a pattern", "docs/x-findings.md", "# T\n\n**Run:** a, per `docs/patterns.md`\n\n**Result:** b\n\n## What was run\n\nc\n\n## What we found\n\nd\n\n## What this does not show\n\ne\n", 1},
+		{"a document citing a pattern", "x.md", "As `docs/patterns.md` says.\n", 1},
 		{"an open item citing a value", "docs/open.md", "**Fix it.** As `docs/values.md` says.\n", 1},
 		{"CLAUDE.md importing both", "CLAUDE.md", "Read them.\n\n@docs/values.md\n\n@docs/patterns.md\n", 0},
 		{"the values document naming itself", "docs/values.md", "# Values\n\nThis file, values.md, holds them.\n", 0},
@@ -329,21 +291,22 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 
 // Every decision after decisionFormatAfter follows the decision template in
 // docs/writing.md, and every tombstone, whatever its number, keeps only its
-// status line and cites the finding that says why.
+// status line and cites the commit that says why.
 func TestLaterDecisionsFollowTemplate(t *testing.T) {
 	src, err := os.ReadFile("../../docs/decisions.md")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, p := range decisionProblems(string(src), findingsHeadings) {
+	for _, p := range decisionProblems(string(src), committedHeadings) {
 		t.Error(p)
 	}
 }
 
-// findingsHeadings returns the headings of a findings document, or false if it
-// does not exist.
-func findingsHeadings(rel string) (map[string]bool, bool) {
-	src, err := os.ReadFile(filepath.Join("../..", rel))
+// committedHeadings returns the headings of a file as a commit holds it, named
+// as <commit>:<path>, or of a commit's message and diff when named by the commit
+// alone, or false if the commit or the file does not exist.
+func committedHeadings(ref string) (map[string]bool, bool) {
+	src, err := exec.Command("git", "-C", "../..", "show", ref).Output()
 	if err != nil {
 		return nil, false
 	}
@@ -397,13 +360,17 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 			switch {
 			case len(e.body) > 1:
 				report(e.id, "is a tombstone and has more than its status line; the reason belongs in a finding (W-37)")
-			case why == nil:
-				report(e.id, "is a tombstone without \"Why: `docs/<topic>-findings.md`, \\\"<section>\\\".\" (W-37)")
+			case why == nil, why[2] == "" && why[3] != "", why[2] != "" && why[3] == "":
+				report(e.id, "is a tombstone without \"Why: `<commit>`.\" or \"Why: `<commit>:<path>`, \\\"<heading>\\\".\" (W-37)")
 			default:
-				if headings, ok := headingsOf(why[1]); !ok {
-					report(e.id, "cites %s, which does not exist (W-37)", why[1])
-				} else if section := strings.Join(strings.Fields(why[2]), " "); !headings[section] {
-					report(e.id, "cites %q in %s, which has no such heading (W-37)", section, why[1])
+				ref := why[1]
+				if why[2] != "" {
+					ref += ":" + why[2]
+				}
+				if headings, ok := headingsOf(ref); !ok {
+					report(e.id, "cites %s, which does not exist (W-37)", ref)
+				} else if section := strings.Join(strings.Fields(why[3]), " "); why[2] != "" && !headings[section] {
+					report(e.id, "cites %q in %s, which has no such heading (W-37)", section, ref)
 				}
 			}
 			continue
@@ -602,15 +569,18 @@ func firstWords(s string) string {
 
 func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 	headings := func(rel string) (map[string]bool, bool) {
-		if rel == "docs/x-findings.md" {
+		switch rel {
+		case "84a0751:docs/x-findings.md":
 			return map[string]bool{"Why it went": true}, true
+		case "05f89c4":
+			return map[string]bool{}, true
 		}
 		return nil, false
 	}
 	date := "**Date:** 2026-09-23 · **Status:** active\n\n"
-	support := "**Support.**\n- A fact. `docs/x-findings.md`, \"Why it went\".\n- Another, over\n  two lines. D-001 (Go).\n\n"
+	support := "**Support.**\n- A fact. `84a0751:docs/x-findings.md`, \"Why it went\".\n- Another, over\n  two lines. D-001 (Go).\n\n"
 	complete := date + "**Decision.** x\n\n" + support + "**Rejected.** y\n\n**Revisit when** z.\n"
-	tombstone := "**Status:** withdrawn 2026-09-20. Replaced by D-126 (words). Why:\n`docs/x-findings.md`, \"Why it went\".\n"
+	tombstone := "**Status:** withdrawn 2026-09-20. Replaced by D-126 (words). Why:\n`84a0751:docs/x-findings.md`, \"Why it went\".\n"
 	cases := []struct {
 		name  string
 		entry string
@@ -638,7 +608,11 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 		{"tombstone", "## D-076 — T\n\n" + tombstone + "\n---\n", nil},
 		{"tombstone with more", "## D-076 — T\n\n" + tombstone + "\nMore history.\n", []string{"D-076 is a tombstone and has more"}},
 		{"tombstone with no reason", "## D-076 — T\n\n**Status:** withdrawn 2026-09-20. Replaced by D-077 (words).\n", []string{"D-076 is a tombstone without"}},
-		{"tombstone citing a missing finding", "## D-076 — T\n\n" + strings.Replace(tombstone, "x-findings", "y-findings", 1), []string{"D-076 cites docs/y-findings.md, which does not exist"}},
+		{"tombstone citing a missing file", "## D-076 — T\n\n" + strings.Replace(tombstone, "x-findings", "y-findings", 1), []string{"D-076 cites 84a0751:docs/y-findings.md, which does not exist"}},
+		{"tombstone citing a commit's message", "## D-076 — T\n\n**Status:** withdrawn 2026-09-20. Replaced by D-077 (words). Why: `05f89c4`.\n", nil},
+		{"tombstone citing a missing commit", "## D-076 — T\n\n**Status:** withdrawn 2026-09-20. Replaced by D-077 (words). Why: `1234567`.\n", []string{"D-076 cites 1234567, which does not exist"}},
+		{"tombstone citing a file with no heading", "## D-076 — T\n\n" + strings.Replace(tombstone, ", \"Why it went\"", "", 1), []string{"D-076 is a tombstone without"}},
+		{"tombstone citing a file in the tree", "## D-076 — T\n\n" + strings.Replace(tombstone, "84a0751:", "", 1), []string{"D-076 is a tombstone without"}},
 		{"tombstone citing a missing heading", "## D-076 — T\n\n" + strings.Replace(tombstone, "Why it went", "Elsewhere", 1), []string{"D-076 cites \"Elsewhere\""}},
 	}
 	for _, c := range cases {

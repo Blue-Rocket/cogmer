@@ -13,7 +13,7 @@ encyclopedia — the last section says where to read instead.
   It records what was **rejected and why**, and several awkward-looking choices are
   load-bearing. Add an entry whenever a real alternative was weighed. Never
   renumber: a reversed decision becomes a tombstone, and the reason for reversing
-  it goes in a finding.
+  it goes in the message of the commit that withdraws it.
 - **Read `docs/writing.md` before writing any document or commit message**, and
   follow it. It holds the rules and a template for each kind of item.
 - **Read the code before characterising it.** Paraphrasing a grep result produced a
@@ -46,7 +46,7 @@ they rot.
 | `docs/values.md` | what this project holds itself to |
 | `docs/patterns.md` | architectural patterns that apply beyond this project |
 | `docs/decisions.md` | why, and what was rejected |
-| `docs/*-findings.md` | what we observed when we tried it |
+| a commit, cited as `<commit>:<path>` or `<commit>` (D-128) | what we observed when we tried it, where no test can hold the evidence |
 | `cmd/cogmer/behaviors.go` | what someone else's software does that we rely on |
 | `docs/open.md` | actions not yet taken, decisions not yet made |
 | `docs/phases.md` | the phases the work was planned in, and how each ended |
@@ -55,9 +55,9 @@ they rot.
 | `README.md` | what somebody who has not installed it needs (D-122) |
 | `plugin/README.md` | what somebody who has installed it needs |
 
-- A finding never goes in the spec — put the requirement it justifies there.
-- A finding about someone else's software goes in the behaviour registry, the only
-  one of the five that tests itself.
+- Evidence never goes in the spec — put the requirement it justifies there.
+- What someone else's software does goes in the behaviour registry, which tests
+  itself, and what our own code does is a test. Neither is retold anywhere else.
 - An open item is deleted when it is done, never marked done. Nothing records status
   except the phase table in `docs/phases.md`.
 - A decision that changes what the system *is* updates the spec in the same pass
@@ -141,7 +141,7 @@ holds. Hooks keep it fresh, but they only fire for edits this session made.
   not re-attempt it. **Nothing checks this**, which is why it is written here.
 - **Whether injected context survives a compaction is the summarizer's judgement**,
   not a format guarantee, so no assertion can cover it. Re-run Test B from
-  `docs/phase0a-findings.md` when the model or the Claude Code version changes.
+  `84a0751:docs/phase0a-findings.md` when the model or the Claude Code version changes.
 - **Claude Code behaviours this project relies on are undocumented, and several fail
   silently** — the room keeps accepting events while recording the wrong thing. If
   you find a new reliance, add one to `behaviors.go` with a negative test, because a

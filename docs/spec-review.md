@@ -1,7 +1,7 @@
 # Specification review after Phases 0 and 0a
 
-Evaluated against what the spike actually established (`phase0-findings.md`,
-`phase0a-findings.md`) and the choices made since (`decisions.md`).
+Evaluated against what the spike actually established (`84a0751:docs/phase0-findings.md`,
+`84a0751:docs/phase0a-findings.md`) and the choices made since (`decisions.md`).
 
 **Overall: the architecture held up. The event model, the no-CRDT call, the
 local-first invariants, and the attributed-injection format all survived contact
@@ -409,7 +409,7 @@ should require it rather than have it exist only as an accident of how we worked
 
 ### C2 — Compaction has a phase but no standing requirement
 
-**OPEN.** Phase 0a's findings still live only in `phase0a-findings.md`. §21 was rewritten for session-scoped rooms but still does not mention that Claude Code compacts sessions on its own.
+**OPEN.** Phase 0a's findings still live only in `84a0751:docs/phase0a-findings.md`. §21 was rewritten for session-scoped rooms but still does not mention that Claude Code compacts sessions on its own.
 
 **Medium.** Phase 0a (which I added) is an investigation. §21 "Context Window
 Management" governs injection limits and never mentions that Claude Code compacts

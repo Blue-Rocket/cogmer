@@ -88,7 +88,8 @@ step and no external requests.
 
 Two independent Claude sessions synchronizing turns produced an exchange where the
 second resolved a referent from the first, disagreed with it on the merits, and
-found a defect the first had missed — [`docs/phase2-experiment.md`](docs/phase2-experiment.md).
+found a defect the first had missed. The runs are recorded in
+[`phase2-experiment.md`](https://github.com/Blue-Rocket/cogmer/blob/84a0751/docs/phase2-experiment.md), as of commit `84a0751`.
 Repeated across two machines and two Claude Code versions: 0.44 s sync over the open
 internet, identical event ordering.
 
@@ -139,13 +140,10 @@ Claude Code ships as a native binary and a colleague may have no Node installed.
 | [`docs/relied-on-behaviors.md`](docs/relied-on-behaviors.md) | what Claude Code does that this depends on, generated from the registry |
 | [`docs/spec-review.md`](docs/spec-review.md) | the spec evaluated against what the implementation established |
 
-Earlier findings the design still rests on:
-[`docs/phase0-findings.md`](docs/phase0-findings.md) (the integration spike, including
-two non-obvious defects in the Claude Code surface),
-[`docs/phase0a-findings.md`](docs/phase0a-findings.md) (injected teammate context
-survives compaction, so the delivery watermark is unchanged) and
-[`docs/phase5-findings.md`](docs/phase5-findings.md) (offline and reconnection across
-two machines).
+Earlier runs the design rests on are kept in history as of commit `84a0751`: the
+integration spike in [`phase0-findings.md`](https://github.com/Blue-Rocket/cogmer/blob/84a0751/docs/phase0-findings.md), the compaction
+probe in [`phase0a-findings.md`](https://github.com/Blue-Rocket/cogmer/blob/84a0751/docs/phase0a-findings.md), and the partition between
+two machines in [`phase5-findings.md`](https://github.com/Blue-Rocket/cogmer/blob/84a0751/docs/phase5-findings.md).
 
 ### Behavior checks
 
