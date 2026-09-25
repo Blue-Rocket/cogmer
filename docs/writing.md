@@ -452,7 +452,9 @@ marker).
 Documents not yet rewritten are listed in `writingNotYetRewritten` and exempt. The
 test fails when a listed document passes, so that it comes off the list in the
 commit that rewrote it. This guide is never checked, because it quotes every word
-it bans.
+it bans. Nothing in `docs/explanations/` is checked, and none of these rules applies
+to it: an explanation walks a reader through how something works, in whatever form
+teaches it best.
 
 `TestCitationsNameThingsThatExist`, in `cmd/cogmer/citations_test.go`, checks
 every citation in the documents, the Go sources, the scripts and the plugin. Each

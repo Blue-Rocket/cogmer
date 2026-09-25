@@ -51,6 +51,7 @@ they rot.
 | `docs/open.md` | actions not yet taken, decisions not yet made |
 | `docs/phases.md` | the phases the work was planned in, and how each ended |
 | `docs/work/` | material for one open item, deleted with it; nothing durable cites it |
+| `docs/explanations/` | how something works, walked through for a reader who has forgotten; exempt from the writing rules |
 | `README.md` | what somebody who has not installed it needs (D-122) |
 | `plugin/README.md` | what somebody who has installed it needs |
 
