@@ -48,6 +48,7 @@ they rot.
 | `cmd/cogmer/behaviors.go` | what someone else's software does that we rely on |
 | `docs/open.md` | actions not yet taken, decisions not yet made |
 | `docs/phases.md` | the phases the work was planned in, and how each ended |
+| `docs/work/` | material for one open item, deleted with it; nothing durable cites it |
 | `README.md` | what somebody who has not installed it needs (D-122) |
 | `plugin/README.md` | what somebody who has installed it needs |
 

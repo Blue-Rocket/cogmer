@@ -42,7 +42,7 @@ func citationSources(t *testing.T) []string {
 			files = append(files, rel)
 		}
 	}
-	for _, pattern := range []string{"*.md", "docs/*.md", "cmd/cogmer/*.go", "scripts/*"} {
+	for _, pattern := range []string{"*.md", "docs/*.md", "docs/work/*.md", "cmd/cogmer/*.go", "scripts/*"} {
 		matches, err := filepath.Glob(filepath.Join("../..", pattern))
 		if err != nil {
 			t.Fatal(err)

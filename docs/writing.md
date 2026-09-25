@@ -31,6 +31,7 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-16 | do not restate in a closing sentence | judgement |
 | W-17 | keep an item short by leaving out kinds of detail | judgement |
 | W-18 | every claim is true of what it names | judgement |
+| W-19 | nothing durable cites working material | checked |
 | W-20 | no em-dash | checked |
 | W-21 | none of the words in the table | checked |
 | W-22 | a permitted judgement word carries a marker | checked |
@@ -139,6 +140,13 @@ what a citation says its source holds must each match the source. When the sourc
 can change, as a line number or a count can, say which version the claim describes:
 a commit, or a date. A citation that resolves to a real entry but attributes to it
 something it does not say breaks this rule, although W-09's test passes.
+
+W-19. Working material lives in `docs/work/`. It serves one open item, such as a
+checkpoint of a rewrite in progress, and is deleted with that item. It may use the
+findings template's **Run:** and **Result:** fields. Nothing durable cites it, because
+the citation would outlive it: only `docs/open.md` and other working material may.
+A fact in it that stays true after its item is done moves to a durable record or an
+open item before it is deleted.
 
 ## Words and marks to avoid
 
@@ -277,8 +285,8 @@ number, each other decision takes a new number at the bottom of the log, and eve
 citation of the old number is checked against its few words (W-11) and pointed at
 the entry that now holds what it describes.
 
-W-41. A decision never points to open work: not to `docs/open.md`, and not to a task
-in a tracker. Open work is deleted or closed when it is resolved, so a pointer to it
+W-41. A decision never points to open work: not to `docs/open.md`, not to working
+material in `docs/work/`, and not to a task in a tracker. Open work is deleted or closed when it is resolved, so a pointer to it
 is written knowing it will go stale. **Limits.** states the decision's scope, what it
 does not decide, which stays true after a later decision settles the question. The
 open item points the other way, citing the decision it concerns: "D-123 (finding a
@@ -412,11 +420,12 @@ registry. No document is exempt. A decision that was withdrawn keeps its tombsto
 so citations of it still resolve.
 
 `structure_test.go` checks the structure the templates set. Bold appears only as a
-template's field names, in decisions and findings documents, and as the opening of
-an item in `open.md`. A findings document has **Run:**, **Result:** and the three
-sections its template names. No header sits over a section of three lines or
-fewer; a document's title and the headers a template defines are exempt. The
-specification carries no dates. These checks share the exemption list with the
+template's field names, in decisions, findings documents and working material, and
+as the opening of an item in `open.md`. A findings document has **Run:**, **Result:**
+and the three sections its template names. No header sits over a section of three
+lines or fewer; a document's title and the headers a template defines are exempt.
+The specification carries no dates. No document other than `open.md` and working
+material cites `docs/work/`. These checks share the exemption list with the
 word check. No length limit is checked, because a limit is met most cheaply by
 compressing, which is the failure W-17 describes. The header rule is not such a
 limit: what it asks for is removing the header.
@@ -428,8 +437,8 @@ template are listed in `relianceNotRewritten`, which only shrinks.
 `TestLaterDecisionsFollowTemplate`, in `structure_test.go`, checks every decision
 after D-123, reading the log as Markdown so that a field name inside code does not
 count as the field. It checks W-30, W-33, W-34, W-36 and W-41 on each; for W-41 it
-rejects a mention of `open.md` or a link to a ClickUp, GitHub issue, Jira or Linear
-task. Every tombstone,
+rejects a mention of `open.md` or `docs/work/`, or a link to a ClickUp, GitHub issue,
+Jira or Linear task. Every tombstone,
 whatever its number, must hold only its status line, and its "Why:" must name a
 findings document and a heading that exist.
 

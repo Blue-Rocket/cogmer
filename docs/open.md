@@ -43,7 +43,7 @@ report the port and fall back to moving this daemon aside.
 **Most decision entries hold more than one decision, or history, and none is split
 yet.** W-40 in `docs/writing.md` says an entry records one decision. Reading all 126
 entries in full, as they stood at commit `f11e871`, gave this, with the number of
-decisions in parentheses. `docs/decision-log-findings.md` holds the observations for
+decisions in parentheses. `docs/work/decision-split.md` holds the observations for
 each entry: where each decision sits, the alternative each extra one has, the parts
 that are not decisions, and what each citation means.
 
@@ -192,7 +192,7 @@ and would need to follow.
 
 **Whether decisions move to one file per record before the log is split.** Every
 citation of a decision is prose: a number and a few words typed at each use. Checking
-them showed four costs, recorded in `docs/decision-log-findings.md`. A citation says
+them showed four costs, recorded in `docs/work/decision-split.md`. A citation says
 nothing about how it relates to what it cites, so what each of 146 citations means
 needs a reader. Its few words are retyped each time and drift from the title. Finding
 every citation of an entry takes a grep that also hits test fixtures, code comments
@@ -313,6 +313,37 @@ move it resembles.
 dropped in favour of naming the person.
 
 `/cogmer:room-list` and `/cogmer:self-status` were both named without confirmation.
+
+**Citations credit an entry with something it does not hold.** Each resolves, so the
+citation test passes, but the source says something else:
+
+- `CLAUDE.md`, "No adapter machinery for a second host (D-043, D-113)": D-113 does not
+  state it; D-110 (host order) does.
+- `CLAUDE.md`, "is fixed at its first prompt and never changes (D-016)", and
+  `docs/decisions.md`, "D-016 fixes that at the first prompt": D-056 (a session's
+  room is fixed at first sight) decided that.
+- `CLAUDE.md`, "No join tokens, and no join-by-name on a trusted network (D-024,
+  D-026)", and `docs/spec-review.md`, "The bearer token was never necessary (D-024,
+  D-025)": D-024 keeps a join code, and D-026 (no join token) removed it.
+- `cmd/cogmer/tailcat.go`, "a peerId is an Ed25519 key … (D-020)": D-020 never names
+  Ed25519; D-042 (peer identity is an Ed25519 key pair) decides it.
+- In `docs/decisions.md`: D-017's Context, "D-015 gave rooms a generated id plus a
+  human-chosen label", though D-015 holds no label; "The invitation format from D-017",
+  though D-017 holds no invitation format; "Already decided (D-052, §29): interactive,
+  blocking on another person…", words D-053 holds; "D-099 prefers the label because a
+  word pair means nothing to a person weeks later", a reason D-094 gives; and
+  "`common.sh` and D-107 both attribute to §3.1", though D-107 cites no § section.
+
+**Three decisions' Status lines report what is no longer so.** D-041 (ship as a Claude
+Code plugin) says "specified; not implemented", D-057 (a slash command is a thin
+wrapper over the CLI) says "commands not yet built", and D-083 says "not yet
+implemented", yet the plugin, its commands and the first opening of the view at
+pairing all exist.
+
+**The view leaves the derived name off a user's own turns, and no decision records
+why.** Commit `33ce996` made the choice. D-021 (peer names are derived from the
+identity) is cited for it, but D-021 says only what the name is for; it says nothing
+about a user's own turns.
 
 **Two comments describe the current-room pointer D-080 removed.** `main.go:878` and
 `membership.go:686-688` still explain a machine-wide current room. D-080 (a terminal

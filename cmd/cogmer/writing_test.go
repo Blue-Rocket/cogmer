@@ -69,7 +69,7 @@ var (
 func writingDocuments(t *testing.T) []string {
 	t.Helper()
 	var docs []string
-	for _, pattern := range []string{"*.md", "docs/*.md", "plugin/*.md"} {
+	for _, pattern := range []string{"*.md", "docs/*.md", "docs/work/*.md", "plugin/*.md"} {
 		matches, err := filepath.Glob(filepath.Join("../..", pattern))
 		if err != nil {
 			t.Fatal(err)

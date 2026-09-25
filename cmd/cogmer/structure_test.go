@@ -24,6 +24,10 @@ import (
 
 var (
 	findingsDocument = regexp.MustCompile(`^docs/[^/]+-findings\.md$`)
+	// Working material for an open item. It may use the findings fields, and
+	// nothing durable may cite it, because it is deleted with its item (W-19).
+	workDocument = regexp.MustCompile(`^docs/work/[^/]+\.md$`)
+	workCitation = regexp.MustCompile(`docs/work/`)
 	// The field names the templates define, which are the only bold text
 	// allowed outside an open.md item's opening sentence.
 	decisionFields = map[string]bool{
@@ -43,7 +47,7 @@ var (
 	isoDate        = regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}\b`)
 	// Open work a decision must not point to: the repository's list, and the
 	// task URLs of the trackers a project is likely to use.
-	openWork = regexp.MustCompile(`\bopen\.md\b|app\.clickup\.com/t/\S+|github\.com/[\w.-]+/[\w.-]+/issues/\d+|atlassian\.net/browse/\S+|linear\.app/\S+/issue/\S+`)
+	openWork = regexp.MustCompile(`\bopen\.md\b|docs/work/|app\.clickup\.com/t/\S+|github\.com/[\w.-]+/[\w.-]+/issues/\d+|atlassian\.net/browse/\S+|linear\.app/\S+/issue/\S+`)
 )
 
 // specification is the one document that must carry no dates.
@@ -62,7 +66,7 @@ func structureProblems(doc string, src []byte) []string {
 	switch {
 	case doc == "docs/decisions.md":
 		fields = decisionFields
-	case findingsDocument.MatchString(doc):
+	case findingsDocument.MatchString(doc), workDocument.MatchString(doc):
 		fields = findingsFields
 	}
 	seenFields := map[string]bool{}
@@ -102,6 +106,27 @@ func structureProblems(doc string, src []byte) []string {
 		return ast.WalkContinue, nil
 	})
 
+	// Nothing durable cites working material (W-19). The check reads each block's
+	// Markdown as written, because such a citation is usually a path in backticks.
+	if doc != "docs/open.md" && !workDocument.MatchString(doc) {
+		ast.Walk(root, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+			if !entering {
+				return ast.WalkContinue, nil
+			}
+			switch n.(type) {
+			case *ast.FencedCodeBlock, *ast.CodeBlock, *ast.HTMLBlock:
+				return ast.WalkSkipChildren, nil
+			case *ast.Paragraph, *ast.TextBlock, *ast.Heading:
+				if workCitation.MatchString(nodeSource(n, src)) {
+					lo, _ := sourceRange(n)
+					report(lo, "cites working material, which is deleted with its open item; cite a durable record instead (W-19)")
+				}
+				return ast.WalkSkipChildren, nil
+			}
+			return ast.WalkContinue, nil
+		})
+	}
+
 	// A header over three lines or fewer is one the section does not need.
 	// Headers a template defines are exempt: a decision's, a findings
 	// document's sections, and each finding under "What we found".
@@ -112,7 +137,8 @@ func structureProblems(doc string, src []byte) []string {
 		}
 		title := inlineText(h, src)
 		documentTitle := h.Level == 1 && c == root.FirstChild()
-		if documentTitle || decisionTitle.MatchString(title) || (findingsDocument.MatchString(doc) && (h.Level == 3 || isFindingsSection(title))) {
+		shaped := findingsDocument.MatchString(doc) || workDocument.MatchString(doc)
+		if documentTitle || decisionTitle.MatchString(title) || (shaped && (h.Level == 3 || isFindingsSection(title))) {
 			continue
 		}
 		first, last := 0, 0
@@ -231,6 +257,10 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 		{"date in the specification", specification, "The daemon started on 2026-09-22 and\nis still running today, over\nseveral lines, with no header.\n", 1},
 		{"date in a code span in the specification", specification, "Write `2026-09-22` there.\n", 0},
 		{"date elsewhere", "x.md", "Run on 2026-09-22.\n", 0},
+		{"a durable record citing working material", "docs/x-findings.md", "# T\n\n**Run:** a\n\n**Result:** b, from `docs/work/split.md`.\n\n## What was run\n\nc\n\n## What we found\n\nd\n\n## What this does not show\n\ne\n", 1},
+		{"open.md citing working material", "docs/open.md", "**Split the log.** See `docs/work/split.md`.\n", 0},
+		{"working material with the findings fields", "docs/work/split.md", "# T\n\n**Run:** a\n\n**Result:** b\n", 0},
+		{"working material citing itself", "docs/work/split.md", "Also in `docs/work/other.md`.\n", 0},
 	}
 	for _, c := range cases {
 		if got := structureProblems(c.doc, []byte(c.src)); len(got) != c.want {
@@ -544,6 +574,7 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 		{"history word in code", "## D-124 — T\n\n" + strings.Replace(complete, "**Decision.** x", "**Decision.** Run `stays`.", 1), nil},
 		{"Limits pointing at open.md", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Three questions are open in `docs/open.md`.\n\n**Revisit when**", 1), []string{"D-124 points to open work"}},
 		{"Limits pointing at a tracker task", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Tracked in https://app.clickup.com/t/86abc123.\n\n**Revisit when**", 1), []string{"D-124 points to open work"}},
+		{"Limits pointing at working material", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Detail in `docs/work/split.md`.\n\n**Revisit when**", 1), []string{"D-124 points to open work"}},
 		{"Limits stating scope", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** It does not decide whether stop restarts the daemon.\n\n**Revisit when**", 1), nil},
 		{"open work before the cutoff", "## D-123 — Old\n\nLeft open in `docs/open.md`.\n", nil},
 		{"tombstone", "## D-076 — T\n\n" + tombstone + "\n---\n", nil},
