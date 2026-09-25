@@ -1,16 +1,19 @@
 # cogmer
 
-Two people, working separately on their own machines and their own Claude Code
-subscriptions, in one conversation. Your turns and theirs replicate directly between
-you — no server holds the conversation, and no account exists anywhere.
+cogmer is public so that it can be tested. It is not ready for general use.
 
-Your session keeps working when the other one is offline. Their turns arrive at your
-next prompt, never before it: nothing they do makes your session take a turn.
+cogmer puts two people, working separately on their own machines and their own
+Claude Code subscriptions, in one conversation. Your turns and theirs replicate directly between
+your machines. No server holds the conversation, and no account exists anywhere.
+
+Your session keeps working when your colleague's is offline. Their turns reach your
+session at your next prompt, never before it, so nothing they do makes your session
+take a turn.
 
 ## Install
 
-Two commands, inside a Claude Code session. Run them one at a time: pasted
-together, they arrive as a single command and the first one fails.
+Run these two commands inside a Claude Code session, one at a time. Pasted together,
+they arrive as a single command, and the first one fails.
 
 ```
 /plugin marketplace add Blue-Rocket/cogmer
@@ -20,43 +23,44 @@ together, they arrive as a single command and the first one fails.
 /plugin install cogmer@blue-rocket
 ```
 
-Then start a new session. A hook fetches the binary for your platform when a session
-starts and starts a daemon on your machine, so on a first install the session you installed from has
-no binary, and its `/cogmer:` commands say so. The download is about 30MB and
-usually takes seconds. Nothing about how Claude Code starts changes, no shell
-profile is edited, and no service is registered with the operating system.
+Then start a new session. When a session starts, a hook fetches the binary for your
+platform and starts a daemon on your machine. The session you installed from has not
+run that hook, so it has no binary, and its `/cogmer:` commands say so. The binary is
+about 30MB, and the download took 13 to 16 seconds when measured on 2026-09-22.
+Installing changes nothing about how Claude Code starts, edits no shell profile, and
+registers no service with the operating system.
 
-Each binary is authorised by a sha256 pinned in the plugin. A download that does not
-match it is deleted rather than run, and a machine with a Go toolchain and no
-matching asset builds from source instead.
+Each binary is authorised by a SHA-256 hash pinned in the plugin. A download whose
+hash does not match is deleted without being run. If there is no verified download
+and the machine has Go installed, the binary is built from source instead.
 
 ## Pair, once, on a call
 
-Send your colleague your pairing string:
+Send your colleague your pairing string, which this command prints:
 
 ```
 /cogmer:self-status
 ```
 
-It is a public key and an address. Holding it admits nobody, so send it any way you
-like. If it says nobody can reach your address, that is the part that matters — a
-colleague given that string cannot finish a pairing.
+The string is a public key and an address. Holding it admits nobody, so you can send
+it any way you like. If the command says nobody can reach your address, a colleague
+given the string cannot finish pairing with you.
 
-Then, both at once, each with the other's string:
+Then, both at the same time, each run this with the other's string:
 
 ```
 /cogmer:peer-pair ed25519:GoR7…IWPU@203.0.113.9:4783 David
 ```
 
-A page opens in each of your browsers showing two words. You read them to each other
-on the call. That comparison is the whole of the security model, and it is why the
-words never pass through the model: two words Claude told you would mean nothing.
-§25 explains why two are enough and why a mismatch must never be retried. On a
-machine with no browser — over SSH, in a container — the same ceremony happens in
-the terminal.
+A page opens in each of your browsers showing two words, and you read them to each
+other on the call. That comparison is what shows the key each of you received is the
+other's, and not one substituted on the way, so the words never pass through the
+model: two words Claude told you would prove nothing. §25 (security) explains why two words are enough, and why a mismatch
+must never be retried. On a machine with no browser, such as over SSH or in a
+container, the comparison happens in the terminal instead.
 
-Nothing synchronizes until both of you confirm the words matched. An unverified peer
-is refused, so a room with one looks quiet rather than broken.
+Nothing is exchanged with a colleague until both of you confirm the words matched. A
+room whose other member is unverified looks quiet rather than broken.
 
 ## Work in one room
 
@@ -73,40 +77,28 @@ The other accepts it by name:
 /cogmer:room-join misty-canyon
 ```
 
-Then work normally. A session's room is fixed at its first prompt and never changes,
-so joining from a session that has already been in one is refused — start a new
-session rather than looking for a way around it.
+Then work as you normally would. A session's room is fixed at its first prompt and
+never changes, so a session that has already been in a room cannot join another.
+Start a new session to join a different room.
 
-The room is also a page, live over server-sent events at `http://127.0.0.1:4782`:
-who said what, when, with attribution anchored on each peer's derived name rather
-than the display name it asserts. Served from the binary, with no assets, no build
-step and no external requests.
+The room is also a page in your browser, at `http://127.0.0.1:4782`, which updates as
+turns arrive. It shows who said what, and when. Each colleague is labelled with a name
+derived from their key as well as the name they chose, so two people who choose the
+same name still read as two. The page is served by the binary and makes no requests
+to anywhere else.
 
 [`plugin/README.md`](plugin/README.md) is the reference for every command.
 
-## Whether it is worth it
-
-Two independent Claude sessions synchronizing turns produced an exchange where the
-second resolved a referent from the first, disagreed with it on the merits, and
-found a defect the first had missed. The runs are recorded in
-[`phase2-experiment.md`](https://github.com/Blue-Rocket/cogmer/blob/84a0751/docs/phase2-experiment.md), as of commit `84a0751`.
-Repeated across two machines and two Claude Code versions: 0.44 s sync over the open
-internet, identical event ordering.
-
-That is the question this project exists to answer, and it is answered for two
-sessions the same person was watching. Whether it holds when the second person is
-somebody else is not yet known, because nobody but the author has ever been in a
-room. That is the next thing to find out.
-
 ## What it does not do
 
-- **Discover anybody on your local network.** Pairing needs a string exchanged out
-  of band, by design: nothing a person can hold admits them to a room.
-- **Approve a join request you did not invite.** Whether it should is undecided.
-- **Work on Windows with confidence.** The binaries build and are published; hook
-  shell semantics differ there and have not been re-probed.
-- **Summarize anything.** Teammate turns are stored and injected as the text that was
-  actually said, attributed, never disguised as local and never compressed.
+It does not find anybody on your local network. Pairing needs a string exchanged by
+some other means, because nothing a stranger could obtain admits them to a room.
+
+It does not let somebody you have not invited ask to join a room.
+
+It does not summarize. A colleague's turns are stored and injected as the text that
+was actually written, attributed to them, never presented as your own and never
+compressed.
 
 ## Working on it
 
@@ -116,51 +108,48 @@ bin/cogmer daemon                  # hooks and UI on :4782, peer sync on :4783
 go test ./...
 ```
 
-A plugin install puts the binary in `~/.cogmer/bin`, deliberately not on PATH, so
-`cogmer` resolves at a shell only if you built it yourself. Every command the binary
-prints for you to type carries its own full path; those are the ones to trust.
+A plugin install puts the binary in `~/.cogmer/bin`, which is not on `PATH`, so
+`cogmer` at a shell finds only a binary you built and installed yourself. Every
+command the binary prints for you to type carries its full path.
 
-`COGMER_ADDR` sets the local address, `COGMER_PEER_ADDR` the peer address,
-`COGMER_PEERS` extra peer addresses, `COGMER_PREFLIGHT=off` skips behavior checks on
-new rooms, and `COGMER_MAX_EVENTS`, `COGMER_MAX_EVENT_CHARS` and
-`COGMER_MAX_BLOCK_CHARS` bound injected context (§21).
+`COGMER_ADDR` sets the local address, `COGMER_PEER_ADDR` the peer address, and
+`COGMER_PEERS` extra peer addresses. `COGMER_PREFLIGHT=off` skips the behaviour checks
+when a room is formed. `COGMER_MAX_EVENTS`, `COGMER_MAX_EVENT_CHARS` and
+`COGMER_MAX_BLOCK_CHARS` bound the context injected into a session (§21, context
+window management).
 
-Go with pure-Go SQLite throughout, so every target cross-compiles from one machine
-with `CGO_ENABLED=0` and depends on nothing at runtime — which matters because
-Claude Code ships as a native binary and a colleague may have no Node installed.
+The code is Go, with a SQLite library written in Go, so every target builds from one
+machine with `CGO_ENABLED=0` and needs nothing else at run time. Claude Code ships as
+a native binary, so a colleague may have no Node installed.
 
 ### Where to read
 
 | | |
 |---|---|
 | [`Shared Claude Sessions.md`](Shared%20Claude%20Sessions.md) | the specification: the system as a user experiences it |
-| [`docs/decisions.md`](docs/decisions.md) | why, and what was rejected — read before proposing a simplification, because some of the awkwardness is load-bearing |
-| [`docs/open.md`](docs/open.md) | actions not yet taken, decisions not yet made |
+| [`docs/decisions.md`](docs/decisions.md) | the detail beneath the specification, and why; read it before proposing a simplification, because some awkward-looking choices are there for a reason |
+| [`docs/writing.md`](docs/writing.md) | how every document here is written |
+| [`docs/open.md`](docs/open.md) | actions not yet taken, and decisions not yet made |
 | [`docs/phases.md`](docs/phases.md) | the phases the work was planned in, and how each ended |
-| [`docs/relied-on-behaviors.md`](docs/relied-on-behaviors.md) | what Claude Code does that this depends on, generated from the registry |
+| [`docs/relied-on-behaviors.md`](docs/relied-on-behaviors.md) | what Claude Code does that cogmer depends on, generated from the registry |
 
-Earlier runs the design rests on are kept in history as of commit `84a0751`: the
-integration spike in [`phase0-findings.md`](https://github.com/Blue-Rocket/cogmer/blob/84a0751/docs/phase0-findings.md), the compaction
-probe in [`phase0a-findings.md`](https://github.com/Blue-Rocket/cogmer/blob/84a0751/docs/phase0a-findings.md), and the partition between
-two machines in [`phase5-findings.md`](https://github.com/Blue-Rocket/cogmer/blob/84a0751/docs/phase5-findings.md).
+### Behaviour checks
 
-### Behavior checks
-
-This depends on undocumented Claude Code behaviors — how a hook reports a turn, what
-the transcript contains, what compaction preserves, whether a detached daemon can
-still put a window in front of a person. None is contractual and several fail
-silently: the room keeps accepting events while recording the wrong thing.
+cogmer depends on Claude Code behaviours that are not documented: how a hook reports a
+turn, what the transcript contains, what compaction keeps, and whether a daemon
+running in the background can still open a window in front of a person. None of them
+is promised, and several fail silently: the room keeps accepting events while it
+records the wrong thing.
 
 ```sh
-bin/cogmer doctor          # one Claude turn, ~5s
-bin/cogmer doctor --deep   # adds compaction, drives a real one, ~40s
+bin/cogmer doctor          # one Claude turn, about 5s
+bin/cogmer doctor --deep   # also drives a real compaction, about 40s
 ```
 
-The session tier runs automatically the first time a room is formed on a Claude Code
-version nobody has verified, cached on the version rather than the room, so forming a
-tenth room costs nothing. A failure never blocks the room: it names the assumption
-that changed, and each behavior's `Reliance` says what breaks as a result.
-
-## License
+The session checks run by themselves the first time a room is formed under a Claude
+Code version this machine has not checked, and the result is kept for that version,
+so forming another room costs nothing. A failed check never blocks the room. It names
+the behaviour that changed, and each behaviour's `Reliance` says what breaks as a
+result.
 
 Apache-2.0. Copyright 2026 Blue Rocket, Inc.

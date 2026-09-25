@@ -54,7 +54,7 @@ they rot.
 | `docs/phases.md` | the phases the work was planned in, and how each ended |
 | `docs/work/` | material for one open item, deleted with it; nothing durable cites it |
 | `docs/explanations/` | how something works, walked through for a reader who has forgotten; cites nothing, and no other writing rule applies |
-| `README.md` | what somebody who has not installed it needs (W-75) |
+| `README.md` | what somebody should know to use cogmer or work on it, before installing it (W-75) |
 | `plugin/README.md` | what somebody who has installed it needs |
 
 - Evidence never goes in the spec — put the requirement it justifies there.

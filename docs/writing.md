@@ -67,7 +67,7 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-70 | a behaviour's `Title` is an observed fact | judgement |
 | W-71 | a behaviour's `Reliance` starts with what breaks | checked |
 | W-72 | a behaviour check's error says what changed | judgement |
-| W-75 | `README.md` is for somebody who has not installed it | judgement |
+| W-75 | `README.md` is what somebody should know before installing it | judgement |
 | W-76 | `plugin/README.md` is for somebody who has | judgement |
 | W-80 | one requirement per paragraph of the specification | judgement |
 | W-81 | the specification carries no dates | checked |
@@ -435,17 +435,17 @@ W-72. The error the check returns says what changed and where to look next.
 
 ### The two READMEs
 
-W-75. `README.md` is for somebody who has not installed cogmer and is deciding
-whether to. It must say what cogmer is, how to install it, what it does not do, and
-why it might be worth it: the two-peer result, stated with its limit, that it
-happened between two sessions one person was watching. A README that serves both
+W-75. `README.md` is what somebody should know to use cogmer or to work on it, before
+they have installed it. It must say whether cogmer is ready for general use, what
+cogmer is, how to install it, and what it does not do. It holds no history: what was
+tried, and what it showed, is in the commits (W-42). A README that serves both
 audiences serves neither in its first screen, since one reader wants the install
 lines and the other wants what is unfinished.
 
 W-76. `plugin/README.md` is for somebody who has installed cogmer. It must include
 the command reference and where the hooks look for the binary. Neither README
-repeats the other, and neither says what is built or unfinished, which is in
-`open.md` (W-25).
+repeats the other. Apart from whether cogmer is ready for general use, neither says
+what is built or unfinished, which is in `open.md` (W-25).
 
 ### A requirement in the specification (`Shared Claude Sessions.md`)
 
