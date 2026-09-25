@@ -12,14 +12,10 @@ import (
 	"time"
 )
 
-// Phase 2 anti-entropy, reduced to what the §30 experiment needs.
+// Anti-entropy synchronization (§10): a peer asks each other peer for the events it
+// lacks, and receives them.
 //
-// Deliberately omitted, and none of it changes what the experiment measures:
-// invitations and guest lists (§12) — peers are named by COGMER_PEERS;
-// signatures (§25) — a peer is trusted to report its own identity. Either would
-// entrench a format before D-023 has settled one.
-//
-// Polling is NOT among the omissions: it is the decided default (D-031). Peer
+// Polling is the decided default (D-031). Peer
 // propagation is half a second; arrival into a teammate's Claude waits for their
 // next prompt, which is minutes during a long turn. Push would improve the fast
 // half of a path whose slow half is the turn. Pull also makes reconnection free —

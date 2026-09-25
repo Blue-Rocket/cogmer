@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-// Phase 5: offline and reconnection.
+// Offline operation and reconnection (§26).
 //
 // Two peers work while partitioned and converge when the partition heals, with
 // nothing lost and both agreeing on the order. Anti-entropy is the whole mechanism

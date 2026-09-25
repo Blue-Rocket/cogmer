@@ -130,7 +130,6 @@ a native binary, so a colleague may have no Node installed.
 | [`docs/decisions.md`](docs/decisions.md) | the detail beneath the specification, and why; read it before proposing a simplification, because some awkward-looking choices are there for a reason |
 | [`docs/writing.md`](docs/writing.md) | how every document here is written |
 | [`docs/open.md`](docs/open.md) | actions not yet taken, and decisions not yet made |
-| [`docs/phases.md`](docs/phases.md) | the phases the work was planned in, and how each ended |
 | [`docs/relied-on-behaviors.md`](docs/relied-on-behaviors.md) | what Claude Code does that cogmer depends on, generated from the registry |
 
 ### Behaviour checks

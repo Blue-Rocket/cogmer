@@ -105,7 +105,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprint(os.Stderr, `cogmer -- Phase 0 integration spike
+	fmt.Fprint(os.Stderr, `cogmer -- one Claude Code conversation, shared between peers
 
   cogmer daemon          Run the local daemon on `+defaultAddr+`
   cogmer hook prompt     UserPromptSubmit hook (capture + inject)
@@ -509,7 +509,7 @@ func runHook(kind string) {
 	os.Exit(0)
 }
 
-// runSeed inserts a simulated teammate exchange (Phase 0, docs/phases.md) so cross-session
+// runSeed inserts a simulated teammate exchange so cross-session
 // injection can be exercised on one machine, before any networking exists.
 func runSeed() {
 	store, _, room := openLocal()

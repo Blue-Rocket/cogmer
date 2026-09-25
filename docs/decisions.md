@@ -358,7 +358,7 @@ no cost while letting membership end cleanly.
   file, a walk-up rule, a default-off guard, and room-name validation against path
   traversal, all to infer something that an invitation states outright.
 - *Standing team rooms* — the Slack-shaped model. Appealing, but it is precisely
-  what produces the catch-up problem and A3's exposure, and §30's question is
+  what produces the catch-up problem and A3's exposure, and the experimental question the specification then posed is
   about real-time shared conversation, which it does not need.
 - *Discarding the log when a room closes* — would satisfy "no continuity" more
   literally while losing conversation the specification requires preserving.
@@ -372,7 +372,7 @@ argues for simplifying Phase 2.
 
 **Settled by D-016:** a session holds membership in at most one room at a time.
 
-**Revisit when** the experiment in §30 suggests asynchronous catch-up is more
+**Revisit when** the experiment the specification then posed suggests asynchronous catch-up is more
 valuable than bounded context — that is the trade this decision makes.
 
 ---
@@ -1268,7 +1268,7 @@ was never revisited, which is the gap this log exists to prevent. Asked directly
 whether it was interim or decided, the honest answer was that nobody had decided.
 
 **Decision.** Polling is the default for peer synchronization, not a placeholder.
-§31 lists real-time push as Phase 3; it should not be built for the peer layer
+The implementation order the specification then held lists real-time push as Phase 3; it should not be built for the peer layer
 without a reason beyond latency.
 
 **The argument is C4's own measurement.** Peer propagation is roughly half a
@@ -1286,7 +1286,7 @@ simpler shape as well as the cheaper one.
 
 **The push that does matter is a different one.** §17 requires the local UI to
 update live. That is the daemon pushing to a browser on loopback — server-sent
-events — not peers pushing to each other. §31 places "Real-Time Push" in the peer
+events — not peers pushing to each other. That order places "Real-Time Push" in the peer
 layer, where its value is lowest, and the UI has no phase of its own at all.
 
 **Revisit when** something needs sub-second peer propagation for a reason other
@@ -1310,7 +1310,7 @@ is wasteful would be the second.
 Phase 0, Phase 2 was completed before Phase 1 finished, Phase 3 was decided against,
 Phase 6 was deferred, and parts of Phase 7 were taken early. That was the right trade
 while the assumptions underneath the sequence were being tested. It stopped being
-right once §31 described a plan nobody was following, which is worse than either
+right once that order described a plan nobody was following, which is worse than either
 following it or replacing it.
 
 **Decision.** Record actual status against every phase, add the phases the original
@@ -1327,7 +1327,7 @@ still resolve. Superseded phases are marked, not rewritten.
 
 **Why the UI comes first.** Every experiment so far measured whether *Claude*
 understands a teammate's conversation, and none measured whether a *person* finds
-watching one useful. That is half of §30, it has never been tested, and it cannot be
+watching one useful. That is half of the experimental question, it has never been tested, and it cannot be
 while the only way to read a room is a command-line dump.
 
 *Amended the same day.* The first draft of this bundled room identity and the
@@ -1352,7 +1352,7 @@ that a third peer is wanted, since it adds noise to a working session and is unl
 to invalidate anything.
 
 **Rejected.**
-- *Follow §31 as written* — it specifies Tailscale, peer push, and a project-scoped
+- *Follow the implementation order as written* — it specifies Tailscale, peer push, and a project-scoped
   room, all displaced by later decisions. Following it would mean building things
   already decided against.
 - *Renumber the phases* — breaks every reference in this log and in the findings
@@ -5768,7 +5768,7 @@ being decided by drift.
 - *Leave it in D-086.* Where an ordering lives determines whether anybody finds it,
   and the person who needs this one is scoping a host, not choosing a pairing
   surface.
-- *Put it in §31's phase order.* A phase needs a placement, and CoWork's placement
+- *Put it in the phase order.* A phase needs a placement, and CoWork's placement
   depends on its extension model — which is D-086's own revisit trigger. An ordering
   of intent is not yet a phase.
 - *Record the order and omit the intervals.* The order without them is inert: it
@@ -6061,7 +6061,7 @@ yet defensible, and names which part is missing.
 **Applied to what exists**, which is what makes this operative rather than
 aspirational.
 
-- **The DERP relay.** *Traces* — D-062 evaluated it, and §31's Phase 13 question
+- **The DERP relay.** *Traces* — D-062 evaluated it, and Phase 13's question
   asks openly whether depending on a relay nobody here operates is acceptable.
   *Benefits the person* — two people behind strict NAT cannot reach each other
   otherwise, so the alternative is not a purer system but no collaboration. *Not
@@ -6084,7 +6084,7 @@ aspirational.
 
   It exists because there is nowhere else to publish from: a module path must match
   its repository URL, there is no repository, and that is blocked on the name
-  (§31, Phase 13). **GA is defined nowhere in this project**, so the tag needs an
+  (Phase 13). **GA is defined nowhere in this project**, so the tag needs an
   operative trigger rather than a milestone: this is retired when a public release
   host exists, which is the same event that unblocks Phase 13. `publish.sh` already
   anticipates it — "when this moves to a public release host, this script is what

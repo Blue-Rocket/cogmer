@@ -51,7 +51,6 @@ they rot.
 | a commit, cited as `<commit>:<path>` or `<commit>` (W-42 in `docs/writing.md`) | what we observed when we tried it, where no test can hold the evidence |
 | `cmd/cogmer/behaviors.go` | what someone else's software does that we rely on |
 | `docs/open.md` | actions not yet taken, decisions not yet made |
-| `docs/phases.md` | the phases the work was planned in, and how each ended |
 | `docs/work/` | material for one open item, deleted with it; nothing durable cites it |
 | `docs/explanations/` | how something works, walked through for a reader who has forgotten; cites nothing, and no other writing rule applies |
 | `README.md` | what somebody should know to use cogmer or work on it, before installing it (W-75) |
@@ -60,8 +59,8 @@ they rot.
 - Evidence never goes in the spec — put the requirement it justifies there.
 - What someone else's software does goes in the behaviour registry, which tests
   itself, and what our own code does is a test. Neither is retold anywhere else.
-- An open item is deleted when it is done, never marked done. Nothing records status
-  except the phase table in `docs/phases.md`.
+- An open item is deleted when it is done, never marked done. `open.md` groups items
+  by milestone, and nothing records a milestone once its last item is gone (W-53).
 - A change to what the user experiences changes the spec in the same commit (W-85).
 - `docs/decisions.md` holds only decisions about the system. How documents are
   written, where a thing goes and how they are checked are rules in

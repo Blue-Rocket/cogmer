@@ -6,176 +6,15 @@ either becomes a decision, a change to the specification, or code — and is the
 record of what the system is lives in the specification, so an item that has earned a
 permanent home does not need one here too. Nothing here records status.
 
+Items are grouped by milestone: a set of related functionality, named in the sentence
+that opens its section. A milestone's section is deleted with its last item, and
+nothing records it afterwards.
+
 Being scratch is the point. Be untidy in it.
 
-## Decided and not built
+## Installing and the first commands
 
-**The boundary around injected turns is removed from their text, when it could be
-chosen to be absent from it.** `FormatTeamContext` in `cmd/cogmer/daemon.go` generates
-a random value for the boundary, then deletes any copy of that value from each
-colleague's turn, so a turn that contains it arrives altered. A random 20-character
-value almost never occurs in a turn, so the effect is rare, but the text is changed
-when it does. Choosing a value that occurs in none of the turns in the block, and
-generating another in the rare case that one does, would leave every turn as written
-and need no removal. `TestTeammateContentCannotEscapeTheBlock` in
-`cmd/cogmer/transcript_test.go` checks the boundary and should pass unchanged. D-040
-(the injected block is fenced with an unforgeable value) records the removal, so the
-change rewrites that part of it under W-38 (a partial change rewrites the earlier
-entry).
-
-**A web page can read the local API, and only the `Origin` check keeps it from
-writing, once its site's name points at 127.0.0.1.** A site can load its page from
-its own address on port 4782, then point its name at 127.0.0.1 (DNS rebinding). The
-browser then treats the page's requests to the daemon as same-origin, so it sends
-`X-Cogmer` without asking and lets the page read the replies. `/`, `/events` and
-`/stream` have no check, so the page can read a room once it knows the room's
-address, which was not checked. The state-changing routes are refused only because
-`guardLocal` in `cmd/cogmer/localguard.go` rejects the page's `Origin`, a check that
-passes a request with no `Origin` at all. The daemon answers a request whose `Host`
-names another site: on 2026-09-24, `curl -H 'Host: evil.example:4782'` got 200 from
-`/` and `/healthz`. None of this was reproduced in a browser.
-`docs/explanations/dns-rebinding.md` walks through each scenario.
-
-The fix is to refuse, on every local route, any request whose `Host` is not
-`127.0.0.1`, `localhost` or `[::1]` with the daemon's port. A page can reach the
-daemon under its own name, or name the daemon in `Host` and be treated as another
-origin, but not both. Demonstrate it before and after, as D-087 (the local API
-requires a header a web page cannot send) was demonstrated: a hosts-file entry
-pointing a made-up name at 127.0.0.1 reproduces the end state of rebinding. D-087
-calls the header check the one the defence rests on and the `Origin` check a second
-layer, so the change rewrites that part of it under W-38 (a partial change rewrites
-the earlier entry).
-
-**No test fails when a change to the signing bytes or the wire format stops an
-existing record from being read.** Every signing test in `cmd/cogmer/keys_test.go`
-signs a fresh event and then verifies it, so an edit to `signingBytesV3` or
-`eventBytes` changes the signer and the verifier together and every test still
-passes (read from the code on 2026-09-24). An event signed under scheme v3 before the
-edit, held on a colleague's machine, would then fail to verify, with an error that
-reads as a forgery. D-058 (signature schemes are kept, never replaced) depends on
-that edit never happening, and nothing detects it. The wire format has the same gap:
-nothing decodes a sync message written at `minWireVersion` with the current code.
-
-The fix is a v3 event signed once and checked in, as a constant or a file under
-`cmd/cogmer/testdata/`, with a test that `Verify` accepts it, and the same for a sync
-message at each version `speaks` accepts. Each new scheme or wire version adds its
-own frozen record when it ships.
-
-**What leaves the machine is recorded only for 0.6.0.**
-`84a0751:docs/what-leaves-findings.md` read every outbound path on 2026-09-21, at 0.6.0.
-Two have changed since: releases come from GitHub (`plugin/release-url.txt`), and peers
-reach each other through Tailscale's DERP relays, choosing a region in
-`loadTailcatRegion` in `cmd/cogmer/tailcat.go`, which may fetch a relay map from a
-server nobody has named (read on 2026-09-25, not traced further). D-115 (a centralized
-component must trace to a disclosed tradeoff) rests on that record. Reading every
-outbound path again at the current version, including where `loadTailcatRegion` fetches
-from, would say what leaves now. Three of the properties that do not leave are kept only
-by the absence of code, and each could be a test instead, such as one that the embedded
-view holds no absolute URL.
-
-**B19 checks a colleague's turn that was the conversation's subject, never one that was
-incidental.** The probe in `cmd/cogmer/probe.go` injects "The codeword for this check is
-…" and asks for the codeword after compacting. Test B in
-`84a0751:docs/phase0a-findings.md` showed that a turn the conversation never discussed
-survived too, which is the case a real room produces, and only a person re-running it by
-hand checks it again. A `--deep` probe that runs unrelated turns between injecting and
-compacting would check it, at the cost of more turns in a check that takes about 40s.
-
-**Whether automatic compaction can start during a turn is unknown.** Automatic
-compaction never fired in the compaction probe of 2026-09-16, even at 378,916 tokens
-against a 100k threshold, so `84a0751:docs/phase0a-findings.md` shows only that none
-started during that turn. Nobody has checked what turn reassembly does with a compaction
-marker and summary record in the middle of the turn it reassembles.
-
-**§19 (incremental context injection) reads as if a turn is delivered once it is
-injected.** Its steps run "inject them into Claude", then "update the session's
-incorporated-event state", so a reader takes delivery to advance at injection. A
-turn counted that way is lost for good whenever the hook times out or the daemon
-dies before it replies, and the user's session never sees it. D-014 (derive delivery
-state from transcript evidence) counts a turn only once the session's transcript
-shows it arrived. The requirement §19 should state is the user's: a colleague's turn
-is never counted as delivered to a session that did not receive it.
-
-**D-007 (record `COMPACTION` events as observability) is not built.** No code records
-a compaction, so if the summarizer stops keeping a colleague's turns, a room's
-history shows nothing at the moment it happened. §7 lists the event type among those
-to design for later. Either the event is built, or D-007 is withdrawn.
-
-**Re-pick the overlay relay when it cannot be reached.** D-104 pins it so the
-address is stable. Nothing re-picks, so a machine that relocates past its pinned
-relay is unreachable and nothing says so. Change driven by failure, never by
-preference.
-
-**Say when your own address changes.** Every pairing string and invitation already
-handed out is then stale, and only the daemon can know.
-
-**A room never closes, so nothing is archived.** D-015 (rooms are session-scoped)
-has a closed room kept as an archive that can be read but never rejoined, and the
-specification freezes a room's sequences at that point. Membership ends per person
-through `leave` and `revoke`; the room itself has no closed state.
-
-**Local network discovery** (D-019's zero-configuration path) is not built.
-
-**`cogmer stop` (D-123, finding a daemon by the addresses it holds).** Specified and
-not built. It needs `runStop` and a SIGTERM handler in `main.go`, since §3.7 keeps
-`os/exec` and `syscall` out of the daemon's files, plus the blocked-address message
-naming `stop` by its full path, and a test that it declines a process not named
-`cogmer`. A test harness that listens on a port under another name is enough for
-that.
-
-Three things about it are undecided. The first is whether `stop` then starts this
-installation's daemon. Clearing the way is almost always why somebody runs it, but a
-person may also want it simply stopped. The second is whether it gets a slash
-command. The person is in a session, not at a terminal, and the binary is not on
-PATH, so from a terminal they have to type `~/.cogmer/bin/cogmer stop`. The third is
-Windows, which has no `lsof`. `netstat -ano` gives the pid there, or `stop` can
-report the port and fall back to moving this daemon aside.
-
-**Most decision entries hold more than one decision, or history, and none is split
-yet.** W-40 in `docs/writing.md` says an entry records one decision. Reading all 126
-entries in full, as they stood at commit `f11e871`, gave this, with the number of
-decisions in parentheses. `docs/work/decision-split.md` holds the observations for
-each entry: where each decision sits, the alternative each extra one has, the parts
-that are not decisions, and what each citation means.
-
-- split (59): D-002 (2), D-008 (2), D-010 (2), D-014 (2), D-015 (2), D-016 (2),
-  D-017 (4), D-018 (2), D-019 (3), D-020 (2), D-021 (4), D-023 (3), D-024 (2),
-  D-025 (3), D-030 (2), D-032 (2), D-033 (2), D-035 (2), D-036 (2), D-037 (2),
-  D-040 (2), D-041 (3), D-042 (4), D-043 (4), D-045 (2), D-046 (4), D-050 (2),
-  D-052 (4), D-053 (3), D-056 (2), D-057 (3), D-059 (2), D-060 (2), D-061 (4),
-  D-062 (2), D-066 (2), D-067 (3), D-069 (2), D-074 (2), D-075 (2), D-077 (2),
-  D-080 (3), D-081 (2), D-082 (2), D-084 (2), D-086 (2), D-088 (3), D-090 (2),
-  D-091 (2), D-093 (2), D-094 (2), D-095 (3), D-096 (2), D-098 (2), D-100 (2),
-  D-104 (3), D-106 (3), D-117 (3), D-121 (2);
-- become tombstones under W-37 (a reversed decision becomes a tombstone): D-028,
-  which D-029 reversed, and D-047, which D-055 reversed; D-076 is one already;
-- one decision, with history or findings to move out (57): every entry not listed
-  here;
-- one decision and nothing to move (9): D-005, D-007, D-009, D-012, D-013, D-112,
-  D-124, D-125, D-126.
-
-D-098, D-100, D-122, D-124, D-125 and D-126 were moved into `docs/writing.md` as rules
-on 2026-09-25 (W-28, the decision log holds only decisions about the system), so they
-need no split. The counts here describe `f11e871` and include them.
-
-Splitting all 59 adds 86 entries, and 146 citations of them mean something other
-than the first decision, so each needs checking against its few words. Four
-questions come before any split:
-
-- whether an extra decision that repeats an existing entry folds into it instead of
-  taking a number: D-080's prefix rule into D-096, D-020's guest-list preference
-  into D-024, D-056's rule into D-016;
-- whether D-002, D-062, D-070 and D-078 become tombstones or are rewritten to what
-  still holds (W-37, W-38), since later entries hold most of what they decided;
-- which decision keeps the number where most citations mean one the title does not
-  name, as in D-043, whose citations mostly mean "no adapter machinery for a second
-  host", and D-080, split 8 to 7;
-- whether D-018, D-024 and D-025 are rewritten for what D-026 (no join token)
-  reversed before they are split.
-
-Five entries lack a **Decision.** field: D-068, D-083, D-086, D-088 and D-089.
-
-## Commands that mislead
+A new user installs the plugin, and the first commands they run answer instead of failing.
 
 **`/cogmer:self-status` on first use fails instead of answering.** It is the first
 command a new person runs, because the pairing string is what they came for, and it
@@ -229,6 +68,67 @@ change covers every one of them, and each command still needs checking, because
 some exit non-zero on purpose. A fix reaches nobody until the version moves (D-120,
 the manifest version pins an installed plugin).
 
+**Asking for a new session to finish an install is too much.** After `/plugin
+install` the person believes it is installed, and Claude Code agrees: since
+v2.1.221 a plugin installed mid-session is live in that session, with its commands
+and its per-prompt hooks. Only SessionStart has not run, and nothing re-runs it,
+since Claude Code runs no plugin code at install and reloading plugins does not
+fire it. So the binary is never fetched, the daemon never starts, and the standing
+policy for room content (D-081) is never given. Telling somebody to start again to
+finish something they think has finished costs them the session they were working
+in, and the README currently does exactly that.
+
+The possible mitigations:
+
+- Start the fetch from the per-prompt hook when there is no binary, detached, so the
+  first thing typed after installing begins the download without waiting on it.
+  Unchecked: whether a slash command fires that hook at all.
+- Have `cli.sh` start the fetch and wait for it within a bound when a command finds
+  no binary, as the first-use item under "Installing and the first commands" describes.
+  `install.sh` already starts the daemon when the download lands, so starting the
+  daemon needs nothing further.
+- Let the session you installed from enter rooms without the session-start policy.
+  D-081 could not show that policy helping: in-block framing alone produced the
+  same refusal of a hostile turn. Rerunning that hostile-turn test in a session
+  that installed the plugin mid-session would say whether this is safe.
+- Otherwise, have `join` and `create` refuse in a session that never got the policy,
+  and offer `/clear`, which fires SessionStart but discards the conversation so far.
+  Everything before entering a room, such as pairing, `self-status` and `self-name`,
+  reads no room content and needs no policy, so the cost falls only on entering a
+  room. It needs a marker the SessionStart hook writes per session.
+- Shorten the wait with a smaller download, as "Whether the download is slow enough to
+  matter" describes.
+- Ship the binary inside the plugin, ruled out there for what it adds to the
+  history.
+
+**`whoami` prints a pairing string it knows nobody can use.** `printPairingInvitation`
+prints the string first and then, when `pairingReachable` fails, a `NOTE:` after it,
+so a loopback address goes out looking sendable. On 09-22 `/cogmer:self-status` did
+exactly that: it advised holding off, then gave the string as "provisional" and
+"safe to send". When no address is reachable there should be no string to copy. The
+note for an unpublished address also says to start a session, which misleads when a
+session has started and the daemon is blocked: `pairingReachable` does not read
+`daemon-state`, which already has the real reason.
+
+**The username notice prints twice in `whoami`.** `runWhoami` prints `nameLine`, and
+then `printPairingInvitation` prints it again while the name is not chosen.
+
+**Whether the download is slow enough to matter.** Deliberately not addressed until
+people installing it say so. The darwin/arm64 binary is 29.3MB and took 16s on
+09-22; release binaries are already stripped. Compressed with `gzip -9` it is
+11.0MB, so compression is the obvious lever. It would add `gunzip` to what the
+installer needs, which is confirmed only on macOS; minimal Linux images may lack
+it, and Git Bash on Windows is unchecked. The version that adds no requirement
+publishes both forms, pins both, and fetches the compressed one only where
+`gunzip` exists, checking the binary it will actually run, not only the file it
+downloaded. Shipping binaries inside the plugin removes the download entirely but
+commits about 150MB per release into the history everybody clones, and is ruled
+out.
+
+## Running the daemon
+
+The daemon a machine runs is the right one, and says so when something is in its way.
+
 **A port held by another cogmer daemon is reported as held by something else.**
 When the peer-sync port is taken, `runDaemon` calls `reportDaemonBlocked` without
 asking what holds it, and the message says "held by something that is not a cogmer
@@ -246,17 +146,104 @@ the new binary does not run until that process dies of something else. Read from
 the code on 09-22, not yet observed. A daemon that reports its version would let
 the hook replace one older than the binary it just installed, using `stop` (D-123).
 
-**`whoami` prints a pairing string it knows nobody can use.** `printPairingInvitation`
-prints the string first and then, when `pairingReachable` fails, a `NOTE:` after it,
-so a loopback address goes out looking sendable. On 09-22 `/cogmer:self-status` did
-exactly that: it advised holding off, then gave the string as "provisional" and
-"safe to send". When no address is reachable there should be no string to copy. The
-note for an unpublished address also says to start a session, which misleads when a
-session has started and the daemon is blocked: `pairingReachable` does not read
-`daemon-state`, which already has the real reason.
+**`cogmer stop` (D-123, finding a daemon by the addresses it holds).** Specified and
+not built. It needs `runStop` and a SIGTERM handler in `main.go`, since §3.7 keeps
+`os/exec` and `syscall` out of the daemon's files, plus the blocked-address message
+naming `stop` by its full path, and a test that it declines a process not named
+`cogmer`. A test harness that listens on a port under another name is enough for
+that.
 
-**The username notice prints twice in `whoami`.** `runWhoami` prints `nameLine`, and
-then `printPairingInvitation` prints it again while the name is not chosen.
+Three things about it are undecided. The first is whether `stop` then starts this
+installation's daemon. Clearing the way is almost always why somebody runs it, but a
+person may also want it simply stopped. The second is whether it gets a slash
+command. The person is in a session, not at a terminal, and the binary is not on
+PATH, so from a terminal they have to type `~/.cogmer/bin/cogmer stop`. The third is
+Windows, which has no `lsof`. `netstat -ano` gives the pid there, or `stop` can
+report the port and fall back to moving this daemon aside.
+
+## Reaching a peer on another network
+
+Two peers on different networks, each behind its own router, reach each other with nothing configured.
+
+**NAT to NAT, with a real colleague on a real home router.** The last unknown in the
+transport, and not testable alone.
+
+**Re-pick the overlay relay when it cannot be reached.** D-104 pins it so the
+address is stable. Nothing re-picks, so a machine that relocates past its pinned
+relay is unreachable and nothing says so. Change driven by failure, never by
+preference.
+
+**Say when your own address changes.** Every pairing string and invitation already
+handed out is then stale, and only the daemon can know.
+
+**Whether the public relay is an acceptable dependency.** Reaching a peer across NAT
+works through a public relay operated by a third party, used with no account and no
+configuration of ours. It has to be settled before somebody else's conversation
+crosses it. It has three parts, with different answers: whether depending on a relay
+nobody here operates fits §4's rule that no transport is a prerequisite; what the
+relay observes, since it cannot read what it carries but sees which nodes talk, when,
+and how much; and whether unconfigured use of somebody's free infrastructure is
+something to build a product on.
+
+## Somebody else uses it
+
+A colleague who did not write cogmer installs it, pairs, joins a room and works in it.
+
+**Somebody who did not write cogmer uses it.** The
+repository is public, carries the marketplace manifest beside the plugin, and serves
+releases the installer verifies against its pins (D-121, the repository is both the
+release host and the marketplace). What it needs is a colleague installing, pairing,
+joining, working, and saying what they hit in the order they hit it. It is the only
+remaining work that can fail in a way nothing else detects, and the failure looks like
+somebody quietly not using it again.
+
+Two things to watch for, because both have been argued about without evidence:
+whether the two-word comparison is performed or skipped, and whether the browser view
+is consulted or forgotten.
+
+**What a person actually notices in the view.** D-090 left this open: the display
+name and the derived name are separate elements but carry similar weight, and
+nothing has been measured about whether a reader distinguishes them.
+
+**Whether arrival wants announcing.** D-039 (the browser view is the settled
+avenue) left this open. Do not build a notification on speculation — it has a
+different answer for close pairing than for long solo stretches.
+
+## First contact without a paste
+
+A host can admit somebody who asks to join, without a pairing string being sent first.
+
+**Whether a host approves an unsolicited join request.** A person who is not on a
+room's guest list cannot ask to be let in; §12a (room membership) and D-051 (stranger
+pairing is not a supported case) leave open whether they should be able to, and
+nothing is built for it.
+
+## Discovery on a local network
+
+Peers on the same network find each other without an address being typed.
+
+**Local network discovery** (D-019's zero-configuration path) is not built.
+
+## Three peers
+
+A room works with three members, including one whose turns reach another only through a third.
+
+**Nobody has checked that a peer's events reach a third peer through a second.** A
+room of three in which two members cannot reach each other directly depends on the
+third relaying their events with each one's origin kept (§13, transitive
+synchronization). Every run so far has had two peers. Blocking the direct path between
+two of three peers, and checking that each one's events arrive attributed to their
+origin, would answer it. Pairs are the case that exists, so this waits until somebody
+wants a third member.
+
+## Rooms and sessions
+
+What a room, and the sessions in it, do as people create, leave, return and join from more than one session.
+
+**A room never closes, so nothing is archived.** D-015 (rooms are session-scoped)
+has a closed room kept as an archive that can be read but never rejoined, and the
+specification freezes a room's sequences at that point. Membership ends per person
+through `leave` and `revoke`; the room itself has no closed state.
 
 **`leave`, run twice, says "this session is not in a room."** True, and unhelpful
 to somebody who left it a moment ago: it reads as a failure and sends them looking
@@ -276,100 +263,6 @@ this happens, and binding is what `BindSession` already knows about, so a second
 That is the one place a non-idempotent command could cheaply refuse a mistake it
 now makes in silence. The command's documentation warns against retrying, which is
 the weakest possible form of the check.
-
-**Move `plugin/commands/*.md` to the `skills/<name>/SKILL.md` layout.** The
-documentation calls `commands/` legacy and says the two are loaded identically. D-119
-deliberately did not do it in the same pass, because a directory restructure is a bad
-thing to bury a §3.1 fix inside. `TestNoCommandIsModelInvocable` reads the old path
-and would need to follow.
-
-## Undecided
-
-**Whether decisions move to one file per record before the log is split.** Every
-citation of a decision is prose: a number and a few words typed at each use. Checking
-them showed four costs, recorded in `docs/work/decision-split.md`. A citation says
-nothing about how it relates to what it cites, so what each of 146 citations means
-needs a reader. Its few words are retyped each time and drift from the title. Finding
-every citation of an entry takes a grep that also hits test fixtures, code comments
-and quotations. A line-number citation moves with every edit above it.
-
-The options, each with its cost:
-
-- keep one file, and write citations as links to stable anchors: cheap, and GitHub
-  resolves them, but the relation between records stays untyped;
-- one file per decision, such as `docs/decisions/D-054.md`, with a front-matter
-  header for the ID, title, status, date, the entry that replaced it, and typed links
-  (supports, restates, reverses), and prose below it: the integrity checks become
-  exact, a split becomes a new file and edited links, and each record gets its own
-  history, at the cost of moving 126 entries and changing every tool that reads the
-  log;
-- decisions as data, with the Markdown generated for reading, as `behaviors.go` and
-  `docs/relied-on-behaviors.md` already work: the most checkable, and the least
-  pleasant to write in.
-
-Whichever is chosen comes before any split. Splitting 59 entries and repointing their
-citations in the present format would be redone in the new one. The choice also
-decides what the decision log's table of contents is: a generated block in one file,
-or a generated index file for a directory.
-
-**Whether a host approves an unsolicited join request.** A person who is not on a
-room's guest list cannot ask to be let in; §12a (room membership) and D-051 (stranger
-pairing is not a supported case) leave open whether they should be able to, and
-nothing is built for it.
-
-**Asking for a new session to finish an install is too much.** After `/plugin
-install` the person believes it is installed, and Claude Code agrees: since
-v2.1.221 a plugin installed mid-session is live in that session, with its commands
-and its per-prompt hooks. Only SessionStart has not run, and nothing re-runs it,
-since Claude Code runs no plugin code at install and reloading plugins does not
-fire it. So the binary is never fetched, the daemon never starts, and the standing
-policy for room content (D-081) is never given. Telling somebody to start again to
-finish something they think has finished costs them the session they were working
-in, and the README currently does exactly that.
-
-The possible mitigations:
-
-- Start the fetch from the per-prompt hook when there is no binary, detached, so the
-  first thing typed after installing begins the download without waiting on it.
-  Unchecked: whether a slash command fires that hook at all.
-- Have `cli.sh` start the fetch and wait for it within a bound when a command finds
-  no binary, as the first-use item under "Commands that mislead" describes.
-  `install.sh` already starts the daemon when the download lands, so starting the
-  daemon needs nothing further.
-- Let the session you installed from enter rooms without the session-start policy.
-  D-081 could not show that policy helping: in-block framing alone produced the
-  same refusal of a hostile turn. Rerunning that hostile-turn test in a session
-  that installed the plugin mid-session would say whether this is safe.
-- Otherwise, have `join` and `create` refuse in a session that never got the policy,
-  and offer `/clear`, which fires SessionStart but discards the conversation so far.
-  Everything before entering a room, such as pairing, `self-status` and `self-name`,
-  reads no room content and needs no policy, so the cost falls only on entering a
-  room. It needs a marker the SessionStart hook writes per session.
-- Shorten the wait with a smaller download, parked under "Needs somebody else".
-- Ship the binary inside the plugin, ruled out there for what it adds to the
-  history.
-
-**Whether to rebuild the post-quantum hedge.** D-104 removed the pre-shared key,
-which was the only quantum-resistant element in the stack. It could be rebuilt at
-our own layer from material the pairing exchange already produces — per peer, which
-is better than one secret shared with everybody. Nothing depends on deciding this.
-
-**Whether `verify` still earns its place.** `/cogmer:peer-pair <name> --again` now
-does the same job, and `verify` has no slash command, so it may be a subcommand
-nobody has a route to.
-
-**What a person actually notices in the view.** D-090 left this open: the display
-name and the derived name are separate elements but carry similar weight, and
-nothing has been measured about whether a reader distinguishes them.
-
-**Whether arrival wants announcing.** D-039 (the browser view is the settled
-avenue) left this open. Do not build a notification on speculation — it has a
-different answer for close pairing than for long solo stretches.
-
-**Whether a peer event may cause a *separate* run.** §3.7 forbids one in an
-interactive session and leaves this open. Addressing another person's Claude
-would need it, and it raises its own questions — whose subscription, what tool
-access, what was agreed to — none of them answered.
 
 **A notice when a second session from this machine joins a room — not thought
 through.** `SessionsInRoom` already counts this machine's live sessions in a room
@@ -402,12 +295,186 @@ Probably not actionable beyond informing: letting session B end session A would 
 a session acting on another session's membership, and D-016 already forbids the
 move it resembles.
 
-## Cleanup
+**Whether a peer event may cause a *separate* run.** §3.7 forbids one in an
+interactive session and leaves this open. Addressing another person's Claude
+would need it, and it raises its own questions — whose subscription, what tool
+access, what was agreed to — none of them answered.
 
-`WithheldFor` is used only by its own test — a leftover from the count that was
-dropped in favour of naming the person.
+An item on **idempotency** was in `residual-concerns.md` and is gone: the file was
+deleted on the strength of a reading from earlier in the session, and being
+untracked there is no copy. `/cogmer:peer-pair` repeated on a completed pairing was
+worked in D-107 and D-108, which may or may not be what it said.
 
-`/cogmer:room-list` and `/cogmer:self-status` were both named without confirmation.
+
+## Compaction
+
+A colleague's turns survive a compaction, and a room shows when one happened.
+
+**B19 checks a colleague's turn that was the conversation's subject, never one that was
+incidental.** The probe in `cmd/cogmer/probe.go` injects "The codeword for this check is
+…" and asks for the codeword after compacting. Test B in
+`84a0751:docs/phase0a-findings.md` showed that a turn the conversation never discussed
+survived too, which is the case a real room produces, and only a person re-running it by
+hand checks it again. A `--deep` probe that runs unrelated turns between injecting and
+compacting would check it, at the cost of more turns in a check that takes about 40s.
+
+**Whether automatic compaction can start during a turn is unknown.** Automatic
+compaction never fired in the compaction probe of 2026-09-16, even at 378,916 tokens
+against a 100k threshold, so `84a0751:docs/phase0a-findings.md` shows only that none
+started during that turn. Nobody has checked what turn reassembly does with a compaction
+marker and summary record in the middle of the turn it reassembles.
+
+**D-007 (record `COMPACTION` events as observability) is not built.** No code records
+a compaction, so if the summarizer stops keeping a colleague's turns, a room's
+history shows nothing at the moment it happened. §7 lists the event type among those
+to design for later. Either the event is built, or D-007 is withdrawn.
+
+## What reaches the machine, and what leaves it
+
+Nothing outside a room can read it, alter a colleague's words, or make a record a colleague holds unreadable, and what leaves the machine is known.
+
+**A web page can read the local API, and only the `Origin` check keeps it from
+writing, once its site's name points at 127.0.0.1.** A site can load its page from
+its own address on port 4782, then point its name at 127.0.0.1 (DNS rebinding). The
+browser then treats the page's requests to the daemon as same-origin, so it sends
+`X-Cogmer` without asking and lets the page read the replies. `/`, `/events` and
+`/stream` have no check, so the page can read a room once it knows the room's
+address, which was not checked. The state-changing routes are refused only because
+`guardLocal` in `cmd/cogmer/localguard.go` rejects the page's `Origin`, a check that
+passes a request with no `Origin` at all. The daemon answers a request whose `Host`
+names another site: on 2026-09-24, `curl -H 'Host: evil.example:4782'` got 200 from
+`/` and `/healthz`. None of this was reproduced in a browser.
+`docs/explanations/dns-rebinding.md` walks through each scenario.
+
+The fix is to refuse, on every local route, any request whose `Host` is not
+`127.0.0.1`, `localhost` or `[::1]` with the daemon's port. A page can reach the
+daemon under its own name, or name the daemon in `Host` and be treated as another
+origin, but not both. Demonstrate it before and after, as D-087 (the local API
+requires a header a web page cannot send) was demonstrated: a hosts-file entry
+pointing a made-up name at 127.0.0.1 reproduces the end state of rebinding. D-087
+calls the header check the one the defence rests on and the `Origin` check a second
+layer, so the change rewrites that part of it under W-38 (a partial change rewrites
+the earlier entry).
+
+**The boundary around injected turns is removed from their text, when it could be
+chosen to be absent from it.** `FormatTeamContext` in `cmd/cogmer/daemon.go` generates
+a random value for the boundary, then deletes any copy of that value from each
+colleague's turn, so a turn that contains it arrives altered. A random 20-character
+value almost never occurs in a turn, so the effect is rare, but the text is changed
+when it does. Choosing a value that occurs in none of the turns in the block, and
+generating another in the rare case that one does, would leave every turn as written
+and need no removal. `TestTeammateContentCannotEscapeTheBlock` in
+`cmd/cogmer/transcript_test.go` checks the boundary and should pass unchanged. D-040
+(the injected block is fenced with an unforgeable value) records the removal, so the
+change rewrites that part of it under W-38 (a partial change rewrites the earlier
+entry).
+
+**No test fails when a change to the signing bytes or the wire format stops an
+existing record from being read.** Every signing test in `cmd/cogmer/keys_test.go`
+signs a fresh event and then verifies it, so an edit to `signingBytesV3` or
+`eventBytes` changes the signer and the verifier together and every test still
+passes (read from the code on 2026-09-24). An event signed under scheme v3 before the
+edit, held on a colleague's machine, would then fail to verify, with an error that
+reads as a forgery. D-058 (signature schemes are kept, never replaced) depends on
+that edit never happening, and nothing detects it. The wire format has the same gap:
+nothing decodes a sync message written at `minWireVersion` with the current code.
+
+The fix is a v3 event signed once and checked in, as a constant or a file under
+`cmd/cogmer/testdata/`, with a test that `Verify` accepts it, and the same for a sync
+message at each version `speaks` accepts. Each new scheme or wire version adds its
+own frozen record when it ships.
+
+**What leaves the machine is recorded only for 0.6.0.**
+`84a0751:docs/what-leaves-findings.md` read every outbound path on 2026-09-21, at 0.6.0.
+Two have changed since: releases come from GitHub (`plugin/release-url.txt`), and peers
+reach each other through Tailscale's DERP relays, choosing a region in
+`loadTailcatRegion` in `cmd/cogmer/tailcat.go`, which may fetch a relay map from a
+server nobody has named (read on 2026-09-25, not traced further). D-115 (a centralized
+component must trace to a disclosed tradeoff) rests on that record. Reading every
+outbound path again at the current version, including where `loadTailcatRegion` fetches
+from, would say what leaves now. Three of the properties that do not leave are kept only
+by the absence of code, and each could be a test instead, such as one that the embedded
+view holds no absolute URL.
+
+**Whether to rebuild the post-quantum hedge.** D-104 removed the pre-shared key,
+which was the only quantum-resistant element in the stack. It could be rebuilt at
+our own layer from material the pairing exchange already produces — per peer, which
+is better than one secret shared with everybody. Nothing depends on deciding this.
+
+## The documents
+
+Every document follows `docs/writing.md`.
+
+**Most decision entries hold more than one decision, or history, and none is split
+yet.** W-40 in `docs/writing.md` says an entry records one decision. Reading all 126
+entries in full, as they stood at commit `f11e871`, gave this, with the number of
+decisions in parentheses. `docs/work/decision-split.md` holds the observations for
+each entry: where each decision sits, the alternative each extra one has, the parts
+that are not decisions, and what each citation means.
+
+- split (59): D-002 (2), D-008 (2), D-010 (2), D-014 (2), D-015 (2), D-016 (2),
+  D-017 (4), D-018 (2), D-019 (3), D-020 (2), D-021 (4), D-023 (3), D-024 (2),
+  D-025 (3), D-030 (2), D-032 (2), D-033 (2), D-035 (2), D-036 (2), D-037 (2),
+  D-040 (2), D-041 (3), D-042 (4), D-043 (4), D-045 (2), D-046 (4), D-050 (2),
+  D-052 (4), D-053 (3), D-056 (2), D-057 (3), D-059 (2), D-060 (2), D-061 (4),
+  D-062 (2), D-066 (2), D-067 (3), D-069 (2), D-074 (2), D-075 (2), D-077 (2),
+  D-080 (3), D-081 (2), D-082 (2), D-084 (2), D-086 (2), D-088 (3), D-090 (2),
+  D-091 (2), D-093 (2), D-094 (2), D-095 (3), D-096 (2), D-098 (2), D-100 (2),
+  D-104 (3), D-106 (3), D-117 (3), D-121 (2);
+- become tombstones under W-37 (a reversed decision becomes a tombstone): D-028,
+  which D-029 reversed, and D-047, which D-055 reversed; D-076 is one already;
+- one decision, with history or findings to move out (57): every entry not listed
+  here;
+- one decision and nothing to move (9): D-005, D-007, D-009, D-012, D-013, D-112,
+  D-124, D-125, D-126.
+
+D-098, D-100, D-122, D-124, D-125 and D-126 were moved into `docs/writing.md` as rules
+on 2026-09-25 (W-28, the decision log holds only decisions about the system), so they
+need no split. The counts here describe `f11e871` and include them.
+
+Splitting all 59 adds 86 entries, and 146 citations of them mean something other
+than the first decision, so each needs checking against its few words. Four
+questions come before any split:
+
+- whether an extra decision that repeats an existing entry folds into it instead of
+  taking a number: D-080's prefix rule into D-096, D-020's guest-list preference
+  into D-024, D-056's rule into D-016;
+- whether D-002, D-062, D-070 and D-078 become tombstones or are rewritten to what
+  still holds (W-37, W-38), since later entries hold most of what they decided;
+- which decision keeps the number where most citations mean one the title does not
+  name, as in D-043, whose citations mostly mean "no adapter machinery for a second
+  host", and D-080, split 8 to 7;
+- whether D-018, D-024 and D-025 are rewritten for what D-026 (no join token)
+  reversed before they are split.
+
+Five entries lack a **Decision.** field: D-068, D-083, D-086, D-088 and D-089.
+
+**Whether decisions move to one file per record before the log is split.** Every
+citation of a decision is prose: a number and a few words typed at each use. Checking
+them showed four costs, recorded in `docs/work/decision-split.md`. A citation says
+nothing about how it relates to what it cites, so what each of 146 citations means
+needs a reader. Its few words are retyped each time and drift from the title. Finding
+every citation of an entry takes a grep that also hits test fixtures, code comments
+and quotations. A line-number citation moves with every edit above it.
+
+The options, each with its cost:
+
+- keep one file, and write citations as links to stable anchors: cheap, and GitHub
+  resolves them, but the relation between records stays untyped;
+- one file per decision, such as `docs/decisions/D-054.md`, with a front-matter
+  header for the ID, title, status, date, the entry that replaced it, and typed links
+  (supports, restates, reverses), and prose below it: the integrity checks become
+  exact, a split becomes a new file and edited links, and each record gets its own
+  history, at the cost of moving 126 entries and changing every tool that reads the
+  log;
+- decisions as data, with the Markdown generated for reading, as `behaviors.go` and
+  `docs/relied-on-behaviors.md` already work: the most checkable, and the least
+  pleasant to write in.
+
+Whichever is chosen comes before any split. Splitting 59 entries and repointing their
+citations in the present format would be redone in the new one. The choice also
+decides what the decision log's table of contents is: a generated block in one file,
+or a generated index file for a directory.
 
 **Seven citations in `docs/decisions.md` credit an entry with something it does not
 hold.** Each resolves, so the citation test passes, but the source says something
@@ -433,12 +500,42 @@ why.** Commit `33ce996` made the choice. D-021 (peer names are derived from the
 identity) is cited for it, but D-021 says only what the name is for; it says nothing
 about a user's own turns.
 
+**§19 (incremental context injection) reads as if a turn is delivered once it is
+injected.** Its steps run "inject them into Claude", then "update the session's
+incorporated-event state", so a reader takes delivery to advance at injection. A
+turn counted that way is lost for good whenever the hook times out or the daemon
+dies before it replies, and the user's session never sees it. D-014 (derive delivery
+state from transcript evidence) counts a turn only once the session's transcript
+shows it arrived. The requirement §19 should state is the user's: a colleague's turn
+is never counted as delivered to a session that did not receive it.
+
+## Maintenance
+
+The code, its tests and its commands hold nothing that would mislead a maintainer.
+
+`WithheldFor` is used only by its own test — a leftover from the count that was
+dropped in favour of naming the person.
+
+`/cogmer:room-list` and `/cogmer:self-status` were both named without confirmation.
+
+**`cogmer`'s usage text describes a current room, which D-080 removed.** `usage` in
+`cmd/cogmer/main.go` says `join` makes "a room current, so new sessions join it", and
+`leave` leaves "the current room". A room is the session's own (D-064), so a user
+reading the help is told how something works that does not exist (read on
+2026-09-25).
+
 **Two comments describe the current-room pointer D-080 removed.** `main.go:878` and
 `membership.go:686-688` still explain a machine-wide current room. D-080 (a terminal
 command exists to be tested or to work when the plugin cannot) deleted
 `SetCurrentRoom` and `CurrentRoom`, so a maintainer reading either comment is told
 about a mechanism that does not exist. Found on 09-23, reading every decision for
 the split list.
+
+**`TestAnAddressBelongsToAPeer` fails when two random keys derive the same name.** It
+admits two fresh identities under `PeerName` of each, and when the two word pairs
+collide, `Allow` refuses the second: "you already know a different key as
+\"glad-bobcat\"". It failed once and passed six times in a row on 2026-09-25. Giving
+the two peers fixed, distinct names would remove the chance.
 
 **`TestTheThreeEndingsOfAPairing` fails about one run in four.** Its subtest
 "matched writes the name and the verification" fails at cleanup with "TempDir
@@ -449,37 +546,12 @@ it is not caused by a recent change. A flaky test trains a maintainer to rerun
 failures instead of reading them. The fix is to make the test wait for whatever
 writes, or to stop that writer before the subtest returns.
 
-## Needs somebody else
+**Move `plugin/commands/*.md` to the `skills/<name>/SKILL.md` layout.** The
+documentation calls `commands/` legacy and says the two are loaded identically. D-119
+deliberately did not do it in the same pass, because a directory restructure is a bad
+thing to bury a §3.1 fix inside. `TestNoCommandIsModelInvocable` reads the old path
+and would need to follow.
 
-**Somebody who did not write cogmer uses it.** Phase 13 in `docs/phases.md`. The
-repository is public, carries the marketplace manifest beside the plugin, and serves
-releases the installer verifies against its pins (D-121, the repository is both the
-release host and the marketplace). What it needs is a colleague installing, pairing,
-joining, working, and saying what they hit in the order they hit it. It is the only
-remaining work that can fail in a way nothing else detects, and the failure looks like
-somebody quietly not using it again.
-
-**NAT to NAT, with a real colleague on a real home router.** The last unknown in the
-transport, and not testable alone.
-
-**Whether the public relay is an acceptable dependency.** Parked deliberately as a
-precondition of Phase 13, where it stops being theoretical.
-
-**Whether the download is slow enough to matter.** Deliberately not addressed until
-people installing it say so. The darwin/arm64 binary is 29.3MB and took 16s on
-09-22; release binaries are already stripped. Compressed with `gzip -9` it is
-11.0MB, so compression is the obvious lever. It would add `gunzip` to what the
-installer needs, which is confirmed only on macOS; minimal Linux images may lack
-it, and Git Bash on Windows is unchecked. The version that adds no requirement
-publishes both forms, pins both, and fetches the compressed one only where
-`gunzip` exists, checking the binary it will actually run, not only the file it
-downloaded. Shipping binaries inside the plugin removes the download entirely but
-commits about 150MB per release into the history everybody clones, and is ruled
-out.
-
-## Lost, and needs recovering from David
-
-An item on **idempotency** was in `residual-concerns.md` and is gone: the file was
-deleted on the strength of a reading from earlier in the session, and being
-untracked there is no copy. `/cogmer:peer-pair` repeated on a completed pairing was
-worked in D-107 and D-108, which may or may not be what it said.
+**Whether `verify` still earns its place.** `/cogmer:peer-pair <name> --again` now
+does the same job, and `verify` has no slash command, so it may be a subcommand
+nobody has a route to.

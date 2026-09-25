@@ -58,6 +58,7 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-50 | an `open.md` item names the problem | judgement |
 | W-51 | a long `open.md` item holds detail of another kind | judgement |
 | W-52 | delete a finished `open.md` item | judgement |
+| W-53 | `open.md` groups items by milestone, and a finished one leaves no record | judgement |
 | W-55 | a pattern applies beyond this project, and this project follows it | judgement |
 | W-56 | a pattern names nothing in this repository | checked |
 | W-57 | a pattern states one rule, then its reason | judgement |
@@ -380,6 +381,12 @@ decision.
 
 W-52. Delete an item when it is done; never mark it done.
 
+W-53. `docs/open.md` groups its items by milestone: a set of related functionality,
+named in a sentence that opens the milestone's section. The section is deleted with
+its last item, and nothing records or refers to a milestone once it is gone. An order for the remaining work, when one helps, is the
+order of the sections, and changes as the work does. A plan is ephemeral: the more
+of it is done, and the more the work teaches, the less of it still holds.
+
 ### A pattern (`docs/patterns.md`)
 
 ```markdown
@@ -462,9 +469,8 @@ and goes stale without anything in the sentence saying so.
 W-81. The specification carries no dates.
 
 W-83. The specification carries no status and no plan. Nothing in it says what is
-built, finished, partial, deferred or next, and nothing orders the work: the phases
-the work was planned in are in `docs/phases.md`, actions not yet taken are in
-`docs/open.md`, and what has been built is the code. A requirement is stated the same
+built, finished, partial, deferred or next, and nothing orders the work: actions not
+yet taken are in `docs/open.md`, and what has been built is the code. A requirement is stated the same
 way whether or not it is met yet. Status in the specification goes stale with every
 commit, and a reader cannot tell a requirement from a report.
 

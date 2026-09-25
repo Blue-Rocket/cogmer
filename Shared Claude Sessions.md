@@ -2354,28 +2354,6 @@ Collaboration should be ambient.
 
 ---
 
-# 30\. Important Experimental Question
-
-The prototype exists to answer:
-
-> Can several people using independent Claude Code subscription sessions approximate a genuinely shared Claude conversation by synchronizing complete human/Claude turns directly between their machines and incrementally injecting unseen teammate turns?
-
-A second question is:
-
-> Does parallel access to several independent Claude sessions make this experience more useful than a single shared Claude by allowing multiple investigations to proceed simultaneously?
-
-Optimize the prototype for answering these questions, not for production completeness.
-
----
-
-# 31\. Implementation Order
-
-The phases the work was planned in, what each set out to do and how each ended, are in
-`docs/phases.md`. The specification states what must be true, not the order in which
-it is built or how far building has got.
-
----
-
 # 32\. Explicit Non-Goals
 
 Do not initially build:
@@ -2515,13 +2493,6 @@ Extract confirmed:
 - unresolved questions.
 
 This should be derived from the complete conversational record rather than replacing it.
-
----
-
-# 36\. First Task for Claude Code
-
-This section held the instructions for the first integration spike. The spike is
-Phase 0 in `docs/phases.md`, and `84a0751:docs/phase0-findings.md` records what it found.
 
 ---
 

@@ -15,17 +15,14 @@ import (
 // How a peer is reached, and nothing about whether it may speak.
 //
 // §4 calls an endpoint a bootstrap hint that is opaque to the protocol: whatever
-// the transport in use can reach. That was true of the specification and not of
-// the code, where `peerAddr()` was both the address the daemon bound and the one it
-// told peers to use. Those are the same string only when nothing sits between two
-// machines, which for two people working from home is never (D-063). An SSH tunnel
-// papered over it in Phases 2 and 5 by making both ends loopback, and Phase 5
-// caught the paper tearing: an invitation advertised the host's own 127.0.0.1, the
-// bad address propagated to the other peer, and it retried it once a second for the
-// length of the run.
+// the transport in use can reach. The address a daemon binds and the address a peer
+// can reach it at are the same only when nothing sits between two machines, which
+// for two people working from home is never (D-063). An endpoint that is the bound
+// address advertises the host's own 127.0.0.1, and the other peer then retries an
+// address it can never reach.
 //
-// So an endpoint now carries how to reach it, and binding is a separate question
-// from advertising.
+// So an endpoint carries how to reach it, and binding is a separate question from
+// advertising.
 //
 //	tcp://198.51.100.7:4783   a direct address, and the bare form host:port
 //	tc://<tailcat address>    a path negotiated through DERP, then direct if it can be

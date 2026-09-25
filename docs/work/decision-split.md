@@ -1915,7 +1915,7 @@ decision) asks that a title state the decision.
 
 The sentence "Recorded in §7 as struck through with the reason, rather than removed."
 is history under W-32 (a decision describes only the present). The struck-through queue
-is at `Shared Claude Sessions.md:2686`, in Phase 7 of §31 (implementation order), and
+is at `Shared Claude Sessions.md:2686`, in Phase 7 of section 31 of the specification (the implementation order), and
 not in §7 (event model).
 The clause "which was observed filling a log through the Phase 5 partition" is a
 finding. The paragraph opening "Also fixed: `peerStatus` enumerated only
@@ -1984,7 +1984,7 @@ text credits to D-019 and D-062 together. Three mean the evaluation findings:
 ### D-063: The first pair is remote, so cross-network reach comes before local discovery
 
 D-063 holds one decision. It decides that Phase 15 (reaching a peer on another
-network, in §31, the implementation order) is built before Phase 12 (discovery on a
+network, in section 31 of the specification, the implementation order) is built before Phase 12 (discovery on a
 local network) and is a prerequisite for Phase 13 (somebody else uses it). It sits
 in the paragraph that opens "Decision. Phase 15 moves ahead of Phase 12".
 
@@ -3289,7 +3289,7 @@ could carry annotated corrections and still be updated in the same pass.
 
 The Context ("nine decisions recorded in one day had produced no specification
 edits") and "The worst of it was stated as a requirement" record what was observed,
-which is a finding. The second names §29 (the experience we want) and §31
+which is a finding. The second names §29 (the experience we want) and section 31 of the specification
 (implementation order) as contradicting the code. "This is the same failure as
 review finding A1" is a finding too, about A1 in `docs/spec-review.md` (§19 never
 says when delivery state advances). "What the pass changed" and its six-item list
@@ -3928,7 +3928,7 @@ neither repeats the other, and that current state lives in `open.md`. It sits at
 "Decision. `README.md` is what somebody who has not installed it needs" and "What was
 deliberately<!-- writing: quotes the decision log --> kept at the top rather than
 buried." Leading `README.md` with the
-result of §30 (the important experimental question) is part of what `README.md`
+result of section 30 of the specification (the important experimental question) is part of what `README.md`
 contains, and its alternative is under Rejected.
 
 The Context ("Until the repository was public ... a lab notebook") is history under
@@ -4005,7 +4005,7 @@ judgement another reader could make differently. Three writing reviews applied t
 same test to
 every entry, and for five they still read it differently: the unsigned `have` map in D-044 (sync requests are signed), the unsigned version number in D-058 (signature schemes are
 kept), the fetch-back check in `publish.sh` in D-067 (release assets are served from
-the droplet), the operator-surface exemption in D-092 (an address is learned once, out of band), and the §30 result leading
+the droplet), the operator-surface exemption in D-092 (an address is learned once, out of band), and the section 30 of the specification result leading
 `README.md` in D-122 (the two READMEs are split by whether you have installed it).
 Each could be read as one more decision than this document counts. A grep finds a
 citation only by its

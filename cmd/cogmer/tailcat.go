@@ -20,9 +20,9 @@ import (
 // Reaching a peer on another network (§15).
 //
 // Two people working from home are behind two routers and neither can bind an
-// address the other can reach. Phases 2 and 5 papered over this with an SSH
-// tunnel, which is a person performing NAT traversal by hand; for a pair who pair
-// daily that is the product failing at its first step (D-063).
+// address the other can reach. An SSH tunnel works around it only by a person
+// performing NAT traversal by hand, which for a pair who pair daily is the product
+// failing at its first step (D-063).
 //
 // Tailcat is Tailscale's data plane -- WireGuard, hole punching, DERP -- with no
 // control plane, no account and no tailnet. A peer publishes an address, the other

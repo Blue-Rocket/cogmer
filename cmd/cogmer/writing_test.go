@@ -28,7 +28,6 @@ var writingNotYetRewritten = map[string]bool{
 	"Shared Claude Sessions.md": true,
 	"docs/decisions.md":         true,
 	"docs/open.md":              true,
-	"docs/phases.md":            true,
 }
 
 // writingNeverChecked holds documents the word check cannot apply to.
