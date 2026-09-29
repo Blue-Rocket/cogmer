@@ -643,249 +643,139 @@ machine.
 
 ## D-026 — There is no join token at all
 
-**Date:** 2026-09-16 · **Status:** active · **Supersedes** the residual code path in D-024 and D-025
+**Date:** 2026-09-16 · **Status:** active
 
-**Context.** D-025 had narrowed join codes to a single case: inviting in advance,
-when the host would not be present to approve a request. That case does not survive
-examination.
+**Decision.** There is no join token, code or invitation secret, and nothing a user can
+hold admits them to a room. Admission is an entry on a guest list, proved by possession
+of a key, or a present host's approval of a request.
 
-**Decision.** Remove join tokens from the design. Admission is a guest list entry
-proved by possession of a key, or a host's explicit approval of a request. There is
-no code, no invitation secret, and nothing a person can hold that would admit them.
-
-**Why the last case collapses.** A host who knows a guest can admit them and then
-leave — the guest joins whenever it likes, with no host present and no token
-involved. So a token would be needed only by a host that is absent **and** has never
-recorded the guest. But such a host must act before that guest can enter under any
-scheme, including the token scheme, since somebody has to issue the token. The token
-therefore buys nothing that acting once through the guest list would not, while
-carrying every property of a bearer credential: secret in transit, uncheckable
-afterwards, and enrolling whoever intercepts it under a name members will treat as
-familiar.
-
-**What is given up, stated rather than engineered around.** Pairing with someone
-entirely unknown requires a host present to approve it. That is the moment a person
-should be deciding, so the constraint reads as correct rather than merely tolerable.
-
-**Consequence.** The system now has no credential that can be forwarded, stolen, or
-replayed — not as a deprecated path, but absent. §25 says so directly rather than
-describing how to handle one safely.
+**Support.**
+- A host who knows a guest can admit them and leave, and the guest joins whenever it
+  likes, with no host present and no token. D-024 (admission is a guest list).
+- A token would be needed only by a host who is absent and has never recorded the guest,
+  and such a host has to act before that guest can enter under any scheme, since
+  somebody has to issue the token. §12 (forming a room).
+- A token admits whoever holds it, so it has to be kept secret in transit, cannot be
+  checked afterwards, and enrols whoever intercepts it under a name the room's members
+  will treat as familiar. §12.
 
 **Rejected.**
-- *Keeping codes for the absent-host-unknown-guest case* — the host must act anyway.
-- *Keeping codes as an optional convenience* — an avoidable credential that exists is
-  a credential that will be used, and its weaknesses do not become optional with it.
+- *A code for inviting in advance, when the host will not be present.* The host has to
+  act anyway, and acting once through the guest list buys the same.
+- *A join code as a fallback for strangers who have not paired.* A host who is present
+  can approve a request instead (D-144), and a code carries every weakness of a bearer
+  credential.
+- *Codes as an optional convenience.* A credential that exists will be used, and its
+  weaknesses do not become optional with it.
+
+**Limits.** Pairing with someone entirely unknown needs a host present to approve it.
+
+**Revisit when** users need to invite someone they have never paired with while the
+host is away.
 
 ---
 
 ## D-027 — A sequence conflict is quarantined, not dropped
 
-**Date:** 2026-09-16 · **Status:** active (implemented)
+**Date:** 2026-09-16 · **Status:** active
 
-**Context.** B4: a peer that loses its room database restarts its sequence at 1
-while other peers hold higher numbers under its identifier, so everything it
-publishes afterwards collides. `INSERT OR IGNORE` against
-`UNIQUE(peer_id, peer_sequence)` absorbed that as an ordinary duplicate.
+**Decision.** Each event received is classified as stored, duplicate or conflict, where a
+conflict is the same peer and sequence number arriving with a different event
+identifier. A conflicting event is set aside with both identifiers, and `cogmer
+conflicts` shows it.
 
-**Decision.** Distinguish the three outcomes on receipt — `stored`, `duplicate`,
-`conflict` — where a conflict is the same peer and sequence arriving with a
-*different* event identifier.
-
-**Quarantine rather than reject.** The rejected event is retained alongside both
-identifiers. Rejecting it outright would keep the room consistent, which is the
-part that matters, but destroys the only evidence that distinguishes a peer which
-lost its state from an event that was forged. Those call for opposite responses,
-and by the time anyone investigates, the event is the only thing that can tell them
-apart.
-
-**Why not repair it automatically.** Reassigning the incoming event a free sequence
-number would preserve it, and §13 forbids rewriting `peerSequence` during relay for
-good reason: the pair is an identity, and a receiver that edits it makes its copy
-disagree with every other peer's. A conflict is a condition to report, not to
-paper over.
-
-**Surfacing matters as much as detecting.** `cogmer conflicts` exists because a
-quarantined event is invisible otherwise. The failure being silent was the whole
-of B4; detecting it into a table nobody reads would reproduce that.
+**Support.**
+- A conflict means a peer lost its state or an event was forged, and the kept event is
+  the only evidence that tells the two apart. §8 (event identity and ordering).
+- A peer and its sequence number are an event's identity, so a receiver that changed
+  them would disagree with every other peer's copy. §13 (transitive synchronization).
+- A kept conflict nobody can see would be as silent as a dropped one. `cmd/cogmer/main.go`,
+  the `conflicts` command.
 
 **Rejected.**
-- *Keeping `INSERT OR IGNORE`* — correct for redelivery, silently wrong here, and
-  unrecoverable: the sender believes it shared, the receiver never sees it, and
-  anti-entropy cannot repair a gap where the sender's highest sequence is below what
-  the receiver reports holding.
-- *Overwriting the held event* — the incoming event has no better claim, and events
-  are immutable.
-- *Waiting until Phase 2* — `Insert` is the method peer synchronization will call.
-  Fixing it while the code is small costs almost nothing; fixing it once peers are
-  exchanging events means diagnosing it first.
+- *Ignoring the conflict as a duplicate.* It is unrecoverable: the sender believes it
+  shared the event, the receiver never sees it, and anti-entropy cannot fill a gap where
+  the sender's highest sequence is below what the receiver reports holding.
+- *Overwriting the event held.* The incoming event has no better claim, and events are
+  immutable.
+- *Giving the incoming event a free sequence number.* It would preserve the event and
+  change its identity, which makes the receiver's copy disagree with every other peer's.
 
-**Note.** Locally generated events take their sequence from `MAX()+1`, so a conflict
-on a local `Append` means the local store is inconsistent rather than that a peer
-misbehaved. It is reported as such.
+**Limits.** A local event takes its sequence from the membership index (D-029), so a
+conflict on a local event means the local store is inconsistent rather than that a peer
+misbehaved, and it is reported that way.
+
+**Revisit when** conflicts are found to have a cause other than lost state or forgery.
 
 ---
 
 ## D-028 — Losing a room database ends that peer's membership; recovery is not attempted
 
-**Date:** 2026-09-16 · **Status:** SUPERSEDED BY D-029 — the cost of ending
-membership was assessed wrongly, and the mechanism that avoids it is cheaper than
-the sequence epoch this entry rejected.
-
-**Context.** D-027 made a restarted sequence counter detectable. It did not say what
-a peer should do when it is the one that lost its state.
-
-**Decision.** Treat it as the end of that peer's membership in that room. The peer
-leaves, does not rejoin, and does not resume publishing.
-
-**The blast radius is smaller than the word suggests,** and three things get
-conflated here. Membership in that room is lost. The conversation is not — every
-other member holds a full replica. The peer's identity is not — it lives in
-`identity.json`, outside any room's storage. So the cost is one room, in a system
-where a room is bounded by the work that created it (D-015). Under the
-project-scoped model this decision replaced, the same event would have cost months.
-
-**An inversion worth knowing.** Losing *identity* is the safe failure: the peer
-becomes a new peer with a new sequence space and can collide with nothing. Losing a
-*room* while keeping identity is the dangerous one, because that is the peer that
-can republish sequence numbers others already hold. Anyone reasoning about backups
-will assume the opposite.
-
-**Why recovery was considered and declined.** It is not out of reach. Events are
-immutable and replicated, so a peer could refetch the room from any member —
-including its own past events — and resume above its highest sequence, using the
-anti-entropy exchange that already exists.
-
-Establishing "its highest sequence" is the problem. It must be the highest held by
-*any* member, and an offline member may hold a higher one than anything reachable.
-Resume below it and the conflict recurs. Resume far above it and the gap is
-permanent, because the highest-contiguous rule can never close it — every peer would
-believe indefinitely that it was missing events.
-
-A sequence epoch solves this properly: an incarnation number raised on recovery, so
-a restarted counter occupies a different space rather than colliding. That is the
-standard answer, and it changes both the event model and the synchronization state
-exchange. §11 declines a CRDT until testing proves one necessary; the same judgement
-applies here, and the case for it is weaker because short-lived replicated rooms have
-already made the loss cheap.
-
-**Rejected.**
-- *Refetch and resume* — sound until an unreachable member holds a higher sequence.
-- *Resume with a safety gap* — trades a detectable conflict for a permanent
-  synchronization stall, which is worse because nothing reports it.
-- *A sequence epoch now* — correct, and disproportionate until a loss has cost
-  something.
-- *Rejoining under a fresh identity* — technically safe, but it splits one person
-  across two peers in the room's history and in every guest list, to preserve a
-  membership that D-015 made cheap to recreate.
-
-**Revisit when** a room is long-lived enough that losing membership in one is
-expensive — which would most likely mean the session-scoped model itself was being
-reconsidered.
+**Status:** withdrawn 2026-09-16. Replaced by D-029 (losing a room database does not end
+membership).
 
 ---
 
 ## D-029 — Losing a room database does not end membership; the sequence lives with the identity
 
-**Date:** 2026-09-16 · **Status:** active · **Supersedes** D-028
+**Date:** 2026-09-16 · **Status:** active
 
-**Context.** D-028 treated a lost room database as the end of that peer's
-membership, on the grounds that a session-scoped room is cheap to lose. Two things
-were wrong with that assessment.
+**Decision.** A peer that loses a room's database keeps its membership. Its highest issued
+sequence for each room is stored outside the room's database, in the membership index,
+with the identity, and each sequence number is reserved there before the event that uses
+it is published.
 
-**The database is not where the value is.** A person's own turns, and the
-teammate turns injected into their session, are already in that session's context —
-stored under `~/.claude/projects/`, untouched by the loss. What the room database
-holds is the *record*. Losing it is nearer to losing scrollback than to losing work,
-and D-028 traded something consequential for something largely recoverable.
-
-**And it took more than it appeared to.** D-016 forbids a session that has received
-teammate context from moving to another room. So a peer whose membership ended could
-not collaborate again *from that session at all* — it would have to abandon the
-Claude session, and with it the working context that was the actual point. A disk
-hiccup cost the afternoon. Neither decision was wrong alone; their composition was.
-
-**Decision.** Membership survives. Only one thing must survive with it for the room
-to stay safe — the peer's own sequence position — so that is stored **outside the
-room database, sharing the fate of the identity** rather than the fate of the events.
-
-This inverts the dangerous failure rather than tolerating it:
-
-- room events lost, identity and sequence intact → resume above the recorded number,
-  refetch events from any member, membership continues;
-- everything lost including identity → a new peer with a new sequence space, which
-  can collide with nothing.
-
-There is no longer any loss that both keeps an identifier and forgets what that
-identifier issued — which was the precondition for B4.
-
-**Reserve before publishing.** The sequence must be recorded before the event using
-it is sent, never after. Failing between the two records a number that went unused,
-which is harmless. The reverse publishes a number with no record of it, which is the
-entire problem.
-
-**Why this beats the sequence epoch D-028 rejected.** An epoch solves the same
-problem by making a restarted counter occupy a different space, at the cost of a
-field on every event and a synchronization state exchange keyed by peer *and* epoch.
-Persisting the counter avoids the restart instead of accommodating it, changes no
-event, and touches no protocol. D-028 was right that an epoch was disproportionate
-and wrong that the alternative was giving up.
-
-**Costs, stated so they are expected.** Events return only from peers that still hold
-them, so a member recovering alone has a correct sequence and an empty history until
-others reconnect. Delivery state is lost with the database, so some teammate turns
-are injected twice — redundant rather than harmful, bounded by the room's lifetime,
-and the right direction per D-014. The user should be told the room is refetching,
-because that state is not the same as working normally.
+**Support.**
+- A user's own turns and the colleagues' turns injected into their session are in that
+  session's context, under `~/.claude/projects/`, and survive the loss, so the room's
+  database holds the record, which other members can supply again. §8 (event identity
+  and ordering).
+- A session never joins a second room, so a peer whose membership ended could not
+  collaborate again from that session at all. D-016 (a session never joins a second
+  room).
+- Losing identity is the safe failure, since the peer becomes a new peer with a new
+  sequence space, and losing a room while keeping the identity is the dangerous one,
+  since that peer could reissue numbers others hold. §8.
+- Reserving before publishing means a failure between the two leaves a number unused,
+  which is harmless. `cmd/cogmer/daemon.go`, `appendLocal`, which calls
+  `ReserveSequence` before `Append`.
 
 **Rejected.**
-- *Ending membership* (D-028) — see above.
-- *A sequence epoch* — correct, and unnecessary once the counter cannot be lost.
-- *Keeping the counter in the room database with a backup copy elsewhere* — two
-  copies that can disagree, and the disagreement is the failure.
+- *Ending the peer's membership in the room.* It would cost the user the session and its
+  working context, in exchange for a record other members hold.
+- *A sequence epoch, an incarnation number raised on recovery.* It needs a field on every
+  event and a synchronization exchange keyed by peer and epoch, while keeping the counter
+  avoids the restart and changes no event or protocol.
+- *Keeping the counter in the room's database with a backup elsewhere.* Two copies can
+  disagree, and the disagreement is the failure.
+
+**Limits.** Events return only from peers that still hold them, so a member recovering
+alone has a correct sequence and an empty history until others reconnect. Delivery state
+is lost with the database, so some colleagues' turns are injected twice.
+
+**Revisit when** a peer is found to have reissued a sequence number after recovering.
 
 ---
 
 ## D-030 — Two listeners: hooks on loopback, peer sync separately
 
-**Date:** 2026-09-16 · **Status:** active (implemented)
+**Date:** 2026-09-16 · **Status:** active
 
-**Context.** Making a pair work across two machines was preferred over a three-peer
-run: transitive relay is nearly free in a pull design, so Phase 6 was unlikely to
-invalidate anything, while two machines still hold real risk — clock skew, real
-partitions, real latency — and are what makes the thing usable at all.
+**Decision.** Hooks and the local view are served on one listener, `COGMER_ADDR`, which
+refuses to bind anything but loopback. Synchronization with peers is served on a separate
+listener, `COGMER_PEER_ADDR`.
 
-The blocker was small and structural. One listener on `127.0.0.1` served hooks, the
-UI, and synchronization. A second machine could not reach it, and exposing it would
-have exposed the hook API too.
-
-**Decision.** Two listeners. `COGMER_ADDR` carries hooks and the UI and
-**refuses to bind anything but loopback**. `COGMER_PEER_ADDR` carries
-synchronization, defaults to loopback, and warns when bound elsewhere.
-
-Separate listeners rather than one mux with a path filter, because the property that
-matters is *which interface can reach an endpoint*, and a filter is a rule someone
-can edit later without seeing what it guarded. Tests assert that neither serves the
-other's routes.
-
-**Why the hook API is the strict one.** Reaching `/hook/prompt` is equivalent to
-being the local person: it publishes into the room and returns the room's
-conversation. That is not an API to expose under any configuration, so it is refused
-rather than discouraged.
-
-**The peer API is exposed with a warning rather than refused,** because exposing it
-is the entire point of a second machine. The warning states plainly that it is
-unauthenticated and that nothing verifies who connects — true until identity becomes
-cryptographic (D-023). Refusing would block the work; staying silent would imply a
-protection that does not exist.
+**Support.**
+- Reaching the hook interface is equivalent to being the local user: it publishes into
+  the room and returns the room's conversation. `cmd/cogmer/main.go`, `runDaemon`.
+- Tests check that neither listener serves the other's routes.
+  `cmd/cogmer/listener_test.go`.
 
 **Rejected.**
-- *One listener, path filtering* — the boundary becomes a line of code rather than a
-  network interface.
-- *Exposing the peer API by default* — nothing should be reachable until someone
-  decides it should be.
-- *Refusing to expose the peer API until authentication exists* — that is the
-  ordering D-023 warns against: it would mean building identity before ever running
-  across a network, and the network is what the identity is for.
+- *One listener, with the routes filtered by path.* The boundary would be a line of code
+  someone can edit without seeing what it guarded, rather than a network interface.
+
+**Revisit when** hooks need to be reached from another machine.
 
 ---
 
@@ -6629,3 +6519,26 @@ it fails.
 expecting one.
 
 **Revisit when** colleagues are found to need first contact without a pairing string.
+
+---
+
+## D-145 — The peer listener may be exposed, and says so when it is
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Decision.** The peer listener defaults to loopback. It may be bound where other machines
+can reach it, and the daemon then notes at start that it is reachable.
+
+**Support.**
+- Exposing the peer listener is how a second machine reaches this one. §4 (networking).
+- Every peer connection is TLS pinned to a key this machine knows, so a stranger
+  completes no handshake. D-101 (peer connections are TLS pinned to a verified key).
+
+**Rejected.**
+- *Exposing the peer listener by default.* Nothing is reachable until someone decides it
+  should be.
+- *Refusing to expose it until peers were authenticated.* It would have meant building
+  identity before ever running across a network, which is what identity is for.
+
+**Revisit when** exposing the peer listener is found to reveal something a pinned
+handshake does not protect.
