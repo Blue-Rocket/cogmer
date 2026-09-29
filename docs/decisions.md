@@ -375,321 +375,117 @@ more valuable than bounded context.
 
 ---
 
-## D-016 — One room per session, and presence is not membership
-
-**Date:** 2026-09-16 · **Status:** active · **Closes** the open question in D-015
-
-**Context.** D-015 left open whether a session could hold membership in two rooms
-at once, and stating the constraint immediately raised the lifecycle questions
-behind it: can a session leave, rejoin, or move to a different room?
-
-**Decision — one room at a time.** This follows from the event model rather than
-being a policy preference. Every captured event belongs to exactly one room, and
-a session in two rooms gives no basis for choosing which. Injection fails the same
-way in reverse: a session receiving turns from two unrelated conversations cannot
-separate them, and neither can the person reading the result.
-
-**Leaving** is always explicit. **Rejoining** the same room is allowed while it
-remains live, and the per-event delivery set from D-014 makes it correct for free
-— a returning session receives what it missed and nothing else.
-
-**Moving to a different room is refused once teammate context has been injected.**
-This is the sharp edge. Injected context cannot be withdrawn: another person's
-conversation is in that session's context window for the rest of its life, and
-anything the session subsequently produces may be shaped by it. Admitting the
-session to a second room would publish the first room's conversation into the
-second through the model's own output — invisibly, irreversibly, and without
-either room's members knowing. The system cannot detect that leak once it has
-happened; it can only decline to create the conditions.
-
-A session that has received *no* injected context may move freely, which covers
-joining the wrong room and correcting it. A session's own prompts and responses
-impose no restriction: that content originated with the person, so carrying it
-forward is their own disclosure, not a leak of someone else's.
-
-**Presence is not membership.** The first draft of this said membership ends when
-the Claude Code session ends — which is wrong, because sessions do not end. The
-process exits, but the session persists and resumes under the same ID (verified in
-Phase 0a, checked by B14). Under that draft, two people closing their
-terminals for lunch would have archived the room, and neither could rejoin it nor
-join another.
-
-So membership is durable and ends only by explicit departure or room closure,
-while presence is transient and lapses whenever a process exits. An exiting
-session is **absent**, not gone; resuming restores presence without rejoining.
-A session-end signal is a presence signal, and the system must not depend on
-receiving one at all — a killed process sends nothing. The presence display the specification then listed as a future capability
-display (`offline — last seen 14 min ago`) already assumed this distinction; the
-specification simply had not stated it.
-
-**Consequence for closing.** A room closes on explicit departure by all members, or
-on prolonged dormancy with a deliberately generous threshold. Closing early is the
-more damaging error: a closed room can never be rejoined, and a member that
-received injected context can join no other. The asymmetry should be resolved in
-favour of keeping rooms open.
-
-**Rejected.**
-- *Allowing a session into a second room with a warning* — the leak is silent and
-  affects people who did not see the warning.
-- *Binding a session to one room for its entire life, with no exception* — simpler,
-  but forces a full session restart for a mistyped invitation.
-- *Treating process exit as departure* — the draft above; breaks resumption, which
-  is ordinary rather than exceptional.
-
-**Revisit when** a mechanism exists to scope or evict injected context within a
-live session. The refusal to move rooms is a consequence of that being impossible,
-not a value judgement about people.
-
----
-
-## D-017 — A room carries two identifiers: a UUID for synchronization, a generated name for people
+## D-016 — A session is in one room at most, and never joins a second
 
 **Date:** 2026-09-16 · **Status:** active
 
-**Context.** D-015 gave rooms a generated id plus a human-chosen label. The label
-was the weak part.
+**Decision.** A Claude Code session is a member of one room at most, and a session that
+has been in one room never joins a second. It may leave its room and rejoin it.
 
-**Decision.** Every room has a `roomId` — a UUID, globally unique, never reused or
-changed, carried on every event, and the key for all replication, deduplication
-and storage — and a `roomName`, generated at the same moment from two curated word
-lists (weather or sky, plus landscape): `misty-canyon`, `thunder-ridge`.
-
-**The name is generated rather than chosen, and that is the point.** A name a
-person picks will be the name of a project, a client, or a ticket. Rooms named
-after projects become rooms scoped to projects by convention — the exact model
-D-015 abandoned. Generating the name resists that structurally instead of relying
-on anyone's discipline.
-
-Weather-plus-landscape was chosen for four properties, all of which matter because
-an invitation may be read aloud over a call: speakable, unambiguous when heard,
-short enough to type without copying, and drawn from a narrow neutral domain so
-that no random pairing produces something offensive. The domain being narrow is a
-safety property, not a stylistic one. It also happens to name a place, which is
-what a room is.
-
-**The name is explicitly non-authoritative.** Nothing synchronizes, routes,
-deduplicates, or stores by name; databases are filenamed by `roomId`. Two
-unrelated rooms may share a name, and an implementation that keys on one will
-eventually merge two unrelated conversations. This had to be stated, because a
-pleasant identifier invites exactly that misuse.
-
-**Uniqueness is scoped to a peer, not global.** Global uniqueness is impossible —
-rooms are created independently on machines that never coordinate. But a name is
-only ever resolved against the peer named in an invitation, so a peer need only
-keep its own live room names distinct, regenerating on collision. That makes a
-few hundred words per list sufficient.
-
-**Names are immutable** for the life of the room: renaming would invalidate
-outstanding invitations and make an archived room harder to recognize.
+**Support.**
+- Every captured event belongs to one room, so a session in two would give no basis
+  for choosing which, and a session receiving turns from two unrelated conversations
+  could not keep them apart. §12a (room membership).
+- Injected context cannot be withdrawn, so admitting a session to a second room would
+  carry the first room's conversation into the second through the model's own output,
+  without either room's members knowing. §12a.
+- Delivery is recorded per event, so a session that rejoins receives what it missed and
+  nothing else. D-014 (delivery from transcript evidence).
 
 **Rejected.**
-- *A single identifier* — a UUID cannot be read over a call; a name cannot be a
-  synchronization key. The two jobs have incompatible requirements.
-- *Person-chosen names* — reintroduces project scoping by convention.
-- *Globally unique names* — unachievable without coordination, and unnecessary once
-  resolution is scoped to a peer.
-- *Including the name on every event* — it is room metadata, and putting a mutable
-  display string inside immutable events invites drift.
+- *Letting a session into a second room with a warning.* The leak is silent, and falls
+  on people who never saw the warning.
+- *Letting a session that has received no colleague's turns move to another room.* The
+  exception depends on knowing what a context window holds, and starting a new session
+  corrects a room joined by mistake more cheaply.
 
-**Revisit when** a name is needed outside the scope of a single peer, such as a
-directory of rooms across an organization. Per-peer uniqueness would no longer be
-sufficient.
+**Limits.** A session's own prompts and responses restrict nothing, because that
+content came from its own user.
+
+**Revisit when** a way exists to scope or remove injected context within a live
+session.
 
 ---
 
-## D-018 — Identity and reachability are separate; invitations carry an endpoint and a secret
+## D-017 — A room's identifier is authoritative, and its name is not
 
 **Date:** 2026-09-16 · **Status:** active
 
-**Context.** The invitation format from D-017 read
-`misty-canyon@davids-macbook:4783`, and the specification had used
-`alice-machine:4783` since §4. Neither said how a machine name resolves.
+**Decision.** Every room has a UUID, globally unique, never reused and never changed,
+which every event carries and on which replication, deduplication and storage all key.
+Its name is for people: nothing synchronizes, routes, deduplicates or stores by the
+name, events do not carry it, and unrelated rooms may share it.
 
-Checked on the development machine: `os.Hostname()` returns `macbookpro.lan`,
-`scutil --get LocalHostName` returns `pushover`, and the resolvable name maps to
-`192.168.86.31` — a LAN address no remote teammate can reach. Tailscale is not
-installed, so MagicDNS does not exist there at all. Three names for one machine,
-none of them `davids-macbook`, and the one that resolves is unreachable from
-outside.
-
-**Decision.** Separate the two concerns the invitation had merged.
-
-- `machineId` is an **identity** label for attribution and display. Nothing routes
-  by it.
-- An **endpoint** is reachability, opaque to the collaboration protocol, supplied
-  by whichever transport is in use.
-
-A daemon must **discover** its endpoint rather than derive one from its hostname —
-under Tailscale by asking Tailscale for the MagicDNS name or tailnet address, both
-of which are Tailscale's properties and not the host's. A daemon that cannot
-determine a reachable address should say so instead of issuing an unusable
-invitation.
-
-**The endpoint is a bootstrap hint,** correct only once. Having joined, a peer
-learns the membership and how to reach it, so the inviting peer's address stops
-mattering — the same principle as an inviting peer not being authoritative. An
-invitation may carry several endpoints, since a teammate on the same network and
-one across the internet do not reach the same address, and endpoints go stale when
-machines move.
-
-**A room name is not a credential.** This follows directly from D-017: the name is
-drawn from a deliberately small, speakable space, which is ample for avoiding
-confusion and useless against guessing. Authorization is a separate single-use,
-expiring secret issued with the invitation. The invitation is consequently a
-bearer credential, and §25 now says so.
+**Support.**
+- A room's database is named by its identifier. §22 (persistence).
+- A synchronization request addresses a room by its identifier. D-049 (the sync request
+  addresses a room by id).
+- Names are generated independently on each machine, so unrelated rooms can share one.
+  D-135 (a room name is unique only among one peer's rooms).
 
 **Rejected.**
-- *Resolving `machineId` as a hostname* — the original implied design. Disproven on
-  the first machine tested.
-- *Requiring Tailscale MagicDNS* — it can be disabled, leaving only the address,
-  and §4 already insists the protocol not depend on Tailscale specifically.
-- *Relying on the room name for authorization* — makes a 16,000-combination guess
-  sufficient to enter a conversation.
+- *A single identifier.* A UUID cannot be read aloud on a call, and a name cannot be a
+  key for synchronization.
+- *Carrying the name on every event.* The name belongs to the room, and a display
+  string inside immutable events invites drift.
 
-**Revisit when** a transport without stable addressable endpoints is added, such as
-WebRTC through a signalling server, where the invitation carries a session
-descriptor rather than an address.
+**Revisit when** a room's name has to be authoritative somewhere, such as a directory of
+rooms across an organization.
 
 ---
 
-## D-019 — No network provider is required; local discovery is the zero-configuration path
+## D-018 — Identity and reachability are separate
 
-**Date:** 2026-09-16 · **Status:** active as to the **requirement** — no provider is
-part of room identity, membership or replication, and none may be a prerequisite.
-Its **build order** is superseded by D-063: the first real pair works from home and
-will never share a network, so local discovery is not the first transport to build.
+**Date:** 2026-09-16 · **Status:** active
 
-**Context.** The specification was written for an internal experiment, where
-assuming Tailscale was free. For a public release it is not: "install this" and
-"install this, create a Tailscale account, put every person in a configured
-tailnet" attract very different numbers of people, and Tailscale's free tier is
-framed for personal rather than commercial use, so an evaluating team may read a
-free tool as requiring a paid service.
+**Decision.** A machine's label is for attribution and display, and nothing routes by
+it. An endpoint is where a peer can be reached. It is opaque to the protocol, and the
+daemon discovers it from the transport in use rather than deriving it from the
+hostname. An endpoint in an invitation is a hint needed only until the joining peer
+learns the room's members, and an invitation may carry several.
 
-**Decision.** State as a requirement that no network provider is part of room
-identity, membership, or replication, and that the system must function with no
-VPN at all when peers can already reach one another. Two people on the same
-network is the simplest case and must be the easiest: no account, no external
-service, no configuration.
-
-Transports are attempted in order — same network, then a private network provider,
-then internet peer-to-peer, then relay — and which one connected is an
-implementation detail that must not surface in room identity or event data.
-Implementation order is Local, then Tailscale, then WebRTC.
-
-The architectural seam already existed: §4 said the protocol must not depend on
-Tailscale and §33 already had `PeerSyncTransport`. What changed is the **priority**.
-Local discovery moved from "later possibility" to the first transport built, and
-the independence became a stated requirement rather than an aspiration.
-
-**That priority was wrong, and D-063 corrects it.** It rested on "two people on
-the same network is the simplest case" — true, and irrelevant, because the first
-pair who need this work from home and will never be on one. The *requirement* above
-is unaffected: no provider may be required, and the same-network case must still
-cost nothing when it arises. What changed is which case gets built first.
-
-**Where this conflicted with earlier decisions, and how it was resolved.** The
-appealing version of zero-configuration joining is `cogmer join misty-canyon`
-— find the room by name on the network and enter it. That cannot be adopted as
-stated. D-017 made room names short, speakable, and therefore guessable, and D-018
-made authorization a separate secret precisely because of that.
-
-On a shared network — an office, a conference, a cafe — any listener could
-enumerate advertised room names, and could guess them without listening. A room
-holds source code, customer information, and whatever has been pasted into a
-prompt.
-
-So discovery locates a room; it never admits anyone to one. Local discovery
-replaces the *endpoint* in an invitation, which D-018 had already reduced to a
-bootstrap hint, while the secret remains:
-
-```
-cogmer join misty-canyon#k7qm-2xpr-9vlt
-```
-
-Still short enough to say across a desk. The secret also disambiguates, which
-local discovery needs anyway: names are unique only among the rooms one peer
-hosts, so a broadcast search may surface two unrelated rooms sharing a name.
+**Support.**
+- A machine answers to several names, and the one that resolves may be an address no
+  remote peer can reach: on one machine `os.Hostname()` returned `macbookpro.lan`,
+  `scutil --get LocalHostName` returned `pushover`, and the name that resolved was a
+  LAN address. `84a0751:docs/decisions.md`.
+- An endpoint need be correct only once, because a peer that has joined learns how to
+  reach the other members. §12 (forming a room).
 
 **Rejected.**
-- *Tailscale as the architectural foundation* — couples adoption to an account and
-  a second daemon for the simplest case.
-- *Joining by name alone on a trusted network* — "trusted network" is doing
-  unearned work; office and conference networks are neither small nor trusted.
-- *Treating a signalling service as a small future detail* — signalling is small
-  and never sees a conversation, but relays carry the traffic and cost money.
-  Recorded in §33 so it is chosen deliberately.
+- *Resolving the machine's label as a hostname.* The first machine tried disproved it.
 
-**Note for implementation.** `tsnet` lets a Go program become a tailnet node
-directly, which would satisfy D-018's requirement to obtain an address from
-Tailscale rather than from the hostname without shelling out to its CLI. That
-makes it attractive *inside* `TailscaleTransport`, and unacceptable anywhere else.
+**Revisit when** a transport is added whose peers have no addressable endpoint.
 
-Tailscale is also not installed on the development machine, so local discovery is
-now the shorter path to a working two-peer test as well as the better public
-default.
+---
 
-**Revisit when** a transport is added whose peers have no addressable endpoint,
-where `discover` cannot be expressed as returning candidates.
+## D-019 — No network provider is required
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Decision.** No network provider is part of a room's identity, its membership or
+replication, and none is a prerequisite: cogmer works with no virtual private network
+when peers can reach each other. A connection tries the same network, then a private
+network provider, then internet peer-to-peer, then a relay, and which one connected
+appears in no room's identity and no event.
+
+**Support.**
+- Tailscale's free plan is for personal use, so a team evaluating cogmer could read it
+  as requiring a paid service. `https://tailscale.com/pricing`.
+- What synchronization means is independent of the transport that carries it. §4
+  (networking).
+
+**Rejected.**
+- *Tailscale as the foundation.* It ties adoption to an account and a second daemon for
+  the simplest case.
+
+**Revisit when** a transport is added whose peers cannot be found as candidates.
 
 ---
 
 ## D-020 — A guest list replaces the join secret only once peer identity is cryptographic
 
-**Date:** 2026-09-16 · **Status:** active (partly deferred)
-
-**Context.** If a room keeps a list of invited peers, is the join secret from D-018
-still needed?
-
-**Finding: not with identity as it stands.** A guest list is an *authorization*
-mechanism and presupposes *authentication*. A `peerId` today is ten random bytes
-generated locally, asserted by the peer that sends it, and verified by nothing.
-A list of unverifiable names is a convenience, not a control — any peer can claim
-any identifier.
-
-It would also be worse than the secret it replaced. A join code is used once and
-discarded; a `peerId` appears in every event the peer originates, so it is far
-more discoverable than the credential it would be standing in for.
-
-**Decision.** Keep the secret for now. State in the specification that peer
-identity must become cryptographic — identifiers derived from a public key,
-possession proved on connection, events signed at origin — and that until it does,
-the guest list, the relay rule, and attribution are conventions rather than
-controls.
-
-**Once identity is cryptographic, the guest list is the better mechanism** and the
-specification says to prefer it. Admission becomes proof of possession rather than
-presentation of a token: nothing transmitted can be replayed by an interceptor,
-nothing expires, and admission can be withdrawn.
-
-**They compose rather than compete.** A guest list does not remove the first
-exchange — two peers who have never met must still establish keys over a channel
-they trust, exactly as a secret must be sent over one. It removes every *subsequent*
-exchange, because a verified key is durable where a secret is spent. So: a
-single-use secret admits a peer that is not yet known, being admitted is what makes
-it known, and between known peers no secret is required. This is the model SSH uses
-for host keys, and the reasoning is the same.
-
-**The stronger argument for doing the work is unrelated to admission.** §13 requires
-that a relaying peer never rewrite `originPeerId`, `peerSequence`, or `eventId` —
-but nothing enforces it. An event arriving from Alice claiming to originate with
-David is indistinguishable from one Alice composed herself, and transitive relay is
-a stated resilience feature rather than an edge case. Signing at origin is what
-makes relay verifiable instead of merely well-behaved. This closes review item C7.
-
-A guest list also makes broadcast discovery (D-019) safe to enumerate: if admission
-requires a key, a listener learning every advertised room name gains nothing.
-
-**Rejected.**
-- *Guest list instead of the secret, now* — authorization without authentication.
-- *Guest list keyed on `userId` or `machineId`* — the same defect with friendlier
-  names.
-- *Deferring identity until after Phase 2* — Phase 6 tests transitive relay, which
-  is precisely what unsigned events cannot make safe.
-
-**Revisit when** implementing Phase 2. Peer identity format is entrenched by the
-first event two peers exchange, so the keypair decision wants making before peers
-exist, not after.
+**Status:** withdrawn 2026-09-16. Replaced by D-024 (admission is a guest list).
 
 ---
 
@@ -2416,7 +2212,7 @@ conflating them is how a mechanism gets justified by a case nobody wants.
 
 **Recorded as open in §12a**: whether a request may arrive unsolicited. Any peer that
 can reach the address and name the room could otherwise cause something to appear on
-the host's screen, and names are guessable by design (D-017). Guessing grants nothing,
+the host's screen, and names are guessable by design (D-134). Guessing grants nothing,
 which is what makes names safe; producing an interruption is a different matter, and a
 prompt people learn to dismiss quickly is a poor place for a decision that matters.
 The alternative — requests accepted only while the host has said they are expecting
@@ -3072,7 +2868,7 @@ whether anyone comes in. An intercepted address is worth what an intercepted IP
 address is worth today.
 
 Tailcat has its own WireGuard keypair. That is a **transport** identity and must
-never be confused with a `peerId`, which is an Ed25519 key (D-020) and is what
+never be confused with a `peerId`, which is an Ed25519 key (D-042) and is what
 signs events and is what a person verifies. Two keys, two jobs.
 
 **Do not use `AllowedClients`.** Tailcat can restrict connections by peer public
@@ -4587,7 +4383,7 @@ remains is the case where tailcat cannot negotiate: the string is then genuinely
 unusable and we now say so precisely.
 
 **Not taken: advertising the machine's LAN address as a fallback.** It is easy to
-detect and it is right only for peers on the same network — which D-019 names as the
+detect and it is right only for peers on the same network — which D-138 names as the
 zero-configuration path and which is not built. Advertising an address that works for
 some colleagues and silently not others is worse than an address that visibly works
 for none. This belongs with local discovery, not ahead of it.
@@ -4706,7 +4502,7 @@ different machine.** `192.168.1.42` at a coffee shop belongs to somebody else's
 laptop, so attempting it does not fail — it succeeds against a stranger, and then
 has to be unwound at a higher layer. Private ranges therefore never appear in a
 pairing string, an invitation, or a durable record. They enter only as facts
-discovered on the network we are on now (D-019), where discovery states where a
+discovered on the network we are on now (D-138), where discovery states where a
 peer *is* rather than where a peer *was*.
 
 This entry first argued that the cost was disclosure — that a signed sync request
@@ -4750,7 +4546,7 @@ wrong about somebody else rather than merely wrong.
 **None of this is implemented.** A peer is advertised at one address, that address
 is recorded once, and nothing expires.
 
-**Revisit when:** local discovery lands (D-019's zero-configuration path), which is
+**Revisit when:** local discovery lands (D-138, local discovery), which is
 what gives a location candidate a legitimate way in.
 
 ## D-092 — An address is learned once, out of band, and only one side needs one
@@ -4766,7 +4562,7 @@ tail of the pairing string a colleague sends by whatever channel they like.
 `parsePairing` splits on the last `@`, `SetPeerEndpoint` stores it, and
 `syncTargets` offers it to `RunVerification` later. There is no other path —
 `RemoteAddr` is never read anywhere in the codebase, so nothing is learned from a
-connection, and there is no discovery to learn it from (D-019's zero-configuration
+connection, and there is no discovery to learn it from (D-138's local discovery
 path is not built).
 
 **Only one side needs a usable address.** `RunVerification` checks for an inbound
@@ -6721,3 +6517,133 @@ read and searched, and is never rejoined, synchronized or injected.
   specification requires to be kept.
 
 **Revisit when** an archived room needs to be joined again.
+
+---
+
+## D-133 — Presence is not membership
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Decision.** Membership is held by a session's ID, and ends only when the session
+explicitly leaves or the room closes. Presence says whether a member can be reached now,
+and lapses whenever a process exits, a machine sleeps or a network drops. A room closes
+when every member has left, or after a dormancy long enough that resuming it is not
+plausible, and the threshold is generous.
+
+**Support.**
+- A Claude Code session's ID survives its process exiting and being resumed, and
+  survives compaction. `84a0751:docs/phase0a-findings.md`, and B14.
+- A killed process, or a machine that loses power, sends no signal that its session
+  ended. §12a (room membership).
+- A closed room can never be rejoined, and its sessions can join no other room. D-016 (a
+  session never joins a second room).
+
+**Rejected.**
+- *Treating a process exiting as leaving.* Two people closing their terminals for lunch
+  would close the room, and neither could rejoin it or join another.
+
+**Revisit when** Claude Code sessions cannot be resumed.
+
+---
+
+## D-134 — A room's name is generated from two word lists, never chosen
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Decision.** A room's name is generated from two curated word lists, one of weather or
+sky and one of landscape, such as misty-canyon, and nobody chooses it.
+
+**Support.**
+- A name a user chose would be the name of a project, a client or a ticket, and rooms
+  named after projects become scoped to projects. D-015 (rooms are scoped to sessions).
+- An invitation may be read aloud on a call, so a name is speakable, unambiguous when
+  heard, short enough to type, and drawn from a narrow, neutral domain in which no
+  combination is offensive. §12 (forming a room).
+- The space of names is small, so a name can be guessed. §12.
+
+**Rejected.**
+- *Names users choose.* They bring back rooms scoped to projects by convention.
+
+**Revisit when** users need to find an archived room by what it was about.
+
+---
+
+## D-135 — A room's name is unique only among one peer's rooms
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Decision.** A peer keeps the names of its own live rooms distinct, generating another
+on a collision, and no name is unique beyond one peer.
+
+**Support.**
+- Rooms are created on machines that do not coordinate, so names cannot be globally
+  unique. §12 (forming a room).
+- A name is only ever resolved against one peer. §12.
+- The two lists hold 88 and 87 words, which give 7,656 combinations, and a peer hosts
+  few live rooms at once. `cmd/cogmer/roomname.go`.
+
+**Rejected.**
+- *Globally unique names.* They cannot be had without coordination, and nothing needs
+  them while a name is resolved against one peer.
+
+**Revisit when** a name has to be resolved beyond one peer.
+
+---
+
+## D-136 — A room's name never changes
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Decision.** A room's name is fixed for the life of the room.
+
+**Support.**
+- An invitation names the room it invites to. §12 (forming a room).
+- An archived room is recognized by its name. D-132 (a closed room's log is archived).
+
+**Rejected.**
+- *Renaming a room.* It would invalidate the invitations that have been sent, and make an
+  archived room harder to recognize.
+
+**Revisit when** users ask to rename rooms.
+
+---
+
+## D-137 — A room's name is never a credential
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Decision.** Nothing admits a peer to a room on the strength of the room's name.
+
+**Support.**
+- Room names come from a small, speakable space that cannot resist a guess. D-134 (a
+  room's name is generated from two word lists).
+- Admission is an entry on the room's guest list, or a host's approval of a request.
+  §12 (forming a room).
+
+**Rejected.**
+- *Admitting on the name.* A guess among 7,656 combinations would be enough to enter a
+  conversation.
+
+**Revisit when** a room has to admit a peer that is neither on its guest list nor
+approved by a host.
+
+---
+
+## D-138 — Local discovery locates a room, and never admits anyone
+
+**Date:** 2026-09-16 · **Status:** not built
+
+**Decision.** Peers on the same network can find a room by local service discovery,
+without an address being typed. Discovery locates the room, and never admits anyone to
+it.
+
+**Support.**
+- On a shared network any listener can list the advertised room names, and names can be
+  guessed without listening. D-137 (a room's name is never a credential).
+- Admission is the room's guest list. §12 (forming a room).
+
+**Rejected.**
+- *Joining by name alone on a trusted network.* Office and conference networks are
+  neither small nor trusted.
+
+**Revisit when** two users who share a network need to pair.

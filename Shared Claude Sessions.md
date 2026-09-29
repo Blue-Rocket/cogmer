@@ -1074,8 +1074,8 @@ admits anyone to one.
 ## The room name is not a credential
 
 A room name comes from a small space that is guessable on purpose, so that it can be
-spoken aloud. Tens of thousands of combinations are enough to avoid confusion and
-useless against a guess.
+spoken aloud. A few thousand combinations are enough to avoid confusion and useless
+against a guess.
 
 Authorization is never the name. It is an entry on a guest list, proved by possession
 of a key, or a host's explicit approval of a request, and no peer admits a session to a
@@ -1111,8 +1111,7 @@ A room name is:
 - drawn from a narrow, neutral domain, so that no combination is offensive or
   misleading.
 
-Each list is large enough that collisions are uncommon: a few hundred entries in each
-gives tens of thousands of combinations.
+Each list is large enough that the live rooms one peer hosts rarely collide.
 
 Names are not globally unique and cannot be, since rooms are created independently on
 machines that do not coordinate. A peer keeps only the live rooms it hosts distinctly

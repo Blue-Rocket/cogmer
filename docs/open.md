@@ -239,7 +239,7 @@ right to ask, and the host still approves.
 
 Peers on the same network find each other without an address being typed.
 
-**Local network discovery** (D-019's zero-configuration path) is not built.
+**Local network discovery** (D-138, local discovery locates a room and never admits anyone) is not built.
 
 ## Three peers
 

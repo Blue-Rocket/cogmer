@@ -53,9 +53,8 @@ var peerAnimals = []string{
 // PeerName derives a stable display name from a peer identifier.
 //
 // It hashes rather than slicing the identifier directly, so the name is
-// well-distributed whatever the identifier's format -- random hex today, a public
-// key fingerprint once identity becomes cryptographic (D-020). The derivation
-// need not change when that happens.
+// well-distributed whatever the identifier's format, which is the peer's Ed25519
+// public key (D-042).
 func PeerName(peerID string) string {
 	sum := sha256.Sum256([]byte(peerID))
 	a := binary.BigEndian.Uint32(sum[0:4]) % uint32(len(peerAdjectives))
