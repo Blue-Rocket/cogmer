@@ -504,10 +504,20 @@ does that cogmer relies on is in the behaviour registry, `cmd/cogmer/behaviors.g
 is checked. What Claude Code offers or forbids that nothing checks is in `CLAUDE.md`'s
 "Facts that are not obvious from the code": that every plugin command carries the
 plugin's name as a prefix, and that every extension point delivers to the model and
-never to a person. `CLAUDE.md` is instructions to the model, not a record a reviewer consults, so
-the facts kept there survive only because a session reads them. A document of
-the host's constraints, or a section of the specification, would give them a place a
-reviewer can find, and `CLAUDE.md` would then point at it (W-26).
+never to a person. `CLAUDE.md` is instructions to the model, not a record a reviewer
+consults, so the facts kept there survive only because a session reads them.
+
+The registry is the place for what someone else's software does that cogmer relies on,
+but a fact about Claude Code that nothing checks, such as the command prefix or
+extension points delivering only to the model, can go in the registry only if an entry
+is permitted to omit the check. Permitting an entry to omit the check would put every
+external reliance in one place: an entry without a check keeps its `Title` and
+`Reliance`, says how a person can confirm the fact by hand, and appears in
+`docs/relied-on-behaviors.md` in a group of its own, so it is never mistaken for
+something `cogmer doctor` verifies. The code that relies on an entry cites it, and
+`CLAUDE.md`'s "Where to read before changing something" points at entries by area, so a
+fact reaches a session when the work touches what it constrains rather than on every
+turn (W-26).
 
 **Most decision entries hold more than one decision, or history, and none is split
 yet.** W-40 in `docs/writing.md` says an entry records one decision. Reading all 126
