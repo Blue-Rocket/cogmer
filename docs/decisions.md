@@ -491,79 +491,37 @@ appears in no room's identity and no event.
 
 ## D-021 — Peer names are word pairs derived from the identity, never chosen
 
-**Date:** 2026-09-16 · **Status:** active (derivation implemented; verification deferred)
+**Date:** 2026-09-16 · **Status:** active
 
-**Context.** Peer identifiers should be readable, as room names are (D-017):
-`quiet-otter` rather than `peer-852ffe6408339bcada91`.
+**Decision.** A peer's name, an adjective and an animal such as quiet-otter, is derived
+by `PeerName()` from a hash of the peer's identifier when the identity is loaded. It is
+never chosen and never stored, and attribution rests on it rather than on the display
+name a peer asserts.
 
-**Decision.** A peer carries two identifiers, mirroring a room: a `peerId` that is
-verified, signed with and keyed on, and a `peerName` — an adjective and an animal —
-for people to read and say. Implemented as `PeerName()`, which hashes the
-identifier rather than slicing it, so the derivation works unchanged when `peerId`
-becomes a public-key fingerprint (D-020).
-
-**The name is derived, never chosen, and that distinction matters more for peers
-than for rooms.** A room name colliding is confusing. A peer name colliding is
-impersonation: §20 injects `speaker="Alice"` directly into a teammate's Claude,
-so a display name a peer can select is a way to put words in a colleague's mouth,
-in a form the model reads exactly as the colleague saying them. A name a peer
-chooses is a claim about who it is, and a display name must not be a claim.
-
-**Deriving it is necessary and not sufficient.** 8,280 combinations is trivially
-grindable: generate identities until the derived name matches a chosen target. No
-name short enough to say aloud can resist that, and a larger word list does not
-change the conclusion — it changes the cost from seconds to minutes.
-
-The protection therefore cannot come from the name. It comes from D-020's known
-peers: a name is a mnemonic for an identity already verified, never an
-introduction to a stranger. The specification now requires that a name be
-displayed as itself only for a verified peer, and that unverified speakers be
-marked as such **inside the injected text**, not merely in an interface — the
-model reasons about attribution, so marking it only in a UI protects the wrong
-reader.
-
-**Word lists name colleagues, which constrains them more than the room lists.**
-Weather and landscape name places; adjectives and animals name people. An
-adjective that would be unkind applied to a person is unacceptable however
-harmless it is applied to an animal, and so is any animal used as an insult.
-Combinations are generated and nobody approves them individually, so the
-constraint lives in the lists. A test asserts it, which is a floor and not a
-substitute for reviewing additions.
+**Support.**
+- The injected block tells a colleague's Claude who said each turn, so a name a peer
+  could choose would put words in a colleague's mouth in a form the model reads as the
+  colleague saying them. §20 (attribution in injected context).
+- A hash covers the whole identifier, so a difference anywhere in it changes the name.
+  `cmd/cogmer/peername.go`, `PeerName`.
+- The word lists name people, so they hold nothing unkind applied to a person, and a
+  test checks them. §6 (naming people), and `cmd/cogmer/peername_test.go`.
 
 **Rejected.**
-- *Self-chosen display names* — the impersonation vector above.
-- *Storing the name alongside the identity* — a persisted name can drift from the
-  identity it represents. It is derived on load and marked `json:"-"`.
-- *A larger word list as the answer to spoofing* — raises grinding cost by minutes
-  and leaves the property unchanged.
-- *Indexing the word lists by the first and last bytes of the identifier* rather
-  than by a hash of it. The appeal is auditability: a name visibly derived from
-  bytes you can read is one a person could check. Measured, it fails on the point
-  that matters — two identifiers differing only in a middle byte derive the **same**
-  sliced name and different hashed names, so slicing sees sixteen bits and is blind
-  to everything between the ends. Hashing covers the whole identity, so any
-  difference anywhere changes the name. Two lesser faults were fixable and the
-  third was not: the identifier is currently `"peer-" + hex`, making the first two
-  characters `pe` for every peer (one distinct value across 2,000 generated ids),
-  and 256 byte values into a 90-word list leaves some names roughly 50% more likely
-  than others.
+- *Display names a peer chooses.* They are the impersonation above.
+- *Storing the name with the identity.* A stored name can drift from the identity it
+  represents.
+- *Indexing the word lists by the first and last bytes of the identifier, so that a
+  person could check the name against the bytes.* Two identifiers differing only in a
+  middle byte would derive the same name, because slicing sees sixteen bits and nothing
+  between the ends.
 
-  The instinct is sound at a different scale. Auditable word rendering is how key
-  fingerprints are compared by people, and §25 now requires that such a comparison
-  render the *whole* key. Two words carry thirteen bits; offering that as a
-  fingerprint check would claim an assurance it cannot provide. When D-020's
-  cryptographic identity lands, a full-fingerprint word sequence belongs alongside
-  it — as a separate thing from the peer name, not as a redefinition of it.
+**Limits.** A derived name can be ground: an identity can be generated again and again
+until its name matches a target, so a name is a mnemonic for a verified identity,
+never an introduction to a stranger (D-139).
 
-**On collisions.** 8,280 names is comfortable for a pairing and not for an
-organization: roughly 0.5% chance of a shared name among 10 peers, 3.6% among 25,
-and 45% among 100. Expanding both lists to 256 entries would give 65,536 and push
-that out by an order of magnitude. Held off because curating 512 words against the
-naming-people constraint is the work, not the arithmetic.
-
-**Revisit when** `peerId` becomes a key fingerprint. The derivation needs no
-change, but the verified/unverified display rule becomes enforceable rather than
-advisory, and that is the point at which names become trustworthy at all.
+**Revisit when** peer names are needed at a scale where collisions become common, since
+the lists hold 8,280 combinations (D-140).
 
 ---
 
@@ -571,236 +529,115 @@ advisory, and that is the point at which names become trustworthy at all.
 
 **Date:** 2026-09-16 · **Status:** active
 
-**Context.** The specification said a room is "created by one peer" and that a late
-joiner "receives the room from its beginning," in three places, without ever
-saying when the beginning is. Nothing said what happens before a room exists.
+**Decision.** A room's identifier and name are generated when a user creates the room,
+and creating a room is the act of inviting someone into it. The creating session
+becomes the first member, and the room's history begins there. Before that, nothing is
+captured, injected or shared.
 
-**Decision.** The `roomId` and `roomName` are generated at the moment a person
-invites someone. Creating a room and issuing the first invitation are the same
-act. The creating session becomes the first member and the room's history starts
-there.
-
-Before that, a session is an ordinary Claude Code session: nothing captured,
-nothing injected, nothing shared. Collaboration is something a person starts,
-not a state they are in.
-
-**The alternative is a silent disclosure.** The natural implementation — create a
-room when a session starts, so capture is always on — means a person who works
-alone for two hours and then invites a colleague hands over all two hours. The
-invitation looks like saying hello and behaves like publishing a transcript.
-Nothing in the interface would suggest otherwise, and the disclosure is
-irreversible.
-
-So the specification now states that *"from its beginning" means the beginning of
-the room, never of a session that belongs to it* — the ambiguity that made the
-wrong reading available.
-
-**Acknowledged cost.** A person usually wants to invite someone *because* of
-what just happened, and that conversation is precisely what the new room does not
-contain. The prototype accepts this; the workaround is the one people already use,
-which is to explain. Deliberately contributing selected earlier turns is a
-reasonable later feature. Contributing them by default is not, and the difference
-is consent.
+**Support.**
+- A room that began when a session started would hand the first colleague invited
+  everything the user had done alone, by an act that looks like saying hello, and the
+  disclosure could not be withdrawn. §12a (room membership).
+- Throughout the specification, a room's beginning is the room's, never a member
+  session's. §12a.
 
 **Rejected.**
-- *Create a room at session start* — the disclosure above.
-- *Create a room lazily at the first captured event* — same outcome, reached less
+- *Creating a room when a session starts.* It is the disclosure above.
+- *Creating a room lazily, at the first captured event.* The same outcome, reached less
   visibly.
-- *Offer to include prior turns when inviting* — better than defaulting, but it is
-  a prompt to share under time pressure, which is a poor moment to ask. Left for
-  a later design with the turns shown before they are sent.
+- *Offering to include earlier turns when inviting.* It asks a user to decide what to
+  share under time pressure, which is a poor moment to ask.
 
-**Revisit when** selective contribution of earlier turns is designed, since that is
-the feature this decision defers rather than forecloses.
+**Limits.** A new room does not hold the conversation that made a user want to invite
+someone, and earlier turns are never contributed by default.
 
----
-
-## D-023 — A peer identifier must be safe to know; identities are created once and exchanged on joining
-
-**Date:** 2026-09-16 · **Status:** active (specified; not implemented)
-
-**Context.** Two questions: when does a peer identity come into being, and how does
-a host learn a guest's identifier before inviting them? Answering the second
-surfaced that the current identifier is hazardous to share.
-
-**When.** An identity is created once, on a machine's first use, and persists. Not
-per room, per session, or per invitation — it outlives all of them. This is the
-inverse of a room (D-022), which begins at a known moment for a known purpose and
-is archived when that purpose ends. An identity exists before there is anything to
-join, which is what lets a peer be recognized later rather than met afresh.
-
-An identity belongs to a **machine**, not a person: a person with a laptop and a
-desktop is two peers and appears twice wherever peers are listed. Deliberate — a
-key that never leaves the machine that made it cannot be lost from one machine by
-losing another — but it should be visible rather than surprising.
-
-**How a guest's identifier is obtained: it is not, in advance.** There is no
-directory, and requiring one before two people could work together would defeat the
-point of an invitation. Identities are exchanged on joining. The invitation admits
-a peer that is not yet known; joining is where each side learns and records the
-other.
-
-**The identifier must be safe to know.** Asking how to obtain a guest's identifier
-exposed that knowing one is currently a capability: it is a random value that
-nothing verifies, so knowing it is sufficient to claim it and publish events
-attributed to its owner. It is a shared secret in the costume of an identifier —
-and it is broadcast by design, appearing in every event, every interface, and every
-exchange between peers.
-
-The remedy is not to keep identifiers private, which is impossible for something
-the system exists to spread. It is to make holding one worthless: **the identifier
-should be the public key, or a fingerprint of it.** A public key can be printed,
-logged, listed, and read aloud, because possession proves nothing; only the private
-key produces a signature.
-
-**The order matters, and is easy to get wrong.** Changing the identifier's format
-does not by itself help. While nothing verifies signatures, a peer can still assert
-someone else's identifier and be believed. The identifier becomes safe to know at
-the moment signatures are *checked*, not at the moment keys are introduced. So
-generating keypairs now, without verification, would produce something that looks
-like the fix and delivers none of it — which is why nothing was implemented here.
-
-**Self-certifying is not self-authenticating.** An identifier that is a public key
-proves possession of that key. It does not prove which person holds it. Joining
-establishes the first claim only; the second rests on trust taken at first contact,
-whose weakness is that whoever presents a valid invitation becomes the peer that is
-recorded — durably, under a name members will thereafter treat as familiar.
-Verifying once, over a channel the invitation did not travel on, closes that, and
-once is enough.
-
-**Rejected.**
-- *A directory of peer identifiers* — an arrangement required before collaboration
-  defeats the invitation.
-- *Treating the current identifier as sensitive* — it appears in every event; a
-  secret that must be broadcast is not a secret.
-- *Generating keypairs now as a first step* — see the ordering note. Half of this
-  change provides none of its value while appearing to.
-
-**Revisit when** Phase 2 begins. This and D-020 are the same body of work, and it
-must land before peers exchange their first event.
+**Revisit when** contributing chosen earlier turns to a room is designed.
 
 ---
 
-## D-024 — Admission is a guest list; the join code is a fallback for strangers
+## D-023 — A peer identifier must be safe to know
 
-**Date:** 2026-09-16 · **Status:** active · **Corrects the emphasis of** D-018, D-020
+**Date:** 2026-09-16 · **Status:** active
 
-**Context.** The intent behind a guest registry was `cogmer join misty-harbor`
-with no secret in it. The specification conceded in one sentence that known peers
-need no secret, and then made the bearer code primary everywhere else.
+**Decision.** A peer's identifier is its public key, so knowing it grants nothing. An
+identifier is safe to know only because signatures are checked: every event is signed by
+the peer that created it and rejected on receipt if it does not verify.
 
-**The error was conflating two claims.** That authorization cannot rest on a
-guessable name is true. That the credential must therefore travel *in the
-invitation* does not follow, and I treated it as though it did.
-
-**Decision.** A guest list is the ordinary path. A host records that a peer it
-already knows may enter a room; the guest types only the room name; admission is
-proof of possession of a key the host already holds. The name locates, the list
-admits. Nothing secret is typed, spoken, or transmitted, and guessing the name
-gains nothing.
-
-**The out-of-band step does not disappear — it improves.** A host must hold the
-guest's identifier first. But that is a *public* identifier, exchanged once per
-person rather than once per meeting, and safe to paste into a chat, mail, print, or
-read aloud, because holding it confers nothing.
-
-Compare the two exchanges honestly, since both cost one message:
-
-| | join code | public identifier |
-|---|---|---|
-| must stay secret in transit | yes | no |
-| how often | every first meeting | once per person, ever |
-| interception | enrols the wrong peer | reveals nothing |
-| verifiable afterwards | no | yes, by fingerprint |
-
-The friction argument for codes does not survive that table. It is the same number
-of messages, in the other direction, and the safer one is also the one that stops
-recurring. `authorized_keys` is the same trade, and nobody experiences it as
-friction.
-
-**The code survives as a fallback, explicitly weaker.** Two people who have never
-exchanged identifiers should not need a round trip before pairing. A code should
-expire, admit one peer once, and be unnecessary afterwards — the peer it admitted
-is known now.
-
-**A consequence worth stating:** preferring the guest list is a security decision,
-not only a convenience. An intercepted code enrols an impostor under a name members
-will thereafter treat as familiar. An intercepted invitation naming a guest reveals
-only that a room exists.
-
-**Unchanged by this.** The ordering from D-023 still governs: none of it is
-enforceable until signatures are verified. Until then a guest list is a convention,
-and the prototype is unauthenticated whichever path it nominally uses.
+**Support.**
+- An identifier appears in every event its peer creates, in every interface and in every
+  exchange between peers, so an identifier that gave its holder any power could not be
+  protected. §6 (identity).
+- Peer identity is an Ed25519 key pair, and events are signed at origin. D-042 (peer
+  identity is an Ed25519 key pair).
 
 **Rejected.**
-- *The code as the primary mechanism* — the position this corrects.
-- *Removing codes entirely* — a first meeting should not require preparation, and
-  refusing that makes the tool harder to try than to adopt.
-- *Deriving admission from the room name on a trusted network* — the name is
-  guessable by construction (D-017); there is no network where that is safe.
+- *Treating the identifier as sensitive.* It appears in every event, and a secret that
+  must be broadcast is not a secret.
+- *Introducing key pairs before signatures were checked.* A peer could still assert
+  another's identifier and be believed, so it would look like the fix and deliver none
+  of it.
+
+**Limits.** An identifier proves possession of a key, and never which person holds it.
+Verification establishes that. D-054 (verification gates synchronization and
+injection).
+
+**Revisit when** an identifier has to carry something other than the public key.
 
 ---
 
-## D-025 — The guest list, specified: two scopes, a signed challenge, and approval in the moment
+## D-024 — Admission is a guest list
 
-**Date:** 2026-09-16 · **Status:** active · **Completes** D-024
+**Date:** 2026-09-16 · **Status:** active
 
-**Context.** D-024 made the guest list the primary admission path and invoked
-`authorized_keys` as the precedent. It did not specify the mechanism: where a list
-lives, how entries are added or removed, what the proof consists of, or what
-happens to a peer that is not on one. Naming an analogy is not specifying a design.
+**Decision.** Admission to a room is an entry on the host's guest list for a peer the
+host knows, proved by possession of the key the host holds for it. The room's name
+locates the room and the guest list admits the peer, so nothing secret is typed, spoken
+or sent, and guessing the name gains nothing.
 
-**Two lists, at different scopes.** Knowing someone and admitting them to a
-particular conversation are different decisions, and collapsing them makes the
-second inexpressible. **Known peers** belongs to a machine, is durable, and outlives
-every room — it is why a colleague is recognized later rather than met afresh.
-**A room's guests** belongs to the room, names which known peers may enter, and is
-archived with it. A person may know six colleagues and admit two to a room
-concerning customer data.
-
-Commands for both, because a list that cannot be inspected or corrected is not
-administrable: `peers`, `allow`, `forget`; `guests`, `invite`, `revoke`. Forgetting
-and revoking differ — revoking withdraws admission to one room, forgetting discards
-the identity, so a later meeting is a first meeting again.
-
-**Admission is a fresh signed challenge.** The joiner presents an identifier, the
-host finds it among the room's guests and issues an unpredictable challenge, the
-joiner signs it. The challenge must be new every time: an exchange that can be
-replayed is a bearer credential with extra steps. Nothing secret passes in either
-direction, so the exchange needs integrity rather than confidentiality.
-
-**Refusal must be more than silence, and that changes the role of codes.** A peer
-not on the list is refused — and the host is *told*, and shown the identifier and
-derived name presented. The host may admit it, which makes that peer known and a
-guest in one act.
-
-This is how two people who have never met will ordinarily pair: Alice attempts to
-join, David sees the request, recognizes the moment, approves. **No identifier is
-exchanged beforehand and no token is issued.** It removes the round trip that was
-the whole argument for keeping codes when both people are present.
-
-What a host approves is an identifier. The name beside it is a claim made by a
-stranger who chose when to make it, and the interface should not let the two be
-confused.
-
-The refused peer is told, and shown its own identifier, so its user can say what
-the host needs to allow. A request is not a queue: if the host is absent the
-request fails rather than waiting, and never grants entry later without attention.
-
-**Codes now cover one case only:** inviting in advance, when the host will not be
-present to approve. Where a host is present, approval is better in every respect,
-because a person decides rather than a token. *(Superseded by D-026: that one case
-does not survive examination either.)*
+**Support.**
+- A host holds a guest's public identifier before inviting them, from a pairing
+  string, which is exchanged once per colleague and is safe to send any way, because
+  holding it grants nothing. D-023 (a peer identifier must be safe to know).
+- A room's name is never a credential. D-137 (a room's name is never a credential).
+- An intercepted invitation naming a guest reveals only that a room exists. §12 (forming
+  a room).
 
 **Rejected.**
-- *One combined list* — cannot express knowing someone without admitting them
-  everywhere.
-- *Silent refusal* — leaves both sides with no way to proceed, and makes the
-  no-prior-exchange case impossible without a code.
-- *Queuing requests for an absent host* — an admission that completes without
-  attention is the token model wearing a different name.
-- *Approving by displayed name* — the name is the stranger\'s claim; the identifier
-  is the fact.
+- *A join secret, kept until identity is cryptographic.* A secret has to remain secret
+  in transit, is spent on each first meeting, and enrols whoever intercepts it, while a
+  public identifier is sent once per colleague and reveals nothing if intercepted.
+  Identity is cryptographic (D-042), and there is no join token (D-026).
+- *Admitting on the room's name on a trusted network.* The name is guessable (D-134),
+  and no network is safe for that.
+
+**Revisit when** admission is needed for a peer the host has never paired with and
+cannot approve.
+
+---
+
+## D-025 — A machine knows peers, and a room admits guests
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Decision.** There are two lists at two scopes. A machine's known peers are the
+identifiers it has learned and the names it knows them by, durable and outlasting every
+room. A room's guests are the known peers who may enter it, created with the room and
+archived with it. Revoking withdraws a peer's admission to one room, and forgetting a
+peer discards the identity and every admission it held.
+
+**Support.**
+- A user may know six colleagues and admit two of them to a room about customer data.
+  §12 (forming a room).
+- Both lists can be inspected and changed, with `/cogmer:peer-list`,
+  `/cogmer:peer-forget`, `/cogmer:room-status`, `/cogmer:room-invite` and
+  `/cogmer:room-revoke`. `plugin/commands/`.
+
+**Rejected.**
+- *One combined list.* It cannot express knowing someone without admitting them to
+  every room.
+
+**Revisit when** a user needs to admit a peer to a room without knowing it on this
+machine.
 
 ---
 
@@ -1183,7 +1020,7 @@ simply *ask*: "what is the team discussing?" gets a full answer — who said wha
 that they are unverified — from context already injected. It needs no code, no view,
 and no protocol. For a pair on one problem it answers most of what a view would.
 
-It also demonstrated D-021 reaching the person it was for. The `unverified` marker,
+It also demonstrated D-139 (a name is shown as itself only for a verified peer) reaching the person it was for. The `unverified` marker,
 added so a model would not treat a display name as fact, was relayed to the
 person unprompted in the model's own words. An attribution caveat travelling from
 the wire to a human without a UI in between is the design working end to end.
@@ -6647,3 +6484,148 @@ it.
   neither small nor trusted.
 
 **Revisit when** two users who share a network need to pair.
+
+---
+
+## D-139 — A name is shown as itself only for a verified peer
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Decision.** A peer's name is shown as itself only when its identity has been verified.
+Any other peer is shown as unverified, with its identifier, and an unverified speaker is
+marked inside the injected text, not only in an interface.
+
+**Support.**
+- A derived name can be ground, so it is a mnemonic for a verified identity, never an
+  introduction. D-021 (peer names are derived from the identity).
+- The model reasons about who said a thing, so a mark only in the view would protect the
+  wrong reader. §20 (attribution in injected context).
+- An unverified peer's turns are not exchanged at all, so the mark is a backstop. D-054
+  (verification gates synchronization and injection).
+
+**Rejected.**
+- *Marking an unverified speaker only in the view.* The model, which reasons about the
+  speaker, would never see it.
+
+**Revisit when** a turn from an unverified peer is found in injected context without its
+mark.
+
+---
+
+## D-140 — Peer names come from 8,280 combinations
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Decision.** Peer names are drawn from 92 adjectives and 90 animals, which give 8,280
+combinations, rather than from two lists of 256 words each.
+
+**Support.**
+- With 8,280 names, the chance that two of 10 peers share one is about 0.5%, of 25 about
+  3.6%, and of 100 about 45%, from the sizes of the lists in `cmd/cogmer/peername.go`.
+- Pairs are the case that exists. D-109 (two is the target, and nothing rules out more).
+- The lists name people, so each word is curated against being unkind to a person.
+  §6 (naming people).
+
+**Rejected.**
+- *Two lists of 256 words each.* They would give 65,536 combinations and push collisions
+  out by an order of magnitude, at the cost of curating 512 words against that
+  constraint.
+
+**Revisit when** rooms regularly hold enough peers that names collide.
+
+---
+
+## D-141 — An identity is created once, and belongs to a machine
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Decision.** A peer identity is created once, on a machine's first use of cogmer, and
+persists, outliving every room, session and invitation. It belongs to a machine, not a
+person, so a user with a laptop and a desktop is two peers, and appears as two wherever
+peers are listed or admitted.
+
+**Support.**
+- An identity that exists before there is anything to join lets a peer be recognized on
+  a later occasion rather than met afresh. §6 (identity).
+- A private key never leaves the machine that made it, so losing one machine never loses
+  the key another holds. `cmd/cogmer/identity.go`.
+
+**Rejected.**
+- *An identity per room, session or invitation.* A colleague would be met afresh each
+  time.
+- *One identity per person, carried across machines.* The private key would have to be
+  copied between machines.
+
+**Revisit when** users need their machines to appear as one peer.
+
+---
+
+## D-142 — Identities are exchanged through pairing strings, with no directory
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Decision.** A peer learns another's identity from the pairing string that other peer
+sends, and there is no directory of peers to consult.
+
+**Support.**
+- A pairing string carries an identifier, an address and a name, none of which is a
+  secret. §12 (forming a room).
+- Pairing happens once with each colleague and outlasts every room. §12.
+
+**Rejected.**
+- *A directory of peer identifiers.* Needing one to be set up before two people could
+  work together would defeat an invitation, and a directory is a central component.
+
+**Revisit when** users need to find a colleague's identity without the colleague sending
+it.
+
+---
+
+## D-143 — Admission is proved by signing a fresh challenge
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Decision.** A peer that joins presents its identifier, the host finds it among the
+room's guests and issues a fresh, unpredictable challenge, and the peer signs it with
+the matching private key.
+
+**Support.**
+- Nothing secret passes in either direction, so the exchange needs integrity, which the
+  signature supplies, and no confidentiality. §12 (forming a room).
+- Proving possession of a key establishes who is asking, and never whether they may,
+  which is the guest list's question. D-044 (sync requests are signed).
+
+**Rejected.**
+- *A proof that can be replayed.* An exchange that can be replayed is a bearer
+  credential.
+
+**Revisit when** admission has to work without the host able to answer a challenge.
+
+---
+
+## D-144 — A refused peer's request goes to a host who is present
+
+**Date:** 2026-09-16 · **Status:** not built
+
+**Decision.** A peer that is not a guest is refused, and the host is told that it asked,
+with the identifier and derived name it presented. The host may admit it, by its
+identifier, which makes it known and a guest in one act. The refused peer is told it was
+refused and shown its own identifier. A request is never queued: if the host is absent,
+it fails.
+
+**Support.**
+- It serves two colleagues whose machines have not met, which is an absence of a recorded
+  key, not of trust. §12 (forming a room).
+- The name beside a request is a claim made by whoever sent it, and the identifier is the
+  fact. §6 (identity).
+
+**Rejected.**
+- *Refusing in silence.* Neither side could proceed.
+- *Queuing requests for an absent host.* An admission completed without the host's
+  attention is a token in another form.
+- *Approving by the name shown.* The name is the requester's claim.
+
+**Limits.** It does not decide whether a request may arrive when the host is not
+expecting one.
+
+**Revisit when** colleagues are found to need first contact without a pairing string.

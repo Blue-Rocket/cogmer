@@ -124,7 +124,7 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 			Display: e.UserDisplayName, Label: labels[e.PeerID],
 			Verified:  e.PeerID == d.id.PeerID || d.members.IsVerified(e.PeerID),
 			EventType: e.EventType, Content: e.Content, Clock: ts,
-			// §6/D-021 require the identifier be shown for any peer whose identity
+			// §6 and D-139 require the identifier be shown for any peer whose identity
 			// is unverified. That is every remote peer today. It is not required
 			// for your own turns, where it identifies nothing you did not know.
 			Mine: e.PeerID == d.id.PeerID,
