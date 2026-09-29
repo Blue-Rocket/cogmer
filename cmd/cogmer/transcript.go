@@ -110,8 +110,8 @@ func ReassembleLastTurn(path, lastMessage string) (*AssistantTurn, error) {
 					parts = append(parts, s)
 				}
 			case "tool_use":
-				// Recorded as a count only; §27 keeps tool detail out of the
-				// main transcript for now.
+				// Only the tool's name is kept: §27 shows a response's tool
+				// calls as a count, not each call.
 				turn.ToolCalls = append(turn.ToolCalls, b.Name)
 			}
 			// "thinking" blocks are deliberately never published.

@@ -12,7 +12,7 @@ import (
 // The short authentication string (D-048).
 //
 // Two people on a call compare two words. That is sound -- despite being far
-// shorter than the 43-character identifier §25 otherwise requires -- only because
+// shorter than the 43-character identifier -- only because
 // of what the words are derived from. Two properties carry it, and removing either
 // leaves a ceremony that looks identical and protects nothing:
 //

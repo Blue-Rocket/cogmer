@@ -195,7 +195,7 @@ func syncInterval() time.Duration {
 // no user left once the browser view took per-room URLs, and while it existed it
 // answered three times with the wrong room.
 
-// roomToChange is for a command that alters who can see what. §22 puts membership
+// roomToChange is for a command that alters who can see what. §3.6 puts membership
 // in a session, so a terminal has no room to admit anybody to (D-079).
 func roomToChange(m *Membership) Room {
 	sid := sessionID()
@@ -868,7 +868,7 @@ func runJoin(args []string) {
 }
 
 // runLeave takes THIS session out of its room. Membership is held by a session
-// (§22), so leaving is per-session: a peer with three sessions in a room leaves
+// (§3.6), so leaving is per-session: a peer with three sessions in a room leaves
 // three times, and that follows from where membership lives rather than being a
 // quirk.
 //

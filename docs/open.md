@@ -265,6 +265,12 @@ that exist. Whether a room shows a colleague's session joining, leaving or worki
 is undecided, and "Whether arrival wants announcing" under "Somebody else uses it"
 is part of the same question.
 
+**Nothing lets a room show its conversation without injecting it.** Section 28 of the
+specification has a setting per room that keeps a room visible to its members while
+injecting none of it into their sessions, for a room whose conversation should not
+reach another user's model provider. No such setting exists in the code (read on
+2026-09-29), and no decision records it.
+
 **A room never closes, so nothing is archived.** D-015 (rooms are session-scoped)
 has a closed room kept as an archive that can be read but never rejoined, and the
 specification freezes a room's sequences at that point. Membership ends per person

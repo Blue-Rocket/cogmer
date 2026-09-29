@@ -747,7 +747,7 @@ func TestNoAmbientRoomOverride(t *testing.T) {
 	}
 }
 
-// Standing, not choice. A room's guest list is its members' concern, and §22 puts
+// Standing, not choice. A room's guest list is its members' concern, and §3.6 puts
 // membership in a session — so a terminal has no room to admit anybody to, and
 // naming one would be reaching into a room that belongs to a session you are not
 // in (D-079).

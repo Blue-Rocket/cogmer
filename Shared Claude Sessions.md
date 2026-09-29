@@ -1653,11 +1653,7 @@ Injected context is never summarized by a model.
 
 # 22\. Persistence
 
-Each peer maintains a complete local event database.
-
-SQLite is preferred for the prototype.
-
-Conceptually:
+Each peer keeps a complete local database of every room it is in, in SQLite:
 
 ```
 ~/.cogmer/
@@ -1670,51 +1666,42 @@ Conceptually:
         a91f720d-4e63-4b15-8c77-05de3b8f6291.db
 ```
 
-Databases are named by `roomId`, never by name. Names may collide; identities do not.
+A room's database is named by the room's identifier, never by its name, because names
+may collide and identifiers do not.
 
-A room's database moves to the archive when the room closes. An archived room is readable and searchable. It is never rejoined, never synchronized, and never injected.
-
-Retaining the archive is what allows membership to be ephemeral without discarding the conversation. Preserving the actual conversation remains a requirement; resuming membership in it does not.
+A room's database moves to the archive when the room closes. An archived room can be
+read and searched, and is never rejoined, synchronized or injected. Keeping the
+archive is what lets membership end without discarding the conversation.
 
 ## The membership index
 
-`membership.db` holds one record per room this peer has joined, outside every room database:
+The membership index is kept outside every room's database, and holds, for each room
+this peer has joined, the room's identifier and name, whether the peer is in it, has
+left it, or the room is archived, the highest sequence this peer has issued in it,
+and the room's guests.
 
-```
-roomId
-roomName
-state          joined / left / archived
-issuedSequence the highest sequence this peer has issued in that room
-```
+The index shares the fate of the peer's identity, not of the rooms, because a room's
+database can be lost while the peer survives, and a record kept only inside the thing
+whose loss it guards against guards nothing. Section 8 says how a peer uses it: it is
+consulted every time a room opens, its sequence is advanced before the event that uses
+it is published, and a peer that finds state lost says so.
 
-It exists because a room's database can be lost while the peer survives. Without it, an emptied room is indistinguishable from one never joined, and a peer would silently resume its sequence from the beginning — the condition that makes another peer's copy of the conversation diverge with nothing to signal it.
-
-The index must share the fate of the peer's identity, not the fate of the rooms. A value stored only inside the thing whose loss it guards against is no guard at all.
-
-An index nothing reads guards nothing either. A peer is required to consult it whenever it opens a room, and to report what it finds; see the treatment of lost state under event identity.
-
-`issuedSequence` is advanced before the event using it is published, never after, for the reason given under event identity.
-
-A room's record is written when the room is created or joined, and retained once the room is archived, so a peer can still distinguish a room it once belonged to from one it has never seen.
+A room's record is written when the room is created or joined, and kept once the room
+is archived, so a peer can tell a room it once belonged to from one it has never seen.
 
 ## What a room's database holds
 
-- events;  
-- peer synchronization state;  
-- Claude session context state;  
-- the room's guest list and configuration.
-
-It must **not** hold this peer's own sequence position for the room. That belongs to the membership index, for the reason above.
+A room's database holds the room's events, the conflicting events it has kept aside,
+and which of the room's events each session has received or been offered. It never
+holds this peer's own sequence position for the room, which is in the membership
+index.
 
 ---
 
 # 23\. Local Durability
 
-A locally generated event should be committed to durable storage **before** being considered published.
-
-Network transmission comes afterward.
-
-Therefore:
+An event created on this machine is committed to durable storage before it counts as
+published, and is sent to peers only afterwards:
 
 ```
 Claude event
@@ -1729,264 +1716,250 @@ local UI
 peer propagation
 ```
 
-A network failure must not lose local conversation history.
+So a failed network never loses the local conversation.
 
 ---
 
 # 24\. Conflict Model
 
-Conversation events are immutable, so conventional edit conflicts should not occur.
+Events are immutable, so conventional conflicts between edits do not occur. When two
+users create events at the same moment, such as David's E and Alice's F, both are
+kept, and neither overwrites the other.
 
-Two people may simultaneously generate:
+Every peer shows a room's events in the same order, by timestamp, then by originating
+peer, then by that peer's sequence number.
 
-```
-David event E
-Alice event F
-```
-
-Both are retained.
-
-Neither overwrites the other.
-
-Display ordering should be deterministic.
-
-Use an ordering based on appropriate fields such as:
-
-```
-timestamp
-origin peer
-peer sequence
-event ID
-```
-
-Do not pretend distributed wall clocks provide perfect causal ordering.
-
-If necessary later, introduce logical clocks.
-
-Do not do so until needed.
+Wall clocks on different machines do not give a causal order, and the order shown
+does not claim one.
 
 ---
 
 # 25\. Security
 
-Conversation history may contain:
+A room's history may hold proprietary source code, customer information, architecture,
+logs and credentials pasted by accident, so every exchange between peers is
+authenticated.
 
-- proprietary source code;  
-- customer information;  
-- architecture;  
-- logs;  
-- credentials accidentally pasted by people.
+The interface for the Claude Code hooks and the local view binds only to the loopback
+address. Being on the same network, or the same private network, never admits
+anyone.
 
-Peer communication must therefore be authenticated.
-
-For the initial Tailscale-based prototype:
-
-- restrict connections to the private network;  
-- identify expected peers;  
-- validate room membership;  
-- do not expose the daemon's peer API publicly;  
-- bind Claude hook/UI APIs to localhost.
-
-Nothing here is admitted by holding a value. An invitation names a guest; it does not grant entry, and an interceptor learns only that a room exists. There is deliberately no credential that can be forwarded, stolen, or replayed — given that peers can be known in advance, every property of such a credential is avoidable, and so none is accepted.
-
-Do not assume network membership alone is sufficient for a production security model.
-
-## Peer identity
-
-Peer identity must eventually become cryptographic. Until it does, several rules in this specification are conventions rather than controls.
-
-A peer identifier should be derived from a public key, a peer should prove possession of the corresponding private key on connecting, and events should be signed by the peer that originated them.
-
-Until that exists:
-
-- a peer identifier is self-asserted, and any peer may claim any identifier;  
-- a list of permitted peers is a convenience rather than a control, because the names on it cannot be verified;  
-- a relaying peer is trusted not to forge events attributed to others.
-
-Build nothing that depends on those properties holding.
+Nothing admits anyone by being held. An invitation names a guest and grants no entry,
+and an interceptor learns only that a room exists. There is no credential that can be
+forwarded, stolen or replayed.
 
 ## Known peers
 
-Once identity is cryptographic, admit known peers rather than holders of a secret.
+A peer's identifier is its public key. A peer proves possession of the matching
+private key when it connects, and every event is signed by the peer that created it,
+so an identifier cannot be claimed by a peer that does not hold its key.
 
-A peer keeps a list of the peers it has met and the public keys it knows them by. A room admits members drawn from that list, and joining becomes a proof of possession rather than the presentation of a token. That is better in every respect that matters here: nothing is transmitted that an interceptor could reuse, nothing expires, and admission can be withdrawn.
+A room admits its members from the peers this machine knows, by proof of possession,
+never by the presentation of a token. Nothing an interceptor could reuse is ever
+sent, nothing expires, and admission can be withdrawn.
 
-This does not remove the first exchange. Two peers that have never met must still establish each other's keys over some channel they trust, exactly as a join secret must be sent over one.
+Two peers that have never met still have to establish each other's keys once, over a
+channel they trust. Every exchange after that one needs nothing further, because a key
+once verified is durable.
 
-What it removes is every exchange after the first: a key once verified is durable, whereas a secret is spent on use.
+Verification is a comparison of two words, spoken aloud, derived from a live exchange
+between the two daemons, as "The two-word comparison" below describes. It is the only
+way a peer becomes verified.
 
-Verification is a comparison of **two words**, spoken aloud, derived from a live exchange between the two daemons. It is described in "The two-word comparison" below, and it is the **only** ceremony this system performs. A peer is verified or it is not, and there is one way to become so.
+No second method is offered, such as comparing a rendering of the whole identifier.
+Verification gates synchronization, so it matters only when collaboration is about to
+happen, and collaboration needs both daemons running and able to reach each other,
+which is all the live exchange needs. A second method would only be a weaker way to
+pass the same gate, and people check a long string badly: shown forty-three characters
+on a call, a reader compares the first group and the last, and skims the middle.
 
-No second method is offered, and the omission is deliberate. Comparing a rendering of the whole identifier is the ceremony a standing value forces, and it would be available without a live exchange — but that advantage buys nothing here. Verification gates synchronization, so an unverified peer cannot collaborate; verification therefore matters only when collaboration is about to happen; and collaboration already requires both daemons running and mutually reachable, which is exactly what the live exchange needs. There is no state in which a peer needs verifying and cannot be verified this way.
+Rendering an identifier for a user to read is still useful, such as when a key has
+changed and somebody is looking at two of them. That is a display, and nothing about
+looking at it marks a peer verified.
 
-What a second method would add is a **weaker way to satisfy the same gate**, which is what people reach for when the stronger one is inconvenient. A gate is only as strong as the weakest ceremony that satisfies it, and the weaker one here is the one people demonstrably perform badly: shown forty-three characters to check over a telephone, a reader takes the first group, the last group, and skims the middle, reducing the verified entropy to whatever was actually compared.
+A short string is sound where a standing value is not. An attacker who has intercepted
+a long-term identifier can search offline for a key of their own whose rendering
+matches, at a cost set by how much of the rendering is compared: sixteen characters
+are out of reach, and three fall in under a second. A value derived from a fresh
+exchange cannot be aimed at in advance, so the attacker commits blind, gets one guess,
+and a wrong guess is a mismatch the two users hear.
 
-Rendering an identifier for a person to *read* remains useful — when a key has changed and somebody is looking at two of them, grouped output is kinder than an unbroken run of base64. That is a display, not a ceremony, and nothing about looking at it marks a peer verified.
-
-The reason a short string is sound where a static one is not is worth keeping, because it is what makes the single method defensible. A long-term identifier sits still, so an attacker who has intercepted one can grind **offline**, at leisure, for a key of his own whose rendering matches, at a cost of exactly the entropy displayed: sixteen characters are beyond reach, three fall in under a second. A value derived from a fresh exchange cannot be aimed at in advance. The attacker must commit blind, gets one guess, and a wrong guess is a mismatch the two people hear.
-
-This also settles what a peer name is for. A name derived from an identifier is a mnemonic for an identity already verified, never a verification in itself — it covers too few bits and, being derived, is grindable by anyone who wants a particular one.
-
-The two mechanisms therefore compose rather than compete. A single-use secret admits a peer that is not yet known, and being admitted is what makes it known. Between peers that already know each other, no secret is required and none should be demanded.
+A peer's derived name is a mnemonic for an identity already verified, never a
+verification in itself, because it covers too few bits and can be ground by anyone who
+wants a particular one (section 6).
 
 ## Learning a peer's identity
 
-A peer's identity is not obtained in advance. There is no directory to consult, and requiring one before two people could work together would defeat the purpose of an invitation.
+A peer's identity is learned at pairing (section 12), from the pairing string a
+colleague sends. There is no directory to consult. An identifier is a public key, so
+learning one needs no confidentiality.
 
-Identities are exchanged on joining. The invitation admits a peer that is not yet known, and joining is where each side learns the other's identifier and records it. Because an identifier is a public key, learning one requires no confidentiality and creates no exposure: it is the one part of this exchange that can safely happen in the open.
-
-A self-certifying identifier proves possession of a key. It does not prove which person holds it. Those are different claims, and only the first is established by joining.
-
-The second rests on trust taken at first contact, and its weakness should be stated plainly: whoever presents a valid invitation becomes the peer that is recorded. An invitation that reached the wrong person enrolls the wrong person, durably, under a name every member will thereafter treat as familiar.
-
-Verification is therefore worth doing once, shortly after a first meeting, by comparing rendered identifiers over a channel the invitation did not travel on. Two colleagues already on a call can do it in seconds. The value of doing it once is that it never needs doing again.
+An identifier proves possession of a key, and never which person holds it. Until the
+two words are compared, whoever's pairing string was received is the peer recorded,
+and a string that was replaced on the way enrols the wrong peer, durably, under a name
+the user will treat as familiar. Verifying once, when pairing, is what establishes
+whose key it is, and it never needs doing again.
 
 ## What the second channel actually provides
 
-A rendered identifier is no harder to intercept than the identifier itself: it is the same bytes, spaced for reading. Nothing about the rendering resists interception, and treating it as though it did is the mistake this section exists to prevent.
+The comparison protects nothing by itself. What protects the user is the channel the
+two words are compared over, through two properties of it:
 
-The protection lies entirely in the channel, and in two properties of it rather than one.
+- diversity: an attacker has to compromise two paths instead of one, so a comparison
+  over the path the pairing string arrived on accomplishes nothing;
+- recognition: the user comparing can tell who they are talking to.
 
-- **Diversity** — an attacker must now compromise two paths instead of one. Comparing a rendering over the same path the identifier arrived on accomplishes nothing at all.  
-- **Recognition** — the person verifying can tell *who they are talking to*.
+Recognition matters most. It is why a voice call works and a second written channel
+does not: two written channels are both text, and whoever controls the delivery of one
+may control the other, while a voice adds a fact no interception supplies, that this
+is the colleague and not somebody in their place.
 
-The second is the one that matters most, and the one most easily overlooked. It is why a voice call works and a second written channel does not: two written channels are both text, and whoever controls the delivery of one may control the other. A voice adds a fact no interception supplies — that this is the colleague, not somebody in their place.
-
-State the requirement accordingly. The channel must be one the identifier did not travel on **and** one on which the other party can be recognised. A rendering compared with a stranger, however carefully, verifies that two parties hold the same key and says nothing about whose it is.
+So the channel is one the pairing string did not travel on, and one on which the other
+party can be recognized. A comparison with a stranger, however careful, establishes
+that two parties hold the same key and says nothing about whose it is.
 
 ## The two-word comparison
 
-Verification is two words, said aloud on a call, by both people at once. It is one act at **pairing** time — not at joining, and not at admission — because pairing is what happens once between two machines and outlasts every room they share (§12).
+Verification is two words, said aloud on a call, by both users at once. It happens at
+pairing, not at joining or admission, because pairing happens once between two
+machines and outlasts every room they share (section 12).
 
-Reading forty-three characters of base64 over a telephone is a task people do badly or skip, and skipping leaves no trace, so the verified entropy is whatever was actually checked rather than whatever was displayed. Two words are compared as units: somebody either says "badger" or does not, where an eye slides over `ol5v` without stopping.
+People read forty-three characters of base64 over a telephone badly, or skip it, and
+skipping leaves no trace. Two words are compared as units: somebody either says
+"badger" or does not.
 
-Two properties make that short form sound, and removing either leaves a ceremony that looks identical and protects nothing:
+Two properties make the short form sound, and without either the ceremony looks the
+same and protects nothing:
 
-- **Commitment.** Each side sends a hash of its contribution before either reveals one. An attacker relaying between them must fix what he presents to each side before learning what the other will present, so he cannot search for a pair of substitutions whose words agree. He is reduced to one blind guess.
-- **Freshness.** The words derive from per-exchange randomness together with both identities, not from the standing identifiers alone. There is nothing to precompute against, because the target does not exist until the exchange is under way.
+- commitment: each side sends a hash of its contribution before either reveals one,
+  so an attacker relaying between them has to fix what they present to each side
+  before learning what the other will present, and is reduced to one blind guess;
+- freshness: the words derive from randomness chosen for this exchange together with
+  both identities, so there is nothing to compute in advance.
 
-Together these turn an offline search into a single online guess, at odds set by the length of the string.
+Together they turn an offline search into a single guess made during the exchange, at
+odds set by the length of the string.
 
-**Failure must be conspicuous, because nothing blocks a retry.** A short string with silent retries is weak: the attacker simply tries again. What protects it is that a wrong guess produces two different strings and the two people *hear* it. So a mismatch must refuse, must say plainly that something intercepted the exchange, and must never present itself as a transient error worth repeating. Nothing about a failed comparison is recorded, because a stored failure invites an interface that offers to try again, and trying again is the one thing that must not be offered.
+A failed comparison is conspicuous, because nothing blocks a retry. A wrong guess
+produces two different strings, and the two users hear it, so a mismatch refuses, says
+plainly that something intercepted the exchange, and never presents itself as a
+passing error worth repeating. Nothing about a failed comparison is recorded, because
+a stored failure invites an interface that offers to try again.
 
-Requirements on the exchange:
+The exchange meets these requirements:
 
-- both sides commit before either reveals, and a reveal that arrives before a commitment, or that does not open the commitment already held, is refused;
-- the words derive from both identities and both nonces, ordered so that each side computes the same string without either being the initiator;
-- the vocabulary is phonetically distinct and alternates between two lists, so that words said in the wrong order are not a valid rendering of anything;
-- that vocabulary is **not** the one used for peer names or room names, since a comparison string sitting beside a derived peer name must not be mistakable for it;
-- only a person records the result. The exchange proves both sides hold the keys they named; it cannot establish that the voice on the call is the colleague rather than somebody in their place.
+- both sides commit before either reveals, and a reveal that arrives before a
+  commitment, or does not open the commitment already held, is refused;
+- the words derive from both identities and both nonces, ordered so that each side
+  computes the same string without either being the initiator;
+- the words are phonetically distinct and alternate between two lists, so that words
+  said in the wrong order are not a valid rendering of anything;
+- those lists are not the ones used for peer names or room names, so that the words
+  cannot be mistaken for a derived peer name beside them;
+- only a user records the result, because the exchange proves both sides hold the keys
+  they named and cannot establish that the voice on the call is the colleague.
 
-Both people must ask for the verification. A daemon answers a step in the exchange only when its own user has started one, which is what keeps this from becoming a channel by which anyone can cause something to appear on someone else's screen.
+Both users ask for the verification. A daemon answers a step in the exchange only when
+its own user has started one, so nobody can use the exchange to make something appear
+on somebody else's screen.
 
-A commitment step implemented incorrectly degrades to a grindable value while still looking like a ceremony. That is worse than performing none, because it produces the confidence without the property.
+A commitment step implemented incorrectly leaves a value that can be ground while
+still looking like a ceremony, which is worse than none, because it gives the
+confidence without the protection.
 
 ## Verification is a gate, not a label
 
-No transcript crosses to or from a peer that has not been verified, and no
-unverified peer's turn enters anyone's model context. Admission and verification
-are **two** requirements and both must hold.
+No transcript crosses to or from a peer that has not been verified, and no unverified
+peer's turn enters anyone's model context. Admission and verification are separate
+requirements, and both must hold.
 
-They answer different questions and neither implies the other. Admission says this
-key may enter this room; it is a decision about a key. Verification says the key is
-the person's; it is a decision about a human being. Every cryptographic check in
-this specification passes just as well for a key substituted in transit, because
-the substituted key is a real key, held by whoever substituted it. Only the
-comparison over a recognising channel distinguishes them.
+Admission says a key may enter a room, and is a decision about a key. Verification says
+the key belongs to the person it is meant to, and is a decision about a person. Every
+cryptographic check here passes as well for a key substituted on the way, because the
+substituted key is a real key held by whoever substituted it, and only the comparison
+over a channel where the other party can be recognized tells them apart.
 
-Marking an unverified peer on injected text is necessary and insufficient. The whole
-chain here is exact and automatic and rests on one human step, and a step that is
-optional, skippable, and costs nothing to skip is a step that will be skipped —
-after which nothing looks wrong, which is precisely the failure a marker warns
-about. So verification is a gate.
+Marking an unverified peer inside injected text is necessary, and not enough. A step
+that is optional and costs nothing to skip will be skipped, and afterwards nothing
+looks wrong, so verification is a gate.
 
-Three consequences follow, and all three are load-bearing:
+An event relayed by another peer (section 13) is judged by the peer that wrote it,
+never by the peer that carried it, so that a verified relay cannot pass on an
+unverified author.
 
-- **Refuse at the origin, not the sender.** An event relayed under §13 is judged by
-  the peer that wrote it, never by the peer that carried it. Otherwise a verified
-  relay would launder an unverified author.
-- **Hold, do not discard.** Synchronization is a pull against a watermark, so
-  refusing to store simply leaves events on offer. When the two people verify, the
-  next poll brings the whole backlog. Nothing is lost by waiting and nothing needs
-  to be re-sent.
-- **Say what is happening.** A room that is silent because of a gate is
-  indistinguishable from a room that is silent because nobody is talking. Both the
-  refusal and the holding back must name the peer and the command that clears it.
+Events from an unverified peer are held, not discarded. Synchronization is a pull, so
+refusing to store an event leaves it on offer, and once the two users verify, the next
+poll brings everything that was waiting.
 
-Inviting an unverified peer is permitted and has no effect until they are verified.
-That is deliberate: whom to admit remains the host's judgement (D-051), and the
-second gate is not a second opinion about that judgement — it is a different
-question, asked of a different party.
+A room that is silent because of the gate says so. Both the refusal and the holding
+back name the peer, and the command that clears it, because a room silenced by a gate
+looks the same as a room where nobody is talking.
 
-What is withheld is the **delivery** of the invitation, not the admission. The
-guest-list entry is written when the host makes it; the guest is told about it once
-verification makes the room usable, and completing a verification delivers whatever
-was waiting. Otherwise the easiest room to create would be one that does nothing:
-the guest accepts, both believe they are collaborating, and the silence is explained
-only by a sentence somebody may not read.
+Inviting an unverified peer is permitted, and has no effect until they are verified.
+Whom to admit is the host's judgement, and the gate is a different question asked of a
+different party, not a second opinion about that judgement.
+
+What waits is the delivery of the invitation, not the admission. The entry on the
+guest list is written when the host makes it, and the guest is told about it once
+verification makes the room usable, so completing a verification delivers whatever was
+waiting. Otherwise the easiest room to create would be one that does nothing, while
+both users believed they were collaborating.
 
 ## Room content is unreadable in transit
 
-Events are signed, which gives integrity and origin and conceals nothing. Room
-content is a person's prompts and whatever their Claude said back, so
-confidentiality is a requirement and not a preference.
+Signing gives integrity and origin, and conceals nothing. A room's content is a user's
+prompts and whatever their Claude said back, so confidentiality is a requirement.
 
-Every connection between peers is TLS 1.3, over every transport — including one
-that is already encrypted, so that confidentiality never depends on which path a
-dial happened to take. The certificate each daemon presents is self-signed and
-carries the identity key; the check is that the key inside it is a peer this machine
-already knows, and for a dial aimed at one named peer, that it is that peer. Chains,
-authorities, hostnames and expiry are never consulted, because none of them exist
-here. A client certificate is required rather than requested: a peer with nothing to
-pin has no business completing a handshake.
+Every connection between peers is TLS 1.3, over every transport, including one that is
+already encrypted, so that confidentiality never depends on which path a connection
+took. Each daemon presents a self-signed certificate carrying its identity key, and
+the check is that the key inside is a peer this machine knows, and, for a connection
+aimed at one named peer, that it is that peer. Chains, authorities, hostnames and
+expiry are never consulted, because none exist here. A client certificate is required,
+not requested, because a peer with nothing to pin has no business completing a
+handshake.
 
-This places the transport's identity and the event's identity on the same key,
-confirmed by the same comparison (§25).
+So the transport's identity and the event's identity are the same key, confirmed by the
+same comparison.
 
-It does not protect content at rest, and it does not protect a room from its own
-members. A member is entitled to read what the room carries; that is what admission
-means.
+Encryption in transit does not protect content at rest, and does not protect a room
+from its own members. A member is entitled to read what the room carries, which is
+what admission means.
 
 ## The local API is not reachable from a web page
 
-The daemon serves the view, and the ceremony above happens on it, so the local API
-is now something a person acts through rather than only reads. It binds to loopback,
-which keeps other machines out and does nothing whatever about a page open in this
-machine's own browser — `127.0.0.1` is an address like any other to a page, and a
-request with a simple content type is sent without the browser asking permission
-first. The response cannot be read across origins; the effect has already happened
-by then.
+A user acts through the local API: the view the daemon serves runs the comparison
+above, and the API can mark a peer verified and publish a turn into a room, which
+reaches colleagues' context windows. Binding to loopback keeps other machines out and
+does nothing about a page open in this machine's own browser, which can send a request
+with a simple content type to 127.0.0.1 without the browser asking first.
 
-What is reachable that way is not incidental. The local API can mark a peer verified,
-which is the gate every other guarantee in this section depends on, and it can
-publish a turn into a room, which reaches teammates' context windows.
-
-So a request that changes anything must **present** a header that our own code sends
-and a page from another origin cannot. A browser will not send a custom header to
-another origin without asking first, and that question is answered with nothing, so
-the request is never made. The check is that the header is present, which is what makes
-it fail closed: anything that cannot present it is refused, whatever it is.
+So a request that changes anything carries a header that cogmer's own code sends and a
+page from another origin cannot. A browser will not send a custom header to another
+origin without asking first, and that question is answered with nothing, so the
+request is never made. The check is that the header is present, so anything that
+cannot present it is refused.
 
 None of this defends against a malicious program running as the same user, which can
-send any header it likes and could edit the databases directly in any case. The
-threat closed here is a web page, which is the one thing the browser enforces a
-boundary for.
+send any header it likes and could edit the databases directly. The threat closed
+here is a web page, which is the boundary the browser enforces.
 
 ## The case with no answer
 
-Two people who have never met cannot recognise each other, so neither property is fully available on first contact. Nothing in this design resolves that, and no rendering will.
+Two people who have never met cannot recognize each other, so neither property of the
+channel is fully available on first contact, and nothing in this design resolves that.
+The first exchange is where trust is taken rather than established, and cogmer makes
+that moment visible rather than claiming it is covered.
 
-What remains is to make the moment visible rather than to pretend it is covered: the first exchange is where trust is taken rather than established, and a system that hides that has moved a risk rather than removed it.
-
-Admission is not retraction. Removing a peer from a list prevents it rejoining and prevents future presence. It does not withdraw what that peer has already seen.
+Removing a peer from a room prevents it from rejoining and from being present in
+future, and never withdraws what that peer has already seen.
 
 ---
 
 # 26\. Offline Operation
 
-Offline operation is a first-class requirement.
-
-Example:
+Offline operation is a first-class requirement. Both users keep working while their
+machines cannot reach each other:
 
 ```
 David       OFFLINE       Alice
@@ -1994,9 +1967,7 @@ David       OFFLINE       Alice
 E F G                    H I J
 ```
 
-Both continue working.
-
-After reconnection:
+and after they reconnect, both hold the whole conversation:
 
 ```
        synchronize
@@ -2006,17 +1977,16 @@ David                  Alice
 E F G H I J            E F G H I J
 ```
 
-Neither person should have to initiate manual reconciliation.
+No user reconciles anything by hand.
 
-Offline operation is bounded by the room's lifetime. A peer whose session has ended has left the room, and does not rejoin by coming back online; reconciliation applies to members that are still members.
+Offline operation is bounded by the room's lifetime: a room that has closed does not
+reopen when a member comes back online.
 
 ---
 
 # 27\. Tool Activity
 
-Do not initially place every tool invocation in the main transcript.
-
-Prefer:
+A response shows how many tool calls its turn made, rather than each call:
 
 ```
 Claude — David
@@ -2026,50 +1996,29 @@ I found the problem in VerificationService.ts...
 ▸ 14 tool operations
 ```
 
-Expandable later into:
-
-```
-Read SessionLambda.ts
-Grep dldvVerification
-Read VerificationService.ts
-Edited VerificationService.ts
-Ran tests
-```
-
-Tool synchronization is secondary to prompt/response synchronization.
+The names of the tools a turn called travel with its response. Synchronizing prompts
+and responses comes before anything about tools.
 
 ---
 
 # 28\. Configuration
 
-A room is never configured by a project. Nothing in a repository, and nothing about a working directory, determines which room a session joins. Rooms are entered by invitation only.
+No project configures a room. Nothing in a repository, and nothing about a working
+directory, determines which room a session joins, and rooms are entered only by
+invitation.
 
-Separate personal identity from per-room state.
+A user's identity is kept apart from the state of their rooms. Identity is the user's
+identifier, the name they go by, and their machine's label. A room's state is its
+identifier, its name, its guests, and whether it injects its conversation into its
+members' sessions, and it belongs to the daemon, is created when the room is created or
+joined, and is never in a repository.
 
-Per-room state is created when a room is created or joined. It belongs to the daemon, not to any repository, and is not committed anywhere:
+A room can be set to show its conversation to its members while injecting none of it
+into any member's Claude session, because injection carries a colleague's
+conversation into another user's session, and so to that user's model provider under
+their own account.
 
-```json
-{
-  "roomId": "0f7a4e6c-2b91-4d0a-9c3e-7f1d8a5b2c44",
-  "roomName": "misty-canyon",
-  "injectSharedContext": true,
-  "guests": ["ed25519:M7Kd…4Fq2", "ed25519:Rb91…7Twc"]
-}
-```
-
-Disabling `injectSharedContext` makes a room visible to its members as a conversation while placing none of it into any participant's Claude session. This matters because injection carries a teammate's conversation into another person's session, and therefore to that person's model provider under their own account.
-
-Personal machine configuration:
-
-```json
-{
-  "userId": "david",
-  "userDisplayName": "David",
-  "machineId": "davids-macbook"
-}
-```
-
-Peer connectivity configuration should not require committing personal credentials to Git.
+Nothing a user configures for reaching peers is committed to a repository.
 
 ---
 
