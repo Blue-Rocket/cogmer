@@ -525,24 +525,6 @@ why.** Commit `33ce996` made the choice. D-021 (peer names are derived from the
 identity) is cited for it, but D-021 says only what the name is for; it says nothing
 about a user's own turns.
 
-**§19 (incremental context injection) reads as if a turn is delivered once it is
-injected.** Its steps run "inject them into Claude", then "update the session's
-incorporated-event state", so a reader takes delivery to advance at injection. A
-turn counted that way is lost for good whenever the hook times out or the daemon
-dies before it replies, and the user's session never sees it. D-014 (derive delivery
-state from transcript evidence) counts a turn only once the session's transcript
-shows it arrived. The requirement §19 should state is the user's: a colleague's turn
-is never counted as delivered to a session that did not receive it.
-
-## Maintenance
-
-The code, its tests and its commands hold nothing that would mislead a maintainer.
-
-`WithheldFor` is used only by its own test — a leftover from the count that was
-dropped in favour of naming the person.
-
-`/cogmer:room-list` and `/cogmer:self-status` were both named without confirmation.
-
 **`cogmer`'s usage text describes a current room, which D-080 removed.** `usage` in
 `cmd/cogmer/main.go` says `join` makes "a room current, so new sessions join it", and
 `leave` leaves "the current room". A room is the session's own (D-064), so a user

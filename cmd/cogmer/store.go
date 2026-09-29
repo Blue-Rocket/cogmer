@@ -425,7 +425,7 @@ func (s *Store) ListRoom(room string) ([]Event, error) {
 
 // UndeliveredFor returns room events this Claude session has not been confirmed
 // to have received, excluding events the session itself produced -- those are
-// already in its own context window (§19, step 2).
+// already in its own context window (§19).
 func (s *Store) UndeliveredFor(room, sessionID string) ([]Event, error) {
 	rows, err := s.db.Query(`SELECT `+selectCols+` FROM events
 		WHERE room_id = ? AND origin_session_id != ?

@@ -63,7 +63,7 @@ var behaviourTitle = regexp.MustCompile(`^B\d{2}: `)
 
 // specSectionTitle is a numbered heading of the specification, which a § citation
 // names, so it stays however short its section is.
-var specSectionTitle = regexp.MustCompile(`^\d+[a-z]?(\.\d+)*\.? `)
+var specSectionTitle = regexp.MustCompile(`^\d+[a-z]?(\.\d+)*\\?\.? `)
 
 // specification is the one document that must carry no dates.
 const specification = "Shared Claude Sessions.md"
@@ -308,6 +308,7 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 		{"a second level-1 header over one line", "x.md", "# T\n\na\nb\nc\nd\n\n# U\n\nOne line.\n", 1},
 		{"decision heading", "docs/decisions.md", "## D-124 — T\n\n**Date:** 2026-09-23 · **Status:** active\n", 0},
 		{"numbered specification heading", specification, "Intro.\n\n## 3.3 No authoritative peer\n\nOne line.\n", 0},
+		{"numbered top-level specification heading", specification, "Intro.\n\n# 16\\. Propagation\n\nOne line.\n", 0},
 		{"unnumbered specification heading", specification, "Intro.\n\n## No authoritative peer\n\nOne line.\n", 1},
 		{"behaviour heading", behaviourDocument, "Intro.\n\n### B01: A behaviour\n\nIf this changes, it breaks.\n", 0},
 		{"behaviour heading elsewhere", "x.md", "Intro.\n\n### B01: A behaviour\n\nIf this changes, it breaks.\n", 1},

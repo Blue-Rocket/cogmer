@@ -17,7 +17,7 @@ import (
 	"tailscale.com/wgengine/filter"
 )
 
-// Reaching a peer on another network (§15).
+// Reaching a peer on another network (§4).
 //
 // Two people working from home are behind two routers and neither can bind an
 // address the other can reach. An SSH tunnel works around it only by a person
