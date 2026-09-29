@@ -432,6 +432,24 @@ which was the only quantum-resistant element in the stack. It could be rebuilt a
 our own layer from material the pairing exchange already produces — per peer, which
 is better than one secret shared with everybody. Nothing depends on deciding this.
 
+## Beyond one conversation
+
+What cogmer might do beyond sharing one conversation, once a room works for a pair.
+
+**None of the capabilities the specification once listed as future is decided.** They
+were: addressing another user's Claude ("@David-Claude what led you to that
+conclusion?"); asking another user to investigate something; presence, showing whose
+Claude is working, who is viewing the room and who has been offline and for how long;
+searching history across archived rooms ("What did we discover about DLDV last
+Tuesday?"); and a durable team memory of confirmed decisions, requirements,
+discoveries, constraints and unresolved questions, derived from the complete
+conversation rather than replacing it. Addressing another user's Claude depends on
+"Whether a peer event may cause a separate run" under "Rooms and sessions".
+
+**Whether cogmer needs a command that says what it is and lists the others.** Section 29
+of the specification said there is none because the product's name was not settled, and
+the name is now settled (section 37), so that reason no longer holds.
+
 ## The documents
 
 Every document follows `docs/writing.md`.

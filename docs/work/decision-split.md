@@ -456,7 +456,7 @@ decision.
 The rest of the entry holds history. The paragraph on presence opens "The first draft
 of this said membership ends when the Claude Code session ends - which is wrong …
 Under that draft, two people closing their terminals for lunch would have archived
-the room". A later paragraph says "§35's existing presence display … already assumed
+the room". A later paragraph says "section 35's existing presence display … already assumed
 this distinction; the specification simply had not stated it". The Status "Closes the
 open question in D-015" and the Context paragraph are history as well. The clause
 "the session persists and resumes under the same ID (verified in Phase 0a, checked by

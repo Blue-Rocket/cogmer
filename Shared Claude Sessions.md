@@ -2024,7 +2024,8 @@ Nothing a user configures for reaching peers is committed to a repository.
 
 # 29\. The Experience We Want
 
-Eventually:
+A user sets up once, pairs once with each colleague, and then works in rooms from
+inside a session:
 
 ```
 # once, so colleagues have something to send you
@@ -2041,224 +2042,147 @@ Eventually:
 
 ## Installation
 
-A participant installs one thing, and it is a thing Claude Code already understands:
+A user installs one thing, and it is a thing Claude Code already understands:
 
 ```
 /plugin marketplace add Blue-Rocket/cogmer
 /plugin install cogmer@blue-rocket
 ```
 
-Two lines rather than one, because a plugin is installed from a marketplace and a
-marketplace is added by name: the repository carries `.claude-plugin/marketplace.json`
-alongside the plugin it lists, so both lines name the same repository. The first is
-run once per person, the second once per plugin.
+There are two lines because a plugin is installed from a marketplace, and a
+marketplace is added by name. The repository carries its marketplace manifest beside
+the plugin it lists, so both lines name the same repository. The first line is run once
+per user, and the second once per plugin.
 
-The plugin carries the hooks. No shell profile is modified, no configuration file is hand-edited, no service is registered with the operating system, and nothing about how Claude Code is started changes.
+The plugin carries the hooks. Installing modifies no shell profile, needs no
+configuration file edited by hand, registers no service with the operating system, and
+changes nothing about how Claude Code starts.
 
-This follows from Claude Code being launched and used unchanged. A plugin is loaded by Claude Code wherever Claude Code loads plugins, so the system reaches those surfaces without needing to know they exist — which matters because that set will change, and a design that enumerates surfaces will be wrong within a release.
+Claude Code loads a plugin wherever it loads plugins, so cogmer reaches every surface
+Claude Code runs on without knowing which they are (section 3.8).
 
 ## Where each command lives
 
-Three homes, and which one a command belongs in is decided by the command rather than by preference.
+Three homes, and the command decides which it belongs in.
 
-**Inside a Claude Code session**, as commands it already loads: everything a person does in the ordinary course. Listing rooms and peers, creating a room, inviting a known peer, joining, leaving, reading the room, pairing with a colleague, choosing the name others see. Either they have no interaction beyond their arguments, or they hand off to a surface that does — and their output is something a person reads once, so it is acceptable that it reaches them by way of the model, which is how everything from an extension point reaches a person (§3.8).
+Inside a Claude Code session, as commands it already loads, is everything a user does
+in the ordinary course: listing rooms and peers, creating a room, inviting a known peer,
+joining, leaving, reading the room, pairing with a colleague, and choosing the name
+others see. Each either needs nothing beyond its arguments or hands off to a surface
+that does, and its output is something a user reads once, so it can reach them by way
+of the model, as everything from an extension point does (section 3.8).
 
-Joining in particular belongs here. A room is session-scoped, and a command typed inside a session can name the session it means; a command outside one cannot. Nothing machine-level picks a room on a session's behalf, so a room command typed at a terminal is refused rather than answered with a guess.
+Joining in particular belongs inside a session, because a command typed inside a
+session can name the session it means, and a command outside one cannot. Nothing on the
+machine picks a room on a session's behalf, so a room command typed at a terminal is
+refused rather than answered with a guess.
 
-**In the local view**, as a page the daemon serves: the two-word comparison. Three properties keep that ceremony away from the model, and any one would be enough.
+The two-word comparison lives in the local view, a page the daemon serves, and never
+passes through the model, for three reasons, any one of which would be enough:
 
-- It is **interactive**, and blocks on another person for as long as it takes them to start their side.
-- Its output must reach a person's eyes **unaltered**. Two words whose purpose is that you compared exactly what your daemon computed must not pass through a model, and least of all through the model that is reading room content from peers — the content §20 exists because it once impersonated an operator instruction.
-- Recording the result is a **human act**, and the human is on a telephone rather than at a prompt.
+- it is interactive, and waits on another user for as long as they take to start
+  their side;
+- its output must reach the user's eyes unaltered, and least of all by way of the model
+  that reads room content from peers;
+- recording its result is a person's act, and that person is on a call rather than at
+  a prompt.
 
-Those properties rule out the model. They do not rule out a browser, and the view is where the ceremony belongs: a terminal is an operator surface, and asking somebody to open one in order to meet a colleague is not a user experience.
+Those reasons rule out the model and not a browser. A terminal is a surface for
+operating cogmer, and asking a user to open one in order to meet a colleague is not a
+user experience.
 
-A slash command therefore **performs** the ceremony rather than pointing at it. It records the peer, mints a page, opens it, and returns without waiting; the waiting and the comparison happen on the page. Every pairing gets its own address, so a second one arrives as a new tab rather than as a silent rewrite of one nobody is looking at, and a page left over from an earlier attempt can never quietly become a different pairing.
+So a slash command performs the comparison rather than pointing at it. It records the
+peer, creates a page, opens it, and returns without waiting, and the waiting and the
+comparison happen on the page. Every pairing gets its own address, so a second pairing
+arrives as a new tab, and a page left from an earlier attempt can never become a
+different pairing.
 
-The page is reachable only by the person at the machine. The daemon serves it on loopback, and the requests that change anything — beginning an exchange, recording its result, publishing a turn — are refused unless they carry a header a page from any other origin cannot send. Loopback keeps other machines out; that header is what keeps out a page open in this machine's own browser.
+Only the user at the machine can reach the page. The daemon serves it on loopback, and
+refuses any request that changes something unless it carries the header a page from
+another origin cannot send (section 25).
 
-**At a terminal**, as a separate program: the operator surface, which is not a user experience and is not meant to be. Diagnostics that must work when the plugin path is broken, the daemon's own lifecycle, this machine's identity, and testing. The terminal ceremony remains, as the fallback for a machine that cannot open a browser — one reached over SSH, or in a container — which makes it a second branch rather than a legacy.
+At a terminal, as a separate program, is what operates cogmer rather than what a user
+does: diagnostics that must work when the plugin path is broken, the daemon's own
+lifecycle, this machine's identity, and testing. The comparison also runs at a terminal
+on a machine that cannot open a browser, such as one reached over SSH or in a
+container.
 
-This split is why the vocabulary separates pairing from inviting (§12). A single verb spanning both scopes would have forced both into the more restrictive home.
+Pairing and inviting are separate verbs (section 12) because they live in different
+homes.
 
 ## Command names
 
-A prefix names what the command acts on. `peer-` acts on somebody else, `room-` on a room, `self-` on you. The prefix names the target and not the activity, so a command that prints your own pairing string is `self-` however much it is about pairing.
+A command's prefix names what it acts on: `peer-` acts on somebody else, `room-` on a
+room, and `self-` on you. The prefix names the target, not the activity, so the command
+that prints your own pairing string is `self-`, however much it is about pairing.
 
-Commands are prefixed at all because a plugin shares one namespace with every other plugin a person has installed, and an unprefixed `create` or `status` is a collision waiting to happen.
-
-There is no prefix for the system itself, and so no single command that says what it is or lists the rest. That command would be named after the product, and the name is not settled. A placeholder is worse than the gap: a command name goes into habit and into whatever colleagues write down for each other, and is harder to withdraw later than a directory is.
+Commands are prefixed at all because a plugin shares one namespace with every other
+plugin a user has installed, and an unprefixed `create` or `status` would collide.
 
 ## Starting the daemon
 
-A person should not have to start the daemon, notice that it has stopped, or know that it exists.
+A user never has to start the daemon, notice that it has stopped, or know that it
+exists. The session-start hook starts it when it is not already running, so installing
+is the whole of setup, and the first session after installing is like every session
+after it.
 
-The session-start hook starts it when it is not already running. Installation is then the whole of setup, and the first session after installing is indistinguishable from every session after that.
+Starting the daemon never delays the session. The hook returns at once, and the daemon
+becomes useful when it is ready, so a session that begins before the daemon is
+listening simply has nothing to inject yet.
 
-Three requirements follow, each easy to get wrong:
+A daemon already running is the ordinary case, not an error. Several sessions often
+begin at once on one machine, each tries to start the daemon, at most one succeeds, and
+none reports a problem.
 
-- **Starting must not delay the session.** Waiting on a daemon nobody asked for is worse than having no daemon. The hook returns immediately and the daemon becomes useful when it is ready; a session that begins before the daemon is listening simply has nothing to inject yet.  
-- **Already running is the ordinary case, not an error.** Several sessions begin at once on one machine routinely. Each attempts to start the daemon, at most one succeeds, and none reports a problem. A failure to bind is the expected outcome, not a fault.  
-- **Failure is silent to the person and recorded by the daemon.** A daemon that cannot start means no collaboration, which is degraded rather than broken: the session continues exactly as it would have without any of this, and says nothing about it.
+A daemon that fails to start is silent to the user, and recorded by the daemon. It means
+no collaboration, and the session continues as it would have without cogmer.
 
-The daemon outlives the session that started it, because a room may have members in several sessions and because starting it repeatedly is worse than leaving it running. It must therefore be discoverable and stoppable by the person whose machine it is on. A background process a person cannot find is not acceptable merely because it is useful.
+The daemon outlives the session that started it, because a room may have members in
+several sessions, and starting it repeatedly is worse than leaving it running. So the
+user whose machine it runs on can find it and stop it.
 
-Stopping it is a terminal command, because it is the daemon's own lifecycle. It stops whichever cogmer daemon holds the addresses this installation uses, not only the one this installation started. A daemon left running from another state directory, or from an earlier version, holds the same addresses and blocks this one exactly as an unrelated program would, and the person experiences the two the same way. It signals only a process it has identified as a cogmer daemon. Anything else holding an address is named, with its process, and left alone, because stopping a program this system did not start is not the person's request and is not this system's to do.
+Stopping the daemon is a terminal command, because it is the daemon's own lifecycle. It
+stops whichever cogmer daemon holds the addresses this installation uses, not only the
+one this installation started, because a daemon left running from another state
+directory or an earlier version blocks this one just as an unrelated program would.
+It signals only a process it has identified as a cogmer daemon. Anything else holding
+an address is named, with its process, and left alone.
 
-A daemon that cannot bind says which of those holds its address, and when it is a cogmer daemon, gives the command that clears it. Describing a blocker without identifying it leaves the person to do the identification.
+A daemon that cannot bind says which of these holds its address, and when it is a
+cogmer daemon, gives the command that clears it.
 
-The person should not have to:
-
-- copy transcripts;  
-- summarize what Claude discovered;  
-- paste teammates' conversations;  
-- manage synchronization;  
-- identify missing events;  
-- resolve routine synchronization conflicts.
-
-Collaboration should be ambient.
+A user never has to copy transcripts, summarize what Claude found, paste a colleague's
+conversation, manage synchronization, find missing events, or resolve routine
+conflicts. Collaboration is ambient.
 
 ---
 
 # 32\. Explicit Non-Goals
 
-Do not initially build:
+cogmer has none of these:
 
-- central cloud conversation service;  
-- cloud transcript database;  
-- Claude API proxy;  
-- centralized model inference;  
-- RAG;  
-- embeddings;  
-- vector database;  
-- automatic summaries;  
-- organizational knowledge base;  
-- Slack integration;  
-- shared Claude Code session;  
-- CRDT framework;  
-- libp2p networking;  
-- sophisticated peer discovery.
-
-These can be evaluated after the core experiment.
+- a central cloud conversation service;
+- a cloud transcript database;
+- a proxy for the Claude API;
+- centralized model inference;
+- retrieval-augmented generation, embeddings or a vector database;
+- automatic summaries;
+- an organizational knowledge base;
+- a Slack integration;
+- a shared Claude Code session;
+- a CRDT framework;
+- libp2p networking.
 
 ---
 
-# 33\. Future Networking Evolution
+# 33\. Transports
 
-Keep networking behind an abstraction.
+Networking sits behind a transport, which finds peers and moves bytes, and does
+nothing else. Replication sees only the transport. A transport never interprets an
+event, never decides membership and never admits anyone: it finds candidates, and the
+room's guest list decides who may enter.
 
-A transport is responsible for finding peers and moving bytes, and for nothing else:
-
-```
-PeerSyncTransport
-
-  discover(roomName)     → candidate rooms reachable by this transport
-  connect(peer)
-  send(peer, data)
-  onMessage(handler)
-  onPeerJoined(handler)
-  onPeerLeft(handler)
-```
-
-Replication sees only this. A transport never interprets an event, never decides membership, and never authorizes a join — `discover` returns candidates, and admission remains a matter of the room's own secret.
-
-Implement in this order:
-
-```
-PeerSyncTransport
-       │
-       ├── Local          ← no dependencies; same network
-       ├── Tailscale      ← remote peers, no NAT traversal to solve
-       └── WebRTC         ← remote peers with nothing installed
-```
-
-Local is first because it is the only one that requires nothing of the user. A project whose simplest case needs an account and a second daemon has narrowed its audience before anyone has tried it.
-
-Later possibilities include QUIC and libp2p.
-
-Internet peer-to-peer carries a cost worth stating plainly before it is chosen. Peers must be introduced to each other by some signalling service, and peers behind unfriendly network address translation need a relay. Signalling is small and never sees a conversation. Relaying is neither: it carries the traffic, and somebody has to pay for it. That is a commitment to be made deliberately, not discovered.
-
-The event and synchronization models should not care which transport is being used.
-
----
-
-# 34\. Possible Future CRDT Layer
-
-If the application eventually introduces mutable shared state, consider a local-first CRDT such as Automerge.
-
-Potential architecture:
-
-```
-Claude Code
-     │
-    hooks
-     │
-     ▼
-cogmer daemon
-     │
- ┌───┴────────────┐
- │                │
-event store    shared state
- │                │
-immutable       CRDT
- │                │
- └──────┬─────────┘
-        ▼
-  peer transport
-```
-
-Do not introduce this complexity for immutable conversation events.
-
----
-
-# 35\. Future Capabilities
-
-The architecture should permit later implementation of:
-
-### Address another Claude
-
-```
-@David-Claude what led you to that conclusion?
-```
-
-### Ask another person to investigate
-
-```
-@Alice investigate the race condition David's Claude found.
-```
-
-### Presence
-
-```
-David
-  Claude working...
-
-Alice
-  viewing room
-
-Carlos
-  offline — last seen 14 min ago
-```
-
-### Searchable history
-
-Across archived rooms, since a live room holds only its own pairing:
-
-```
-What did we discover about DLDV last Tuesday?
-```
-
-### Durable team memory
-
-Extract confirmed:
-
-- architectural decisions;  
-- requirements;  
-- discoveries;  
-- constraints;  
-- unresolved questions.
-
-This should be derived from the complete conversational record rather than replacing it.
+The event model and synchronization are the same whichever transport carries them.
 
 ---
 
@@ -2268,16 +2192,17 @@ The product, the plugin and the repository are `cogmer`. The name reaches the mo
 path, the binary, the plugin manifest, the state directory and the release path, and
 nowhere else.
 
-Nothing cryptographic carries it. Signing namespaces use the `protocolNamespace`
-constant, which is arbitrary on purpose and must never change (D-069): a tag carrying
-a product name would make every signature ever produced hostage to a naming decision,
-and by D-058's rule a rename after real events exist would mean carrying the old
-namespace forever. A scheme is added beside the current one and never edited, so a
-signature outlives every later change to what an event carries.
+Nothing cryptographic carries the name. Signing uses a namespace that is arbitrary on
+purpose and never changes, because a namespace carrying a product name would make every
+signature ever produced depend on a naming decision. A signature scheme is added beside
+the current one and never edited, so a signature outlives every later change to what an
+event carries, and a rename after real events existed would mean carrying the old
+namespace for ever.
 
-The state directory is `~/.cogmer`, and it is the one place the name reaches the
-filesystem. Nothing derives state from any other name.
+The state directory is `~/.cogmer`, the one place the name reaches the filesystem, and
+nothing derives state from any other name.
 
-The plugin manifest name is the slash command namespace. Claude Code prefixes every
-plugin skill with it, so the manifest name is what a person types before the colon
-and changing it changes every command at once (D-118).
+The plugin manifest's name is the namespace of the slash commands. Claude Code prefixes
+every command a plugin provides with it, and offers no form without it, so the manifest
+name is what a user types before the colon, and changing it changes every command at
+once.

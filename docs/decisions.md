@@ -365,7 +365,7 @@ no cost while letting membership end cleanly.
 
 **Cost, stated plainly.** §10 and §26 lose most of their purpose: anti-entropy no
 longer reconciles "several hours offline" or "working on an airplane," only
-interruptions inside a live pairing. §35's durable team memory must be built over
+interruptions inside a live pairing. The durable team memory the specification then listed as a future capability must be built over
 archives rather than live rooms. Both sections were amended rather than deleted,
 because the machinery is still correct — it simply has far less to do, which
 argues for simplifying Phase 2.
@@ -420,7 +420,7 @@ So membership is durable and ends only by explicit departure or room closure,
 while presence is transient and lapses whenever a process exits. An exiting
 session is **absent**, not gone; resuming restores presence without rejoining.
 A session-end signal is a presence signal, and the system must not depend on
-receiving one at all — a killed process sends nothing. §35's existing presence
+receiving one at all — a killed process sends nothing. The presence display the specification then listed as a future capability
 display (`offline — last seen 14 min ago`) already assumed this distinction; the
 specification simply had not stated it.
 
@@ -1290,7 +1290,7 @@ events — not peers pushing to each other. That order places "Real-Time Push" i
 layer, where its value is lowest, and the UI has no phase of its own at all.
 
 **Revisit when** something needs sub-second peer propagation for a reason other
-than conversation: presence indicators (§35) are the likely first, since "Claude
+than conversation: presence indicators, which the specification then listed as a future capability, are the likely first, since "Claude
 working…" is stale the moment it is a second old. Large rooms where constant polling
 is wasteful would be the second.
 
