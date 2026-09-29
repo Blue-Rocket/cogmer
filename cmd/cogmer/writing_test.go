@@ -33,9 +33,32 @@ var writingNeverChecked = map[string]string{
 	"docs/writing.md": "it quotes every word and mark it bans",
 }
 
-// decisionFormatAfter is the last decision written before docs/writing.md.
-// Every later decision must follow its template.
-const decisionFormatAfter = 123
+// decisionsNotRewritten lists the decisions written before docs/writing.md that
+// have not been rewritten to its template. It only shrinks: a listed entry that
+// passes the template check fails the test, so that it comes off the list in the
+// commit that rewrote it.
+var decisionsNotRewritten = map[string]bool{
+	"D-001": true, "D-002": true, "D-003": true, "D-004": true, "D-005": true, "D-006": true,
+	"D-007": true, "D-008": true, "D-009": true, "D-010": true, "D-011": true, "D-012": true,
+	"D-013": true, "D-014": true, "D-015": true, "D-016": true, "D-017": true, "D-018": true,
+	"D-019": true, "D-020": true, "D-021": true, "D-022": true, "D-023": true, "D-024": true,
+	"D-025": true, "D-026": true, "D-027": true, "D-028": true, "D-029": true, "D-030": true,
+	"D-031": true, "D-032": true, "D-033": true, "D-034": true, "D-035": true, "D-036": true,
+	"D-037": true, "D-038": true, "D-039": true, "D-040": true, "D-041": true, "D-042": true,
+	"D-043": true, "D-044": true, "D-045": true, "D-046": true, "D-047": true, "D-048": true,
+	"D-049": true, "D-050": true, "D-051": true, "D-052": true, "D-053": true, "D-054": true,
+	"D-055": true, "D-056": true, "D-057": true, "D-058": true, "D-059": true, "D-060": true,
+	"D-061": true, "D-062": true, "D-063": true, "D-064": true, "D-065": true, "D-066": true,
+	"D-067": true, "D-068": true, "D-069": true, "D-070": true, "D-071": true, "D-072": true,
+	"D-073": true, "D-074": true, "D-075": true, "D-077": true, "D-078": true, "D-079": true,
+	"D-080": true, "D-081": true, "D-082": true, "D-083": true, "D-084": true, "D-085": true,
+	"D-086": true, "D-087": true, "D-088": true, "D-089": true, "D-090": true, "D-091": true,
+	"D-092": true, "D-093": true, "D-094": true, "D-095": true, "D-096": true, "D-097": true,
+	"D-099": true, "D-101": true, "D-102": true, "D-103": true, "D-104": true, "D-105": true,
+	"D-106": true, "D-107": true, "D-108": true, "D-109": true, "D-110": true, "D-111": true,
+	"D-112": true, "D-113": true, "D-114": true, "D-115": true, "D-116": true, "D-117": true,
+	"D-118": true, "D-119": true, "D-120": true, "D-121": true, "D-123": true,
+}
 
 var (
 	bannedWords = regexp.MustCompile(`(?i)\b(load-bearing|honest|honestly|not merely|leverage|leveraged|leverages|utilise|utilised|utilize|utilized|utilizes|robust|robustly|seamless|seamlessly|comprehensive|ensure|ensured|ensures|ensuring|nuanced|testament|tapestry|delve|delves|delving|crucial|crucially)\b`)

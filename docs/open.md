@@ -542,53 +542,23 @@ that are not decisions, and what each citation means.
 - one decision and nothing to move (9): D-005, D-007, D-009, D-012, D-013, D-112,
   D-124, D-125, D-126.
 
-D-098, D-100, D-122, D-124, D-125 and D-126 were moved into `docs/writing.md` as rules
-on 2026-09-25 (W-28, the decision log holds only decisions about the system), so they
-need no split. The counts here describe `f11e871` and include them.
+The answers settled on 2026-09-29 change those counts, and they are rules in
+`docs/writing.md` now: the log stays one file (W-28), a repeated decision folds into the
+entry that holds it, an entry is rewritten to what still holds before it is split (W-40),
+and a plan becomes a "removed" tombstone (W-37). Applied to the notes, 52 entries remain
+to split, adding 78 entries rather than 86:
 
-Splitting all 59 adds 86 entries, and 146 citations of them mean something other
-than the first decision, so each needs checking against its few words. Four
-questions come before any split:
+- no longer split: D-098 and D-100, moved to `docs/writing.md`; D-002 and D-032,
+  removed as plans; D-020 and D-056, whose second decisions fold into D-024 and D-016;
+  and D-062, whose first decision D-068 holds, so it is rewritten to its second;
+- still split with one decision fewer: D-080, whose prefix rule folds into D-096;
+- D-061 splits into its four decisions about the system, and its title about Phase 7
+  goes.
 
-- whether an extra decision that repeats an existing entry folds into it instead of
-  taking a number: D-080's prefix rule into D-096, D-020's guest-list preference
-  into D-024, D-056's rule into D-016;
-- whether D-002, D-062, D-070 and D-078 become tombstones or are rewritten to what
-  still holds (W-37, W-38), since later entries hold most of what they decided;
-- which decision keeps the number where most citations mean one the title does not
-  name, as in D-043, whose citations mostly mean "no adapter machinery for a second
-  host", and D-080, split 8 to 7;
-- whether D-018, D-024 and D-025 are rewritten for what D-026 (no join token)
-  reversed before they are split.
+The 146 citations that mean something other than an entry's first decision have not
+been recounted.
 
 Five entries lack a **Decision.** field: D-068, D-083, D-086, D-088 and D-089.
-
-**Whether decisions move to one file per record before the log is split.** Every
-citation of a decision is prose: a number and a few words typed at each use. Checking
-them showed four costs, recorded in `docs/work/decision-split.md`. A citation says
-nothing about how it relates to what it cites, so what each of 146 citations means
-needs a reader. Its few words are retyped each time and drift from the title. Finding
-every citation of an entry takes a grep that also hits test fixtures, code comments
-and quotations. A line-number citation moves with every edit above it.
-
-The options, each with its cost:
-
-- keep one file, and write citations as links to stable anchors: cheap, and GitHub
-  resolves them, but the relation between records stays untyped;
-- one file per decision, such as `docs/decisions/D-054.md`, with a front-matter
-  header for the ID, title, status, date, the entry that replaced it, and typed links
-  (supports, restates, reverses), and prose below it: the integrity checks become
-  exact, a split becomes a new file and edited links, and each record gets its own
-  history, at the cost of moving 126 entries and changing every tool that reads the
-  log;
-- decisions as data, with the Markdown generated for reading, as `behaviors.go` and
-  `docs/relied-on-behaviors.md` already work: the most checkable, and the least
-  pleasant to write in.
-
-Whichever is chosen comes before any split. Splitting 59 entries and repointing their
-citations in the present format would be redone in the new one. The choice also
-decides what the decision log's table of contents is: a generated block in one file,
-or a generated index file for a directory.
 
 **Seven citations in `docs/decisions.md` credit an entry with something it does not
 hold.** Each resolves, so the citation test passes, but the source says something

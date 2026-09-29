@@ -231,7 +231,8 @@ specification it makes the text around it false with it.
 W-28. The decision log holds only decisions about the system: what it does, and the
 detail beneath the specification. How a document is written, where a thing is
 written, and how the documents are checked are rules in this guide, where a rule and
-its reason can be corrected together.
+its reason can be corrected together. The log is one file, `docs/decisions.md`, which
+every check of decisions reads.
 
 W-29. A rule in this guide states what to do. It gives a reason only where the rule
 would surprise a reader, and the reason says what the rule protects, in general
@@ -331,6 +332,14 @@ naming the rule that holds it, or the section when no one rule does:
 **Status:** moved YYYY-MM-DD to `docs/writing.md`, "<heading>".
 ```
 
+A decision that is a plan for the work rather than a decision about the system, such as
+an order to do things in, becomes a tombstone of a third kind. A plan is ephemeral
+(W-53), so nothing replaces it and nothing records it elsewhere:
+
+```markdown
+**Status:** removed YYYY-MM-DD: a plan for the work, not a decision about the system (W-53).
+```
+
 W-38. When a later decision changes only part of an earlier one, rewrite the earlier
 entry so that it states only what still holds, and name the removed part in the
 later decision's **Rejected.** in the same way.
@@ -346,7 +355,10 @@ semicolon or "and", and a paragraph opening with a bold statement that is not a
 template field. When an entry is split, the decision most citations mean keeps the
 number, each other decision takes a new number at the bottom of the log, and every
 citation of the old number is checked against its few words (W-11) and pointed at
-the entry that now holds what it describes.
+the entry that now holds what it describes. A second decision that another entry
+already holds folds into that entry rather than taking a number. An entry that a later
+decision has changed in part is rewritten to what still holds (W-38) before it is
+split, so that nothing reversed is copied into a new entry.
 
 W-41. A decision never points to open work: not to `docs/open.md`, not to working
 material in `docs/work/`, and not to a task in a tracker. Open work is deleted or closed when it is resolved, so a pointer to it
@@ -574,13 +586,16 @@ limit: what it asks for is removing the header.
 each behaviour's `Reliance` starts "If this changes".
 
 `TestLaterDecisionsFollowTemplate`, in `structure_test.go`, checks every decision
-after D-123, reading the log as Markdown so that a field name inside code does not
-count as the field. It checks W-30, W-33, W-34 and W-41 on each; for W-41 it
+that is not in `decisionsNotRewritten`, reading the log as Markdown so that a field
+name inside code does not count as the field. The list holds the decisions written
+before this guide that are not yet rewritten, and it only shrinks: a listed entry that
+passes fails the test, so that it comes off the list in the commit that rewrote it. It checks W-30, W-33, W-34 and W-41 on each; for W-41 it
 rejects a mention of `open.md` or `docs/work/`, or a link to a ClickUp, GitHub issue,
 Jira or Linear task. Every tombstone,
 whatever its number, must hold only its status line. A withdrawn entry must name the
 decision that replaced it, and that decision must have a **Rejected.**. A moved
-entry must name a rule or a heading this guide holds.
+entry must name a rule or a heading this guide holds. A removed entry must say that it
+was a plan, with W-53.
 
 `TestWritingRulesAreIndexed`, in `cmd/cogmer/writingrules_test.go`, checks that
 the rule index above and the checks agree. Every rule in the index has a paragraph

@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -44,7 +43,11 @@ var (
 	// holds the reason.
 	withdrawnBy = regexp.MustCompile(`^\*\*Status:\*\* withdrawn \d{4}-\d{2}-\d{2}\.\s+Replaced\s+by\s+(D-\d{3})\s+\((?s:[^)]+)\)\.$`)
 	// A decision placed in docs/writing.md names the rule or the section that holds it.
-	movedTo        = regexp.MustCompile("^\\*\\*Status:\\*\\* moved \\d{4}-\\d{2}-\\d{2} to `docs/writing\\.md`,\\s+(?:(W-\\d{2})\\s+\\((?s:[^)]+)\\)|\"((?s:[^\"]+))\")\\.$")
+	movedTo = regexp.MustCompile("^\\*\\*Status:\\*\\* moved \\d{4}-\\d{2}-\\d{2} to `docs/writing\\.md`,\\s+(?:(W-\\d{2})\\s+\\((?s:[^)]+)\\)|\"((?s:[^\"]+))\")\\.$")
+	// A decision that was a plan for the work is removed, and nothing replaces it.
+	// The rule it names is assembled, so that the rule index check does not read it
+	// as a rule this test enforces.
+	removedPlan    = regexp.MustCompile(`^\*\*Status:\*\* removed \d{4}-\d{2}-\d{2}:\s+a\s+plan\s+for\s+the\s+work,\s+not\s+a\s+decision\s+about\s+the\s+system\s+\(` + "W-" + `53\)\.$`)
 	decisionStatus = regexp.MustCompile(`^\*\*Date:\*\* \d{4}-\d{2}-\d{2} · \*\*Status:\*\* (active|not built)$`)
 	isoDate        = regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}\b`)
 	// What a pattern may not name: this project's decisions, sections of its
@@ -338,7 +341,7 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 	}
 }
 
-// Every decision after decisionFormatAfter follows the decision template in
+// Every decision not in decisionsNotRewritten follows the decision template in
 // docs/writing.md, and every tombstone, whatever its number, keeps only its
 // status line. A withdrawn one names the decision whose **Rejected.** says why.
 func TestLaterDecisionsFollowTemplate(t *testing.T) {
@@ -385,9 +388,8 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 	}
 
 	type entry struct {
-		id     string
-		number int
-		body   []ast.Node
+		id   string
+		body []ast.Node
 	}
 	var entries []*entry
 	var current *entry
@@ -395,8 +397,7 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 		if h, ok := c.(*ast.Heading); ok && h.Level <= 2 {
 			current = nil
 			if m := decisionTitle.FindStringSubmatch(inlineText(h, src)); m != nil && h.Level == 2 {
-				n, _ := strconv.Atoi(m[1])
-				current = &entry{id: "D-" + m[1], number: n}
+				current = &entry{id: "D-" + m[1]}
 				entries = append(entries, current)
 			}
 			continue
@@ -421,6 +422,15 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 		return false
 	}
 	for _, e := range entries {
+		if len(e.body) > 0 && strings.HasPrefix(nodeSource(e.body[0], src), "**Status:** removed") {
+			switch {
+			case len(e.body) > 1:
+				report(e.id, "is a tombstone and has more than its status line (W-37)")
+			case !removedPlan.MatchString(nodeSource(e.body[0], src)):
+				report(e.id, "is a removed tombstone without \"removed YYYY-MM-DD: a plan for the work, not a decision about the system ("+"W-"+"53).\" (W-37)")
+			}
+			continue
+		}
 		if len(e.body) > 0 && strings.HasPrefix(nodeSource(e.body[0], src), "**Status:** moved") {
 			moved := movedTo.FindStringSubmatch(nodeSource(e.body[0], src))
 			guide, _ := headingsOf("docs/writing.md")
@@ -448,9 +458,7 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 			}
 			continue
 		}
-		if e.number <= decisionFormatAfter {
-			continue
-		}
+		before := len(problems)
 
 		if len(e.body) == 0 || !decisionStatus.MatchString(nodeSource(e.body[0], src)) {
 			report(e.id, "has no **Date:** line whose status is active or not built (W-30)")
@@ -508,6 +516,13 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 			}
 			for _, w := range openWork.FindAllString(nodeSource(c, src), -1) {
 				report(e.id, "points to open work, %q, which goes stale when it is resolved; state the decision's scope instead (W-41)", w)
+			}
+		}
+		if decisionsNotRewritten[e.id] {
+			if len(problems) == before {
+				report(e.id, "now follows the decision template: remove it from decisionsNotRewritten (W-30)")
+			} else {
+				problems = problems[:before]
 			}
 		}
 	}
@@ -632,7 +647,8 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 		entry string
 		want  []string
 	}{
-		{"before the cutoff", "## D-123 — Old\n\nAnything, already.\n", nil},
+		{"not yet rewritten", "## D-123 — Old\n\nAnything, already.\n", nil},
+		{"rewritten but still listed", "## D-123 — T\n\n" + complete, []string{"D-123 now follows the decision template"}},
 		{"complete", "## D-124 — T\n\n" + complete, nil},
 		{"complete, with Limits", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Some.\n\n**Revisit when**", 1), nil},
 		{"not built", "## D-124 — T\n\n" + strings.Replace(complete, "active", "not built", 1), nil},
@@ -650,7 +666,7 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 		{"Limits pointing at a tracker task", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Tracked in https://app.clickup.com/t/86abc123.\n\n**Revisit when**", 1), []string{"D-124 points to open work"}},
 		{"Limits pointing at working material", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Detail in `docs/work/split.md`.\n\n**Revisit when**", 1), []string{"D-124 points to open work"}},
 		{"Limits stating scope", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** It does not decide whether stop restarts the daemon.\n\n**Revisit when**", 1), nil},
-		{"open work before the cutoff", "## D-123 — Old\n\nLeft open in `docs/open.md`.\n", nil},
+		{"open work in an entry not yet rewritten", "## D-123 — Old\n\nLeft open in `docs/open.md`.\n", nil},
 		{"tombstone", "## D-076 — T\n\n" + tombstone + replacement, nil},
 		{"tombstone with more", "## D-076 — T\n\n" + tombstone + "\nMore history.\n" + replacement, []string{"D-076 is a tombstone and has more"}},
 		{"tombstone with a Why", "## D-076 — T\n\n**Status:** withdrawn 2026-09-20. Replaced by D-126 (words). Why: `05f89c4`.\n" + replacement, []string{"D-076 is a tombstone whose status line"}},
@@ -660,6 +676,9 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 		{"moved to a section", "## D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, \"Enforcement\".\n", nil},
 		{"moved to a missing rule", "## D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, " + rule + "99 (x).\n", []string{"D-124 moved to " + rule + "99"}},
 		{"moved to a missing section", "## D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, \"Elsewhere\".\n", []string{"D-124 moved to \"Elsewhere\""}},
+		{"removed as a plan", "## D-002 — T\n\n**Status:** removed 2026-09-29: a plan for the work, not a decision\nabout the system (" + rule + "53).\n", nil},
+		{"removed without its reason", "## D-002 — T\n\n**Status:** removed 2026-09-29.\n", []string{"D-002 is a removed tombstone without"}},
+		{"removed with more", "## D-002 — T\n\n**Status:** removed 2026-09-29: a plan for the work, not a decision about the system (" + rule + "53).\n\nMore.\n", []string{"D-002 is a tombstone and has more"}},
 		{"moved with more", "## D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, \"Enforcement\".\n\nMore.\n", []string{"D-124 is a tombstone and has more"}},
 	}
 	for _, c := range cases {
