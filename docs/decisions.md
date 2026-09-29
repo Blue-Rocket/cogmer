@@ -20,54 +20,32 @@ and the finding that records why.
 
 **Date:** 2026-09-16 · **Status:** active
 
-**Context.** Teammates will be on macOS, Linux, and Windows. The system needs a
-long-lived daemon, hook executables invoked per prompt, and a local browser UI.
+**Decision.** cogmer is written in Go, with `modernc.org/sqlite`, a SQLite written in
+Go, so that nothing needs cgo.
 
-**Decision.** Go, with `modernc.org/sqlite` (pure Go, no cgo).
-
-The deciding fact: `claude` resolves to `~/.local/share/claude/versions/…`, a
-native Mach-O binary — **Claude Code no longer ships as an npm package**, so a
-teammate can have Claude Code and no Node runtime at all. Go gives one
-dependency-free binary per platform; all four targets cross-compile from one Mac.
-The hook entry in `settings.json` is then an identical string on every platform
-(`cogmer hook prompt`), avoiding Windows backslash-and-space paths inside
-JSON string literals.
+**Support.**
+- Users run macOS, Linux and Windows, and a release builds a binary for each.
+  `scripts/release.sh`.
+- Claude Code ships as a native binary, so a colleague can have Claude Code and no
+  Node runtime at all. `84a0751:docs/phase0-findings.md`.
+- Go builds one binary per platform with no runtime dependencies, and every target
+  cross-compiles from one machine with `CGO_ENABLED=0`. `scripts/release.sh`.
 
 **Rejected.**
-- *TypeScript/Node* — requires Node on every teammate's machine. Also `node:sqlite`
-  in Node 22.12 throws without `--experimental-sqlite` (verified directly), so it
-  would mean a `better-sqlite3` native dependency and its prebuild matrix. Faster
-  to iterate; not worth the install burden.
-- *Python* — weakest here. Windows environment fragmentation, and the UI is
-  hand-written JS regardless.
-- *Node spike first, Go daemon after* — genuinely tempting, since Phase 0 never
-  leaves one machine. Rejected because the spike's hook-handling code is small and
-  becomes the daemon's foundation; the rewrite does not pay for itself.
+- *TypeScript on Node.* It would need Node on every colleague's machine, and
+  `node:sqlite` in Node 22.12 throws without `--experimental-sqlite`, so it would mean
+  `better-sqlite3`, a native dependency with its own set of prebuilt binaries.
+- *Python.* Its environments fragment on Windows, and the view is hand-written
+  JavaScript whatever the daemon is written in.
 
-**Revisit when** the team standardizes on a Node toolchain, or the UI outgrows
-plain JS + server-sent events.
+**Revisit when** the users standardize on a Node toolchain, or the view outgrows plain
+JavaScript and server-sent events.
 
 ---
 
 ## D-002 — Stop at Phase 0, and insert Phase 0a before Phase 1
 
-**Date:** 2026-09-16 · **Status:** active
-
-**Context.** The specification's instructions for the integration spike said to stop
-after it and report. Phase 0 proved capture and injection, but never exercised compaction —
-`PreCompact` did not fire.
-
-**Decision.** Stop as instructed, then add **Phase 0a** to the specification
-before any daemon work. Compaction was the one mechanism that could silently
-invalidate both proven directions.
-
-**Rejected.**
-- *Proceed to Phase 1 and handle compaction when it appears* — the failure has no
-  error path; it surfaces as Claude quietly misunderstanding a teammate reference.
-  Diagnosing that with three peers relaying events is far harder than probing it
-  on one machine.
-- *Renumber the phases* — "0a" avoids churn in a specification already referenced
-  by section number throughout the code.
+**Status:** removed 2026-09-29: a plan for the work, not a decision about the system (W-53).
 
 ---
 
@@ -75,22 +53,25 @@ invalidate both proven directions.
 
 **Date:** 2026-09-16 · **Status:** active
 
-**Context.** Neither source Claude Code exposes contains a complete assistant
-turn, and they fail in opposite directions: `Stop.last_assistant_message` holds
-only the final text block, while the transcript at Stop time is missing exactly
-that block (Stop fires before it is flushed).
+**Decision.** A completed turn is reassembled in `ReassembleLastTurn` from the union
+of the transcript, read when the turn completes, and the Stop hook's
+`last_assistant_message`.
 
-**Decision.** Union both in `ReassembleLastTurn`. Verified by exact string match
-against a real 2,582-char response.
+**Support.**
+- `last_assistant_message` holds only the turn's final text block. B04.
+- The transcript, read when Stop fires, lacks that final block, because Stop fires
+  before it is written. B05.
+- Together the two give the complete turn. B12, and §15 (capturing Claude responses).
 
 **Rejected.**
-- *Transcript only* — captured a 110-char preamble of a 2,804-char answer.
-- *`last_assistant_message` only* — silently drops anything said before a tool
-  call, which is most substantive turns.
-- *Sleep-and-retry until the transcript settles* — adds latency to every turn and
-  is still a race, just a longer one.
+- *The transcript alone.* It loses the final block, which is usually most of the
+  answer.
+- *`last_assistant_message` alone.* It loses everything said before a tool call, which
+  is most of a substantive turn.
+- *Waiting and retrying until the transcript settles.* It adds latency to every turn
+  and is still a race, only a longer one.
 
-**Revisit when** B04 or B05 fires.
+**Revisit when** the check for B04 or B05 fails.
 
 ---
 
@@ -98,19 +79,22 @@ against a real 2,582-char response.
 
 **Date:** 2026-09-16 · **Status:** active
 
-**Context.** Attributing assistant records to the turn that produced them.
+**Decision.** A turn's assistant records are every assistant record after the last user
+record that carries a `promptSource`.
 
-**Decision.** Take every assistant record following the last user record bearing a
-`promptSource`.
+**Support.**
+- Assistant records carry no `promptId`, although user records do, including the
+  records of tool results. B09.
+- Human prompts carry a `promptSource`, and the records of tool results do not. B06.
+- The `parentUuid` chain has gaps: an assistant record was seen whose `parentUuid`
+  matched no `uuid` in the same file. `84a0751:docs/phase0-findings.md`.
 
 **Rejected.**
-- *Correlate on `promptId`* — assistant records do not carry one. User records do,
-  including tool-result records.
-- *Walk the `parentUuid` chain* — observed an assistant record whose `parentUuid`
-  matched no preceding `uuid` in the same file. The chain has gaps.
+- *Correlating on `promptId`.* Assistant records carry none.
+- *Walking the `parentUuid` chain.* The chain has gaps.
 
-**Revisit when** B09 fires — assistant records gaining a `promptId` would let this
-become exact correlation, which is strictly better.
+**Revisit when** the check for B09 fails, since a `promptId` on assistant records would
+allow exact correlation instead.
 
 ---
 
@@ -118,58 +102,72 @@ become exact correlation, which is strictly better.
 
 **Date:** 2026-09-16 · **Status:** active
 
-**Context.** D-003 appends `last_assistant_message` to the transcript-derived
-text, which is correct only while it contains just the final block.
+**Decision.** When `last_assistant_message` contains what the transcript supplied,
+`mergeTail` uses it alone rather than appending it.
 
-**Decision.** Detect the superset case rather than assume it cannot happen. If
-Claude Code widens the field to the whole turn, use it alone.
+**Support.**
+- D-003 (reassemble turns from two sources) appends `last_assistant_message` to the
+  text from the transcript, which is correct only while it holds just the final block.
+  `cmd/cogmer/transcript.go`, `mergeTail`.
+- The check for B04 fails if `last_assistant_message` comes to hold the whole turn.
+  B04.
 
-**Rejected.** *Plain append* — an upstream **bugfix** would then duplicate every
-pre-tool text block and silently corrupt the room. A dependency getting better
-should not break us.
+**Rejected.**
+- *Appending it unconditionally.* If Claude Code widened the field, every block said
+  before a tool call would be repeated, and the room would be corrupted silently by a
+  fix upstream.
 
-**Revisit when** B04 fires — at which point the transcript read may be removable.
+**Revisit when** the check for B04 fails, when reading the transcript may become
+unnecessary.
 
 ---
 
-## D-006 — No watermark rewind and no re-injection floor after compaction
+## D-006 — Compaction resets no delivery state and re-injects nothing
 
 **Date:** 2026-09-16 · **Status:** active
 
-**Context.** The feared failure: compaction discards injected teammate turns while
-the delivery watermark still records them as incorporated, so they are never
-re-injected and the referent is lost with no error.
+**Decision.** A session's delivery state is left as it is at a compaction, and nothing
+is injected again afterwards.
 
-**Decision.** Change nothing. Phase 0a tested it twice, including the realistic
-case where the teammate context was *incidental* — injected, then buried under
-four unrelated turns so the summarizer had no reason to keep it. It kept it
-anyway, with attribution. Both tests ran with `injected=0`, so the answers came
-from surviving context rather than re-injection.
+**Support.**
+- Injected turns survived a compaction, with their attribution, both when they were
+  the conversation's subject and when four unrelated turns followed them, with nothing
+  injected again in either run. `84a0751:docs/phase0a-findings.md`, "Injected context
+  survives".
+- The check for B19 fails if a colleague's turn is lost at a compaction. B19.
 
 **Rejected.**
-- *Rewind the watermark on `PreCompact`* — duplicate injection on every compaction
-  for no benefit.
-- *Re-inject a bounded floor of recent turns after any boundary* — same cost, same
-  absence of benefit.
+- *Resetting delivery state before a compaction.* Every compaction would inject the
+  same turns again, for no benefit.
+- *Injecting a bounded number of recent turns after every compaction.* The same cost,
+  and the same absence of benefit.
 
-**Revisit when** B19 fires. Survival is summarizer judgment, not a format
-guarantee; it could change with a model, a longer conversation, or repeated
-compaction cycles (only one was tested).
+**Limits.** Survival is the summarizer's judgement, not a guarantee of the format, and
+could change with a different model, a longer conversation or repeated compactions.
+Only one compaction per session was tested.
+
+**Revisit when** the check for B19 fails.
 
 ---
 
 ## D-007 — Record `COMPACTION` events as observability, not remediation
 
-**Date:** 2026-09-16 · **Status:** deferred to Phase 1
+**Date:** 2026-09-16 · **Status:** not built
 
-**Context.** D-006 rests on behavior that could change without any signal.
+**Decision.** The daemon records an event when a session is compacted, so that a room's
+history shows when compaction happened. The event changes nothing about delivery.
 
-**Decision.** When the daemon is built, record a `COMPACTION` event — a type the
-event model already reserves. Not a fix; it makes compaction visible in room
-history so the correlation exists *before* anyone needs it.
+**Support.**
+- D-006 (compaction resets no delivery state) rests on the summarizer keeping a
+  colleague's turns, and nothing guarantees it will. B19.
+- Claude Code runs a hook before compacting, and the hook reports whether the
+  compaction was manual or automatic. `84a0751:docs/phase0a-findings.md`.
 
-**Rejected.** *Add nothing* — leaves no way to reconstruct what happened if D-006
-ever becomes wrong.
+**Rejected.**
+- *Recording nothing.* If D-006 ever becomes wrong, nothing would show when a
+  compaction happened, and nobody could connect a lost turn to one.
+
+**Revisit when** a compaction is found to have lost a colleague's turn.
 
 ---
 
@@ -177,20 +175,25 @@ ever becomes wrong.
 
 **Date:** 2026-09-16 · **Status:** active
 
-**Context.** Behavior checks cost a real turn of the user's subscription. They
-should run when something might have changed.
+**Decision.** The result of the behaviour checks is recorded against `claude --version`,
+in `~/.cogmer/verified.json`, and a version that has been checked is not checked again.
 
-**Decision.** Check at room formation; cache on `claude --version` in
-`~/.cogmer/verified.json`. Forming a tenth room on a verified version is
-free. `COGMER_PREFLIGHT=off` opts out.
+**Support.**
+- A behaviour check costs a real turn on the user's subscription.
+  `cmd/cogmer/probe.go`.
+- What changes a behaviour is a new Claude Code binary, and its version names the
+  binary. `cmd/cogmer/doctor.go`.
 
 **Rejected.**
-- *Per room* — re-proves the same thing and burns quota; the version is what
-  actually varies.
-- *Time-based expiry* — a TTL is a proxy for "did the binary change," and the
-  binary's version answers that directly.
-- *Manual only* — the failures are silent; nobody runs a check for a problem they
-  cannot see.
+- *Checking for every room.* It proves the same thing again and spends the user's
+  quota, while the version is what varies.
+- *Expiring the result after a time.* A time limit is a stand-in for whether the binary
+  changed, which the version answers directly.
+
+**Limits.** A behaviour that changes without the version changing, such as one that
+depends on the model a session uses, is not checked again.
+
+**Revisit when** a behaviour is found to have changed while `claude --version` did not.
 
 ---
 
@@ -198,13 +201,19 @@ free. `COGMER_PREFLIGHT=off` opts out.
 
 **Date:** 2026-09-16 · **Status:** active
 
-**Context.** Specification §3.1: Claude Code must keep working when collaboration
-is unavailable.
+**Decision.** A failed behaviour check reports which behaviour changed and what that
+breaks, and the room forms anyway.
 
-**Decision.** Report which assumption changed and what it breaks; carry on.
+**Support.**
+- A session is never worse for having cogmer installed, and collaboration that is
+  unavailable leaves Claude Code working normally. §3.1 (first, do no harm).
 
-**Rejected.** *Refuse to form the room* — turns a degraded feature into a broken
-session, which is precisely the failure mode §3.1 forbids.
+**Rejected.**
+- *Refusing to form the room.* A degraded feature would become a broken session, which
+  §3.1 forbids.
+
+**Revisit when** a check fails whose failure would make collaboration harm the session
+rather than degrade it.
 
 ---
 
@@ -212,17 +221,19 @@ session, which is precisely the failure mode §3.1 forbids.
 
 **Date:** 2026-09-16 · **Status:** active
 
-**Decision.** `cmd/cogmer/behaviors.go` holds behaviors and checks together.
-`docs/relied-on-behaviors.md` is generated (`cogmer behaviors --markdown`).
+**Decision.** Each behaviour and its check live together in
+`cmd/cogmer/behaviors.go`, and `docs/relied-on-behaviors.md` is generated from them by
+`cogmer behaviors --markdown`.
 
-**Rejected.** *A hand-written document beside the checks* — it drifts, and a stale
-list of safety properties is worse than none because it is believed.
+**Support.**
+- The generated document is produced from the registry, so it lists what is checked.
+  `cmd/cogmer/behaviors.go`, `MarkdownReport`.
 
-Corollary enforced by test: every behavior needs a negative test proving it fails
-on the regression it claims to catch. A check that cannot fail reads as protection
-while providing none. This caught a real error — the first `--deep` run reported
-B05/B12 failing, which was a bug in the probe's own evidence handling, not a
-behavior change.
+**Rejected.**
+- *A document written by hand beside the checks.* It drifts from them, and a stale list
+  of safety properties is worse than none, because it is believed.
+
+**Revisit when** the registry needs to hold a behaviour that no check can confirm.
 
 ---
 
@@ -6628,3 +6639,48 @@ rebuilding a table, such as a change to the data a store holds.
 
 **Status:** moved 2026-09-25 to `docs/writing.md`, W-42 (evidence is cited by the commit
 that recorded it).
+
+---
+
+## D-129 — Behaviour checks run by themselves when a room is formed
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Decision.** The session tier of the behaviour checks runs by itself the first time a
+room is formed under a Claude Code version this machine has not checked.
+`COGMER_PREFLIGHT=off` turns that off.
+
+**Support.**
+- Several of the behaviours cogmer relies on fail silently, so a user never sees the
+  problem a check would find. `cmd/cogmer/behaviors.go`.
+- A check's result is recorded for the version it ran on, so running it at each new room
+  costs nothing after the first. D-008 (behaviour checks are keyed on the Claude Code
+  version).
+
+**Rejected.**
+- *Running the checks only by hand.* The failures are silent, and nobody runs a check
+  for a problem they cannot see.
+
+**Revisit when** running the checks makes forming a room noticeably slower.
+
+---
+
+## D-130 — Every behaviour check has a test that makes it fail
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Decision.** Each behaviour check has a test showing that it fails on the change it is
+meant to catch.
+
+**Support.**
+- A check can report the wrong result for a reason of its own: the first `--deep` run
+  reported B05 and B12 failing because of a bug in how the probe handled its evidence,
+  not because either behaviour changed. `84a0751:docs/decisions.md`.
+- The tests that make checks fail are in `cmd/cogmer/behaviors_test.go`.
+
+**Rejected.**
+- *A check with no such test.* It reads as protection while giving none.
+
+**Limits.** Nothing checks that every behaviour has such a test.
+
+**Revisit when** a behaviour is added whose change cannot be simulated in a test.

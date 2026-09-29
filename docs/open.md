@@ -603,6 +603,12 @@ collide, `Allow` refuses the second: "you already know a different key as
 \"glad-bobcat\"". It failed once and passed six times in a row on 2026-09-25. Giving
 the two peers fixed, distinct names would remove the chance.
 
+**Five behaviour checks have no test that makes them fail.** D-130 (every behaviour
+check has a test that makes it fail) requires one for each, and no test names B03,
+B05, B07, B11 or B20 (read on 2026-09-29). Nothing checks the requirement, so a check
+for any of the five could pass whatever Claude Code did. A test for each, and a test
+that every entry in the registry is named by one, would close it.
+
 **Two tests in `ui_test.go` assume an order the store does not promise.**
 `TestTheUnverifiedMarkerInTheViewIsAFact` takes the last event of a snapshot to be the
 user's own turn, and `TestTheViewCarriesTheNameYouChose` takes the first to be the named
