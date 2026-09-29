@@ -168,6 +168,15 @@ Two peers on different networks, each behind its own router, reach each other wi
 **NAT to NAT, with a real colleague on a real home router.** The last unknown in the
 transport, and not testable alone.
 
+**Only one address is ever tried for a peer, and none is demoted, aged or
+rehabilitated.** Section 4 of the specification, "The lifecycle of a peer address",
+has an address used as one of several candidates tried together, demoted by
+silence, invalidated by a wrong key, aged at a rate set by what it names, and
+restored by evidence. `known_peers` holds one endpoint per peer with the time it was
+recorded, replaced when the peer advertises another (read on 2026-09-28). D-103 (an
+address belongs to a peer, and is stored in one place) gave each address the owner
+the lifecycle needs, and nothing past that is built.
+
 **Re-pick the overlay relay when it cannot be reached.** D-104 pins it so the
 address is stable. Nothing re-picks, so a machine that relocates past its pinned
 relay is unreachable and nothing says so. Change driven by failure, never by
@@ -239,6 +248,14 @@ wants a third member.
 ## Rooms and sessions
 
 What a room, and the sessions in it, do as people create, leave, return and join from more than one session.
+
+**A room records only prompts and responses, so nobody sees a session join or
+leave.** The specification's event model listed session-joined, session-left and
+status events as a minimum, and `cmd/cogmer/store.go` defines only a user's prompt
+and Claude's response (read on 2026-09-28). The specification now states the two
+that exist. Whether a room shows a colleague's session joining, leaving or working
+is undecided, and "Whether arrival wants announcing" under "Somebody else uses it"
+is part of the same question.
 
 **A room never closes, so nothing is archived.** D-015 (rooms are session-scoped)
 has a closed room kept as an archive that can be read but never rejoined, and the

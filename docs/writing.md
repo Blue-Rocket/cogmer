@@ -76,6 +76,7 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-83 | the specification carries no status and no plan | judgement |
 | W-84 | the specification cites no decision | checked |
 | W-85 | a change to what the user experiences changes the specification with it | judgement |
+| W-86 | the specification names no field | judgement |
 | W-90 | the form of a commit message | judgement |
 | W-91 | a commit that records evidence says how it was run | judgement |
 
@@ -489,6 +490,9 @@ copies drift apart.
 
 W-85. A change to what the user experiences changes the specification in the same
 commit as the decision or the code that makes it.
+
+W-86. The specification names no field. It describes what a thing carries, such as
+a room's identifier or the session a turn came from, and the code names the fields.
 
 W-82. Every requirement is grounded in a benefit to the user or to the product
 owner, and its sentence of reason says what the benefit is and whose it is. A

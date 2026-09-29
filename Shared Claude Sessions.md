@@ -111,18 +111,14 @@ cogmer daemon
 
 A room is a replicated event stream shared by a set of linked Claude Code sessions.
 
-A room has two identifiers, and they are not interchangeable.
+A room has two identifiers, and they are not interchangeable: an identifier such as
+0f7a4e6c-2b91-4d0a-9c3e-7f1d8a5b2c44, and a name such as misty-canyon.
 
-```
-roomId:   0f7a4e6c-2b91-4d0a-9c3e-7f1d8a5b2c44
-roomName: misty-canyon
-```
-
-The `roomId` is the room's identity for synchronization. It is generated, globally
+A room's identifier is its identity for synchronization. It is generated, globally
 unique, never reused and never changed. Every event carries it, and replication,
 deduplication and storage all key on it.
 
-The `roomName` is for people. It is generated at the same moment, so that a room can
+A room's name is for people. It is generated at the same moment, so that a room can
 be spoken aloud, typed without copying, and recognized in a list.
 
 A name is never authoritative. Nothing synchronizes, routes, deduplicates or stores
@@ -292,17 +288,23 @@ order to draw inside it is not.
 
 ---
 
-# 4\. Initial Networking Strategy
+# 4\. Networking
 
 ## No network provider is required
 
-No network provider is part of room identity, room membership, or the replication protocol. A room is a set of linked sessions and an event stream; how bytes reach another machine is beneath that and interchangeable.
+No network provider is part of a room's identity, its membership or the replication
+protocol. A room is a set of linked sessions and an event stream, and how bytes
+reach another machine sits beneath that and is interchangeable.
 
-The system must function with no virtual private network of any kind when peers can already reach one another. Two people on the same network are the simplest case and should be the easiest, requiring no account, no external service, and no configuration.
+cogmer works with no virtual private network of any kind when peers can already
+reach one another. Two users on the same network are the simplest case, and need no
+account, no external service and no configuration.
 
-Tailscale extends the same mechanism to peers that cannot reach each other directly. It is one connectivity provider among several, never a prerequisite.
+A private network such as Tailscale can connect peers that could not otherwise reach
+each other. It is one provider among several, and never a prerequisite.
 
-This is a requirement rather than an aspiration. Anything that makes a particular provider necessary — in identity, in discovery, in the invitation format, or in replication — is a defect.
+Anything that makes a particular provider necessary, in identity, in discovery, in
+the invitation format or in replication, is a defect.
 
 ## Preference order
 
@@ -319,215 +321,153 @@ internet peer-to-peer
 relay
 ```
 
-Attempt these in order and use the first that succeeds. Which one connected is an implementation detail, and should not appear in room identity, event data, or ordinary user-facing output.
+A connection tries these in order and uses the first that succeeds. Which one
+connected appears in no room's identity, in no event, and in no ordinary output a
+user sees.
 
-Tailscale provides machine-to-machine reachability without requiring the prototype to solve NAT traversal, which is why it is the first remote option rather than the first option.
-
-Treat Tailscale as transport/connectivity infrastructure.
-
-For example:
-
-```
-https://alice-machine.tail9c2f.ts.net:4783
-https://david-machine.tail9c2f.ts.net:4783
-```
-
-That could later be replaced by local network discovery, WebRTC, libp2p, another
-virtual private network, direct QUIC, or a transport nobody has proposed. Keep
-synchronization semantics separate from whichever it turns out to be.
+What synchronization means is independent of the transport that carries it.
 
 ## How an address is obtained
 
-A daemon must **discover** the address it is reachable at. It must never derive one from its own hostname.
+A daemon discovers the address it is reachable at, and never derives one from its
+own hostname. A hostname is often not a routable address: it may be a purely local
+name, may resolve only by mDNS, may resolve to a private address no remote peer can
+reach, and is often not the name the transport knows the machine by.
 
-An operating system hostname is not a routable address. It may be a purely local name, it may carry a `.local` suffix that resolves only by mDNS, it may resolve to a private LAN address that no remote peer can reach, and it is frequently not the name the transport knows the machine by. A single machine commonly answers to several names, none of them authoritative.
-
-Under Tailscale, reachability comes from the tailnet: either the device's MagicDNS name or its tailnet address. Both are properties of Tailscale, not of the host, and both must be read from Tailscale rather than assumed. MagicDNS can also be disabled, in which case only the address is available.
-
-A daemon that cannot determine a reachable address should say so plainly rather than emit an invitation that cannot be used.
+A daemon that cannot determine a reachable address says so, rather than offering an
+invitation that cannot be used.
 
 ## What kind of address it is
 
-Addresses are not interchangeable things that differ only in whether they happen to
-work. They differ in what they name, and that decides how long they stay true and
-who may be told about them.
+Addresses differ in what they name, and that decides how long each stays true and
+who may be told it.
 
-An **overlay address** names a node and where to find it. It carries the node's
-public keys together with a relay through which an introduction can be made, after
-which the path upgrades to a direct one if the two machines can reach each other.
-The relay is a **rendezvous** rather than a location: it is where a node can be
-found, not where it is, so moving a machine does not change its address.
+An overlay address names a node and where to find it. It carries the node's public
+keys and a relay through which an introduction can be made, after which the path
+upgrades to a direct one if the two machines can reach each other. The relay is a
+rendezvous, where a node can be found and not where it is, so moving a machine does
+not change its overlay address.
 
-Everything the address is built from must be **persisted with the identity** —
-the node key, and the relay once chosen. An address assembled freshly at each start
-is a different address at each start, which silently invalidates every pairing
-string and every invitation that machine has issued. Nothing announces that, and
-the person who sent the string has no way to learn it. An overlay address is
-therefore a property of the identity and not of the process, and it survives both
-moving and restarting.
+Everything an overlay address is built from, the node key and the relay once chosen,
+is persisted with the identity, so the address survives both moving and restarting.
+An address assembled afresh at each start would silently invalidate every pairing
+string and invitation the machine had issued.
 
-**It must contain no secret.** A pairing string is pasted into chat and read aloud,
-and the two-word comparison exists so that it need not be confidential. Anything
-embedded in an address that would need protecting reintroduces the problem that
-ceremony removes, however useful it is on its own terms. Access is decided by who is
-on a list, never by who holds a string.
+An address contains no secret. A pairing string is pasted into chat and read aloud,
+and who may enter a room is decided by who is on its guest list, never by who holds a
+string.
 
-A **public address** names a place reachable from anywhere. It is true of one
-network position, and a machine that moves has left it.
+A public address names a place reachable from anywhere. It is true of one position
+on the network, and a machine that moves has left it.
 
-A **private address** names a place reachable only from one network. It is true
-there and meaningless elsewhere — and worse than meaningless, because the same
-private address on a different network names a different machine. Reaching it does
-not fail; it succeeds against a stranger.
+A private address names a place reachable only from one network. Elsewhere it names
+a different machine, so reaching it from another network does not fail: it succeeds
+against a stranger.
 
-A **loopback address** names a place reachable only from the machine that holds it.
-It is correct locally and cannot be used by anybody else, so its appearance in
-something offered to another person means no address was learned rather than that
-this one should be tried.
+A loopback address names a place reachable only from the machine that holds it. In
+anything offered to a colleague, it means no address was learned.
 
 ## The lifecycle of a peer address
 
-**An address belongs to a peer, and is recorded once.** It is a fact about one
-machine, so it is stored against that machine's identity and nowhere else. Storing
-it anywhere that does not name whose it is loses the only thing that makes it
-usable: which address to try for a particular peer, which one to replace when they
-move, and whose failure a failure was. Where a room needs to know who to poll, the
-answer is its guest list and the address recorded for each of them — not a separate
-list of addresses.
+An address belongs to a peer and is recorded once, against that peer's identity and
+nowhere else, so that it is always known whose address to try, to replace and to
+blame. Where a room needs to know whom to poll, the answer is its guest list and the
+address recorded for each guest.
 
-**It enters** one of several ways, and each says something different about how far
-it can be trusted:
+An address enters in one of four ways, and each says something different about how
+far it can be trusted:
 
-- from a **pairing string**, typed in by a person from something a colleague sent.
-  It is that colleague's claim about where they listen, at the moment they sent it.
-- from an **invitation**, which carries the room and where its host can be reached.
-- from a **synchronization request**, which carries the address the caller
-  advertises, so a member that has moved says so by continuing to poll.
-- from **discovery** on the network currently in use, which is the only source that
-  reports where a peer *is* rather than where a peer *was*.
+- from a pairing string a user typed in, which is a colleague's claim about where
+  they listened when they sent it;
+- from an invitation, which carries the room and where its host can be reached;
+- from a synchronization request, which carries the address the caller advertises,
+  so a member that has moved says so by continuing to poll;
+- from discovery on the network in use, the only source that reports where a peer is
+  rather than where it was.
 
-**Only what identifies a machine may be advertised.** An overlay address may be put
-in a pairing string, an invitation, or a durable record. A private address may not,
-anywhere, because an advertisement outlives the network it was true on and the claim
-it then makes is about somebody else's machine. A private address may only enter
-from discovery, where it is a fact about the network in use rather than a claim
-about one left behind.
+Only an address that identifies a machine is advertised. An overlay address may
+appear in a pairing string, an invitation or a stored record. A private address may
+not appear in any of them, because an advertisement outlives the network it was true
+on. A private address enters only from discovery, where it is a fact about the
+network in use.
 
-**It is used as a candidate rather than as a fact.** Which address works is a
-property of the pair of machines, not of either one, so the side attempting the
-connection is the only side that can find out. Candidates are ordered by kind —
-same host, same network, public, relayed — and the first few attempted together, so
-that one that no longer answers costs a round trip instead of a timeout.
+An address is a candidate, not a fact. Which address works is a property of the pair
+of machines, so only the side attempting the connection can find out. Candidates are
+ordered by kind, same host, same network, public, then relayed, and the first few
+are attempted together, so that one that no longer answers costs a round trip
+rather than a timeout.
 
-**Whichever answered is remembered, with the time it answered**, and tried first
-next time. That record is a hint and not a fact: it is a snapshot of where a machine
-was, so it is discarded when it stops working rather than retried indefinitely.
+The address that answered is remembered, with the time it answered, and tried first
+next time. The record is a hint about where a machine was, and is discarded when it
+stops working.
 
 ### How an address is invalidated
 
-Nothing announces that a machine has moved. What arrives instead is one of several
-kinds of evidence, and they are not interchangeable — treating them alike is how a
-colleague who shut their laptop for the weekend loses the address that would have
-worked on Monday.
+Nothing announces that a machine has moved, and the evidence that arrives instead
+comes in kinds that are treated differently.
 
-**Silence is weak evidence.** A refused connection, a timeout and no route at all
-are what a wrong address produces, and they are equally what a sleeping machine, a
-closed laptop and a hotel captive portal produce. Silence therefore moves an address
-down the order of candidates. It does not remove it.
+Silence is weak evidence. A refused connection, a timeout and a missing route are
+what a wrong address produces, and equally what a sleeping machine, a closed laptop
+and a hotel's captive portal produce. So silence moves an address down the order of
+candidates, and never removes it.
 
-**A wrong key is strong evidence, and it is a positive fact rather than an absence.**
-The address answered, and what answered was not who was expected. That is available
-only because every connection is pinned to a key already verified (§25), and it is
-the one signal that establishes an address is no longer a particular peer's. It
-invalidates immediately, without waiting for a pattern.
+A wrong key is strong evidence. Every connection is pinned to a key already verified
+(section 25), so an address that answers with a different key is no longer that
+peer's, and it is invalidated at once.
 
-**Age is a judgement, and it is not the same judgement for every kind.** An
-unrefreshed address grows less likely to be true, and how fast depends on what it
-names. A private address should not outlive the network it was learned on at all,
-because off that network it is not merely stale but wrong about a different machine.
-A public address may reasonably be tried for longer. The keys in an overlay address
-do not age, though the rendezvous beside them does, and the relay network refreshes
-that without anybody's help.
+An address that is not refreshed grows less likely to be true, at a rate that depends
+on what it names. A private address does not outlive the network it was learned on.
+A public address may be tried for longer. The keys in an overlay address do not age,
+and the relay network keeps its rendezvous current.
 
-**Replacement is not disproof, and it overwrites.** A peer that advertises a
-different address has moved, and the previous one is superseded rather than shown to
-be wrong — it may still be where they return to. It is nonetheless replaced rather
-than kept alongside: an address per peer that is written over is a list that stays
-the size of the peer list, where one that appends grows with every network a
-colleague has ever visited and tries all of them for ever.
+A peer that advertises a different address has moved, and the new address replaces
+the old one. The old one is superseded rather than disproved, since the peer may
+return to it, but keeping both would grow a peer's addresses with every network
+they visit.
 
-**Forgetting a peer takes every address recorded for them**, for the same reason it
-takes their admissions (§12): a later meeting is a first meeting.
+Forgetting a peer removes every address recorded for them, as it removes their
+admissions (section 12), so a later meeting is a first meeting.
 
-### Whether the rules tighten where it matters most
+### What a failed key check means
 
-They do not need to, and the reason is worth stating because the intuition runs the
-other way.
+Pairing is pinned to the key the pairing string carries, so a stale address makes a
+pairing fail and never connects it to the wrong machine.
 
-**Pairing is the phase least exposed to a stale address**, because it is the only
-one where the exact key that must answer is known in advance. A pairing string
-carries the identifier, so the connection is pinned to it, and an address that has
-changed hands produces a failed handshake rather than a conversation with the wrong
-machine. A stale address can waste the attempt; it cannot mislead.
+Verifying a peer again uses the address on file, which may be months old, and is
+pinned just as strictly.
 
-It is also the phase where addresses are least likely to be stale, since the string
-was sent by a person minutes earlier. **Re-verifying an existing peer is the
-different case**: it uses the address on file, which may be months old, and it is a
-security-sensitive act. The pin is exactly as strict there, so the outcome is the
-same — a failure rather than a wrong answer.
+Synchronization accepts any peer this machine knows at the connection, and the signed
+request inside the connection says which peer it is, because a room records where its
+members listen rather than which member listens where.
 
-**Synchronization is where the pin is loosest**, because a room records where its
-members listen rather than which member listens where, so any known peer is
-accepted and the signed request inside the connection settles which one it is.
+During synchronization, an address that answers with an unexpected key has changed
+hands, which is routine. While verifying a named peer, the same event is what
+substitution looks like, and the user is told rather than the attempt being retried.
 
-What should differ is not the strictness but **what a failure is taken to mean**.
-An address that answers with an unexpected key during synchronization is an address
-that changed hands, and it is routine. The same event while verifying a named peer
-is what substitution looks like from the inside, and it is worth saying so to the
-person rather than retrying quietly.
-
-One thing a stale address does **not** do is give anything away. A connection is
-abandoned when the key on the other side is not one this machine knows, before this
-machine has presented anything of its own, so whoever now holds a reassigned address
-learns that something attempted a connection and nothing about who.
+A connection is abandoned when the key on the other side is not one this machine
+knows, before this machine presents anything of its own, so whoever holds a
+reassigned address learns that something tried to connect and nothing about who.
 
 ### Whether an address is ever rehabilitated
 
-Yes, by evidence, and never by time.
+An address is rehabilitated by evidence, and never by time. Time can cast doubt on
+an address, but cannot restore confidence in one, because nothing has happened.
 
-An address demoted for silence returns to ordinary standing the moment it answers;
-that is the whole reason silence demotes rather than deletes. An address set aside
-for age is current again when the peer advertises it afresh, or when it answers.
+An address demoted for silence returns to ordinary standing the moment it answers,
+which is why silence demotes rather than removes. An address set aside for age is
+current again when the peer advertises it afresh, or when it answers.
 
-An address invalidated by a wrong key is the interesting case, and it too can
-return — but only by presenting the right key. A reassigned address can be
-reassigned back, and the pin is proof rather than assumption, so a connection that
-succeeds against the expected identity is evidence enough.
-
-The asymmetry is the point. Time is allowed to cast doubt on an address and is never
-allowed to restore confidence in one, because nothing has happened.
+An address invalidated by a wrong key returns only by presenting the right key. A
+reassigned address can be reassigned back, and a connection that succeeds against
+the expected identity is proof of that.
 
 ---
 
 # 5\. Local Daemon
 
-Create a lightweight process:
-
-```
-cogmer
-```
-
-The daemon should expose a localhost API for Claude Code hooks.
-
-Example:
-
-```
-127.0.0.1:4782
-```
-
-It should also expose a peer synchronization interface.
-
-Conceptually:
+The daemon is one lightweight process, `cogmer`. It serves an interface for the Claude
+Code hooks and the local view on the machine's loopback address, such as
+`127.0.0.1:4782`, and a separate interface for synchronizing with peers.
 
 ```
                     cogmer
@@ -540,145 +480,149 @@ Conceptually:
    Claude Code        Browser          teammates
 ```
 
-The daemon is started by the session-start hook rather than by the person, and outlives any one session. Installation is covered under the experience we want.
+The session-start hook starts the daemon, not the user, and the daemon outlives any
+one session. Section 29 says how cogmer is installed.
 
-The daemon is responsible for:
+The daemon:
 
-- capturing local events;  
-- storing events;  
-- broadcasting events to the local UI;  
-- connecting to peers named by an invitation;  
-- exchanging missing events;  
-- deduplicating events;  
-- providing unseen team context to Claude hooks;  
-- creating, joining, and closing rooms;  
-- tracking which sessions are members of which room;  
-- distinguishing a member that is absent from one that has left;  
-- archiving a room once it has closed.
+- captures local events;
+- stores events;
+- sends events to the local view;
+- connects to the peers an invitation names;
+- exchanges the events each side lacks, without duplicates;
+- supplies each session with the colleagues' turns it has not seen;
+- creates, joins and closes rooms;
+- tracks which sessions are members of which room;
+- tells a member that is absent from one that has left;
+- archives a room once it has closed.
 
-A single daemon serves several rooms concurrently. Every request identifies the room it concerns; the daemon never infers one.
+One daemon serves several rooms at once. Every request identifies the room it
+concerns, directly or through the session it comes from, and the daemon never guesses
+one.
 
 ---
 
 # 6\. Identity
 
-Every peer requires a stable identity.
-
-At minimum:
-
-```
-peerId
-peerName
-userId
-userDisplayName
-machineId
-```
-
-Every Claude Code session additionally has:
-
-```
-claudeSessionId
-```
-
-Example:
-
-```json
-{
-  "peerId": "01K5...",
-  "userId": "david",
-  "userDisplayName": "David",
-  "machineId": "davids-macbook",
-  "claudeSessionId": "...",
-  "roomId": "0f7a4e6c-2b91-4d0a-9c3e-7f1d8a5b2c44"
-}
-```
+Every peer has a stable identity: a key pair, whose public key is the peer's
+identifier; a name derived from that key; the name its user goes by; an identifier
+for the user; and a label for the machine. Every Claude Code session also has its own
+identifier.
 
 ## Peer names
 
-A peer has two identifiers, for the same reason a room does.
+A peer has two identifiers, for the same reason a room does: an identifier derived
+from its public key, which is verified, signed with and keyed on, and a name, such as
+quiet-otter, which people can read, say and recognize in a transcript. The name is a
+word pair, an adjective and an animal.
 
-```
-peerId:   derived from the peer's public key
-peerName: quiet-otter
-```
+A peer's name is derived from its identifier, never chosen, so that a peer cannot
+simply declare itself to be someone else. A name a peer picks for itself is a claim
+about who it is, and the name attribution rests on is never a claim.
 
-The `peerId` is the identity that is verified, signed with, and keyed on. The `peerName` is a word pair — an adjective and an animal — that people can read, say, and recognize in a transcript.
+A name short enough to say aloud has little entropy, and an identity can be generated
+freely until its derived name matches a chosen target. So a peer's name is a
+mnemonic for an identity already known, never an introduction to a stranger. A name
+never admits, routes, deduplicates or establishes trust. Two peers may derive the
+same name, and an interface shows that rather than hiding it.
 
-A peer name is **derived from the peer identifier**, never chosen. A name a peer picks for itself is a claim about who it is, and the name attribution anchors on must not be a claim. Deriving it means a peer cannot simply declare itself to be someone else.
-
-Deriving it is not sufficient either. A short name has little entropy, and an identity that can be generated freely can be generated until its derived name matches a chosen target. No name short enough to say aloud can resist that. It follows that:
-
-- a peer name is a mnemonic for an identity already known, not an introduction to a stranger;  
-- a name must never be used to admit, to route, to deduplicate, or to establish trust;  
-- two peers may derive the same name, and an interface must show that rather than hide it.
-
-Display a name as itself only for a peer whose identity has been verified. For any other peer, show it as unverified and show the identifier. A name presented without that distinction is an assertion the system cannot support. Because verification is a gate (§25), an unverified peer's turns do not arrive at all — so the marker is a backstop, and displaying it unconditionally makes it say nothing.
+A name is shown as itself only for a peer whose identity has been verified. Any other
+peer is shown as unverified, with its identifier. Verification gates what is
+exchanged (section 25), so an unverified peer's turns do not arrive at all, and the
+marker is a backstop.
 
 ## Three names, and what each is for
 
-A peer is referred to by three names, and confusing them is how a colleague ends up trusting the wrong one.
+A peer is referred to by three names, and confusing them is how a colleague ends up
+trusting the wrong one:
 
-```
-peerName:    quiet-otter     derived from the key; nobody chose it
-displayName: David           what the peer calls itself; a claim
-label:       alice           what YOU call the peer; recorded when you paired
-```
+- the derived name, such as quiet-otter, which is computed from the key and chosen by
+  nobody;
+- the display name, such as David, which is what the peer calls itself, and is a
+  claim;
+- the label, such as alice, which is what you call the peer, recorded when you
+  paired.
 
-The **derived name** cannot be chosen and is therefore the one attribution anchors on. Its jobs are momentary: separate two peers asserting the same display name, and give a changed key something to be noticed against. Neither asks anybody to remember it, and nobody does — a word pair computed from a key means nothing to a person weeks later. It is a mnemonic for an identity already established, and treating it as a way to recognize a colleague asks it for something it was never able to give.
+The derived name cannot be chosen, so attribution rests on it. Its work is momentary:
+it separates two peers asserting the same display name, and gives a changed key
+something to be noticed against. A word pair computed from a key means nothing to a
+user weeks later, so it is never relied on as a way to recognize a colleague.
 
-The **display name** is self-asserted. Unless a person chooses one it is inferred from the operating-system account, which is `David` on a laptop and `Ec2-user` in a container — so it is unreliable in both directions, and two peers asserting the same one is an ordinary event rather than an attack.
+The display name is asserted by the peer. Until a user chooses one it is inferred
+from their operating-system account, which is David on a laptop and Ec2-user in a
+container, so two peers asserting the same display name is ordinary, not an attack.
 
-The **label** is the name this machine's owner gave the peer, supplied when they paired and bound to exactly one key thereafter. It is the only one of the three that is both memorable and unforgeable, because a person chose it about somebody they had just verified. Interfaces lead with it where there is one, keeping the derived name beside it as the anchor.
+The label is the name this machine's user gave the peer when they paired, and it is
+bound to one key, and only one, from then on. It is the only one of the three that is both
+memorable and unforgeable, because a user chose it about somebody they had just
+verified. Interfaces lead with the label where there is one, with the derived name
+beside it.
 
-A label means one key, and recording a second key under a label already in use is refused rather than allowed to create a second row. That refusal is the one moment where a changed key and a substituted key look the same, so it is stated in full rather than shortened to a conflict.
+A label means one key. Recording a second key under a label already in use is
+refused, and the refusal says so in full, because it is the one moment at which a
+changed key and a substituted key look the same.
 
 ## Choosing the name others see
 
-A person may set the display name other people see for them. Until they do, it is inferred, and the two are not interchangeable: a name that was guessed must never travel as though somebody picked it, because a guess presented as a choice is a claim about a person that nobody made.
+A user may set the display name other people see for them. Until they do, it is
+inferred, and a name that was inferred never travels as though somebody chose it,
+because a guess presented as a choice is a claim about a user that nobody made.
 
-Whether it was chosen is recorded rather than inferred. Keeping the guessed name counts as choosing it, because the act of keeping it is the choice.
+Whether a name was chosen is recorded, not inferred. Keeping the inferred name counts
+as choosing it.
 
-The name is seen only by other people. Nobody is shown their own name on their own turns, so there is no moment at which its owner notices it is wrong, and it can travel wrongly for weeks. The moment to offer the choice is therefore the first time the name is about to leave the machine — which is when a pairing string is handed to a colleague, and is the only such moment that precedes any room.
+A user is offered the choice the first time their name is about to leave the machine,
+which is when they hand a colleague a pairing string. Only other people see the name,
+so its owner has no other moment at which to notice it is wrong.
 
-Changing it later is safe, and by construction rather than by luck. Turns already sent keep the name they carried, because events are immutable (§7); and the label a colleague chose is theirs, so a rename cannot alter what anybody else calls you.
+Changing the name later is safe. Turns already sent keep the name they carried,
+because events are immutable (section 7), and a label a colleague chose is theirs,
+so a rename cannot change what anybody else calls you.
 
 ## Naming people
 
-The word lists are subject to a constraint the room lists are not: these names attach to colleagues.
-
-An adjective that would be unkind applied to a person does not belong in the list, however neutral it seems applied to an animal. Nor does any animal used as an insult. The lists should be curated with that in mind and reviewed as they grow, because the combinations are generated and nobody approves them individually.
+The word lists for peer names hold nothing unkind to a person. An adjective that
+would be unkind applied to a person is left out, however neutral it seems applied to
+an animal, and so is any animal used as an insult. The lists are reviewed as they
+grow, because the combinations are generated and nobody approves them one by one.
 
 ## When an identity is created
 
-A peer identity is created once, on a machine's first use of the system, and persists from then on. It is not created per room, per session, or per invitation, and it outlives all of them.
+A peer identity is created once, on a machine's first use of cogmer, and persists
+from then on. It is not created per room, per session or per invitation, and it
+outlives all of them, so a peer can be recognized on a later occasion rather than met
+afresh each time.
 
-This is the opposite of a room, which is created at a known moment for a known purpose and archived when that purpose ends. An identity exists before there is anything to join and remains afterwards. That is what allows a peer to be recognized on a later occasion rather than met afresh each time.
-
-An identity belongs to a machine rather than to a person. A person working from a laptop and a desktop is two peers, and appears as two entries wherever peers are listed or admitted. That is deliberate — a key that never leaves the machine which generated it cannot be lost from one machine by losing another — but the consequence should be visible rather than surprising.
+An identity belongs to a machine, not to a person. A user who works from a laptop and
+a desktop is two peers, and appears as two wherever peers are listed or admitted, so
+that losing one machine never loses the key the other holds.
 
 ## An identifier must be safe to know
 
-A peer identifier **is** the peer's Ed25519 public key. Knowing it grants nothing.
+A peer's identifier is its Ed25519 public key, and knowing it grants nothing. An
+identifier appears in every event its peer creates, in every interface, and in every
+exchange by which peers recognize one another, so an identifier that gave its holder
+any power could not be protected.
 
-This is not a detail of encoding. An identifier appears in every event its peer originates, is displayed in every interface, and must be exchangeable for peers to recognize one another at all. An identifier that confers a capability on whoever learns it therefore cannot be protected, because the system is built to spread it.
+An identifier is safe to know only because signatures are checked. Every event is
+signed by the peer that created it, and an event whose signature does not verify is
+rejected on receipt, so attribution is enforced rather than trusted.
 
-The remedy is not to keep identifiers private, which is impossible here. It is to make them worthless to hold: a public key can be printed, listed, logged, and read aloud, because possession of it proves nothing. Only the private key, which never leaves the machine that made it, can produce a signature.
+An identifier says nothing about whose key it is. Section 25's verification is what
+establishes that.
 
-Note the order in which that became true, because it is the order any similar change must follow. Changing the identifier's format does not by itself help: while nothing verifies signatures, a peer can still assert someone else's identifier and be believed. **An identifier becomes safe to know at the moment signatures are checked, not at the moment keys are introduced.** Both are now in place — events are signed at origin and rejected on receipt if they do not verify — so attribution is a control rather than a convention among cooperating peers.
+The machine label is for attribution and display. It is never an address, and nothing
+routes by it, because where a peer can be reached is a property of the transport and
+changes independently of who the peer is.
 
-What an identifier still cannot do is say *whose* key it is. That is not a property any format supplies, and it is what §25's verification exists for.
-
-`machineId` is an identity label, used for attribution and display. It is never an address, and nothing routes by it. Where a peer can be reached is a property of the transport and changes independently of who the peer is.
-
-A Claude response must always remain attributable to its originating person/session.
-
-Display:
+A Claude response is always attributable to the user and the session it came from,
+and is shown as
 
 ```
 Claude — David
 ```
 
-rather than simply:
+rather than as
 
 ```
 Claude
@@ -688,50 +632,14 @@ Claude
 
 # 7\. Event Model
 
-Use an immutable, append-only event model.
+Events are immutable once created, and a room's store only appends.
 
-Minimum event types:
+A room records two kinds of event: a user's prompt, and Claude's response to it.
 
-```
-USER_PROMPT
-ASSISTANT_MESSAGE
-SESSION_JOINED
-SESSION_LEFT
-STATUS
-```
-
-Design for later addition of:
-
-```
-TOOL_USE
-TOOL_RESULT
-FILE_CHANGED
-COMPACTION
-ERROR
-REACTION
-DIRECT_MESSAGE
-```
-
-Example event:
-
-```json
-{
-  "eventId": "01K5...",
-  "peerId": "david-peer-id",
-  "peerSequence": 1827,
-  "roomId": "0f7a4e6c-2b91-4d0a-9c3e-7f1d8a5b2c44",
-  "timestamp": "...",
-  "userId": "david",
-  "userDisplayName": "David",
-  "machineId": "davids-macbook",
-  "claudeSessionId": "...",
-  "eventType": "USER_PROMPT",
-  "content": "Why is SessionLambda returning a timeout?",
-  "metadata": {}
-}
-```
-
-Events are immutable once created.
+Each event carries its own identifier, the peer that created it and that peer's
+sequence number, the room, the time it was created, the user who wrote it and the
+name they went by, the machine it came from, the session it came from, its kind, its
+content, and the signature of the peer that created it.
 
 ---
 
