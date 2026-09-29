@@ -554,7 +554,8 @@ so citations of it still resolve.
 `structure_test.go` checks the structure the templates set. Bold appears only as a
 template's field names, in decisions and working material, as the opening of an item
 in `open.md`, and as the opening of a paragraph or list item in `CLAUDE.md`. No header sits over a section of three
-lines or fewer; a document's title and the headers a template defines are exempt.
+lines or fewer; a document's title, the headers a template defines, and the
+specification's numbered headings, which § citations name, are exempt.
 The specification carries no dates and cites no decision. No document other than `open.md` and working
 material cites `docs/work/`. The patterns document names no decision, section,
 behaviour or the project itself, and no document other than `CLAUDE.md` names the

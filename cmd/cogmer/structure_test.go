@@ -61,6 +61,10 @@ const behaviourDocument = "docs/relied-on-behaviors.md"
 
 var behaviourTitle = regexp.MustCompile(`^B\d{2}: `)
 
+// specSectionTitle is a numbered heading of the specification, which a § citation
+// names, so it stays however short its section is.
+var specSectionTitle = regexp.MustCompile(`^\d+[a-z]?(\.\d+)*\.? `)
+
 // specification is the one document that must carry no dates.
 const specification = "Shared Claude Sessions.md"
 
@@ -192,7 +196,8 @@ func structureProblems(doc string, src []byte) []string {
 		title := inlineText(h, src)
 		documentTitle := h.Level == 1 && c == root.FirstChild()
 		behaviourEntry := doc == behaviourDocument && behaviourTitle.MatchString(title)
-		if documentTitle || decisionTitle.MatchString(title) || behaviourEntry || (workDocument.MatchString(doc) && h.Level == 3) {
+		specSection := doc == specification && specSectionTitle.MatchString(title)
+		if documentTitle || decisionTitle.MatchString(title) || behaviourEntry || specSection || (workDocument.MatchString(doc) && h.Level == 3) {
 			continue
 		}
 		first, last := 0, 0
@@ -302,6 +307,8 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 		{"header over a short list", "x.md", "Intro.\n\n## T\n\n- a\n- b\n", 1},
 		{"a second level-1 header over one line", "x.md", "# T\n\na\nb\nc\nd\n\n# U\n\nOne line.\n", 1},
 		{"decision heading", "docs/decisions.md", "## D-124 — T\n\n**Date:** 2026-09-23 · **Status:** active\n", 0},
+		{"numbered specification heading", specification, "Intro.\n\n## 3.3 No authoritative peer\n\nOne line.\n", 0},
+		{"unnumbered specification heading", specification, "Intro.\n\n## No authoritative peer\n\nOne line.\n", 1},
 		{"behaviour heading", behaviourDocument, "Intro.\n\n### B01: A behaviour\n\nIf this changes, it breaks.\n", 0},
 		{"behaviour heading elsewhere", "x.md", "Intro.\n\n### B01: A behaviour\n\nIf this changes, it breaks.\n", 1},
 		{"date in the specification", specification, "The daemon started on 2026-09-22 and\nis still running today, over\nseveral lines, with no header.\n", 1},
