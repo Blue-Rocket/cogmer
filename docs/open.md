@@ -454,6 +454,61 @@ the name is now settled (section 37), so that reason no longer holds.
 
 Every document follows `docs/writing.md`.
 
+**Nothing vets a proposed design against the documents it could conflict with.** The
+only process is `CLAUDE.md`'s "Read `docs/decisions.md` before proposing a change", a
+log of about 6,800 lines, and it names none of the other documents. On 2026-09-25 and
+2026-09-28 a session proposed moving implementation detail out of the specification,
+restating decisions in it, and keeping the two-peer result because a decision said so,
+and each was caught by the maintainer rather than by a process. A skill run before a
+design is proposed, like `writing-review`, would take the areas the proposal touches
+from `CLAUDE.md`'s "Where to read before changing something" and a search of the
+documents, and report what the proposal must satisfy and what it conflicts with in the
+values, the specification, the decisions and their **Rejected.** fields, the behaviour
+registry, the patterns and `open.md`, and what records it would need. Each point would
+quote its source, and a test would drop a quote that is not in the file. It would run on
+any proposal that needs a decision entry or a change to the specification. It is only
+as good as the decision log, so it waits until the log is rewritten, and it checks
+consistency, not judgement: whether to proceed stays the maintainer's call.
+
+**Nothing records which decisions and rules the maintainer ratified.** A Claude session
+wrote most of `docs/decisions.md` and `docs/writing.md`, and an entry the maintainer
+approved reads the same as one a session made and logged by itself. Later sessions then
+defend earlier sessions' choices as settled: on 2026-09-25 D-122 (the two READMEs) put
+the two-peer result in `README.md`, W-75 carried the requirement over, and it was
+defended twice before the maintainer removed it. A field on each decision and each rule
+saying whether the maintainer ratified it would show which choices rest on a person's
+judgement. What it costs is a pass over the existing entries to set the field, which
+only the maintainer can do.
+
+**No document defines the project's own terms.** W-01 fixes the words for people, and
+W-08 makes a writer explain a term of our own where it appears, but room, peer, guest,
+label, derived name, pairing, verification and delivery are defined nowhere once. Terms
+drift as a result: on 2026-09-28 the specification used "watermark", "delivery state"
+and "incorporated-event state" for one thing, and "person" for a user, a colleague and
+a human. A glossary would give each term one meaning, and would need a place in
+`CLAUDE.md`'s table of what each document answers and a rule in `docs/writing.md` that
+every document uses the terms as defined.
+
+**A requirement does not say how anybody would know it is met, and nothing links it to
+the tests that check it.** Code comments cite § sections by habit, and tests do not do
+so consistently, so a review cannot ask which tests check section 19 and get an answer.
+Two options: each requirement states how it is verified, which grows the specification
+and names tests in it; or each test that checks a requirement cites its § section, and
+a check reports every section no test cites, which keeps the specification free of
+verification detail.
+
+**Facts about Claude Code that nothing checks are recorded only in `CLAUDE.md`.** A
+constraint nobody here chose, such as what the host does and offers, differs from a
+requirement or a decision, which the project chose and can revisit. What Claude Code
+does that cogmer relies on is in the behaviour registry, `cmd/cogmer/behaviors.go`, and
+is checked. What Claude Code offers or forbids that nothing checks is in `CLAUDE.md`'s
+"Facts that are not obvious from the code": that every plugin command carries the
+plugin's name as a prefix, and that every extension point delivers to the model and
+never to a person. `CLAUDE.md` is instructions to the model, not a record a reviewer consults, so
+the facts kept there survive only because a session reads them. A document of
+the host's constraints, or a section of the specification, would give them a place a
+reviewer can find, and `CLAUDE.md` would then point at it (W-26).
+
 **Most decision entries hold more than one decision, or history, and none is split
 yet.** W-40 in `docs/writing.md` says an entry records one decision. Reading all 126
 entries in full, as they stood at commit `f11e871`, gave this, with the number of
