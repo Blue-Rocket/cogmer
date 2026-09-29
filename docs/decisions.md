@@ -241,17 +241,25 @@ rather than degrade it.
 
 **Date:** 2026-09-16 · **Status:** active
 
-**Context.** Hooks run in the path of every prompt.
+**Decision.** Every path by which a hook fails exits 0 and writes nothing to stdout,
+so a dead daemon means no collaboration and never a broken session.
 
-**Decision.** Every failure path exits 0 writing nothing. A dead daemon degrades
-to "no collaboration," never a broken session. Measured 17 ms when the daemon is
-down; connection-refused returns immediately rather than burning the timeout.
+**Support.**
+- A session is never worse for having cogmer installed. §3.1 (first, do no harm).
+- The prompt hook's stdout is injected into the user's turn. B02.
+- A hook whose daemon is down exits 0 with empty output. B11, and
+  `plugin/hooks-handlers/run.sh`.
+- With the daemon down, the prompt hook took 17ms, because a refused connection
+  returns at once rather than waiting out the timeout.
+  `84a0751:docs/phase0-findings.md`.
 
 **Rejected.**
-- *Non-zero exit on failure* — would surface an error on every prompt.
-- *Explaining the failure on stdout* — `UserPromptSubmit` stdout is injected into
-  the turn, so diagnostics would land in the user's conversation. Diagnostics go
-  to stderr.
+- *Exiting non-zero on failure.* Claude Code would show an error on every prompt.
+- *Explaining the failure on stdout.* It would be injected into the user's
+  conversation, so diagnostics never go to stdout.
+
+**Revisit when** Claude Code offers a hook a way to report a failure that reaches
+neither the model nor the user's turn.
 
 ---
 
@@ -259,12 +267,18 @@ down; connection-refused returns immediately rather than burning the timeout.
 
 **Date:** 2026-09-16 · **Status:** active
 
-**Decision.** `cogmer probe-hook <name> <dir>`, registered as the hook
-command, rather than writing a shell script to a temp directory.
+**Decision.** The probe registers `cogmer probe-hook <name> <dir>` as its hook
+command, rather than writing a shell script to a temporary directory.
 
-**Rejected.** *A generated `.sh`* — it would not run on Windows, making the
-verification mechanism itself the least portable part of a project whose entire
-stack choice (D-001) was driven by Windows support.
+**Support.**
+- The `cogmer` binary runs on every platform a release builds for, including Windows.
+  `scripts/release.sh`, and D-001 (Go, not TypeScript/Node or Python).
+
+**Rejected.**
+- *A generated shell script.* It would not run on Windows, so the check of cogmer's
+  portability would be the least portable part of it.
+
+**Revisit when** the probe needs a hook that the binary cannot serve.
 
 ---
 
@@ -272,119 +286,92 @@ stack choice (D-001) was driven by Windows support.
 
 **Date:** 2026-09-16 · **Status:** active
 
-**Context.** Once the real hooks are registered in the user's settings, they also
-fire inside the probe's own Claude session. A preflight could publish its
-synthetic sentinel conversation into a live room.
+**Decision.** The probe runs its Claude session with `COGMER_ADDR` set to a closed port,
+so that any `cogmer` hook from the user's own settings fails open inside the probe and
+records nothing.
 
-**Decision.** Run the probe with `COGMER_ADDR` pointed at a closed port, so
-any ambient `cogmer` hook fails open (D-011) and records nothing.
+**Support.**
+- The user's own hooks also fire inside the probe's session, which would otherwise
+  publish the probe's synthetic conversation into a live room.
+  `cmd/cogmer/probe.go`.
+- A hook whose daemon cannot be reached exits 0 with empty output. B11.
 
-**Rejected.** *`--setting-sources ""` to load no ambient settings* — plausible, but
-untested, and a flag-parsing surprise would break the probe entirely. The env var
-reuses a guarantee already verified by B11.
+**Rejected.**
+- *Loading no ambient settings, with `--setting-sources ""`.* It was never tried, and a
+  surprise in how Claude Code parses the flag would break the probe entirely.
+
+**Revisit when** a hook from the user's settings is found to act inside the probe.
 
 ---
 
 ## D-014 — Derive delivery state from transcript evidence, not from recorded intent
 
-**Date:** 2026-09-16 · **Status:** active · **Supersedes** the advance-at-injection
-behavior reviewed as A1 in `db1744c:docs/spec-review.md`
+**Date:** 2026-09-16 · **Status:** active
 
-**Context.** §19 says to "update the session's incorporated-event state" without
-saying when, or what counts as incorporated. Advancing it at injection commits
-delivery before the hook has the daemon's response: with a 3s hook timeout, an
-expired or lost reply meant the daemon recorded delivery while Claude saw
-nothing. At-most-once on a channel that needs at-least-once.
+**Decision.** A colleague's turn counts as delivered to a session only when the daemon
+finds the injected block in that session's transcript, matched by a SHA-256 hash of
+the exact text the hook emitted. Delivery is recorded as a set of events, not as a
+position in the room's stream.
 
-**Decision.** Claude Code records a hook's stdout in the transcript as a
-`hook_success` attachment. The daemon already reads that transcript at `Stop` for
-turn reassembly, so delivery is confirmed by observing the injected block there —
-matched on a sha256 of the exact emitted text — rather than assumed because a
-hook ran. Delivery became a set rather than a watermark, since a lost injection
-leaves a hole a contiguous watermark cannot represent.
-
-Confirmation is self-healing: attachments accumulate across turns and survive
-compaction, so an injection missed at its own `Stop` is confirmed at a later one.
+**Support.**
+- Claude Code records a hook's stdout in the transcript as a `hook_success`
+  attachment. B20.
+- The daemon reads the transcript when each turn completes, to reassemble the turn.
+  D-003 (reassemble turns from two sources).
+- A colleague's turn counts as delivered only once the session has received it.
+  §19 (incremental context injection).
+- The attachments remain in the transcript across turns and through compaction, so an
+  injection missed when its own turn completed is confirmed when a later one does.
+  `cmd/cogmer/delivery_test.go`, `TestConfirmationIsSelfHealing`.
+- A lost injection leaves a gap that a single position in the stream cannot
+  represent. `cmd/cogmer/store.go`, `session_delivered`.
 
 **Rejected.**
-- *Advance at injection* — the bug above.
-- *Provisional at injection, committed at `Stop`* — fixes the lost response, but
-  still records intent: `Stop` proves a turn ended, not that context arrived.
-  Retained as the degraded path (see below) because it depends only on
-  `prompt_id` correlation, already verified by B01/B03.
-- *Embedding event IDs in the injected block* — would make evidence directly
-  addressable, but at ~34 characters per event it puts real noise in every
-  teammate's context window. Hashing the block gets the same mapping for free.
+- *Counting a turn delivered when it is injected.* The hook has a 3s timeout, so a
+  reply that expires or is lost would record delivery while Claude saw nothing.
+- *Counting it provisionally at injection and confirming it when the turn completes.*
+  That the turn completed says nothing about whether the context arrived.
+- *Putting each event's identifier in the injected block.* At about 34 characters an
+  event, it adds noise to every colleague's context window, and hashing the block
+  gives the same mapping.
 
-**Consequence: absence of evidence is not evidence of breakage.** The first
-implementation fell back to committing on trust whenever no attachment was found
-— which is indistinguishable from the injection never arriving, so it silently
-lost context in exactly the case this decision exists to fix. Testing the failure
-path caught it. The fallback is now gated on B20 being recorded as *failing* for
-the installed version; otherwise events stay pending and are re-offered. That
-failure mode is noisy and self-announcing rather than silent and lossy, which is
-the right way round.
-
-**Revisit when** B20 fires, or if re-offering proves disruptive enough in practice
-that duplicate context costs more than the loss it prevents.
+**Revisit when** offering undelivered turns again proves more disruptive than the loss
+it prevents.
 
 ---
 
 ## D-015 — Rooms are scoped to sessions, not to projects
 
-**Date:** 2026-09-16 · **Status:** active · **Supersedes** the project-scoped room
-model throughout the specification; **dissolves** A2 in `db1744c:docs/spec-review.md`
+**Date:** 2026-09-16 · **Status:** active
 
-**Context.** A2 found §5, §22 and §28 mutually inconsistent about how a hook call
-resolves to a room, and the proposed fix was a `cwd` → project-config → room
-lookup. That fix was answering the wrong question: it assumed rooms are durable
-things a project owns.
+**Decision.** A room is a set of linked Claude Code sessions, identified by a generated
+identifier and entered by invitation. It closes when every member has explicitly left,
+or when it has been dormant long enough that resuming it is not plausible.
+Nothing about a room is derived from a directory, a repository or a project.
 
-**Decision.** A room is a set of linked Claude Code sessions, identified by a
-generated id, entered by invitation, and closed when its last member session
-ends. Nothing about a room is derived from a directory, repository, or project.
-
-The strongest argument is one the original specification did not make: §21's
-`CONTEXT_CATCHUP_REQUIRED` exists only because rooms outlive sessions. With a
-room that persists for months and a delivery watermark keyed per session, a fresh
-session on Monday faces weeks of unseen events, and the specification's answer was
-to inject a truncated tail and admit the rest was dropped. That is a designed-in
-truncation which only a durable-room model requires. Session-scoped rooms remove
-the condition instead of coping with it, and a late joiner can be given the room
-from its beginning.
-
-Two facts made this cheap. Our implementation was already session-centric —
-delivery keyed on `claudeSessionId`, events carrying it, with only the room *name*
-being project-shaped. And Phase 0a verified that `claudeSessionId` survives both
-`--resume` and compaction, so session-scoped membership is stable across laptop
-sleep and session resumption rather than fragile.
-
-**Split that makes it work:** membership is ephemeral, the record is not. A closed
-room's event log is archived — readable and searchable, never rejoined, never
-synchronized, never injected. This keeps "preserve the actual conversation" at
-no cost while letting membership end cleanly.
+**Support.**
+- A room that outlasted its sessions would face a new session with weeks of unseen
+  events, and injection would have to truncate them. §21 (context window management).
+- A Claude Code session's identifier survives resumption and compaction, so membership
+  held by a session is stable across a laptop sleeping and a session being resumed.
+  B14.
+- A session whose process exits is absent, not gone. §12a (room membership).
 
 **Rejected.**
-- *Project-scoped rooms with `cwd` resolution* (the A2 proposal) — needs a config
-  file, a walk-up rule, a default-off guard, and room-name validation against path
-  traversal, all to infer something that an invitation states outright.
-- *Standing team rooms* — the Slack-shaped model. Appealing, but it is precisely
-  what produces the catch-up problem and A3's exposure, and the experimental question the specification then posed is
-  about real-time shared conversation, which it does not need.
-- *Discarding the log when a room closes* — would satisfy "no continuity" more
-  literally while losing conversation the specification requires preserving.
+- *Rooms scoped to projects, resolved from the working directory.* It needs a
+  configuration file, a rule for walking up directories, a guard that is off by
+  default, and validation of room names against path traversal, all to infer what an
+  invitation states outright.
+- *Standing team rooms.* They produce the catch-up problem, and widen whose model
+  provider receives a user's conversation through injection, for a collaboration that
+  needs only a live pairing.
 
-**Cost, stated plainly.** §10 and §26 lose most of their purpose: anti-entropy no
-longer reconciles "several hours offline" or "working on an airplane," only
-interruptions inside a live pairing. The durable team memory the specification then listed as a future capability must be built over
-archives rather than live rooms. Both sections were amended rather than deleted,
-because the machinery is still correct — it simply has far less to do, which
-argues for simplifying Phase 2.
+**Limits.** Anti-entropy reconciles only interruptions inside a live pairing, not
+hours or days apart, so a durable team memory would have to be built over archived
+rooms rather than live ones.
 
-**Settled by D-016:** a session holds membership in at most one room at a time.
-
-**Revisit when** the experiment the specification then posed suggests asynchronous catch-up is more
-valuable than bounded context — that is the trade this decision makes.
+**Revisit when** catching up asynchronously on weeks of a team's conversation proves
+more valuable than bounded context.
 
 ---
 
@@ -6684,3 +6671,53 @@ meant to catch.
 **Limits.** Nothing checks that every behaviour has such a test.
 
 **Revisit when** a behaviour is added whose change cannot be simulated in a test.
+
+---
+
+## D-131 — Delivery is trusted without evidence only once the evidence is known broken
+
+**Date:** 2026-09-16 · **Status:** active
+
+**Decision.** When a completed turn's transcript holds no injected block, the pending
+turns remain pending and are offered again at the next prompt. The daemon counts them as
+delivered without evidence only once `cogmer doctor` has recorded B20 as failing for
+the installed Claude Code version.
+
+**Support.**
+- A transcript with no injected block looks the same whether the attachment format
+  changed or the injection never reached Claude. B20.
+- Counting a turn delivered on trust whenever no evidence is found loses context
+  silently in the case D-014 (delivery from transcript evidence) exists to catch: the
+  first implementation did that, and testing the failure path showed it.
+  `84a0751:docs/decisions.md`.
+- The daemon logs that it is offering turns again, and points at `cogmer doctor`.
+  `cmd/cogmer/daemon.go`, `confirmDelivery`.
+
+**Rejected.**
+- *Counting a turn delivered whenever no attachment is found.* It is indistinguishable
+  from the injection never arriving, so context would be lost silently.
+
+**Limits.** Offering turns again can inject a colleague's turns more than once, which
+is noisy rather than lossy.
+
+**Revisit when** the check for B20 fails.
+
+---
+
+## D-132 — A closed room's log is archived
+
+**Date:** 2026-09-16 · **Status:** not built
+
+**Decision.** When a room closes, its event log is archived. An archived room can be
+read and searched, and is never rejoined, synchronized or injected.
+
+**Support.**
+- A room keeps each user's actual prompts, Claude's responses, who said each, in what
+  order and in which session. §3.4 (preserve actual conversation).
+- Membership ends when a room closes. D-015 (rooms are scoped to sessions).
+
+**Rejected.**
+- *Discarding the log when a room closes.* It would lose conversation the
+  specification requires to be kept.
+
+**Revisit when** an archived room needs to be joined again.

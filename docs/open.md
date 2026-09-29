@@ -271,7 +271,7 @@ injecting none of it into their sessions, for a room whose conversation should n
 reach another user's model provider. No such setting exists in the code (read on
 2026-09-29), and no decision records it.
 
-**A room never closes, so nothing is archived.** D-015 (rooms are session-scoped)
+**A room never closes, so nothing is archived.** D-132 (a closed room's log is archived)
 has a closed room kept as an archive that can be read but never rejoined, and the
 specification freezes a room's sequences at that point. Membership ends per person
 through `leave` and `revoke`; the room itself has no closed state.
