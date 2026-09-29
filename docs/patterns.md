@@ -1,5 +1,8 @@
 # Patterns
 
+The patterns this project has selected, from those generally available, as the most
+suitable for this project.
+
 Design for the case you have, and never build a ceiling you cannot remove. Work
 that grows with the number of participants is a cost and is acceptable. A format that
 cannot carry more than the present number is permanent once records exist in it, so

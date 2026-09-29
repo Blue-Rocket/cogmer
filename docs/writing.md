@@ -99,7 +99,9 @@ was decided or what is wrong. Background, evidence and history come after it, an
 only if the reader needs them to trust or apply the answer.
 
 W-03. Write plain, complete sentences in paragraphs. Use one idea per sentence and
-the active voice. When a sentence needs a second reading, split it.
+the active voice. When a sentence needs a second reading, split it. Use a pronoun only
+where it can refer to one thing. Where it could refer to more than one, repeat the
+noun.
 
 W-04. State the fact rather than a saying about it. "A check that cannot fail reads
 as protection" makes the reader work out the rule. "Every behaviour check has a
@@ -395,9 +397,9 @@ of it is done, and the more the work teaches, the less of it still holds.
 terms.>
 ```
 
-W-55. A pattern belongs in the list only if it could apply to hundreds of other
-projects and this project follows it. It is stated in neutral, general terms. A
-pattern is a technique: a way of building, with a mechanism a reader can apply to code
+W-55. The patterns are a selection: general techniques, each of which could apply to
+hundreds of other projects, chosen because they suit this project and followed by it.
+A pattern is stated in neutral, general terms. A pattern is a technique: a way of building, with a mechanism a reader can apply to code
 or data. A commitment about whom the project serves is a
 value, in `docs/values.md`. A choice that makes sense only here is a decision, in
 `docs/decisions.md`. A pattern this project does not follow belongs in no list of

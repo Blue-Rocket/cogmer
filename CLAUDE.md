@@ -45,7 +45,7 @@ they rot.
 |---|---|
 | `Shared Claude Sessions.md` | the system as the user experiences it, the constraints on the system's boundaries, and the negative outcomes it avoids (W-84) |
 | `docs/values.md` | what this project holds itself to |
-| `docs/patterns.md` | architectural patterns that apply beyond this project |
+| `docs/patterns.md` | general patterns selected because they suit this project |
 | `docs/decisions.md` | smaller-grained detail too mundane or technical for the spec, necessary exceptions to it, and why (W-84) |
 | `docs/writing.md` | how a document is written, where a thing goes, and how the documents are checked |
 | a commit, cited as `<commit>:<path>` or `<commit>` (W-42 in `docs/writing.md`) | what we observed when we tried it, where no test can hold the evidence |
