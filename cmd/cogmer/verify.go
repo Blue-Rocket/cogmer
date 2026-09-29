@@ -18,8 +18,10 @@ import (
 //
 // Each side runs `cogmer verify <peer>`; each daemon holds a session until
 // the other appears. Nothing arrives unsolicited, so this adds no inbound surface
-// and no prompt anyone can be trained to dismiss -- both open questions in §12a
-// stay closed by construction rather than by a rule someone has to remember.
+// and no prompt anyone can be trained to dismiss. Whether a peer may ever make
+// something appear on another machine unasked is undecided, and verification does
+// not depend on the answer, by construction rather than by a rule someone has to
+// remember.
 //
 // It is a separate act from joining, and from admission. Admission decides whether
 // a peer may enter a room; this decides whether the key on file is the key the

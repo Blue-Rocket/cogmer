@@ -186,7 +186,7 @@ A session that becomes inactive has not left. Sessions can be resumed, so a proc
 that exits makes a member absent rather than gone, and a resumed session returns to
 its room because its session ID survives resumption.
 
-A session belongs to at most one room at a time. A user who starts a new Claude Code
+A session belongs to one room at most, and never joins a second. A user who starts a new Claude Code
 session creates a new room or is invited to one, and does not resume an old room.
 
 Joining a room is always a deliberate act by every participant, and nothing about a
@@ -645,9 +645,9 @@ content, and the signature of the peer that created it.
 
 # 8\. Event Identity and Ordering
 
-Do not rely solely on wall-clock timestamps for event identity or synchronization.
+Neither the identity of an event nor synchronization rests on wall-clock time alone.
 
-Each peer maintains a monotonically increasing sequence number:
+Each peer numbers the events it creates with a sequence that only increases:
 
 ```
 David:
@@ -658,106 +658,91 @@ David:
 1828
 ```
 
-An event therefore has both:
-
-```
-peerId
-peerSequence
-```
-
-and a globally unique:
-
-```
-eventId
-```
-
-The combination:
-
-```
-peerId + peerSequence
-```
-
-allows peers to efficiently determine which events they are missing.
-
-Timestamps are primarily for conversational display and approximate inter-peer ordering.
+So an event has both a globally unique identifier and a position, its peer and that
+peer's sequence number. The position lets peers work out cheaply which events they
+are missing. Timestamps are for showing the conversation and for approximate
+ordering between peers.
 
 ## The lifecycle of a sequence
 
-A sequence belongs to a peer **within a room**. A peer participating in two rooms keeps two independent sequences. Rooms synchronize independently, so a shared counter would leave each room permanent gaps that the highest-contiguous rule could never close.
+A sequence belongs to a peer within a room. A peer in two rooms keeps two independent
+sequences, because rooms synchronize independently, and a shared counter would leave
+each room gaps that could never be closed.
 
-Within a room, a sequence begins at a peer's first event, advances by one for each event that peer originates, and is never reset, reused, or rewritten. It is frozen when the room is archived.
+Within a room, a peer's sequence begins at its first event, advances by one for each
+event that peer creates, and is never reset, reused or rewritten. It is frozen when
+the room is archived.
 
-A peer that cannot establish where its sequence had reached must not publish into that room until it can. Resuming at a lower number republishes sequence numbers that other peers already hold against different events.
+A peer that cannot establish where its sequence had reached publishes nothing into
+that room until it can, because resuming at a lower number reissues numbers other
+peers already hold against different events.
 
 ## Losing a room's local state
 
-Losing a room's local database does not end a peer's membership in that room.
+Losing a room's local database does not end a peer's membership in that room. The
+user's own turns, and the colleagues' turns injected into their session, are already
+in that session's context, and a session's room is fixed for its lifetime, so ending
+membership would cost the user the session in exchange for a record that other
+members can supply again.
 
-What the database holds is the *record* of a conversation, not that conversation's value to the person who was in it. Their own turns, and the teammate turns injected into their session, are already in that session's context — which is stored separately and is unaffected. Ending membership would take something consequential in exchange for something largely recoverable, and it would take more than it appears to: a session's room is fixed for its lifetime, so a peer that lost its membership could not collaborate again without abandoning the session, and with it the working context that was the point.
+A peer's highest issued sequence for each room is stored outside that room's
+database, with the peer's identity. Everything else can be fetched again from another
+member, because events are immutable and replicated. So a peer that loses a room's
+events keeps its identity and its sequence, resumes above the recorded number, fetches
+the events again and stays a member, and a peer that loses everything, identity
+included, is a new peer with a new sequence space and nothing to collide with.
 
-Only one thing must survive for membership to continue safely: **the peer's own sequence position.** Everything else can be refetched from any other member, because events are immutable and replicated.
-
-A peer's highest issued sequence for a room must therefore be stored outside that room's database, sharing the fate of the peer's identity rather than the fate of the room's events.
-
-That inverts the failure which made this dangerous:
-
-- lose the room's events, keep identity and sequence — resume above the recorded number, refetch the events, membership continues;  
-- lose everything, identity included — a new peer, a new sequence space, nothing it could collide with.
-
-There is then no loss that both keeps an identifier and forgets what that identifier has issued.
-
-A sequence must be reserved **before** the event using it is published, never after. A peer that fails between the two has recorded a number it did not use, which is harmless. The reverse publishes a number it has no record of, which is the entire problem.
+A sequence number is reserved before the event that uses it is published. A peer that
+fails between the two has recorded a number it did not use, which is harmless, while
+publishing first would issue a number the peer has no record of.
 
 ## Noticing that state is gone
 
-A peer must consult the membership index whenever it opens a room. State has been lost if either holds:
-
-- the index records membership in a room whose database is absent;  
-- the database's highest sequence for this peer is below the value the index recorded.
-
-Without that check an emptied room is indistinguishable from one never joined, so a peer resumes from the beginning — which is precisely the condition that makes another peer's copy of the conversation diverge with nothing to signal it. Defining the index without requiring that anything read it would leave the failure exactly as silent as before.
-
-The check is cheap and belongs on every open, not only on a suspected fault. A peer does not know it has lost state; that is the nature of the loss.
+A peer consults its record of membership every time it opens a room. State has been
+lost if that record names a room whose database is absent, or if the database's
+highest sequence for this peer is below the number the record holds. A peer does not
+know it has lost state, so the check runs on every open, not only when a fault is
+suspected.
 
 ## Saying so
 
-A peer that has lost state must report it, to the person using it, in terms they can act on.
+A peer that has lost a room's state tells its user, in terms they can act on: that
+local state for the room was lost, that membership and sequence position are intact,
+that the room's history is being fetched again from other members and depends on one
+being reachable, and that some colleagues' turns may be injected a second time. A
+recovery nobody is told about looks the same as nothing having gone wrong.
 
-A room refetching its history — and possibly repeating teammate turns already seen — is in a different condition from one working normally. That difference must be visible, rather than inferred later from a conversation being shorter than someone remembers.
+A room's events return only from peers that still hold them. A member that recovers
+while alone holds a correct sequence position and an empty history, publishes safely,
+and receives the history as others reconnect.
 
-This is not tidiness. A peer recovering while no other member is reachable holds a correct sequence position and an empty history. It will publish safely and behave normally, while the conversation it believes itself part of is simply absent. Nothing about that is apparent from using it.
-
-Report at least: that local state for the room was lost, that membership and sequence position are intact, that history is being refetched from other members and depends on one being reachable, and that some teammate context may be injected a second time.
-
-Silence is the failure mode this specification most often has to guard against, and recovery is no exception: a recovery nobody is told about is indistinguishable from nothing having gone wrong.
-
-## What recovery costs
-
-The costs are modest, and should be expected rather than discovered.
-
-A room's events return only from peers that still hold them. A member that recovers while alone has a correct sequence position and an empty history. It may publish safely, and the history fills as others reconnect.
-
-Delivery state is lost with the database, so teammate turns already seen may be injected again. This is redundant rather than harmful — the session holds them already — and it is bounded by the room's own lifetime. Duplicate injection is the acceptable direction; the alternative is silence about turns that were never delivered at all.
-
-Say what happened. A room that is refetching its history and may repeat some teammate context is in a different state from one working normally, and the difference should be visible rather than inferred.
+Delivery state is lost with the database, so colleagues' turns a session has already
+seen may be injected again. That is redundant rather than harmful, since the session
+holds them already, and it is the direction to err in, because the alternative is
+silence about turns never delivered at all.
 
 ## Redelivery and conflict are not the same thing
 
-A receiving peer must distinguish them, because they are indistinguishable to the obvious implementation and only one of them is harmless.
+A receiving peer tells redelivery from conflict, because the obvious implementation
+treats them alike and only one of them is harmless.
 
-An event arriving with a `peerId` and `peerSequence` already held, carrying the **same** `eventId`, is ordinary redelivery. Ignore it. This is what makes anti-entropy and transitive relay safe to repeat.
+An event whose peer and sequence number the receiver already holds, with the same
+event identifier, is ordinary redelivery and is ignored. That is what makes
+anti-entropy and relaying safe to repeat.
 
-The same pair arriving with a **different** `eventId` is not a duplicate. It is evidence that a peer has lost its state or that an event has been forged. It must be surfaced and retained rather than absorbed.
-
-Absorbing it is silently unrecoverable. The sending peer believes it has shared; the receiving peer never sees it; neither is told; and synchronization cannot repair the gap, because the sender's highest sequence is now *below* what the receiver reports holding. Retain the rejected event rather than discarding it — without it there is no way to tell lost state from forgery afterwards.
+The same peer and sequence number with a different event identifier is not a
+duplicate. It means a peer has lost its state or an event has been forged, and it is
+reported and kept. Absorbing it would lose it for good, since the sender believes it
+shared the event and the receiver reports holding a higher sequence than the sender
+has. The rejected event is kept, because without it nobody can later tell lost state
+from forgery.
 
 ---
 
 # 9\. Synchronization State
 
-Each daemon maintains its knowledge of every peer.
-
-Example:
+Each daemon knows, for every peer in a room, the highest contiguous sequence number it
+has received from that peer:
 
 ```
 Room: misty-canyon  (0f7a4e6c-2b91-4d0a-9c3e-7f1d8a5b2c44)
@@ -769,9 +754,7 @@ Alice      943
 Carlos     611
 ```
 
-This represents the highest contiguous sequence received from each peer.
-
-When Alice reconnects to David, she can say conceptually:
+When Alice reconnects to David, she says what she holds:
 
 ```
 I have:
@@ -781,23 +764,19 @@ Alice   943
 Carlos  611
 ```
 
-David responds with:
+and David sends what she lacks:
 
 ```
 David events 1803–1827
 ```
 
-Alice stores them locally.
-
-No transcript comparison is necessary.
+Alice stores them. No transcript is compared.
 
 ---
 
 # 10\. Anti-Entropy Synchronization
 
-Peers should periodically exchange synchronization state.
-
-Conceptually:
+Peers exchange what they hold periodically. Alice sends David what she holds:
 
 ```
 Alice → David
@@ -809,66 +788,35 @@ Alice → David
 }
 ```
 
-David determines which events Alice lacks and sends them.
+David works out which events Alice lacks and sends them, and Alice does the same for
+David.
 
-Alice does the same for David.
+So a room converges by itself after a temporary network loss, a laptop sleeping, a
+daemon restarting, a machine switching networks, or a member's session being
+resumed.
 
-This means synchronization works after:
-
-- temporary network loss;  
-- laptop sleep;  
-- daemon restart;  
-- switching networks;  
-- a member session being resumed.
-
-The system should converge automatically.
-
-Because a room lives only as long as its member sessions, synchronization reconciles interruptions within an active pairing. It is not required to reconcile weeks of divergence, and the anti-entropy mechanism should not be designed as though it were.
+A room lasts only as long as its sessions, so synchronization reconciles
+interruptions within an active pairing, and is not built to reconcile weeks of
+divergence.
 
 ---
 
 # 11\. CRDT Requirement
 
-Do **not** initially introduce a CRDT library unless testing demonstrates that it is necessary.
-
-The core conversation is an append-only collection of immutable events.
-
-That dramatically simplifies distributed synchronization.
-
-For the prototype, implement:
-
-```
-immutable events
-+
-unique IDs
-+
-per-peer sequence numbers
-+
-anti-entropy synchronization
-+
-deterministic display ordering
-```
-
-If later features introduce mutable shared objects, evaluate Automerge or another CRDT at that point.
-
-Examples of features that may eventually justify CRDTs:
-
-- shared notes;  
-- editable room descriptions;  
-- collaborative task lists;  
-- shared architectural documents.
-
-Conversation events themselves should remain immutable.
+The conversation is an append-only collection of immutable events, so cogmer uses no
+CRDT library. Synchronization rests on immutable events, unique identifiers, a
+sequence per peer, anti-entropy synchronization and a deterministic order for
+display.
 
 ---
 
 # 12\. Forming a Room
 
-A room is formed by invitation, not by configuration.
+A room is formed by invitation, not by configuration. One peer creates a room and
+invites the others, and each of them joins by accepting.
 
-One peer creates a room and produces an invitation. Every other participant presents that invitation to join.
-
-Where the people involved already know one another — which is the ordinary case, since colleagues pair repeatedly — an invitation **names a guest** rather than issuing a token:
+Colleagues usually already know one another, so an invitation names a guest rather
+than issuing a token:
 
 ```
 David:   /cogmer:room-invite alice
@@ -878,86 +826,66 @@ Alice:   → misty-canyon is offered to you by david
          /cogmer:room-join misty-canyon
 ```
 
-David's daemon records that the peer he knows as `alice` may enter `misty-canyon`,
-and tells her daemon so over the channel the two established when they paired. Hers
-holds the offer until she accepts it. Nothing secret is typed, spoken, or
-transmitted, and the room name — guessable by design — grants nothing to whoever
-guesses it.
+David's daemon records that the peer he knows as alice may enter misty-canyon, and
+tells her daemon so over the channel they established when they paired. Her daemon
+holds the offer until she accepts it. Nothing secret is typed, spoken or sent, and
+the room's name, which is guessable, grants nothing to whoever guesses it.
 
-**Delivering an offer is not admitting anybody.** The admission is the guest-list
-entry on the host's side, and it is the host's judgement to make. The offer only
-says that entry exists. Joining stays the guest's own act, and reading the room
-still waits on verification (§25).
+Delivering an offer admits nobody. The admission is the entry on the host's guest
+list, which is the host's judgement. The offer says only that the entry exists,
+joining is the guest's own act, and reading the room waits on verification
+(section 25).
 
-**When the host cannot reach the guest**, inviting says so at the time and produces
-a line for the guest to be sent by any means, which they present instead of a room
-name. That is the fallback rather than the ordinary path, and a host learns
-immediately which one they are on.
+When the host cannot reach the guest, inviting says so at once and produces a line
+the guest can be sent by any means, which they present in place of a room name.
 
-**When the guest is not yet verified**, neither happens. The admission is recorded
-and nothing is sent, because a guest who joins before verification gets a room that
-is silent by design (§25). The host is told to finish verifying, and the invitation
-is delivered when they do.
+When the guest is not yet verified, the admission is recorded and nothing is sent,
+because a guest who joined before verification would find the room silent
+(section 25). The host is told to finish verifying, and the invitation is delivered
+when they do. The output presents this as one step remaining, never as a refusal,
+because trying to start a room is the moment a user is willing to verify.
 
-Inviting somebody unverified is permitted rather than refused, and the reason is
-about people rather than states. Verification is a chore whose payoff is invisible
-until it is needed, and trying to start a room is the moment it stops being
-invisible. Refusing at that moment would block somebody exactly when they are
-willing. So the invitation is accepted, held, and completed by the step the host is
-already being asked to take — which the output must present as one step remaining,
-never as a refusal.
+A name locates a room, and a guest list admits a peer.
 
-This is the intended shape: **a name locates a room, a guest list admits a peer.**
-
-The joining peer receives the room's `roomId` on admission and uses it from then on.
+A peer that joins receives the room's identifier on admission, and uses it from then
+on.
 
 ## Two acts, at two scopes, with two names
 
-**Pairing** is between two machines. It happens once with each colleague, outlasts
-every room the two will ever share, and is where a key is recorded and confirmed.
+Pairing is between two machines. It happens once with each colleague, outlasts every
+room the two will ever share, and is where a key is recorded and confirmed.
 
-**Inviting** is into one room. It happens as often as rooms do, means nothing
-outside the room it names, and is withdrawn by revoking without touching the
-pairing.
+Inviting is into one room. It happens as often as rooms do, means nothing outside the
+room it names, and is withdrawn by revoking, without touching the pairing.
 
-§12 has always kept these as two lists — known peers per machine, a room's guests
-per room — and the commands should say so rather than leaving a reader to infer it
-from which list a call happens to write to. `pair` names the durable act. `invite`
-names the room-scoped one. Nothing is called `allow`, which said only that
-something had been permitted and never which of the two.
+Known peers belong to a machine and a room's guests belong to the room, and the
+commands say which they act on: `pair` names the lasting act, and `invite` the one
+scoped to a room.
 
-The split is not cosmetic: it decides where each act can live. Pairing is
-interactive, blocks on another person, and ends with two words that must reach a
-person's eyes unaltered — so it cannot happen by way of the model, and belongs in
-the view the daemon serves (§29). Inviting is a single non-interactive act whose
-output is informational, so it can be a command inside a Claude Code session like
-any other. A vocabulary that ran the two together would force both into the more
-restrictive home.
+Pairing is interactive, waits on another user, and ends with two words that must
+reach the user's eyes unaltered, so it happens in the view the daemon serves and never
+by way of the model (section 29). Inviting is a single act whose output only informs,
+so it is a command inside a Claude Code session like any other.
 
-Pairing also carries a **bootstrap address** alongside the identifier, for the
-reason §4 gives — an address need only be correct once. Holding it at machine scope
-is what allows verification to precede admission: without it there is nowhere to
-reach a peer until a room already exists, which would leave every first
-verification happening after the room it was supposed to protect.
+A pairing string carries an address as well as the identifier, so that verification
+can happen before any room exists. The address need only be correct once
+(section 4).
 
-A pairing string may also carry the **name its sender goes by**, so the person
-receiving it has a sensible default for the name they must supply, rather than
-being asked to invent one for a colleague whose name they can see. It is carried
-only when somebody chose it: a name inferred from an operating-system account
-travelling as though a person picked it is worse than carrying nothing, because the
-derived name is at least honest about being machine-made. The name is a claim by
-whoever sent the string, so a substituted string carries a substituted name — which
-is safe only because a name is recorded after the two words match, never before.
+A pairing string may also carry the name its sender goes by, so that the user who
+receives it has a sensible default for the name they must supply. It carries the name
+only when somebody chose it, because a name inferred from an operating-system account
+travelling as though a user picked it is worse than carrying nothing. The name is a
+claim by whoever sent the string, so it is recorded only after the two words match.
 
-No part of a pairing string is a secret. An identifier is a public key, an address
-is where a daemon listens, and a name is what somebody calls themselves; an
-interceptor learns that a peer exists and gains no way in (D-026, D-042). What
-interception threatens is substitution, which is what the two-word comparison is
-for.
+No part of a pairing string is a secret. An identifier is a public key, an address is
+where a daemon listens, and a name is what somebody calls themselves, so an
+interceptor learns that a peer exists and gains no way in. What interception
+threatens is substitution, which the two-word comparison is for.
 
 ## Pairing, which happens once
 
-Admission by guest list requires that a host already hold the guest's key. That is one exchange per person, ever:
+Admission by guest list needs the host to hold the guest's key already, which takes one
+exchange with each colleague, ever:
 
 ```
 Each prints their own string and sends it to the other:
@@ -977,150 +905,192 @@ Alice:   /cogmer:peer-pair ed25519:GoR7…IWPU@203.0.113.9:4783#David
          → each says whether the other read the same two words
 ```
 
-**Two strings cross, and both people run the command.** The exchange is symmetric
-because what it establishes is symmetric: that the key David holds for Alice is the
-one Alice has, and that the key Alice holds for David is the one David has. One
-direction alone would leave the other person trusting a key nothing had checked.
+Two strings cross, and both users run the command. What pairing establishes is
+symmetric, that the key David holds for Alice is Alice's and the key Alice holds for
+David is David's, and one direction alone would leave the other user trusting a key
+nothing had checked.
 
-A daemon refuses an incoming verification twice over when its own side has not been
-run. It refuses a peer whose identifier it has never recorded, which is what the
-other person's string supplies. And it refuses a verification it was not asked for,
-even from a peer it knows and with a signature that checks, because a peer may not
-cause a ceremony to begin on somebody else's machine — only the person at that
-machine may.
+A daemon refuses an incoming verification when its own side has not been run. It
+refuses a peer whose identifier it has never recorded, and it refuses a verification
+its user did not ask for, even from a known peer with a signature that checks, because
+only the user at a machine may start a comparison on it.
 
-The string carries an identifier, a bootstrap address, and the name its sender goes by. None of it is a secret: an identifier is a public key, an address is where a daemon listens, a name is what somebody calls themselves, and holding all three admits nobody (D-026, D-042). It may be pasted into a chat, mailed, printed, or read aloud.
+A pairing string may be pasted into a chat, mailed, printed or read aloud.
 
-**Pairing needs a name for the peer, and takes it before the comparison.** The name is what this person will call that colleague everywhere afterwards. Taking it beforehand is not the same as asserting it: it is held, and written only if the words match.
+Pairing takes the name for the peer before the comparison. It is the name this user
+will call that colleague from then on, and it is held until the words match, and
+written only then.
 
-**A pairing has three endings and they are not the same.** Abandoned leaves the key recorded, unverified, and unnamed, so the attempt can be resumed. Matched records the verification and writes the name. Differed removes what the attempt created: a key nobody established anything about must not remain on the list wearing the name meant for somebody else. Re-verifying an existing peer is different again: different words there are an alarm about a relationship, not grounds for discarding it and the admissions it holds.
+A pairing ends in one of three ways. Abandoned leaves the key recorded, unverified and
+unnamed, so that the attempt can be resumed. Matched records the verification and
+writes the name. Differed removes what the attempt created, so that a key nobody
+established anything about does not stay on the list under the name meant for somebody
+else.
 
-**That is a claim about confidentiality only.** The exchange needs no privacy and it does need integrity, and nothing about sending a public value supplies it. An interceptor who reads the string learns nothing; an interceptor who **replaces** it is recorded as the guest, under the name the host expected, durably, with nothing appearing wrong. The two-word comparison is what closes that, and §25 states the requirement it must meet.
+Verifying an existing peer again is different. Different words there are an alarm
+about a relationship, not grounds for discarding it and the admissions it holds.
 
-Pairing carries the address because verification has to be possible before any room exists. Were the address learned only on joining, every first verification would happen after the room it was meant to protect.
+Pairing needs integrity and no privacy. An interceptor who reads a pairing string
+learns nothing, but one who replaces it is recorded as the guest, under the name the
+host expected, with nothing appearing wrong, and the two-word comparison is what
+catches that (section 25).
 
-**Only one of the two needs an address that works.** Both must hold the other's
-identifier and both must run the command, but the exchange completes as soon as
-either side reaches the other: a daemon looks for an exchange that has already
-arrived before it tries to dial, and derives the same two words from what it
-received. So a colleague behind a network nothing can traverse still sends their
-string and still runs their side — they simply never place the call. A pairing
-string that carries no address at all is therefore not a dead end, and must not be
-treated as one.
+Only one of the two users needs an address that works. Both hold the other's
+identifier and both run the command, and the exchange completes as soon as either side
+reaches the other: a daemon looks for an exchange that has already arrived before it
+dials, and derives the same two words from what it received. So a pairing string that
+carries no address still lets its sender pair, and is never treated as a dead end.
 
 ## The guest list
 
-Two lists, at different scopes, because knowing someone and admitting them to a particular conversation are different decisions.
+Knowing someone and admitting them to a particular conversation are different
+decisions, so they are two lists, at different scopes.
 
-**Known peers** belongs to a machine. It records the identifiers a peer has learned and the names it knows them by. It is durable, outlives every room, and is why a colleague is recognized on a later occasion rather than met afresh.
+A machine's known peers are the identifiers it has learned and the names it knows
+them by. The list is durable and outlasts every room, which is why a colleague is
+recognized on a later occasion rather than met afresh.
 
-**A room's guests** belongs to that room. It names which known peers may enter. It is created with the room and archived with it.
+A room's guests are the known peers who may enter it. The list is created with the
+room and archived with it. A user may know six colleagues and admit two of them to a
+room about customer data.
 
-A person may know six colleagues and admit two of them to a room concerning customer data. Collapsing the two lists would make that impossible to express.
-
-Both must be inspectable and changeable:
+Both lists can be inspected and changed:
 
 ```
 /cogmer:peer-list                    list known peers
 /cogmer:peer-pair <string> [name]    record a peer and verify it
 /cogmer:peer-forget <peer>           discard a peer
 
-/cogmer:room-status                  this room, and who may enter it
+/cogmer:room-status                  this room, and who is in it
 /cogmer:room-invite <peer>           admit a known peer
 /cogmer:room-revoke <peer>           withdraw admission
 ```
 
-Recording a peer **without** verifying is possible and is not part of this list. It
-exists for scripts and for tests, and it leaves the peer unable to collaborate until
-the comparison happens.
+A peer can be recorded without being verified, for scripts and tests, and such a peer
+cannot collaborate until the comparison happens.
 
 A room's creator is its first guest.
 
-Forgetting and revoking are not the same act. Revoking withdraws admission to one room. Forgetting discards the identity itself, so a later meeting is a first meeting again.
+Revoking withdraws admission to one room. Forgetting discards the identity itself, so
+a later meeting is a first meeting again.
 
 ## Proving admission
 
-A joining peer presents its identifier. The host looks for that identifier among the room's guests and, finding it, issues a fresh unpredictable challenge, which the joining peer signs with the private key its identifier corresponds to.
+A peer that joins presents its identifier. The host finds that identifier among the
+room's guests, then issues a fresh, unpredictable challenge, which the peer signs with
+the private key its identifier corresponds to.
 
-The challenge must be new every time. An exchange that can be replayed is a bearer credential with extra steps.
+The challenge is new every time, because an exchange that can be replayed is a bearer
+credential.
 
-Nothing secret passes in either direction, so this needs no confidential channel. It needs integrity, which the signature supplies.
+Nothing secret passes in either direction, so the exchange needs integrity, which the
+signature supplies, and no confidential channel.
 
-Proving possession establishes **who** is asking. It does not establish **whether they may**, and the two must not be confused: a peer can generate a key pair as easily as anyone else, so a system that authenticates every caller and admits every authenticated caller has gained a name for its visitors and nothing more. Confidentiality begins at the guest list, not at the signature.
+Proving possession of a key establishes who is asking, and never whether they may. A
+peer can generate a key pair as easily as anyone, so admission begins at the guest
+list, not at the signature.
 
 ## When someone not on the list asks to join
 
-A peer that is not a guest is refused. Refusal must be more than silence.
+A peer that is not a guest is refused, and the refusal is more than silence.
 
-The host is told that a peer asked to enter, and shown the identifier and derived name it presented. The host may then admit it, which makes that peer known and a guest in one act.
+The host is told that a peer asked to enter, and shown the identifier and derived name
+it presented. The host may admit it, which makes that peer known and a guest in one
+act. The case this serves is two colleagues whose machines have not met, which is an
+absence of a recorded key, not of trust.
 
-**What this is for.** Two people who work together, whose machines have not met. That is the ordinary first contact: not an absence of trust, an absence of a recorded key. David knows Alice; his daemon does not yet know hers. Without this path, that case is served only by Alice sending her identifier out of band and David pasting it into `allow` — which works, and is a manual step carried forever for a relationship established long ago.
+Approval is a person's act. What a host approves is an identifier, and the name beside
+it is a claim made by whoever sent the request.
 
-Approval is a human act and should remain one. What a host approves is an identifier; the name beside it is a claim made by whoever chose when to make it.
+The refused peer is told it was refused, and shown its own identifier, so its user can
+tell the host what to admit.
 
-The refused peer is told it was refused and shown its own identifier, so its user can say what the host needs to allow.
-
-A request is not a queue. If the host is absent the request fails. It does not wait, and it does not grant entry later without the host's attention.
+A request is not a queue. If the host is absent the request fails, and it never grants
+entry later without the host's attention.
 
 ## Pairing with someone you do not know is not a supported case
 
-The ordinary case is colleagues pairing repeatedly (§12), and this is not that.
+Pairing with a stranger is not designed for. Section 25 requires verification over a
+channel on which the other party can be recognized, and two people who have never met
+have none, so the comparison would run and establish that two parties hold the same
+key while saying nothing about whose. An appearance of assurance is worse than none,
+because it is what people act on.
 
-It is excluded on the specification's own terms rather than on taste. §25 requires verification over a channel where the other party can be **recognised**, and records that two people who have never met have no such channel. A pairing between strangers would therefore run the ceremony and take nothing from it: the words would be compared, they would match, and the match would establish that two parties hold the same key while saying nothing about whose. Every other pairing gets a real assurance from that step. This one would get its appearance, which is worse than omitting it, because the appearance is what people act on.
+What a room carries is a working session, and admission sends a member's turns to
+another user's model provider under that user's account (section 28). The situations
+that would want pairing with a stranger almost always have a call or a message
+available anyway.
 
-The exposure is also asymmetric with the benefit. What a room carries is a working session — prompts, the discussion around a repository, whatever is in context — and admission sends a member's turns to another person's model provider under that person's account (§28). The situations that would want stranger pairing are ones where a call or a message is almost always available anyway, so what is bought is convenience rather than capability.
-
-The mechanism above does not forbid it: a host who approves a request from someone unknown to them has paired with a stranger. That is a judgement the host made, and nothing here overrides it. What is excluded is **designing for it** — no affordance should present it as intended, and no claim should be made that verification protects it, because in that case it does not.
-
-**Undecided: whether a request may arrive unsolicited.** As described, any peer that can reach the host's address and name the room can cause something to appear on the host's screen, and room names are guessable by design (D-017). Guessing grants nothing, which is the property that makes names safe; producing an interruption is a different matter, and a prompt people learn to dismiss quickly is a poor place to put a decision that matters. The alternative is that requests are accepted only while the host has said they are expecting someone. That is not a token and does not reopen D-026 — arriving during such a window admits nobody, it only earns the right to ask, and the host still approves. Decide this before the path is built.
+A host who approves a request from someone unknown to them has paired with a stranger,
+and that is the host's judgement to make. Nothing presents it as intended, and nothing
+claims that verification protects it.
 
 ## There is no join token
 
-Admission is a guest list entry or a host's approval. There is no code, no invitation secret, and nothing a person can hold that would let them into a room.
+Admission is an entry on a guest list, or a host's approval. There is no code, no
+invitation secret, and nothing a user can hold that would let them into a room. A
+token that admits its holder has to be kept secret while it is sent, cannot be
+checked afterwards, and enrols whoever intercepts it under a name the room's members
+will treat as familiar.
 
-This is not an omission awaiting a later release. A token that admits its holder must be kept secret while being sent to someone, cannot be checked after the fact, and enrols whoever intercepts it under a name the room's members will thereafter treat as familiar. Every one of those properties is avoidable here, so none should be accepted.
+Inviting someone in advance needs no token either. A host may admit a peer it knows
+and then leave, and the guest joins whenever it likes. Only a host that is absent and
+has never recorded the guest would need a token, and such a host has to act before
+that guest can enter under any scheme.
 
-Nor is a token required for inviting someone in advance, which is the case it appears to cover. A host may admit a peer it knows and then leave; the guest joins whenever it likes. A token would be needed only by a host that is absent **and** has never recorded the guest — and such a host must act before that guest can enter under any scheme, so the token buys nothing that acting once would not.
-
-What remains is a single constraint, stated rather than engineered around: **pairing with someone entirely unknown requires a host present to approve it.** That is precisely the moment at which a person should be deciding.
+So pairing with someone entirely unknown requires a host present to approve it, which
+is the moment a user should be deciding.
 
 ## The endpoint is a bootstrap hint
 
-The endpoint is opaque to the collaboration protocol. It is whatever the transport in use can reach — a MagicDNS name, a tailnet address, a LAN address, or something else entirely under a different transport. Synchronization semantics must not depend on its form.
+An endpoint is opaque to the collaboration protocol. It is whatever the transport in
+use can reach, such as a direct address or an overlay address (section 4), and
+synchronization never depends on its form.
 
-It need be correct only once. Having joined, a peer learns the room's membership and how to reach the other members, so the inviting peer's endpoint stops being special immediately. This is the same principle as an inviting peer not being authoritative.
+An endpoint needs to be correct only once. Having joined, a peer learns the room's
+members and how to reach them, so the inviting peer's endpoint stops being special at
+once, just as the inviting peer is not authoritative.
 
-An invitation may therefore carry more than one endpoint, since which one works depends on where the joining peer is standing — a teammate on the same network and a teammate across the internet do not reach the same address. Endpoints also change when a machine moves between networks, so an invitation may be stale, and joining must fail clearly rather than hang.
+An invitation may carry more than one endpoint, because which one works depends on
+where the joining peer is: a colleague on the same network and one across the internet
+do not reach the same address. Endpoints change when a machine moves between networks,
+so an invitation may be stale, and joining with a stale one fails clearly rather than
+hanging.
 
 ## Discovery on a shared network
 
-Where peers are on the same network, a room may be found by local service discovery rather than by being told an address. The daemon advertises its live rooms; a joining daemon looks for the name it was given.
-
-This removes the endpoint from the invitation, which is only a bootstrap hint:
+On a shared network, a room can be found by local service discovery rather than by
+being told an address. The daemon advertises its live rooms, and a daemon that is
+joining looks for the name it was given:
 
 ```
 cogmer join misty-canyon
 ```
 
-That requires no account, no external service, no configuration, and nothing secret — the guest list decides who may enter.
-
-Discovery locates a room. It never admits anyone to one.
+That needs no account, no external service, no configuration and nothing secret,
+because the guest list decides who may enter. Discovery locates a room, and never
+admits anyone to one.
 
 ## The room name is not a credential
 
-A room name is drawn from a small, deliberately guessable space so that it can be spoken aloud. Tens of thousands of combinations is ample for avoiding confusion and useless for resisting a guess.
+A room name comes from a small space that is guessable on purpose, so that it can be
+spoken aloud. Tens of thousands of combinations are enough to avoid confusion and
+useless against a guess.
 
-Authorization is therefore never the name. It is an entry on a guest list, proved by possession of a key, or a host's explicit approval of a request. A peer must never admit a session to a room on the strength of a name.
+Authorization is never the name. It is an entry on a guest list, proved by possession
+of a key, or a host's explicit approval of a request, and no peer admits a session to a
+room on the strength of a name. On a shared network, such as an office, a conference
+or a cafe, any listener can list the advertised room names, and a room holds source
+code, customer information and whatever a user has pasted into a prompt.
 
-This matters most precisely where joining is easiest. On a shared network — an office, a conference, a cafe — any listener can enumerate advertised room names, and those names are guessable even without listening. A room contains source code, customer information, and whatever a person has pasted into a prompt. Convenient discovery and weak authorization are separately reasonable and jointly indefensible.
-
-The guest list also disambiguates. Names are unique only among the rooms one peer hosts, so local discovery may surface two unrelated rooms sharing a name. A joining peer is a guest of at most one of them, and that is what settles which was meant.
+The guest list also tells rooms apart. Names are unique only among the rooms one peer
+hosts, so local discovery may find two unrelated rooms with the same name, and a
+joining peer is a guest of at most one of them.
 
 ## Room names
 
-A room name is generated, never chosen.
-
-Compose it from two curated word lists, one of weather or sky and one of landscape:
+A room name is generated, never chosen. It is made from two curated word lists, one
+of weather or sky and one of landscape:
 
 ```
 misty-canyon
@@ -1129,180 +1099,168 @@ clear-delta
 frost-hollow
 ```
 
-Generating the name serves a purpose beyond convenience. A name a person chooses will be the name of a project, a client, or a ticket — and rooms named after projects become rooms scoped to projects by convention, which is the model this specification deliberately abandoned. A generated name resists that drift without relying on anyone's discipline.
+A name a user chose would be the name of a project, a client or a ticket, and rooms
+named after projects become rooms scoped to projects, so a generated name keeps rooms
+scoped to sessions without relying on anyone's discipline.
 
-A naming scheme should be:
+A room name is:
 
-- speakable, because an invitation may be read aloud over a call;  
-- unambiguous when heard, avoiding homophones and easily confused pairs;  
-- short enough to type without copying;  
-- drawn from a narrow, neutral domain, so that no random combination produces something offensive or misleading.
+- speakable, because an invitation may be read aloud on a call;
+- unambiguous when heard, with no homophones and no easily confused pairs;
+- short enough to type without copying;
+- drawn from a narrow, neutral domain, so that no combination is offensive or
+  misleading.
 
-Weather and landscape satisfy all four, and have the further property of naming a place, which is what a room is.
+Each list is large enough that collisions are uncommon: a few hundred entries in each
+gives tens of thousands of combinations.
 
-Each list should be large enough that collisions are uncommon; a few hundred entries per list yields tens of thousands of combinations.
+Names are not globally unique and cannot be, since rooms are created independently on
+machines that do not coordinate. A peer keeps only the live rooms it hosts distinctly
+named, generating again on a collision, which is enough because a name is only ever
+resolved against one peer.
 
-Names are not globally unique and cannot be, since rooms are created independently on machines that are not coordinating. A peer must ensure only that the live rooms it hosts have distinct names, regenerating on collision. That is sufficient, because a name is only ever resolved against one peer.
+A room's name is fixed for the life of the room, because renaming would invalidate
+the invitations already sent and make an archived room harder to recognize.
 
-A room's name is fixed for the life of the room. Renaming would invalidate outstanding invitations and make an archived room harder to recognize later.
-
-The peer that issued an invitation does not thereby become authoritative. It is only the first reachable member, and it may leave while the room continues.
-
-For the initial prototype an invitation may be copied by hand.
-
-Do not spend significant effort on automatic discovery initially.
-
-Later possibilities include:
-
-- Tailscale device discovery;  
-- mDNS on LAN;  
-- invitation links;  
-- membership exchange between joined peers;  
-- libp2p discovery.
+The peer that issued an invitation does not become authoritative by doing so. It is
+only the first member that can be reached, and it may leave while the room continues.
 
 ---
 
 # 12a\. Room Membership
 
-A Claude Code session holds membership in at most one room at any time.
-
-This is a constraint of the event model, not a policy preference. Every captured event belongs to exactly one room, and a session in two rooms provides no basis for choosing which. Injected context is subject to the same problem from the other direction: a session receiving turns from two unrelated conversations has no way to separate them, and neither does the person reading the result.
+A Claude Code session is a member of one room at most, and never joins a second. Every captured
+event belongs to one room and no other, and a session in two rooms would give no basis for
+choosing which, while a session receiving turns from two unrelated conversations could
+not keep them apart, and neither could the user reading the result.
 
 ## Creation
 
-A room comes into existence when a person creates one, and not before.
+A room exists once a user creates one, and not before.
 
-Creating a room is the act of inviting someone into it. The `roomId` and `roomName` are generated at that moment, the creating session becomes the first member, and the room's history begins there.
+Creating a room is the act of inviting someone into it. The room's identifier and name
+are generated at that moment, the creating session becomes its first member, and the
+room's history begins there.
 
-Nothing earlier belongs to the room. A session that has been working alone has published nothing, because there was no room to publish to, and issuing an invitation does not hand over that work retroactively.
+Nothing earlier belongs to the room. A session that has been working alone has
+published nothing, and issuing an invitation never hands over that work afterwards,
+because a room that began when the session did would give the first person invited
+hours of work, disclosed by an act that looks like saying hello.
 
-This is deliberate. Were a room created when a session started, every solo session would accumulate a conversation that the first person invited then received in full — hours of work disclosed by an act that looks like saying hello. Where a room begins is therefore an explicit decision, made by the person whose conversation it is.
+Throughout this specification, "from its beginning" means the beginning of the room,
+never the beginning of a session that belongs to it.
 
-**"From its beginning", throughout this specification, means the beginning of the room — never the beginning of a session that belongs to it.**
+Before a room exists, a session is an ordinary Claude Code session: nothing is
+captured, injected or shared. Collaboration is something a user starts, not a state
+they are in.
 
-Before a room exists, a session is an ordinary Claude Code session. Nothing is captured, nothing is injected, nothing is shared. Collaboration is something a person starts, not a state they are in.
-
-One consequence should be acknowledged rather than discovered. A person usually wants to invite someone *because* of what just happened, and that conversation is exactly what the new room does not contain. The prototype accepts this. Deliberately contributing selected earlier turns is a reasonable later addition; contributing them by default is not.
-
-## Joining
-
-A session joins a room by presenting an invitation.
-
-A session joining a room already in progress receives that room from its beginning.
+A new room does not contain the conversation that led a user to invite someone. Earlier
+turns are never contributed to a room by default.
 
 ## Leaving
 
-A session may leave a room. Leaving is always explicit. It is never inferred from a Claude Code session becoming inactive.
+A session may leave a room. Leaving is always explicit, and is never inferred from a
+Claude Code session becoming inactive.
 
-On leaving:
+A session that leaves stops publishing to the room and stops receiving injected
+context from it. The events it published stay in the room, because published events
+are immutable, and a user who leaves does not unsay what they said.
 
-- the session stops publishing to the room;  
-- the session stops receiving injected context from it;  
-- a SESSION_LEFT event is published, so remaining members can see the departure;  
-- events the session already published remain in the room.
+## Joining and rejoining
 
-Published events are immutable and are never withdrawn by a departure. A person who leaves does not un-say what they said.
+A session joins a room by accepting an invitation. A session that joins a room already
+in progress receives the room from its beginning.
 
-## Rejoining
-
-A session may rejoin a room it left, for as long as that room is still live.
-
-It receives what it missed, and only what it missed. Delivery is recorded per event rather than as a position in a stream, so a rejoining session is not re-sent conversation it already had.
+A session may rejoin a room it left, for as long as that room is live. It receives what
+it missed, and only that, because delivery is recorded per event rather than as a
+position in a stream.
 
 A closed room is never rejoined, by a former member or by anyone else.
 
 ## Joining a different room
 
-A session's room is fixed at its first prompt and never changes.
+A session enters a room only by creating it or by joining it, and a session that has
+been in one room never joins a second. It may leave its room and rejoin it. A user who
+wants to work in a second room starts a second Claude Code session.
 
-It may leave. It may rejoin the room it left. Its membership is not transferable. To work in a second room, start a second Claude Code session — which costs nothing and is what a person would do anyway.
+Injected context cannot be withdrawn. Once a colleague's conversation has entered a
+session's context window, anything the session produces afterwards may be shaped by
+it, so admitting that session to a second room would carry the first room's
+conversation into the second through the model's own output, invisibly and without
+either room's members knowing.
 
-The reason is that injected context cannot be withdrawn. Once another person's conversation has entered a session's context window it remains there for the life of that session, and anything the session subsequently produces may be shaped by it. Admitting that session to a second room would publish the first room's conversation into the second by way of the model's own output — invisibly, irreversibly, and without either room's other members being aware of it.
-
-The system cannot prevent that leak once it has occurred. It can only decline to create the conditions for it.
-
-**The rule is stated on the session rather than on what the session has received**, and that is a deliberate tightening. The narrower rule — a session may move until teammate context has actually arrived — is sound in principle and covers a real case: joining the wrong room and correcting it before anything arrives. It was specified that way, and it was implemented by recording whether a session had been injected into.
-
-That record was written and never read. The constraint was in fact enforced by the binding being permanent, so the narrower rule existed on paper and nowhere else, and nobody noticed because the stricter behaviour is what anybody would want anyway. Two mechanisms for one rule is how one of them rots, and this one had already rotted before it was used.
-
-So: one mechanism. A session binds on first sight and stays. Correcting a wrongly joined room means starting a session, which is cheaper than a rule that has to be right about what a context window contains.
-
-A session's own prompts and responses never restrict it. That content originated with the person, and carrying it forward is their own disclosure rather than a leak of someone else's — but it is moot here, because the session does not move regardless.
+A session's own prompts and responses never restrict it, because that content came
+from its own user.
 
 ## Presence is not membership
 
-A Claude Code session does not end in any durable sense. Its process exits, but the session persists and may be resumed later under the same session ID.
+A Claude Code session does not end in any lasting sense. Its process exits, and the
+session can be resumed later under the same session ID, so membership and presence are
+separate.
 
-Membership and presence must therefore be modelled separately.
+Membership is durable. It is held by the session ID, begins at joining, and ends only
+when the session explicitly leaves or the room closes.
 
-- **Membership** is durable. It is held by the session ID, begins at joining, and ends only when the session explicitly leaves or the room closes.  
-- **Presence** is transient. It reflects whether a member is currently reachable, and it lapses whenever a process exits, a machine sleeps, or a network drops.
+Presence is transient. It says whether a member can be reached now, and it lapses
+whenever a process exits, a machine sleeps or a network drops.
 
-A member whose Claude Code process exits becomes **absent**. It has not left. Its membership stands, its delivery state is preserved, and events published while it was absent remain owed to it.
+A member whose Claude Code process exits is absent, and has not left. Its membership
+stands, its delivery state is kept, and events published while it was absent are still
+owed to it.
 
-Resuming that session restores presence. It is not a rejoining, because membership never lapsed. The session receives what accumulated during its absence, subject to the injection limits.
+Resuming that session restores presence, and is not a rejoining, because membership
+never lapsed. The session receives what built up while it was absent, within the
+injection limits.
 
-A session-end signal is therefore a presence signal. It must never be treated as departure, and the system must not depend on receiving one: a process that is killed, or a machine that loses power, sends nothing at all.
+A signal that a session ended is a signal about presence, never about departure, and
+nothing depends on receiving one, because a process that is killed, or a machine that
+loses power, sends nothing.
 
 ## Closing
 
-A room closes when every member has explicitly left, or when the room has lain dormant — no member present — long enough that resumption is no longer plausible.
+A room closes when every member has explicitly left, or when it has been dormant, with
+no member present, for long enough that resuming it is no longer plausible.
 
-Set that threshold generously. Overnight gaps, weekends, and illness are ordinary; a room that dissolves because everyone went home has made resumption useless. Closing early is the more damaging error, because a closed room can never be rejoined and a session can join no other.
+The dormancy threshold is generous. Nights, weekends and illness are ordinary, and a
+room that dissolved because everyone went home would make resuming useless, and
+closing early is the worse error, because a closed room can never be rejoined and its
+sessions can join no other.
 
-Closing is the end of the room, not of the conversation. The event log is archived.
+Closing ends the room, not the conversation: the room's events are archived.
 
 ---
 
 # 13\. Transitive Synchronization
 
-Synchronization should not require every peer to be simultaneously connected.
-
-Example:
+Synchronization does not need every peer connected at once.
 
 ```
 David ↔ Alice ↔ Carlos
 ```
 
-Suppose David and Carlos cannot currently reach each other.
-
-David gives Alice:
-
-```
-David event 1827
-```
-
-Alice stores it.
-
-When Alice later connects to Carlos, she may transmit David's event.
-
-Therefore:
+If David and Carlos cannot reach each other, David gives Alice his event 1827, Alice
+stores it, and when Alice next connects to Carlos she passes it on:
 
 ```
 David → Alice → Carlos
 ```
 
-is valid propagation.
+An event belongs to the peer that created it, whichever peer relays it, and a relaying
+peer never changes an event's originating peer, its sequence number or its identifier.
 
-Events belong to their originating peer regardless of which peer relays them.
+Every event is signed by the peer that created it, over the event's own content, so a
+relaying peer can carry an event and cannot author one: an event from Alice that claims
+to come from David is distinguishable from one Alice composed, because Alice cannot
+produce David's signature.
 
-Never rewrite:
+A receiving peer checks every event against the key its originating peer's identifier
+names, and rejects any that does not verify. It rejects rather than keeps it aside,
+because a failed signature has no harmless reading, unlike a sequence conflict, which
+may be a peer that lost its state.
 
-```
-originPeerId
-peerSequence
-eventId
-```
-
-during relay.
-
-Signing events at their origin is what makes this rule enforceable rather than merely stated. A signature is made by the originating peer over the event's own fields, so a relaying peer can carry an event and cannot author one: an event arriving from Alice claiming to originate with David is now distinguishable from one Alice composed, because Alice cannot produce David's signature.
-
-A receiving peer verifies every event against the key its own identifier names, and rejects what does not verify. Rejection rather than quarantine: a failed signature has no benign reading, unlike a sequence conflict, which may be a peer that lost its state.
-
-Note what this does and does not provide. It gives integrity and attribution — nothing can be forged, altered in transit, or falsely attributed. It does not decide who may connect, or who may read a room. Those are matters of admission, and are dealt with there.
-
-This property substantially improves resilience.
+Signatures give integrity and attribution: nothing can be forged, altered on the way
+or falsely attributed. They do not decide who may connect or read a room, which is
+admission (section 12).
 
 ---
 

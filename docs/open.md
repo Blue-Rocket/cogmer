@@ -227,6 +227,14 @@ room's guest list cannot ask to be let in; §12a (room membership) and D-051 (st
 pairing is not a supported case) leave open whether they should be able to, and
 nothing is built for it.
 
+As section 12 describes it, any peer that can reach the host's address and name the
+room could make something appear on the host's screen, and room names are guessable
+on purpose. Guessing grants nothing, but a prompt people learn to dismiss is a poor
+place for a decision that matters. The alternative is to accept requests only while
+the host has said they are expecting someone. That is not a token and does not reopen
+D-026 (no join token): arriving in such a window admits nobody, it only earns the
+right to ask, and the host still approves.
+
 ## Discovery on a local network
 
 Peers on the same network find each other without an address being typed.
@@ -553,6 +561,13 @@ admits two fresh identities under `PeerName` of each, and when the two word pair
 collide, `Allow` refuses the second: "you already know a different key as
 \"glad-bobcat\"". It failed once and passed six times in a row on 2026-09-25. Giving
 the two peers fixed, distinct names would remove the chance.
+
+**`TestTheUnverifiedMarkerInTheViewIsAFact` fails when the user's own turn sorts before the
+others.** The check at `ui_test.go:282` takes the last event of the snapshot as the
+user's own, but events are ordered by timestamp and then by peer, so an event appended
+in the same second as the others can sort before them. It failed once and passed five
+times in a row on 2026-09-28. Finding the event by its content, or appending it a
+second later, would remove the chance.
 
 **`TestTheThreeEndingsOfAPairing` fails about one run in four.** Its subtest
 "matched writes the name and the verification" fails at cleanup with "TempDir

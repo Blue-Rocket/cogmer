@@ -158,8 +158,9 @@ func TestARevealMustOpenItsCommitment(t *testing.T) {
 	}
 }
 
-// No inbound surface (§12a leaves this open, and this closes it by construction):
-// a peer whose user has not asked to verify answers 409 and displays nothing.
+// No inbound surface: a peer whose user has not asked to verify answers 409 and
+// displays nothing, so verification never makes something appear on a machine
+// unasked.
 func TestVerificationCannotBeStartedByAPeer(t *testing.T) {
 	d, _ := testDaemon(t)
 	peer := testIdentity(t)

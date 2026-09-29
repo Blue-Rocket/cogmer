@@ -77,9 +77,8 @@ The other accepts it by name:
 /cogmer:room-join misty-canyon
 ```
 
-Then work as you normally would. A session's room is fixed at its first prompt and
-never changes, so a session that has already been in a room cannot join another.
-Start a new session to join a different room.
+Then work as you normally would. A session that has been in one room can never join
+a second, so start a new session to join a different room.
 
 The room is also a page in your browser, at `http://127.0.0.1:4782`, which updates as
 turns arrive. It shows who said what, and when. Each colleague is labelled with a name
