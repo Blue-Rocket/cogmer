@@ -2,8 +2,8 @@
 
 cogmer is public so that it can be tested. It is not ready for general use.
 
-cogmer puts two people, working separately on their own machines and their own
-Claude Code subscriptions, in one conversation. Your turns and theirs replicate directly between
+cogmer puts people working separately, on their own machines and their own Claude
+Code subscriptions, in one conversation. Your turns and theirs replicate directly between
 your machines. No server holds the conversation, and no account exists anywhere.
 
 Your session keeps working when your colleague's is offline. Their turns reach your

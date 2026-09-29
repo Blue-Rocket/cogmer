@@ -24,7 +24,6 @@ import (
 // docs/writing.md. It only shrinks. A listed document that passes fails the
 // test, so that it comes off the list in the same commit that fixed it.
 var writingNotYetRewritten = map[string]bool{
-	"CLAUDE.md":         true,
 	"docs/decisions.md": true,
 	"docs/open.md":      true,
 }
