@@ -783,104 +783,33 @@ listener, `COGMER_PEER_ADDR`.
 
 **Date:** 2026-09-16 · **Status:** active
 
-**Context.** Polling was chosen for the two-peer experiment and recorded only as a
-code comment calling push "deliberately omitted". It was an interim measure that
-was never revisited, which is the gap this log exists to prevent. Asked directly
-whether it was interim or decided, the honest answer was that nobody had decided.
+**Decision.** Peers synchronize by polling, and push between peers is not built without a
+reason beyond latency. The push that is built is the daemon's to the local view, by
+server-sent events over loopback.
 
-**Decision.** Polling is the default for peer synchronization, not a placeholder.
-The implementation order the specification then held lists real-time push as Phase 3; it should not be built for the peer layer
-without a reason beyond latency.
-
-**The argument is C4's own measurement.** Peer propagation is roughly half a
-second. Propagation *into a teammate's Claude* is not until their next prompt —
-minutes, during a long agentic turn. Push would take the fast half from 500 ms to
-50 ms while the slow half remains measured in minutes. It optimises the wrong side
-of the path, and §16's sub-second target is already met by a one-second poll.
-
-**Pull has properties push does not.** A peer that was absent recovers by asking,
-so reconnection needs no retry queue, no delivery tracking, and nobody has to
-remember what a missing peer missed. Push requires the sender to know who is
-connected and what each has, which is state that can be wrong. Under session-scoped
-rooms, where peers come and go with sessions, "ask for what you lack" is the
-simpler shape as well as the cheaper one.
-
-**The push that does matter is a different one.** §17 requires the local UI to
-update live. That is the daemon pushing to a browser on loopback — server-sent
-events — not peers pushing to each other. That order places "Real-Time Push" in the peer
-layer, where its value is lowest, and the UI has no phase of its own at all.
-
-**Revisit when** something needs sub-second peer propagation for a reason other
-than conversation: presence indicators, which the specification then listed as a future capability, are the likely first, since "Claude
-working…" is stale the moment it is a second old. Large rooms where constant polling
-is wasteful would be the second.
+**Support.**
+- An event reaches the other peers in about half a second, while it reaches a
+  colleague's Claude only at their next prompt, minutes later during a long turn, so
+  push would speed up the half that nobody is waiting on. §16 (propagation).
+- A peer that was absent recovers by asking, so reconnecting needs no queue of retries
+  and no tracking of what each peer was owed. §16.
+- The local view updates live, and a user watching it notices a delay a machine does
+  not. §16, and §17 (shared conversation UI).
 
 **Rejected.**
-- *Push now, for §16's target* — the target is met, and the measurement showing it
-  is met also shows why it does not help.
-- *Leaving it undecided* — an interim measure nobody revisits becomes a decision
-  taken by default, without the reasoning that would let anyone overturn it.
+- *Push between peers, for faster propagation.* Polling every second meets the
+  propagation target, and pushing would need each sender to know who is connected and
+  what each holds, state that can be wrong.
+
+**Revisit when** something needs propagation between peers faster than a second for a
+reason other than conversation, such as showing presence, or when rooms are large enough
+that constant polling is wasteful.
 
 ---
 
 ## D-032 — Re-sequence the phases, and follow them
 
-**Date:** 2026-09-17 · **Status:** active
-
-**Context.** Work had proceeded opportunistically: Phase 4 was completed inside
-Phase 0, Phase 2 was completed before Phase 1 finished, Phase 3 was decided against,
-Phase 6 was deferred, and parts of Phase 7 were taken early. That was the right trade
-while the assumptions underneath the sequence were being tested. It stopped being
-right once that order described a plan nobody was following, which is worse than either
-following it or replacing it.
-
-**Decision.** Record actual status against every phase, add the phases the original
-sequence lacked, and state an execution order to follow from here:
-
-```
-Phase 8  complete the local room   →  Phase 9  peer identity
-      →  Phase 10 pairing          →  Phase 5  offline and reconnection
-      →  Phase 7  hardening
-```
-
-Numbers are never reused or reassigned, so references in this log and in the code
-still resolve. Superseded phases are marked, not rewritten.
-
-**Why the UI comes first.** Every experiment so far measured whether *Claude*
-understands a teammate's conversation, and none measured whether a *person* finds
-watching one useful. That is half of the experimental question, it has never been tested, and it cannot be
-while the only way to read a room is a command-line dump.
-
-*Amended the same day.* The first draft of this bundled room identity and the
-membership index into the same phase, argued the UI was the reason that phase came
-first, and then listed the UI third. Neither of the others blocks it — the UI needs
-no room identifier and nothing from the index — so both were moved to the phases
-whose purpose they actually serve: room identity to pairing, where a generated name
-finally has an invitation to be spoken in, and the index to hardening, where
-database recovery already sits. Phase 8 is now the UI alone. Bundling work that
-shares a location rather than a purpose is how the thing a phase exists for ends up
-scheduled behind the things it does not need.
-
-**Why identity precedes pairing.** A guest list admits whoever claims a name until
-identity is verifiable, so an admission flow built before Phase 9 would be built
-twice. Transitive relay cannot be made safe without signing either. D-023 warned that
-identity entrenches at the first exchange between peers; the experiments have already
-exchanged events, but nothing has been released, so the warning still applies to the
-first real use rather than to the first packet.
-
-**What this does not change.** Pairs remain the target. Phase 6 waits for evidence
-that a third peer is wanted, since it adds noise to a working session and is unlikely
-to invalidate anything.
-
-**Rejected.**
-- *Follow the implementation order as written* — it specifies Tailscale, peer push, and a project-scoped
-  room, all displaced by later decisions. Following it would mean building things
-  already decided against.
-- *Renumber the phases* — breaks every reference in this log and in the findings
-  documents, to save reading one status table.
-- *Leave the order implicit and keep working by judgement* — that is what produced a
-  plan document contradicting the work, and it hid the UI gap for the length of the
-  project.
+**Status:** removed 2026-09-29: a plan for the work, not a decision about the system (W-53).
 
 ---
 
@@ -888,52 +817,27 @@ to invalidate anything.
 
 **Date:** 2026-09-17 · **Status:** active
 
-**Context.** §17 specified a browser at `localhost`, and a browser was built to it.
-That turned out not to match what was wanted: the expectation was that the whole
-experience lived inside the Claude Code session. Worth testing rather than
-arguing, since a hook already pulls the teammate's turns — perhaps it could show
-them too.
+**Decision.** Nothing shows the room inside a Claude Code session. Inside a session, a user
+learns what the room holds by asking their own Claude, which answers from the context
+injected, and a view of the room is a separate program outside the session.
 
-**Finding: it cannot.** Tested directly. A hook's standard output becomes context
-for the model and never appears on screen. Standard error is not surfaced. Writing
-to `/dev/tty` is not surfaced. Confirmed from the other side by an interactive
-session: injection landed — the transcript holds the attachment, and the model
-answered questions about the teammate's conversation in detail — while the
-person saw nothing but Claude's reply.
-
-Claude Code owns its display. No arrangement of hooks produces an ambient view
-inside a session, and the specification now says so rather than leaving someone to
-rediscover it.
-
-**What the test surfaced that was worth more than the answer.** A person can
-simply *ask*: "what is the team discussing?" gets a full answer — who said what, and
-that they are unverified — from context already injected. It needs no code, no view,
-and no protocol. For a pair on one problem it answers most of what a view would.
-
-It also demonstrated D-139 (a name is shown as itself only for a verified peer) reaching the person it was for. The `unverified` marker,
-added so a model would not treat a display name as fact, was relayed to the
-person unprompted in the model's own words. An attribution caveat travelling from
-the wire to a human without a UI in between is the design working end to end.
-
-**Decision.** §17 no longer prescribes a browser. It states that the room cannot be
-shown inside the session, names asking as the affordance that already exists, and
-treats a terminal view and a browser view as different moments rather than
-competitors — one for glancing at without leaving the keyboard, one for reading a
-long exchange properly. Both read only from the local daemon, which is what permits
-more than one.
+**Support.**
+- A hook's standard output becomes context for the model and never appears on screen,
+  and neither its standard error nor a write to `/dev/tty` is shown.
+  `84a0751:docs/decisions.md`.
+- Asked what the team was discussing, a session answered who said what, and that they
+  were unverified, from injected context alone. `84a0751:docs/decisions.md`.
+- Every Claude Code extension point delivers to the model, and nothing displays to a
+  person. D-036 (MCP logging notifications are not a display channel).
 
 **Rejected.**
-- *Making the injected block readable so it doubles as the display* — the premise
-  was that the block is shown. It is not.
-- *Writing to the terminal from a hook* — tested; not surfaced, and it would
-  contend with Claude Code's own rendering even if it were.
-- *Treating the browser as the answer* — it is a good way to read a long exchange
-  and a poor way to stay aware while working, which is what was actually being
-  asked for.
+- *Making the injected block readable, so that it doubles as the display.* The block is
+  never shown.
+- *Writing to the terminal from a hook.* Nothing written there is shown, and it would
+  contend with Claude Code's own rendering if it were.
 
-**Revisit if** Claude Code begins surfacing hook output. That would make an ambient
-in-session view possible and is worth noticing; it cannot be checked automatically,
-since it requires a terminal and an observer.
+**Revisit when** Claude Code shows hook output to the user. Nothing checks that
+automatically, since it needs a terminal and somebody watching.
 
 ---
 
@@ -941,123 +845,62 @@ since it requires a terminal and an observer.
 
 **Date:** 2026-09-17 · **Status:** active
 
-**Context.** D-033 established that Claude Code surfaces nothing a hook writes, so
-ambient display needs something outside the session. A pseudo-terminal wrapper was
-proposed: `cogmer` would launch the ordinary interactive `claude` inside a PTY,
-proxy it, and draw peer turns in a reserved band the child cannot see.
+**Decision.** No pseudo-terminal wrapper launches Claude Code. A view of the room is a
+separate program beside the session, never around it.
 
-The technique works. A passthrough prototype was byte-for-byte identical to running
-`claude` directly — ANSI sequences, terminal dimensions, and exit code — under a
-real 24×80 pseudo-terminal. Feasibility was never the problem.
-
-**Decision.** Do not wrap. A view runs *beside* a session as a separate program,
-not *around* it.
-
-**Three reasons, compounding.**
-
-*It replaces the entry point.* Everything else this project asks of a person is
-something Claude Code already loads: hooks. A wrapper asks them to stop running
-`claude` and run something else, permanently, and to keep doing so through every
-future habit and alias. That is a materially larger ask than an install.
-
-*It only reaches one of the ways Claude Code runs.* It is also a desktop application
-on macOS and Windows, a web application, and a VS Code and JetBrains extension. A
-pseudo-terminal intercepts the terminal and nothing else, and there is no wrapper
-equivalent for an extension host. Ambient display would exist for some users and be
-unreachable for others, with no path to closing the gap.
-
-*Windows is a second implementation.* Pseudo-terminals there are ConPTY, a different
-API from the Unix ones, and the terminal-behaviour matrix widens across Windows
-Terminal, PowerShell, tmux, and IDE terminals. D-001 chose Go specifically so that
-platforms would not diverge; this would have made the display path diverge anyway.
-
-**What survives.** A standalone terminal view — run in a split pane beside a session
-— has none of these properties. It does not replace `claude`, forks no
-pseudo-terminal, never touches Claude Code's rendering, and works on Windows because
-it owns its own terminal rather than puppeting somebody else's. It is additive: the
-only thing installed remains the hooks Claude Code already loads.
+**Support.**
+- A user starts the host the same way they would without cogmer. §3.8 (the host is
+  launched and used unchanged).
+- Claude Code runs as a desktop application, a web application and an editor extension
+  as well as in a terminal, and a pseudo-terminal reaches only the terminal. §3.8.
+- A wrapper on Windows would need ConPTY, a different interface from the Unix
+  pseudo-terminals, so the display path would diverge by platform. D-001 (Go, not
+  TypeScript/Node or Python).
+- A passthrough prototype under a real 24×80 pseudo-terminal was byte-for-byte identical
+  to running `claude` directly, so the obstacle is not feasibility.
+  `84a0751:docs/decisions.md`.
 
 **Rejected.**
-- *Wrapping* — reasons above; the prototype is reverted rather than parked, since
-  uncommitted code carrying two new dependencies would read as an intention.
-- *Treating the browser as sufficient* — it is a good way to read a long exchange and
-  a poor way to stay aware while working.
-- *Keeping the wrapper for terminal users and something else for everyone else* —
-  two display paths, the harder one reaching fewer people.
+- *Wrapping Claude Code in a pseudo-terminal, with colleagues' turns drawn in a reserved
+  band.* It changes how a user starts Claude Code, reaches only the terminal, and needs
+  a second implementation on Windows.
+- *A wrapper for terminal users and something else for everyone else.* Two display
+  paths, the harder one reaching fewer people.
 
-**Recorded as tested, so it is not re-derived:** an invisible pseudo-terminal
-passthrough is achievable, and the reserved-band technique (shrink the child's
-winsize, set the outer scroll region) avoids rather than solves the
-partially-typed-prompt problem. If the entry-point objection ever stops applying,
-that is the approach.
+**Revisit when** starting Claude Code through a wrapper stops being a change to how a
+user starts it.
 
 ---
 
-## D-035 — A remote peer never initiates local execution
+## D-035 — A remote event never makes an interactive session take a turn
 
-**Date:** 2026-09-17 · **Status:** active (implementation already conforms)
+**Date:** 2026-09-17 · **Status:** active
 
-**Context.** Proposed as an invariant: a remote peer event must not initiate Claude
-execution in a receiving session; remote events are displayed asynchronously and
-queued, becoming model context only at the receiving session's next locally
-initiated turn.
+**Decision.** A session a user is working in takes a turn when that user asks it to, and
+at no other time. A remote event never prompts, resumes or otherwise drives an
+interactive session, and any Claude run a peer event causes outside that session
+neither borrows its context nor interrupts it.
 
-**The implementation already conforms**, and not by design so much as by not having
-written the code. The only path that starts a Claude run is `RunProbe`, reachable
-from `runDoctor` (a typed command) and `EnsureVerified` (daemon startup). The
-remote-event path, `pullFrom`, reaches neither.
+**Support.**
+- A turn that arrived unbidden would spend the context window the user relies on, might
+  act on their working tree in the middle of their thought, and would take away their
+  ability to reason about what their own session has seen. §3.7 (a remote event never
+  drives an interactive session).
+- Claude Code edits files and runs commands, so an event that could start a turn on a
+  receiving machine would be execution on that machine, authorised by whoever sent the
+  event. §3.7.
+- Claude Code offers ways to start a run, such as `claude --bg`, so a daemon could drive
+  a session, and only this rule prevents it. §3.7.
 
-**The specification did not state it, and said something weaker that was also
-wrong.** §16 read "Daemon to a Claude session: there is no such path" — descriptive,
-and untrue at the system level. `claude --bg` exists; a daemon could spawn a run on
-receiving an event. The specification documented a limitation of *in-session
-injection* while leaving open exactly what the invariant forbids.
+**Rejected.**
+- *Forbidding a remote event from causing any Claude run at all.* It joins two concerns,
+  not disturbing a session and not spending a user's resources, which have different
+  remedies.
 
-**Decision.** State it as §3.7, an architecture principle rather than an observation,
-because it constrains code that has not been written: no starting a session on a peer
-event, no resuming or driving an existing one, no scheduled run originating from
-received data.
+**Limits.** It does not decide whether a peer event may cause a separate Claude run
+outside the interactive session.
 
-**It is a security boundary before it is an ergonomic one.** Claude Code edits files
-and runs commands. An event that could initiate a turn on a receiving machine is
-arbitrary execution on that machine, authorised by whoever sent the event — and peer
-identity is not verified (D-023), so that is whoever can reach the port. It is also
-the person's subscription, context window, attention, and repository, none of
-which are a teammate's to spend.
-
-§3.7 is the converse of local-first: that principle says a session must survive every
-peer disappearing; this says a session must be unaffected by every peer arriving.
-
-**Guarded structurally rather than by review.** A test asserts that the files
-handling peer traffic do not import `os/exec` or `syscall`, and do not call the
-probe. Checking imports rather than call graphs is crude, and deliberately so: it
-fails the moment the capability is added to the wrong file, which is when someone
-should be asked to justify it.
-
-**Scope, corrected the same day.** The first draft forbade a remote event starting
-*any* Claude run, including a separate background one. That was broader than
-intended and broader than is right: it collapsed two different concerns — "do not
-disturb my session" and "do not spend my resources" — which have different remedies.
-It also foreclosed something this specification contemplates elsewhere, where one
-person addresses another's Claude directly.
-
-The principle is now scoped to interactive sessions: a session a person is
-working in takes a turn when that person asks it to, and at no other time. An
-interactive session is a working state rather than merely a process, and a turn
-arriving unbidden consumes the context window being relied on, may act on the
-working tree mid-thought, and destroys the person's ability to reason about what
-their own session has seen.
-
-Whether a peer event may cause a **separate** run is explicitly left open. It raises
-its own questions — whose subscription is spent, what tool access such a run has,
-what the person whose machine it runs on agreed to — and those deserve an answer
-rather than being settled here by implication. What must hold either way is that no
-such run borrows the interactive session's context or interrupts it.
-
-The structural test enforces something stricter than the principle requires: that
-peer-handling code cannot start a process at all. That is deliberate. Nothing needs
-the looser rule yet, and the questions above have no answers yet, so the guard stands
-until they do.
+**Revisit when** a peer event needs to cause a Claude run of its own.
 
 ---
 
@@ -6542,3 +6385,31 @@ can reach it, and the daemon then notes at start that it is reachable.
 
 **Revisit when** exposing the peer listener is found to reveal something a pinned
 handshake does not protect.
+
+---
+
+## D-146 — Code that handles peer traffic cannot start a process
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Decision.** A test fails if a file that handles peer traffic imports `os/exec` or
+`syscall`, and another fails if `sync.go` or `daemon.go` calls `RunProbe`,
+`EnsureVerified` or `runDoctor`, the functions that start a Claude run. The guard is
+stricter than D-035 (a remote event never makes an interactive
+session take a turn), since it forbids starting any process from those files.
+
+**Support.**
+- The only path that starts a Claude run is `RunProbe`, reached from `runDoctor`, a typed
+  command, and from `EnsureVerified`, the daemon's check at start. `cmd/cogmer/probe.go`,
+  and `cmd/cogmer/invariant_test.go`, `TestExecutionLivesOnlyInTheProbe`.
+- Checking imports fails the moment the capability is added to the wrong file, which is
+  when someone should be asked to justify it. `cmd/cogmer/invariant_test.go`,
+  `TestPeerFacingCodeCannotExecute`.
+
+**Rejected.**
+- *Relying on review.* A rule that nothing checks is broken by the first change nobody
+  reviews with it in mind.
+- *Checking the call graph.* It is more precise, and harder to keep correct than a list
+  of imports.
+
+**Revisit when** a peer event needs to start a process, which D-035 leaves undecided.
