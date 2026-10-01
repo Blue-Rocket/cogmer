@@ -159,8 +159,10 @@ func (d *Daemon) health(w http.ResponseWriter, r *http.Request) {
 	// Health reports how many rooms are served, not which one is "current": there
 	// is no current room, and a daemon serving several has no business naming one
 	// (D-080).
+	// The version is what lets a newer binary recognise a daemon it should replace
+	// (D-158).
 	rooms, _ := d.members.Rooms()
-	writeJSON(w, map[string]any{"ok": true, "rooms": len(rooms), "peerId": d.id.PeerID})
+	writeJSON(w, map[string]any{"ok": true, "rooms": len(rooms), "peerId": d.id.PeerID, "version": version})
 }
 
 // storeFor opens a room's database on demand and keeps it. A daemon that served

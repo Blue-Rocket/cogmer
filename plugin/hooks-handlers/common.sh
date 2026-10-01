@@ -67,8 +67,18 @@ start_daemon_if_needed() {
 
   addr="${COGMER_ADDR:-127.0.0.1:4782}"
   if command -v curl > /dev/null 2>&1; then
-    if curl -s -m 1 "http://${addr}/healthz" > /dev/null 2>&1; then
-      return 0   # already running, which is the ordinary outcome, not an error
+    local health running want
+    if health="$(curl -s -m 1 "http://${addr}/healthz" 2>/dev/null)"; then
+      # Already running is the ordinary outcome, not an error. A daemon of another
+      # version is the one exception: after an update it would keep the old code
+      # serving until something else ended it. The daemon started below decides
+      # whether to replace it, and replaces it, detached like any start (D-158).
+      running="$(printf '%s' "$health" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')"
+      want="$("$bin" version 2>/dev/null)"
+      if [ "$running" = "$want" ]; then
+        return 0
+      fi
+      ct_say daemon.log "hook: the daemon on ${addr} runs ${running:-a version from before daemons reported one} and $bin is ${want:-unknown}; starting it to replace the running one"
     fi
   else
     # "curl said no" and "there is no curl" are not the same answer, and reading the

@@ -138,28 +138,20 @@ different program. Only the hooks port is ever probed, through
 `daemonAlreadyServing`, which reads `/healthz` over plain HTTP. The peer mux serves
 `/healthz` too, but over TLS, and nothing asks it.
 
-**An old daemon keeps serving after an update, and nothing shows it.** `/healthz`
-reports `ok`, `peerId` and `rooms` but no version, and `daemonAlreadyServing`
-accepts any daemon that answers. So after an update installs a new binary,
-`start_daemon_if_needed` finds the old daemon answering and leaves it serving, and
-the new binary does not run until that process dies of something else. Read from
-the code on 09-22, not yet observed. A daemon that reports its version would let
-the hook replace one older than the binary it just installed, using `stop` (D-123).
+**A blocked address does not say that `stop` clears it.** When a daemon cannot bind,
+`reportDaemonBlocked` prints an `lsof` line, where D-123 (finding a daemon by the
+addresses it holds) has it name `stop` by its full path, from `invocation()`. Read
+from the code on 10-01.
 
-**`cogmer stop` (D-123, finding a daemon by the addresses it holds).** Specified and
-not built. It needs `runStop` and a SIGTERM handler in `main.go`, since §3.7 keeps
-`os/exec` and `syscall` out of the daemon's files, plus the blocked-address message
-naming `stop` by its full path, and a test that it declines a process not named
-`cogmer`. A test harness that listens on a port under another name is enough for
-that.
-
-Three things about it are undecided. The first is whether `stop` then starts this
+Three things about `stop` are undecided. The first is whether `stop` then starts this
 installation's daemon. Clearing the way is almost always why somebody runs it, but a
 person may also want it simply stopped. The second is whether it gets a slash
 command. The person is in a session, not at a terminal, and the binary is not on
 PATH, so from a terminal they have to type `~/.cogmer/bin/cogmer stop`. The third is
-Windows, which has no `lsof`. `netstat -ano` gives the pid there, or `stop` can
-report the port and fall back to moving this daemon aside.
+Windows, which has no `lsof`, so neither `stop` nor the replacement of a daemon of
+another version (D-158) can find the process holding a port there. `netstat -ano`
+gives the pid there, or `stop` can report the port and fall back to moving this
+daemon aside.
 
 ## Reaching a peer on another network
 

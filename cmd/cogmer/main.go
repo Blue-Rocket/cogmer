@@ -11,9 +11,12 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
+	"syscall"
 	"time"
 )
 
@@ -50,6 +53,8 @@ func main() {
 		runLog()
 	case "version":
 		fmt.Println(version)
+	case "stop":
+		runStop()
 	case "where":
 		runWhere()
 	case "whoami":
@@ -108,6 +113,7 @@ func usage() {
 	fmt.Fprint(os.Stderr, `cogmer -- one Claude Code conversation, shared between peers
 
   cogmer daemon          Run the local daemon on `+defaultAddr+`
+  cogmer stop            Stop the cogmer daemon on this installation's addresses
   cogmer hook prompt     UserPromptSubmit hook (capture + inject)
   cogmer hook stop       Stop hook (capture assistant turn)
   cogmer seed            Insert a simulated teammate conversation
@@ -338,6 +344,69 @@ func openLocal() (*Store, *Identity, Room) {
 	return store, id, room
 }
 
+// replaceDaemon stops a daemon of another version holding this installation's
+// addresses, and returns the hooks listener once this binary holds it (D-158). It
+// returns nil when the address could not be taken, and says why in the log.
+//
+// Several sessions can start replacements at once. Each stops whatever is still
+// in the way, one binds, and the rest find a daemon of their own version serving,
+// which they leave alone.
+func replaceDaemon(running string) net.Listener {
+	log.Printf("the daemon serving %s runs %s and this is %s; replacing it",
+		addr(), firstNonEmpty(running, "a version from before daemons reported one"), version)
+	outcomes, err := stopDaemonsAt([]string{addr(), peerAddr()})
+	for _, o := range outcomes {
+		switch {
+		case o.Stopped:
+			log.Printf("  stopped pid %d", o.PID)
+		case o.Err != nil:
+			log.Printf("  could not stop pid %d: %v", o.PID, o.Err)
+		default:
+			log.Printf("  left %s, pid %d, alone: it is not a cogmer daemon", firstNonEmpty(o.Name, "an unnamed process"), o.PID)
+		}
+	}
+	if err != nil {
+		log.Printf("  could not replace it (%v); it keeps serving", err)
+		return nil
+	}
+	stopped := false
+	for _, o := range outcomes {
+		stopped = stopped || o.Stopped
+	}
+	if !stopped {
+		log.Printf("  nothing was stopped, so it keeps serving")
+		return nil
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		l, lerr := net.Listen("tcp", addr())
+		if lerr == nil {
+			return l
+		}
+		if v, ok := daemonVersionAt(addr()); ok && !shouldReplace(v, version) {
+			log.Printf("  a daemon of this version is serving %s now; leaving it to it", addr())
+			return nil
+		}
+		if time.Now().After(deadline) {
+			reportDaemonBlocked("hooks and the local view", addr(), lerr)
+			return nil
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
+// listenWithin listens on an address, retrying until the wait is over.
+func listenWithin(address string, wait time.Duration) (net.Listener, error) {
+	deadline := time.Now().Add(wait)
+	for {
+		l, err := net.Listen("tcp", address)
+		if err == nil || time.Now().After(deadline) {
+			return l, err
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
 func runDaemon() {
 	id, err := LoadIdentity()
 	if err != nil {
@@ -364,15 +433,23 @@ func runDaemon() {
 		// an error (§29). Anything else holding the port is a real fault -- and one
 		// nobody would otherwise see, because a hook starts this detached into a log
 		// that is not read.
-		if daemonAlreadyServing(addr()) {
+		running, ok := daemonVersionAt(addr())
+		if !ok {
+			reportDaemonBlocked("hooks and the local view", addr(), err)
+			return
+		}
+		if !shouldReplace(running, version) {
 			clearDaemonState()
 			log.Printf("a cogmer daemon is already serving %s; leaving it to it", addr())
 			return
 		}
-		reportDaemonBlocked("hooks and the local view", addr(), err)
-		return
+		if local = replaceDaemon(running); local == nil {
+			return
+		}
 	}
-	peer, err := net.Listen("tcp", peerAddr())
+	// The peer address can lag the hooks address by a moment while a replaced
+	// daemon exits, so it is tried for a few seconds before it counts as blocked.
+	peer, err := listenWithin(peerAddr(), 5*time.Second)
 	if err != nil {
 		local.Close()
 		reportDaemonBlocked("peer sync", peerAddr(), err)
@@ -449,12 +526,28 @@ func runDaemon() {
 			}
 		}()
 	}
+	// SIGTERM is how `stop` and a replacing daemon end this one (D-123). Closing the
+	// listeners ends the servers, and returning runs the deferred closes of the
+	// overlay and the stores.
+	var stopping atomic.Bool
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGTERM, os.Interrupt)
 	go func() {
-		if err := http.Serve(peer, routes); err != nil {
+		s := <-signals
+		stopping.Store(true)
+		log.Printf("stopping on %v", s)
+		local.Close()
+		peer.Close()
+		if tcListener != nil {
+			tcListener.Close()
+		}
+	}()
+	go func() {
+		if err := http.Serve(peer, routes); err != nil && !stopping.Load() {
 			log.Fatalf("peer server: %v", err)
 		}
 	}()
-	if err := http.Serve(local, d.LocalRoutes()); err != nil {
+	if err := http.Serve(local, d.LocalRoutes()); err != nil && !stopping.Load() {
 		log.Fatal(err)
 	}
 }
@@ -1420,23 +1513,102 @@ func daemonStateFile() string { return filepath.Join(homeDir(), "daemon-state") 
 // own daemons. /healthz names the peer it belongs to, so this distinguishes "a
 // colleague of mine is already running" from "something unrelated has the port".
 func daemonAlreadyServing(address string) bool {
+	_, ok := daemonVersionAt(address)
+	return ok
+}
+
+// daemonVersionAt reports the version a cogmer daemon at an address says it runs,
+// and whether a cogmer daemon answered at all. A daemon built before /healthz
+// carried a version answers with none, which reads as "".
+func daemonVersionAt(address string) (string, bool) {
 	c := &http.Client{Timeout: 700 * time.Millisecond}
 	resp, err := c.Get("http://" + address + "/healthz")
 	if err != nil {
-		return false
+		return "", false
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return false
+		return "", false
 	}
 	var body struct {
-		OK     bool   `json:"ok"`
-		PeerID string `json:"peerId"`
+		OK      bool   `json:"ok"`
+		PeerID  string `json:"peerId"`
+		Version string `json:"version"`
 	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<16)).Decode(&body); err != nil {
+		return "", false
+	}
+	return body.Version, body.OK && body.PeerID != ""
+}
+
+// shouldReplace says whether a daemon of version running gives way to this
+// binary, version mine (D-158). Any difference counts, because the plugin decides
+// which version a machine runs and may move it either way. A build from source
+// reports dev and is never replaced, nor replaces one, because a maintainer runs it
+// by hand and every new session would otherwise end it.
+func shouldReplace(running, mine string) bool {
+	if running == "dev" || mine == "dev" {
 		return false
 	}
-	return body.OK && body.PeerID != ""
+	return running != mine
+}
+
+// stopOutcome is what stopping found at one listening process.
+type stopOutcome struct {
+	PID     int
+	Name    string
+	Stopped bool
+	Err     error
+}
+
+// stopDaemonsAt stops the cogmer daemon listening on each address, and declines
+// anything else listening there (D-123). The daemon in the way is the one holding
+// the address, whichever state directory it belongs to.
+func stopDaemonsAt(addresses []string) ([]stopOutcome, error) {
+	seen := map[int]bool{os.Getpid(): true}
+	var out []stopOutcome
+	for _, a := range addresses {
+		pids, err := listeningPIDs(portOf(a))
+		if err != nil {
+			return out, err
+		}
+		for _, pid := range pids {
+			if seen[pid] {
+				continue
+			}
+			seen[pid] = true
+			o := stopOutcome{PID: pid, Name: processName(pid)}
+			// Identified by its executable's name: a build renamed by hand is then
+			// not stopped, which is the safe way for this check to be wrong.
+			if o.Name == "cogmer" {
+				o.Err = terminate(pid, 5*time.Second)
+				o.Stopped = o.Err == nil
+			}
+			out = append(out, o)
+		}
+	}
+	return out, nil
+}
+
+// runStop is `cogmer stop`.
+func runStop() {
+	outcomes, err := stopDaemonsAt([]string{addr(), peerAddr()})
+	for _, o := range outcomes {
+		switch {
+		case o.Stopped:
+			fmt.Printf("stopped the cogmer daemon, pid %d\n", o.PID)
+		case o.Err != nil:
+			fmt.Printf("could not stop the cogmer daemon, pid %d: %v\n", o.PID, o.Err)
+		default:
+			fmt.Printf("left %s, pid %d, alone: it is not a cogmer daemon\n", firstNonEmpty(o.Name, "an unnamed process"), o.PID)
+		}
+	}
+	if err != nil {
+		log.Fatalf("stop: %v", err)
+	}
+	if len(outcomes) == 0 {
+		fmt.Printf("nothing is listening on %s or %s\n", addr(), peerAddr())
+	}
 }
 
 func reportDaemonBlocked(what, address string, cause error) {

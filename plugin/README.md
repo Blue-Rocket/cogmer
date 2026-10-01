@@ -10,7 +10,7 @@ Claude Code starts, and it replaces or wraps nothing.
 
 | hook | what it does |
 |---|---|
-| `SessionStart` | starts the daemon if it is not running, and fetches the binary in the background if it has not been fetched |
+| `SessionStart` | starts the daemon if it is not running, replaces a running daemon of another version, and fetches the binary in the background if it has not been fetched |
 | `UserPromptSubmit` | captures your prompt, and injects the colleagues' turns this session has not seen |
 | `Stop` | captures the completed response |
 

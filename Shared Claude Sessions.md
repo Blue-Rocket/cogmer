@@ -2147,6 +2147,11 @@ directory or an earlier version blocks this one just as an unrelated program wou
 It signals only a process it has identified as a cogmer daemon. Anything else holding
 an address is named, with its process, and left alone.
 
+After an update, the first session runs the new version. A daemon of a different
+version holding this installation's addresses is stopped and replaced in the
+background, so the session is not delayed, and a fix reaches the user without their
+having to find and stop a process.
+
 A daemon that cannot bind says which of these holds its address, and when it is a
 cogmer daemon, gives the command that clears it.
 
