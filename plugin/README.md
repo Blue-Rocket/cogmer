@@ -64,3 +64,26 @@ exit without output, and the session carries on as if the plugin were not instal
 you lose collaboration, and nothing else. The session-start hook tells the model why
 there is no binary yet, such as a download still running or one that failed, so that
 it can say so when a command does not work.
+
+## Updating
+
+Claude Code learns that a new version exists only when it refreshes its copy of the
+`blue-rocket` marketplace, and for a marketplace from outside Anthropic it does that
+on its own only once auto-update is on. Until then, the plugin's update button stays
+greyed out.
+
+In the desktop app, open Manage plugins, choose Manage marketplaces from the menu on
+the Add button at the top right, and choose Check for updates from the `blue-rocket`
+marketplace's menu. Then update cogmer from Manage plugins. In a terminal, the same
+two steps are `claude plugin marketplace update blue-rocket` and
+`claude plugin update cogmer@blue-rocket`. Asking Claude in a session to update the
+cogmer plugin also works, because it can run those two commands, provided `claude`
+is installed as a command on the machine.
+
+To have new versions arrive by themselves, turn on auto-update for the marketplace.
+The desktop app has no switch for it. In a terminal, run `claude`, then `/plugin`,
+open the Marketplaces tab, select `blue-rocket` and turn on auto-update. This is done
+once on each machine.
+
+The next session after an update fetches the new binary in the background and
+replaces the daemon that is running, so there is nothing to stop or restart.
