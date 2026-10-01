@@ -168,7 +168,7 @@ is not listed, read the spec.
 | the local HTTP API or the view | D-087, D-038, D-039, D-090, D-099 |
 | capture, reassembly, injection | D-014, D-040, D-043, and B04/B05/B09 |
 | rooms, membership, session binding | D-015, D-016, D-046, D-064, D-071, D-077 |
-| identity, keys, admission | D-042, D-044, D-053, D-058, D-073, D-054 |
+| identity, keys, admission | D-042, D-152, D-153, D-044, D-053, D-058, D-073, D-054 |
 | addresses, transport, reachability | D-019, D-091, D-101, D-103, D-104 |
 | another host | D-110, D-111, D-113, §3.8 |
 | the name, a slash command, the plugin manifest | D-117, D-118, D-095, D-096, D-085 |

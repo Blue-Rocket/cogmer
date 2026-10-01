@@ -568,7 +568,8 @@ the peer that created it and rejected on receipt if it does not verify.
   exchange between peers, so an identifier that gave its holder any power could not be
   protected. §6 (identity).
 - Peer identity is an Ed25519 key pair, and events are signed at origin. D-042 (peer
-  identity is an Ed25519 key pair).
+  identity is an Ed25519 key pair) and D-152 (events are signed at origin over
+  length-prefixed fields).
 
 **Rejected.**
 - *Treating the identifier as sensitive.* It appears in every event, and a secret that
