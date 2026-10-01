@@ -1156,6 +1156,54 @@ func runWhoami() {
 	fmt.Println(string(buf))
 	fmt.Printf("\n%s\n", nameLine(id))
 	printPairingInvitation(id)
+
+	running, answering := daemonVersionAt(addr())
+	fmt.Printf("\n%s", versionReport(pluginVersion(), version, running, answering))
+}
+
+// pluginVersion is the version of the plugin that ran this command, or "" when it
+// was run from a terminal rather than through the plugin.
+func pluginVersion() string {
+	root := strings.TrimSpace(os.Getenv("CLAUDE_PLUGIN_ROOT"))
+	if root == "" {
+		return ""
+	}
+	b, err := os.ReadFile(filepath.Join(root, "VERSION"))
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(b))
+}
+
+// versionReport shows the three versions that can disagree for a while after an
+// update: the plugin, the binary it fetched, and the daemon still running. Each
+// disagreement is followed by what resolves it, so a person checking whether an
+// update has landed is told what to do rather than handed three numbers.
+func versionReport(plugin, binary, daemon string, answering bool) string {
+	var b strings.Builder
+	b.WriteString("Versions:\n")
+	if plugin != "" {
+		fmt.Fprintf(&b, "  plugin  %s\n", plugin)
+	}
+	fmt.Fprintf(&b, "  binary  %s\n", binary)
+	switch {
+	case !answering:
+		b.WriteString("  daemon  not running\n")
+	case daemon == "":
+		b.WriteString("  daemon  from before daemons reported a version\n")
+	default:
+		fmt.Fprintf(&b, "  daemon  %s\n", daemon)
+	}
+	if plugin != "" && shouldReplace(binary, plugin) {
+		b.WriteString("\nThe binary is not the version this plugin expects yet. A new session fetches it.\n")
+	}
+	switch {
+	case !answering:
+		b.WriteString("\nNo daemon is running. A new session starts one.\n")
+	case shouldReplace(daemon, binary):
+		b.WriteString("\nThe running daemon is not this binary's version. A new session replaces it.\n")
+	}
+	return b.String()
 }
 
 // runVerify is the two-word check (D-048). Both people run it, at the same time,

@@ -13,6 +13,10 @@
 set -u
 . "$(dirname "$0")/hooks-handlers/common.sh"
 
+# The binary reads the plugin's VERSION through this, to report whether the plugin,
+# the binary and the running daemon agree.
+export CLAUDE_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")" && pwd)}"
+
 if bin="$(cogmer_binary)"; then
   exec "$bin" "$@"
 fi

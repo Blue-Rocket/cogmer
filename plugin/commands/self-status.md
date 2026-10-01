@@ -1,5 +1,5 @@
 ---
-description: Show who you are, what you send colleagues, and whether they can reach you
+description: Show who you are, what you send colleagues, whether they can reach you, and which versions are running
 allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" whoami:*)
 disable-model-invocation: true
 ---
@@ -26,6 +26,10 @@ If the output says nobody can reach the address, that is the important part and 
 outranks everything else: a colleague given that string cannot complete a pairing.
 Relay the reason it gives, which distinguishes a daemon that has not published an
 address yet from one that could not find a route out.
+
+The output ends with the versions of the plugin, the binary and the running daemon.
+Give them in one line. If the output says they disagree, say which, and relay what it
+says resolves it.
 
 Do not print the key on its own. It identifies them exactly and is useless to a
 colleague without the address attached, so handing it over alone sends them into a

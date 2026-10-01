@@ -35,7 +35,7 @@ every room, and `self-` commands act on you.
 | `/cogmer:peer-list` | the peers this machine knows, and whether each is verified |
 | `/cogmer:peer-forget <peer>` | discard a peer and every room admission it held |
 | `/cogmer:peer-pair [their pairing string] [what you call them]` | pair with a colleague by comparing two words in your browser |
-| `/cogmer:self-status` | who you are, what you send colleagues, and whether they can reach you |
+| `/cogmer:self-status` | who you are, what you send colleagues, whether they can reach you, and which versions are running |
 | `/cogmer:self-name [what people should call you]` | show or set the name other people see for you |
 
 ## Pairing happens in your browser, not through the model
