@@ -7,9 +7,11 @@
 # not -- which is what made replacing the pre-GA droplet a change to this file and
 # release-url.txt alone (D-121).
 #
-# The release is created on the tag, so the tag and the assets cannot disagree: the
-# same call that publishes the binaries is the one that names the commit they were
-# built from.
+# The release is created on the tag, and the tag must name a commit whose
+# checksums.txt pins these assets, because the plugin at that tag is what authorises
+# them. GitHub creates a missing tag on its default branch when the commit named is
+# not one it holds, and says nothing, so this checks before it publishes rather than
+# trusting the call.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -29,12 +31,32 @@ while read -r sum name; do
 done < plugin/checksums.txt
 echo "  all five match"
 
+git fetch --quiet origin
+head="$(git rev-parse HEAD)"
+
 if gh release view "$tag" > /dev/null 2>&1; then
-  echo "release $tag exists; uploading assets"
+  # Uploading to an existing release puts these assets under whatever commit its tag
+  # names, so that commit's pins must be these.
+  tagged="$(git ls-remote origin "refs/tags/${tag}^{}" | awk '{print $1}')"
+  [ -n "$tagged" ] || tagged="$(git ls-remote origin "refs/tags/${tag}" | awk '{print $1}')"
+  if [ -z "$tagged" ] || ! git cat-file -e "${tagged}^{commit}" 2>/dev/null \
+    || ! git show "${tagged}:plugin/checksums.txt" 2>/dev/null | cmp -s - plugin/checksums.txt; then
+    echo "release $tag exists, but its tag names ${tagged:-nothing}, whose plugin/checksums.txt" >&2
+    echo "does not pin dist/. Move the tag to the commit that does before uploading." >&2
+    exit 1
+  fi
+  echo "release $tag exists at $(git rev-parse --short "$tagged"); uploading assets"
   gh release upload "$tag" dist/* --clobber
 else
+  # The tag is created on GitHub, from a commit GitHub must already hold.
+  if [ -z "$(git branch -r --contains "$head" 2>/dev/null)" ]; then
+    echo "$(git rev-parse --short HEAD) is not on GitHub, so the tag would be created on" >&2
+    echo "the default branch instead. Push it first: git push origin HEAD" >&2
+    exit 1
+  fi
   echo "creating release $tag from $(git rev-parse --short HEAD)"
   gh release create "$tag" dist/* \
+    --target "$head" \
     --title "$tag" \
     --notes "Binaries for $tag. Each is authorised by the sha256 pinned in plugin/checksums.txt at this tag; a download that does not match is deleted rather than run."
 fi
