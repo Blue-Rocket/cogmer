@@ -14,7 +14,7 @@ If this changes, every prompt in every session is disturbed whenever the daemon 
 
 ### B23: A process the daemon's shape keeps the GUI session, so it can open the view and notify
 
-If this changes, nobody sees a room: the daemon, started in the background by the session-start hook, is the only part of cogmer that can open the room view or raise a notification, since everything Claude Code offers delivers to the model rather than to a person (D-033, D-036). There is no error path back to the daemon, so it believes it showed the view while nothing appeared, and a first-time user is left with a loopback address nobody told them about. On Darwin 25.6 a background process keeps the logged-in GUI session, opens a URL and takes focus, whether or not it is in a new POSIX session.
+If this changes, nobody sees a room: the daemon, started in the background by the session-start hook, is the only part of cogmer that can open the room view, since everything Claude Code offers delivers to the model rather than to a person (D-033, D-036). There is no error path back to the daemon, so it believes it showed the view while nothing appeared, and a first-time user is left with a loopback address nobody told them about. On Darwin 25.6 a background process keeps the logged-in GUI session, opens a URL and takes focus, whether or not it is in a new POSIX session.
 
 ## Tier: session
 

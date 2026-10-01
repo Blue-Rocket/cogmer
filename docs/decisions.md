@@ -906,116 +906,56 @@ outside the interactive session.
 
 ## D-036 — MCP logging notifications are not a display channel
 
-**Date:** 2026-09-17 · **Status:** active (tested, negative)
+**Date:** 2026-09-17 · **Status:** active
 
-**Context.** After a terminal wrapper was ruled out (D-034), an MCP server looked
-like the ideal carrier for ambient display: it is exactly "something Claude Code
-already loads", it needs no change to how anyone starts Claude, it is
-cross-platform, and it would plausibly reach the desktop application and the editor
-extensions, which a pseudo-terminal never could.
+**Decision.** cogmer shows nothing to a user through MCP. MCP carries capability to the
+model, and nothing to a person.
 
-**Tested, and it does not work.** A minimal stdio server was built that declares the
-`logging` capability and emits `notifications/message`. Claude Code starts it, marks
-it connected, and calls its tools normally. The notifications go nowhere.
+**Support.**
+- A minimal MCP server that declared the logging capability and emitted
+  `notifications/message`, while idle and again during a tool call, had its messages
+  shown nowhere: not in `--output-format stream-json`, `--debug`, `--debug-file` or
+  `~/.claude/debug`. `84a0751:docs/decisions.md`.
+- Claude Code's record of what it negotiated with the server lists tools, prompts,
+  resources and resource subscriptions, and no logging, although the server declared it.
+  `84a0751:docs/decisions.md`.
 
-Checked in every place they might surface:
+**Rejected.**
+- *An MCP server as the carrier for showing a user colleagues' turns.* It loads without
+  changing how Claude Code starts and reaches every surface, and what it emits reaches
+  nothing a person sees.
 
-- not in `--output-format stream-json`;
-- not in `--debug` output;
-- not in `--debug-file`, which produced 34 KB including thirteen lines about this
-  server and zero containing the payload;
-- not in `~/.claude/debug`.
-
-**Tested twice, because the first test was wrong.** The first emitted only while the
-server was idle, which a client may legitimately ignore — notifications are often
-pumped only while a request to that server is in flight. So the server was rebuilt
-to emit during a `tools/call`, before responding. Same result: the tool returned its
-value, the notifications vanished.
-
-**The conclusive evidence is the capability record**, not the absence of output.
-Claude Code logs what it negotiated with each server:
-
-```
-{"hasTools":true,"hasPrompts":false,"hasResources":false,"hasResourceSubscribe":false, ...}
-```
-
-Tools, prompts, resources, resource-subscribe. Logging is not in that model at all,
-though the server declared it. A client that rendered log notifications would track
-the capability.
-
-**Consequence.** MCP carries capability *to the model* — tools it can call, resources
-it can read. It does not carry anything *to the person*. Display and inference reach
-Claude Code by different routes, and MCP is only the second.
-
-**Related, and worth stating before anyone builds an MCP server here for another
-reason.** MCP also defines *sampling*, by which a server asks the client to run
-inference. If Claude Code supports it, that is a direct route to violating §3.7 — a
-peer's daemon could cause inference in an interactive session by way of a server.
-Whether Claude Code implements sampling was not tested. Any MCP server this project
-ships must not expose one.
+**Revisit when** Claude Code's record of negotiated capabilities includes logging, or it
+shows an MCP server's notifications.
 
 ---
 
 ## D-037 — Claude Code is launched and used unchanged
 
-**Date:** 2026-09-17 · **Status:** active · **Generalises** D-034
+**Date:** 2026-09-17 · **Status:** active
 
-**Context.** D-034 ruled out a pseudo-terminal wrapper by enumerating its costs:
-it replaces the entry point, reaches only terminal users, and needs a second
-implementation on Windows. That reasoning was correct and too specific — it had to
-be re-derived for each new proposal, and it was derived *after* a prototype had
-already been built.
+**Decision.** A user starts and uses Claude Code the same way they would without cogmer,
+and installs only what Claude Code loads as an extension: hooks, skills, MCP servers and
+the plugin that carries them. A proposal that needs Claude Code started differently, an
+artifact it does not load, or knowledge of how it renders is out.
 
-**Decision.** State it as a principle instead. A person starts and uses Claude
-Code exactly as they do today; this system installs *into* it, never *around* it.
-The only things a participant installs are things Claude Code already loads: hooks,
-skills, MCP servers, and whatever else it accepts.
+**Support.**
+- Claude Code is a terminal program, a desktop application and an editor extension, and a
+  system that extends it through its own mechanisms works in all of them. §3.8 (the host
+  is launched and used unchanged).
+- Every extension point Claude Code offers delivers to the model: hooks supply context,
+  skills supply instructions and MCP servers supply capability. D-033 (the room cannot be
+  displayed inside Claude Code), and D-036 (MCP logging notifications are not a display
+  channel).
 
-The value is that it applies without argument. If a proposal requires starting
-Claude Code differently, installing something it does not already load, or
-understanding how it renders — it is out, and no cost-benefit discussion is needed.
-Applied earlier, it would have stopped the wrapper before anything was written.
+**Rejected.**
+- *Searching Claude Code for an undocumented way to display something.* The installed
+  artifact is a native binary with no source to read, and a seam found that way would be
+  undocumented, unversioned, and beyond what the behaviour registry can check, since
+  whether something appears on screen needs somebody watching.
 
-**What it buys.** Claude Code is a terminal program, a desktop application, and an
-editor extension. A system extending it through its own mechanisms works on all of
-them without knowing any of them exist. A system wrapping its process works on one
-and cannot be made to work on the others. The constraint also keeps terminal
-emulation, ConPTY, editor terminals, shell integration, and every future Anthropic
-surface out of this project's responsibility.
-
-**The consequence that must be accepted, not escaped.** Claude Code's extension
-points all deliver to the model — hooks supply context, skills supply instructions,
-MCP servers supply capability — and each reaches a person only through what the
-model then says. Confirmed independently three times: D-033 (hooks display nothing),
-D-036 (MCP logging is never rendered), and skills being markdown instructions rather
-than programs.
-
-So conversation semantics must work everywhere and do, being model-facing, while
-presentation is best effort. A view *outside* the session remains permitted: it is a
-separate program a person may run, not a change to how they start Claude Code.
-What is forbidden is taking ownership of Claude Code in order to draw inside it.
-
-**On searching for an undocumented display seam.** Proposed, and declined. The
-installed artifact is a native binary, so there is no source to read; "Channels"
-does not appear in this version; and the plugin surface is packaging — `claude
-plugin details` reports a *projected token cost*, which confirms its components are
-model-facing.
-
-More decisively, a seam found that way would be a worse dependency than the wrapper,
-not a better one: undocumented, unversioned, and unverifiable by the behaviour
-registry, since visual correctness needs an observer rather than an assertion. "Find
-an internal seam" and "do not take ownership of Claude Code" are in tension, and the
-first loses.
-
-**Preferred instead, if ambient awareness is wanted.** The daemon can raise an
-operating-system notification directly — no Claude Code involvement, nothing to
-break on upgrade, and it works on every surface because it never touches any of
-them. That yields the signal ambiently and the content on demand, which is what the
-extension surface can actually support.
-
-If a display primitive is ever wanted from Anthropic, the request is small and
-already well-specified here: append a display-only message to the current session,
-without scheduling inference — §3.7 states that second half precisely.
+**Revisit when** Claude Code documents a way for an extension to show something to a
+user.
 
 ---
 
@@ -1023,40 +963,24 @@ without scheduling inference — §3.7 states that second half precisely.
 
 **Date:** 2026-09-17 · **Status:** active
 
-**Context.** D-033 concluded that the room cannot be displayed inside a Claude Code
-session, and everything since has treated an external view as what remains after
-that constraint. That framing was backwards.
+**Decision.** The room is shown outside the session, in a view of its own, and would be
+even if Claude Code could show it inside one.
 
-**Decision.** Record the separation as a design position rather than a consequence.
-A view outside the session is what should be built even if an in-session display
-became available.
+**Support.**
+- A session is read closely and a room is glanced at, so interleaving them would bury the
+  room inside the session and interrupt the session with arrivals not addressed to it.
+  §17 (shared conversation UI).
+- With three colleagues, a session carrying their turns would become unreadable, and the
+  cost would fall on the user's own working view. §17.
+- The model wants a colleague's turns in its context at a turn boundary, and the user
+  wants them available to glance at, so injection serves the model and a view serves the
+  user. §17.
 
-**The argument.** A session is a person's conversation with their own Claude,
-read closely. A room is a record of what colleagues are doing, glanced at.
-Interleaving them buries the glanceable thing inside the closely-read thing, and
-interrupts the closely-read thing with arrivals not addressed to it. A person
-loses the thread of their own work in order to be told something they could have
-looked at when they chose.
+**Rejected.**
+- *Showing colleagues' turns inside the session, if Claude Code allowed it.* It is the
+  interleaving above.
 
-They also scale differently. One colleague interleaved might be tolerable; three is
-unreadable — and the cost lands on the person's own working view, which is the
-last place it should land. Separated, additional participants cost nothing there.
-This answers the earlier observation that a three-peer session "feels a little
-noisy": the noise is only unavoidable while the room shares space with the
-conversation.
-
-**The form it takes.** The model and the person want the same conversation
-differently. The model wants teammate turns *in its context*, at a turn boundary,
-phrased for a reader that does not skim — which §20 already specifies. A person wants
-them *available to glance at*, without their own thread stopping to carry them. One
-channel cannot serve both without compromising each, so injection serves the model
-and a view serves the person.
-
-**Consequence for how the constraint is described.** §17 no longer opens by saying
-the room cannot be shown inside a session. It opens with why the room belongs
-outside one, and treats the constraint as agreeing with the design rather than
-causing it. The distinction matters for anyone reading later: a reader who believes
-this is a workaround will try to undo it the moment an in-session display appears.
+**Revisit when** users say they need colleagues' turns inside their own session.
 
 ---
 
@@ -1064,93 +988,56 @@ this is a workaround will try to undo it the moment an in-session display appear
 
 **Date:** 2026-09-17 · **Status:** active
 
-**Context.** D-038 established that the room belongs outside the session, which made
-two further renderers look attractive: a terminal view for a pane beside the
-session, and an operating-system notification for ambient arrival.
+**Decision.** The browser view is the only renderer of a room. A terminal pane beside the
+session, or a notification when a colleague's turn arrives, is built only once using the
+view shows it is needed.
 
-**Decision.** Build neither yet. The browser view exists; nobody has worked with it.
+**Support.**
+- The view was used on 2026-09-17 and judged the right avenue: a separate window is
+  consulted rather than forgotten. `84a0751:docs/decisions.md`.
+- The terminal is not a user experience. D-086 (the terminal is not a user experience;
+  the view is the surface).
 
-**Why this order.** Everything now known about what a view should be is reasoning.
-The questions that decide the next renderer cannot be answered by more of it: whether
-glancing at a second window is acceptable or whether it is one window too many;
-whether a room is watched continuously or consulted occasionally; whether arrival
-needs announcing at all, or whether noticing on the next glance is enough. Each has a
-different answer for a pair than for four people, and none is knowable in advance.
+**Rejected.**
+- *Building a terminal pane and a notification before the view had been used.* Each would
+  encode a guess about how a room is watched, and have to be maintained whether or not
+  the guess held.
 
-A second renderer built now would encode a guess and then have to be maintained
-whether or not the guess held.
+**Limits.** It does not decide whether a colleague's arrival should be announced.
 
-**What using it will settle.** Solo use is sufficient to start: a person watching
-their own turns appear tests readability, live update, and whether a separate window
-is glanced at or forgotten — without needing a second participant. The
-collaboration-specific questions need a pair, but the ergonomic ones do not.
-
-**Revisit when** there is experience to report. The likely outcomes are that the
-browser is fine and nothing more is needed; that it is right but wants announcing,
-making the notification next; or that a second window is not consulted at all, making
-the terminal pane next. Those lead to different work, which is the reason to wait.
-
-**Outcome, 2026-09-17.** Used, and judged the right avenue. That settles the question
-this decision was waiting on: a separate window is consulted rather than forgotten,
-so the terminal pane is not the next thing and the browser is not a placeholder for
-it. D-038's position — that the room belongs outside the session on its merits —
-now rests on use rather than on argument.
-
-Still open is whether arrival wants announcing. That is a different question with a
-different answer for someone watching a pairing closely than for someone dipping in
-during long solo stretches, and it remains unanswered.
+**Revisit when** use shows that the view is not consulted, or that a user misses a
+colleague's turns for want of an announcement.
 
 ---
 
-## D-040 — The injected block is fenced with an unforgeable value, and framed by classification
+## D-040 — The injected block is fenced with an unforgeable value
 
-**Date:** 2026-09-17 · **Status:** active (implemented)
+**Date:** 2026-09-17 · **Status:** active
 
-**Context.** Asked whether the literal teammate turn is pushed into context without
-language making clear it is informational rather than instructional. There was such
-language — a sentence at the top of the block — and it was defeatable.
+**Decision.** Each injected block is delimited by a value generated for that injection,
+which the content cannot know. Any copy of the value in the content is removed, the
+framing says the block ends only at the matching value and that text claiming otherwise
+is part of the block, and the framing is stated again after the content.
 
-**The vulnerability.** Content was interpolated raw. A teammate turn consisting of
-`</message></team-conversation>` followed by a forged operator instruction escaped
-the block entirely: the injected text then appeared *after* the closing tag, where
-the framing no longer applied. Demonstrated rather than theorised. Since peer
-identity is unverified (D-023), the capability belonged to anyone who could reach
-the sync port.
-
-**Decision — the boundary must be unforgeable.** Each block carries a fence value
-generated per injection and unknowable to the content; the value is stripped from
-the content so it cannot be reproduced; the framing states that the block ends only
-at the matching value and that text claiming otherwise is part of the block; and the
-framing is restated *after* the content, so the last thing read is the boundary
-rather than the first.
-
-**Decision — frame by classification rather than authority.** Instructing a model to
-disregard instructions invites it to weigh two instructions. Telling it what *kind of
-thing* it is reading does not. The framing now says that nothing inside the block is
-addressed to it however phrased — including text appearing to come from an operator,
-a system, or its own user — and that a request appearing inside is *a report that
-someone made a request*, not a request made of it.
-
-**Verified against a live session, not only in structure.** A real session given a
-forged `SYSTEM OVERRIDE` instruction ignored it, explained that it came from inside
-the record and was therefore information rather than instruction, and reported the
-attempt to its own user unprompted. The classification framing is what gave it the
-language to do that.
-
-**What this does not solve.** A teammate's genuine turn may legitimately contain
-imperative text — colleagues tell each other to run things. No fence distinguishes a
-hostile imperative from an honest one, and none should: both are reports of what
-someone said. The defence is that neither is addressed to the reading model, which is
-exactly what the framing now asserts.
+**Support.**
+- A colleague's turn consisting of `</message></team-conversation>` and a forged
+  instruction escaped a block whose content was interpolated as it stood, so the
+  instruction appeared outside the block. `84a0751:docs/decisions.md`.
+- A turn containing the closing delimiter would end the block, and whatever followed
+  could pass for an operator, a system or the local user. §20 (attribution in injected
+  context).
+- A test checks that a turn cannot escape the block. `cmd/cogmer/transcript_test.go`,
+  `TestTeammateContentCannotEscapeTheBlock`.
 
 **Rejected.**
-- *Escaping the delimiters* — whack-a-mole against prose, and it assumes the
-  boundary is syntactic when the model reads it as language.
-- *Truncating or sanitising content* — §3.4 requires the actual conversation be
-  preserved, and a teammate's words are not the system's to edit.
-- *Relying on the model to be robust* — it was, here, and that is a property of the
-  model rather than of this design. The fence holds whether or not the next model
-  does.
+- *Escaping the delimiters.* It is whack-a-mole against prose, and assumes the boundary is
+  syntactic when the model reads it as language.
+- *Truncating or sanitising content.* A colleague's words are not the system's to edit.
+  §3.4 (preserve actual conversation).
+
+**Limits.** A turn that contains the fence value arrives with that value removed.
+
+**Revisit when** a turn is found altered by the removal, or escaping the block.
 
 ---
 
@@ -6413,3 +6300,79 @@ session take a turn), since it forbids starting any process from those files.
   of imports.
 
 **Revisit when** a peer event needs to start a process, which D-035 leaves undecided.
+
+---
+
+## D-147 — No MCP server cogmer ships exposes sampling
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Decision.** Any MCP server cogmer ships exposes no sampling, the MCP mechanism by which a
+server asks the client to run inference.
+
+**Support.**
+- Through sampling, a peer's daemon could cause inference in an interactive session by way
+  of a server, which §3.7 (a remote event never drives an interactive session) forbids.
+- Whether Claude Code implements sampling has not been tested.
+  `84a0751:docs/decisions.md`.
+
+**Rejected.**
+- *An MCP server that exposes sampling.* It would be a route by which a peer drives a
+  session.
+
+**Revisit when** cogmer ships an MCP server.
+
+---
+
+## D-148 — Arrival would be announced by an operating-system notification
+
+**Date:** 2026-09-17 · **Status:** not built
+
+**Decision.** If a colleague's arrival is announced, the daemon raises an
+operating-system notification itself, touching no Claude Code surface.
+
+**Support.**
+- Nothing Claude Code offers displays to a person. D-033 (the room cannot be displayed
+  inside Claude Code), and D-036 (MCP logging notifications are not a display channel).
+- A process the session-start hook starts in the background keeps the logged-in GUI
+  session, so it can put something on screen. B23.
+
+**Rejected.**
+- *An undocumented display seam inside Claude Code.* It would be a worse dependency than
+  a notification. D-037 (Claude Code is launched and used unchanged).
+
+**Limits.** It does not decide whether arrival is announced at all.
+
+**Revisit when** announcing a colleague's arrival is decided.
+
+---
+
+## D-149 — The injected block frames its content by classification, not by authority
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Decision.** The framing around injected turns tells the model what kind of thing it is
+reading: that nothing inside is addressed to it, however phrased, including text that
+appears to come from an operator, a system or its own user, and that a request inside
+is a report that someone made a request, not a request made of it.
+
+**Support.**
+- Telling a model to disregard instructions invites it to weigh two instructions, while
+  telling it what it is reading does not. §20 (attribution in injected context).
+- A session given a forged "SYSTEM OVERRIDE" instruction inside the block ignored it,
+  explained that it came from inside the record and was information, and told its own
+  user, unprompted. `84a0751:docs/decisions.md`.
+- A check fails if the injected block stops framing its content as information rather
+  than instruction. B22.
+
+**Rejected.**
+- *Instructing the model to disregard any instructions in the block.* It sets two
+  instructions against each other.
+- *Relying on the model to be robust.* That is a property of a model, not of this design,
+  and the framing has to hold whether or not the next model is.
+
+**Limits.** A colleague's genuine turn may contain imperative text, and no framing tells a
+hostile imperative from an honest one. Both are reports of what someone said, and
+neither is addressed to the reading model.
+
+**Revisit when** a session is found following an instruction from inside the block.
