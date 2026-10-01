@@ -1041,240 +1041,133 @@ is part of the block, and the framing is stated again after the content.
 
 ---
 
-## D-041 — Ship as a Claude Code plugin; the session-start hook starts the daemon
+## D-041 — Ship as a Claude Code plugin
 
-**Date:** 2026-09-17 · **Status:** active (specified; not implemented)
+**Date:** 2026-09-17 · **Status:** active
 
-**Context.** §3.8 requires that the only thing installed is something Claude Code
-already loads. That settled what *not* to build — no wrapper, no launcher — without
-saying what installation actually looks like. In practice it was still a manual
-daemon start, a hand-written settings file, and environment variables.
+**Decision.** cogmer is packaged as a Claude Code plugin that carries its hooks and its
+commands, installed by adding the marketplace and then the plugin.
 
-**Decision.** Package as a plugin carrying the hooks, installed with
-`claude plugin install cogmer`. The plugin surface is real and includes
-`install`, `uninstall`, `update`, `validate`, `init`, and `marketplace`.
+**Support.**
+- A user installs only what Claude Code loads as an extension. §3.8 (the host is
+  launched and used unchanged).
+- The repository is both the marketplace and the release host, so the two install lines
+  name the same repository. D-121 (the repository is both the release host and the
+  marketplace).
 
-**And the session-start hook starts the daemon.** This is the part that converts the
-install from "run these commands and edit this file" to one line — which was the
-original objection to the wrapper, now answered without any of the wrapper's costs.
-A person should not have to start the daemon, notice it has stopped, or know it
-exists.
+**Rejected.**
+- *A list of the surfaces cogmer reaches, such as the terminal, the desktop application
+  and the editor extensions.* The surfaces change faster than a specification does, and
+  whether a surface runs hooks locally is answered by testing that surface.
 
-**Three requirements, each easy to get wrong.**
-
-*Starting must not delay the session.* Waiting on a daemon nobody asked for is worse
-than having no daemon. The same fault was already made once, where the behaviour
-preflight ran before the listeners and left a new room unreachable for several
-seconds.
-
-*Already running is the ordinary case, not an error.* Several sessions begin at once
-on one machine routinely; each attempts the start, at most one succeeds, none
-reports anything. A failure to bind is the expected outcome.
-
-*Failure is silent to the person and recorded by the daemon.* No daemon means no
-collaboration, which is degraded rather than broken — the same fail-open rule the
-hooks already follow.
-
-**A background process must remain findable.** The daemon outlives the session that
-started it, since a room may have members in several sessions and restarting it
-repeatedly is worse than leaving it up. That makes it something a person did not
-start and might not know about, so it must be discoverable and stoppable by the
-person whose machine it runs on.
-
-**Deliberately not encoded: which surfaces this reaches.** A surface matrix — CLI,
-desktop, editor extensions, and whatever comes next — changes faster than a
-specification does, and a design that enumerates surfaces is wrong within a release.
-§3.8 is stated so that the answer follows from the mechanism rather than from a list.
-Whether any particular surface runs hooks locally remains a question to answer by
-testing that surface, not by consulting a table.
+**Revisit when** Claude Code offers a way to install that needs fewer steps.
 
 ---
 
-## D-042 — Peer identity is an Ed25519 key pair; events are signed at origin
+## D-042 — Peer identity is an Ed25519 key pair
 
-**Date:** 2026-09-17 · **Status:** active (implemented)
+**Date:** 2026-09-17 · **Status:** active
 
-**Context.** Phase 9. D-023 required an identifier safe to know; §13 required that a
-relayer never rewrite an event's origin, with nothing enforcing it; §25 asked for
-signable identity and got a random string.
+**Decision.** A peer's identifier is its Ed25519 public key, written `ed25519:<base64url>`,
+not a fingerprint of it.
 
-**Decision.** A peer's identifier *is* its Ed25519 public key, rendered
-`ed25519:<base64url>`. Events are signed at origin over a length-prefixed encoding
-of their own fields, and a receiving peer verifies every event against the key its
-own identifier names.
+**Support.**
+- An identifier that is the key can be checked against a signature with nothing to look
+  up and no key to distribute. `cmd/cogmer/keys.go`.
+- Knowing an identifier grants nothing, so it can be put in every event, interface and
+  exchange. D-023 (a peer identifier must be safe to know).
 
-**Why the identifier is the key rather than a fingerprint of it.** It is
-self-certifying: a signature can be checked from the identifier alone, with nothing
-to look up and no key distribution step. And it settles D-023's requirement
-absolutely rather than approximately — knowing an identifier grants nothing, which
-is what allows the system to put one in every event, every interface, and every
-exchange, as it does by design.
+**Rejected.**
+- *A fingerprint of the key as the identifier.* Checking a signature would then need the
+  key itself from somewhere else.
 
-**The private key lives in its own file.** `identity.json` is printed by `whoami`
-and is meant to be handed to a colleague; an identity that cannot be shown without
-checking what else is in it is not much of an identity. A test asserts the key never
-marshals.
+**Limits.** An identifier gives integrity and attribution, and never decides who may
+connect or read a room, which is admission (D-045).
 
-**Signing covers length-prefixed fields with a purpose tag.** Concatenating fields
-directly would let a boundary move — a content ending in one value and a session id
-beginning with another could swap undetected. The leading tag binds a signature to
-this purpose and version, so one made here can never be replayed as one made over
-something else.
-
-**Rejection, not quarantine.** A sequence conflict is ambiguous — a peer may have
-lost its state — so D-027 keeps the evidence. A failed signature has no benign
-reading, so it is refused and logged. Verified live: a peer impersonating another
-and offering an event signed by nobody was rejected, and nothing reached the room.
-
-**What this does not do, stated because the startup warning used to overclaim.** It
-gives integrity and attribution: nothing can be forged, altered in transit, or
-falsely attributed, and §13 is enforced rather than merely stated. It does not
-decide who may *connect*, so the peer API still admits any host that can reach it to
-read a room. Proof of possession on connection is Phase 10, with admission, and the
-warning now says exactly this rather than claiming identity is not cryptographic.
-
-**Migration.** An `identity.json` whose identifier is not the local key is rewritten
-to match it. The old identifier named an identity nothing could verify; preserving
-it would preserve a claim.
+**Revisit when** a peer's key has to change while its identity does not.
 
 ---
 
-## D-043 — The wire format is defined separately from the stored row
+## D-043 — A second host is prepared for by naming, never by machinery
 
-**Date:** 2026-09-17 · **Status:** active (implemented)
+**Date:** 2026-09-17 · **Status:** active
 
-**Context.** A suggestion that the daemon's database schema should not become the
-protocol. We were half-violating it: `Event` was simultaneously the SQLite row and
-the type marshalled into `/sync`. One field, `claudeSessionId`, also encoded an
-assumption about which agent produced a turn.
+**Decision.** Nothing in cogmer names the agent that produced a turn: the session a turn
+came from is an origin session, opaque to the host. There is no field saying which host
+produced an event, no architecture of adapters and no design for a second host until a
+second host exists.
 
-**Decision.** Define the wire format in its own file, as its own type, with explicit
-conversion in both directions. Rename the session field to `originSessionId`, which
-says what it is — where a turn came from — without naming the agent that produced
-it. Carry a protocol version in every sync exchange and refuse a peer that speaks a
-different one.
+**Support.**
+- Capture was solved in the first integration work, and every hard problem since has
+  been specific to injecting into Claude Code: hooks display nothing, MCP never renders,
+  a remote event must not start a turn, the injected block needs an unforgeable fence,
+  and delivery is confirmed by evidence. D-033, D-036, D-035, D-040 and D-014.
+- A second adapter would inherit the schema and none of that difficulty, so building one
+  now would generalise from one host and no users. §3.8 (the host is launched and used
+  unchanged).
 
-**Why a separate type when the fields are currently identical.** A database row and
-a protocol message answer to different pressures. A column can be added for local
-bookkeeping without telling any peer; a wire field cannot change without every peer
-agreeing. Sharing one struct means the next convenient column silently becomes
-protocol, and nobody has to decide anything for that to happen.
+**Rejected.**
+- *A field naming the host, such as `source: claude-code | codex`, and an architecture
+  of adapters.* It rests on the claim that collaboration across agents becomes nearly
+  free once events are normalised, and what is hard does not transfer between hosts.
 
-**Why the version moved to v2.** A signature covers field values, so changing what a
-field means changes what was signed. The signing tag is the protocol's real version
-marker, and it was already versioned — which is why this was cheap.
-
-**Why now.** No room existed that anyone would mind losing, and the signing format
-had been fixed for exactly one day. The same change after two colleagues have a room
-they care about means a migration, a compatibility window, and a reason not to
-bother.
-
-**What was deliberately not done.** No `source: claude-code | codex` field, no
-adapter architecture, no design for a second host. The argument for those was that
-cross-agent collaboration becomes nearly free once events are normalised, and the
-evidence says otherwise: capture was solved in Phase 0 and every hard problem since
-has been host-specific injection — hooks display nothing, MCP never renders, a remote
-event must not trigger inference, the injected block needs an unforgeable fence,
-delivery must be confirmed by evidence. None of that transfers. A second adapter
-would inherit the schema and none of the difficulty.
-
-Generalising from one adapter, zero users, and a question answered the day before is
-where that goes wrong. The rename buys the optionality; the architecture can wait for
-a second host to actually exist.
-
-**A bug this surfaced.** `CREATE TABLE IF NOT EXISTS` creates a table and then
-ignores it forever, so every room keeps the shape it was born with and every column
-added since is missing from every room that predates it — surfacing not at open but
-at the first query that names it. An existing room failed with *no such column:
-signature* only when a peer asked it to sync. Rooms are now migrated on open, and
-adding a column to that list is the whole of what a future migration needs.
+**Revisit when** a second host is chosen to be supported.
 
 ---
 
 ## D-044 — Sync requests are signed; authentication is not admission
 
-**Date:** 2026-09-17 · **Status:** active (implemented)
+**Date:** 2026-09-17 · **Status:** active
 
-**Context.** Phase 9's third part. Signing events gave integrity — nothing could be
-forged or falsely attributed — while the peer API still answered anyone who could
-reach it.
+**Decision.** Every sync request carries the caller's identifier, a timestamp and a nonce,
+signed with a purpose tag. The receiver checks the signature against the key the
+identifier names, and refuses a timestamp more than two minutes off or a nonce it has
+seen.
 
-**Decision.** Every sync request carries the caller's identifier, a timestamp, a
-nonce, and a signature over all four plus a purpose tag. The receiver verifies the
-signature against the key the identifier names, rejects a timestamp outside two
-minutes, and rejects a nonce it has already seen.
+**Support.**
+- Peers poll, so a handshake for each poll would cost two round trips a second to avoid
+  holding one piece of state, and a timestamp and nonce prevent replay without either.
+  §16 (propagation).
+- Two machines synchronized by NTP were 408ms apart, so a window of two minutes works on
+  worse networks while keeping the set of seen nonces small. `84a0751:docs/decisions.md`,
+  and `cmd/cogmer/auth.go`, `authTolerance`.
+- The list of what the caller holds is not signed, because altering it gains an
+  authenticated peer nothing, since it may ask for everything. `cmd/cogmer/auth.go`.
 
-**Signed requests rather than a session.** The protocol polls. A handshake per poll
-would cost two round trips a second to avoid holding one piece of state, and a
-server-issued challenge would add a round trip for the same reason. A timestamp and
-a nonce give replay protection without either.
+**Rejected.**
+- *A session established once and reused.* It needs state on both sides, and a
+  server-issued challenge would add a round trip for the same reason.
 
-**Two minutes of tolerance** because clocks differ: two NTP-synced machines measured
-408ms apart, and a peer on a worse network should still sync. Wide enough to work,
-narrow enough that the seen-nonce set stays small — and it is pruned on every
-admission, so a daemon polled every second does not accumulate.
+**Limits.** Signing establishes who is asking and never whether they may: a stranger who
+generated a key pair authenticated correctly and read a private room until admission
+existed. Admission is D-045 (a sync request is refused unless its peer is a guest).
 
-**The `have` map is not signed.** Altering it gains an authenticated peer nothing,
-since it may ask for everything anyway, and canonicalising a map for signing invites
-exactly the ambiguity that length-prefixing exists to prevent.
-
-**What this does not do, and the test that proves it.** Authentication establishes
-*who* is asking. It does not establish *whether they may*. A stranger generated a key
-pair, authenticated correctly, and read a private room — while the host logged
-nothing, because nothing was wrong with the request.
-
-That is worth stating plainly because it is easy to bank: a system that
-authenticates every caller and admits every authenticated caller has gained a name
-for its visitors and nothing else. The confidentiality gap narrowed from "anyone who
-can reach the port" to "anyone who can reach the port and generates a key", which is
-no barrier.
-
-**So what Phase 9 delivers is the ability to make an admission decision, not the
-decision.** The guest list is Phase 10, and until it exists the startup warning says
-exactly this rather than implying the room is protected.
+**Revisit when** clocks between peers are found to differ by more than two minutes.
 
 ---
 
 ## D-045 — Rooms are records with a guest list; admission is enforced
 
-**Date:** 2026-09-17 · **Status:** active (implemented)
+**Date:** 2026-09-17 · **Status:** active
 
-**Context.** Phase 10. D-044 left the confidentiality gap open and said so: a
-stranger generated a key, authenticated correctly, and read a private room, because
-nothing decided *which* peers could ask.
+**Decision.** A room is a record in `membership.db`, holding its identifier, its
+generated name and its guest list, and a sync request is refused unless the peer that
+signed it is a guest of the room.
 
-**Decision.** Rooms become records rather than arbitrary strings — a UUID, a
-generated `weather-landscape` name, and a guest list — stored in `membership.db`
-beside the identity rather than inside any room. A sync request is refused unless
-its authenticated peer is a guest.
+**Support.**
+- Authenticating a caller establishes who is asking, not whether they may. D-044 (sync
+  requests are signed).
+- A stranger who authenticated correctly reads nothing, and the host records that the
+  peer is authenticated and not a guest. `cmd/cogmer/auth_test.go`.
+- Membership lives beside the identity, outside every room's database. §22
+  (persistence).
 
-**Verified by repeating the test that failed.** The same uninvited stranger now
-reads nothing, and the host records why: *"clever-crane … is authenticated but is
-not a guest of this room."* An invited peer reads the room with no refusals. That
-pair of results is the whole of Phase 10's value.
+**Rejected.**
+- *Admitting every authenticated caller.* It gives the system a name for its visitors
+  and nothing more.
 
-**Two scopes, as §12 requires.** `known_peers` is machine-wide and durable; a room's
-guests are per-room. Knowing six colleagues and admitting two to a room about
-customer data has to be expressible, and one list cannot express it. `forget`
-discards an identity so a later meeting is a first meeting; `revoke` withdraws
-admission to one room and leaves the identity known. They read similarly and are not
-the same act.
-
-**Only keys can be admitted.** `allow` and `invite` refuse an identifier that names
-no key. Recording `alice` or an old `peer-8f3a…` would be recording a hope: nothing
-could ever prove possession of it, so the entry could never do its job.
-
-**The out-of-band step is a public key, and the tooling says so.** `allow` prints
-the full fingerprint and tells the operator to verify it over a channel the
-identifier did not travel on. That is the only moment trust is taken on faith, and
-it should be the one moment a person is asked to pay attention.
-
-**A bridge, noted as such.** A daemon pointed at a room nobody created makes one and
-admits its creator, so existing setups keep working. §12 has invitation as the
-deliberate act and D-022 has a room beginning when someone is invited; a daemon
-creating a room on startup is neither. It stands until a session joins a room rather
-than a daemon serving one, which is the multi-room refactor §5 describes and this
-phase did not attempt.
+**Revisit when** a room needs to admit a peer by something other than a guest-list entry
+or a host's approval.
 
 ---
 
@@ -2526,8 +2419,8 @@ whoever upgrades last.
 
 - *Hard equality on the version.* The flag day above.
 - *No version on the wire at all.* Then there is nothing to refuse, and an
-  unknown-shaped event is accepted as though understood. D-043 (the wire format is
-  not the database row) keeps the two structs separate precisely so a column added
+  unknown-shaped event is accepted as though understood. D-155 (the wire format is
+  defined separately from the stored row) keeps the two structs separate precisely so a column added
   for local bookkeeping cannot become protocol by accident; a version is what makes
   that refusable at the far end.
 
@@ -4189,7 +4082,7 @@ why `Ec2-user` could travel for weeks.
 `printPairingInvitation`. All three paths that hand your identity to somebody else go
 through it (D-089 consolidated them), so the offer belongs with the string rather
 than with a command. There is no earlier candidate — identity is created by whatever
-touches it first, which is a daemon started detached by a hook, and D-041 forbids
+touches it first, which is a daemon started detached by a hook, and D-150 forbids
 delaying a session or speaking to the person. Nobody is watching when the name is
 invented.
 
@@ -4962,7 +4855,7 @@ together.
 that ChatGPT Desktop is third, which nothing acts on. The gap sizes are what decide,
 for any given piece of host-independence, whether it is preparation or speculation.
 
-**This licenses nothing.** D-043 (the wire format is not the database row) forbids
+**This licenses nothing.** D-043 (a second host is prepared for by naming, never by machinery) forbids
 `source`/adapter machinery, and D-086 already considered this exact move and refused
 it: "naming a second host does not change that." Naming a third does not either. The
 reasoning is untouched — capture generalises, injection does not, and every hard
@@ -5234,7 +5127,7 @@ survives as the *mechanism* that makes most of those achievable, rather than as 
 principle.
 
 **What this unifies.** §3.7 (a remote event never drives a session), §21 (context
-limits), D-041 (starting must not delay the session) and D-038 (the view is a
+limits), D-150 (starting the daemon never delays the session) and D-038 (the view is a
 separate program, so a busy room never costs somebody their pane) are all the same
 obligation, and nothing said so. Each read as a local judgement; together they are
 one duty with six known cases.
@@ -5740,7 +5633,7 @@ has not installed it).
 
 **Date:** 2026-09-22 · **Status:** active (specified, not built)
 
-**Context.** D-041 (ship as a plugin; the session-start hook starts the daemon)
+**Context.** D-151 (the daemon outlives its session, and can be found and stopped)
 required the daemon to be discoverable and stoppable, and D-080 (a terminal command
 exists to be tested or to work when the plugin cannot) put its lifecycle at the
 terminal. Nothing stops it. On 09-22 that
@@ -5832,9 +5725,8 @@ that migration carries it.
 **Support.**
 - `CREATE TABLE IF NOT EXISTS` leaves an existing table unchanged, so a column added to
   that statement is missing from every store created before it, and the failure
-  appears at the first query that names the column, not when the store opens. D-043
-  (the wire format is defined separately from the stored row), in its paragraph "A bug
-  this surfaced".
+  appears at the first query that names the column, not when the store opens.
+  `84a0751:docs/decisions.md`, D-043's paragraph "A bug this surfaced".
 - `migrate()` runs each time a room store opens, and reads the table's columns to add
   the ones it lacks. `cmd/cogmer/store.go`.
 - SQLite has no way to drop a constraint, so relaxing one rebuilds the table, which
@@ -6359,6 +6251,156 @@ neither is addressed to the reading model.
 
 ---
 
+## D-150 — The session-start hook starts the daemon, and never delays the session
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Decision.** The session-start hook starts the daemon when it is not running. Starting it
+never delays the session, finding it running is the ordinary case, and a failure
+to start is silent to the user and recorded by the daemon.
+
+**Support.**
+- A user never has to start the daemon, notice that it has stopped, or know that it
+  exists. §29 (the experience we want).
+- Several sessions often begin at once on one machine, each tries to start the daemon,
+  and at most one succeeds. §29.
+- A session is never worse for having cogmer installed. §3.1 (first, do no harm).
+
+**Rejected.**
+- *The user starting the daemon by hand.* Installing would not be the whole of setup.
+
+**Revisit when** starting the daemon is found to delay a session.
+
+---
+
+## D-151 — The daemon outlives its session, and can be found and stopped
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Decision.** The daemon outlives the session that started it, and the user whose machine
+it runs on can find it and stop it.
+
+**Support.**
+- A room may have members in several sessions on one machine. §29 (the experience we
+  want).
+- `stop` finds a daemon by the addresses it holds. D-123 (`stop` finds a daemon by the
+  addresses it holds).
+
+**Rejected.**
+- *Starting a daemon with each session and stopping it at the end.* Starting it again and
+  again is worse than leaving it running, and a room's other sessions would lose it.
+
+**Revisit when** the daemon has to stop when its last session ends.
+
+---
+
+## D-152 — Events are signed at origin over length-prefixed fields
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Decision.** Every event is signed by the peer that created it, over a length-prefixed
+encoding of its own fields with a leading purpose tag, and every receiver checks it
+against the key the originating peer's identifier names.
+
+**Support.**
+- A relaying peer can then carry an event and cannot author one. §13 (transitive
+  synchronization).
+- The purpose tag binds a signature to this purpose and version, so a signature made here
+  cannot be replayed as one made over something else. `cmd/cogmer/keys.go`,
+  `protocolNamespace`.
+
+**Rejected.**
+- *Concatenating the fields directly.* A boundary could move: content ending in one value
+  and a session beginning with another could swap without the signature changing.
+
+**Revisit when** an event has to carry a field the signature does not cover.
+
+---
+
+## D-153 — The private key is kept in a file of its own
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Decision.** A peer's private key is in `~/.cogmer/identity.key`, never in `identity.json`,
+which `whoami` prints and a user may hand to a colleague.
+
+**Support.**
+- `identity.json` is printed by `whoami`. `cmd/cogmer/main.go`, `runWhoami`.
+- A test checks that the private key never marshals into the identity.
+  `cmd/cogmer/keys_test.go`, `TestIdentityNeverMarshalsThePrivateKey`.
+
+**Rejected.**
+- *One identity file holding the private key.* An identity that cannot be shown without
+  checking what else is in it is not much of an identity.
+
+**Revisit when** the private key has to be stored somewhere other than a file, such as
+the operating system's keychain.
+
+---
+
+## D-154 — An event whose signature fails is refused, not quarantined
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Decision.** An event whose signature does not verify is refused and logged, and never
+kept aside.
+
+**Support.**
+- A failed signature has no harmless reading, unlike a sequence conflict, which may be a
+  peer that lost its state. D-027 (a sequence conflict is quarantined, not dropped).
+- A peer that impersonated another and offered an event signed by nobody was refused, and
+  nothing reached the room. `84a0751:docs/decisions.md`.
+
+**Rejected.**
+- *Quarantining it as a conflict is quarantined.* There is nothing to tell apart later.
+
+**Revisit when** a failed signature is found to have a harmless cause.
+
+---
+
+## D-155 — The wire format is defined separately from the stored row
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Decision.** The wire format is its own type, in `cmd/cogmer/protocol.go`, with explicit
+conversion to and from the stored row.
+
+**Support.**
+- A column can be added to the store for local bookkeeping without telling any peer, and
+  a wire field cannot change without every peer agreeing, so one struct for both would
+  let a convenient column become protocol without anyone deciding it. `cmd/cogmer/protocol.go`.
+- A test checks that converting an event to the wire format and back drops nothing.
+  `cmd/cogmer/protocol_test.go`, `TestWireRoundTripPreservesEverything`.
+
+**Rejected.**
+- *One struct for the stored row and the wire.* The next column added for local
+  bookkeeping would become protocol silently.
+
+**Revisit when** the stored row and the wire format need to carry exactly the same thing.
+
+---
+
+## D-156 — Only a key can be admitted
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Decision.** Recording a known peer and admitting a guest both refuse an identifier that
+names no key.
+
+**Support.**
+- `Allow` and `Invite` each refuse an identifier from which no public key can be read.
+  `cmd/cogmer/membership.go`, `Allow` and `Invite`.
+- Admission is proved by possession of the key the identifier names. D-143 (admission is
+  proved by signing a fresh challenge).
+
+**Rejected.**
+- *Recording a name or an identifier from before keys, such as `alice` or `peer-8f3a…`.*
+  Nothing could ever prove possession of it, so the entry could never do its job.
+
+**Revisit when** a guest has to be recorded before its key is known.
+
+---
+
 ## D-157 — The overlay listener admits any dialer
 
 **Date:** 2026-10-01 · **Status:** active
@@ -6413,3 +6455,4 @@ pre-shared key provided (D-104, the overlay address is public and stable).
 **Revisit when** tailcat documents how its relay treats one key on several
 connections, or lets a listener admit a client by something a pairing string can
 carry.
+
