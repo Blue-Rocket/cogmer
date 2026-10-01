@@ -84,7 +84,6 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 	// the sole way a peer that moved teaches anybody where it went (D-103).
 	if req.Endpoint != "" {
 		_ = d.members.SetPeerEndpoint(req.PeerID, req.Endpoint)
-		d.permitTunnel(req.Endpoint)
 	}
 
 	store, err := d.storeFor(room.RoomID)

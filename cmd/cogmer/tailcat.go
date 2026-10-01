@@ -169,7 +169,7 @@ func (a tailcatAddr) Network() string { return schemeTailcat }
 func (a tailcatAddr) String() string  { return string(a) }
 
 // StartTailcat begins listening and returns the endpoint to advertise.
-func StartTailcat(allowed []key.NodePublic) (net.Listener, string, *tailcat.Server, error) {
+func StartTailcat() (net.Listener, string, *tailcat.Server, error) {
 	k, err := loadTailcatKey()
 	if err != nil {
 		return nil, "", nil, err
@@ -191,10 +191,10 @@ func StartTailcat(allowed []key.NodePublic) (net.Listener, string, *tailcat.Serv
 		// pasteable — the two cannot both hold, because the key travels inside
 		// the thing that must be published.
 		DisablePresharedKey: true,
-		// Who may open a tunnel is a list, not a secret. It is the peers this
-		// machine has recorded, which is a question we can already answer, and
-		// unlike a shared key it is per peer and revocable.
-		AllowedClients: allowed,
+		// Any dialer may open a tunnel, because a dialer's key is generated at its
+		// first use and no colleague's pairing string can carry it. The TLS pin
+		// refuses a key this machine has not recorded before a request is read
+		// (D-157), so a stranger gets as far as the handshake and no further.
 		// Silenced: tailcat narrates its startup at a volume suited to a CLI, and
 		// this is a daemon whose log a person reads to learn about peers.
 		Logf: func(string, ...any) {},
@@ -261,18 +261,4 @@ func loadTailcatRegion() (*tailcfg.DERPRegion, error) {
 		_ = os.WriteFile(path, buf, 0o600)
 	}
 	return r, nil
-}
-
-// nodeKeyFor reads the tunnel identity out of an address recorded for a peer, so
-// the allow-list can be built from the peers this machine already knows.
-func nodeKeyFor(endpoint string) (key.NodePublic, bool) {
-	e, err := ParseEndpoint(endpoint)
-	if err != nil || e.Scheme != schemeTailcat {
-		return key.NodePublic{}, false
-	}
-	ci, err := tailcat.ParseAddr(tailcat.Addr(e.Value))
-	if err != nil || ci.ServerPublic.NodePublic.IsZero() {
-		return key.NodePublic{}, false
-	}
-	return ci.ServerPublic.NodePublic, true
 }

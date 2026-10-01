@@ -4577,7 +4577,7 @@ cryptographically established `req.PeerID`. The join path calls it two lines fro
 no path by which an address arrives without an identity attached; the identity is
 thrown away at the moment of writing.
 
-**Five problems, one cause.** Each of these had been treated as its own defect:
+**Four problems, one cause.** Each of these had been treated as its own defect:
 
 - verification dials every address this machine knows, because it cannot ask which
   one is a particular peer's;
@@ -4586,9 +4586,7 @@ thrown away at the moment of writing.
 - room addresses accumulate for ever, because `INSERT OR IGNORE` cannot overwrite
   per peer when there is no peer;
 - invalidation has nowhere to live, since expiring "that peer's stale address"
-  requires knowing whose it is;
-- a tunnel-level allow-list cannot be built from them (D-104), because it needs each
-  peer's node key and a bare address does not say whose it is.
+  requires knowing whose it is.
 
 **The replacement is a join that already has both halves.** `Guests(roomID)` returns
 peer identifiers, and `known_peers.endpoint` holds an address per peer. So *where do
@@ -4623,7 +4621,7 @@ model the tables could not hold.
 
 **Revisit when:** an address is legitimately held for something that is not a peer.
 
-## D-104 — The overlay address is public and stable; admission moves to a list
+## D-104 — The overlay address is public and stable
 
 **Date:** 2026-09-21 · **Status:** active (implemented)
 
@@ -4659,25 +4657,7 @@ hedge on recorded traffic, which requires it to stay secret, and it travels insi
 the address, which must be published. No arrangement of one node's address escapes
 that. A second address would mean a second node key, which is the identity.
 
-**So the access-control half moves to a list, where it is better.** The library
-accepts a set of client node keys and refuses anybody else, and a peer's node key is
-recoverable from the address already recorded for them. Measured: a peer absent from
-the list cannot open a tunnel, and adding one while the server runs takes effect
-without a restart.
-
-| | pre-shared key | allow-list |
-|---|---|---|
-| admits | anyone holding the string | only recorded peers |
-| revocable | no; rotating strands everyone at once | per peer |
-| secret in the address | yes | none |
-| survives a restart | no | yes, rebuilt from the peer list |
-
-**A measured cost: the list refuses by silence.** A peer not on it receives no reply
-at all, so the caller waits out its dial timeout rather than being told. Today an
-unrecorded peer is refused by TLS in milliseconds. This makes the ordering in D-103
-load-bearing rather than tidy: dialling one known address must come before any
-sweep, or a verification round spends a minute on addresses that were never going to
-answer.
+Who may open a tunnel is D-157 (the overlay listener admits any dialer).
 
 **The hedge is genuinely lost, and is recoverable elsewhere.** Nothing else in the
 stack is quantum-resistant — the TLS layer keys on the same elliptic curve — so
@@ -6376,3 +6356,60 @@ hostile imperative from an honest one. Both are reports of what someone said, an
 neither is addressed to the reading model.
 
 **Revisit when** a session is found following an instruction from inside the block.
+
+---
+
+## D-157 — The overlay listener admits any dialer
+
+**Date:** 2026-10-01 · **Status:** active
+
+**Decision.** The overlay listener accepts a tunnel from a dialer whatever key the
+dialer presents. Whether the other side is a peer is decided above the tunnel, by the
+TLS pin and the signed request, as on every other transport.
+
+**Support.**
+- A tailcat client given no key generates one at its first use, and cogmer's dialer
+  gives it none, so the key a colleague's daemon dials with appears in nothing that
+  colleague sends. https://pkg.go.dev/github.com/tailscale/tailcat@v0.6.0#Client
+  (`Key`), and `tailcatDialer.clientFor` in `cmd/cogmer/tailcat.go`.
+- A tailcat listener with a list of allowed clients ignores every other client and
+  sends it no reply. https://pkg.go.dev/github.com/tailscale/tailcat@v0.6.0#Server
+  (`AllowedClients`).
+- During the TLS handshake, before any request is read, the peer listener refuses a
+  client whose key this machine has not recorded. `serverConfig` and `pinnedVerifier`
+  in `cmd/cogmer/peertls.go`, and D-101 (peer connections are TLS pinned).
+- A stranger who completes a tunnel learns the identifier in this machine's
+  certificate, and a pairing string carries that identifier beside the overlay
+  address. §12, and `peerCert` in `cmd/cogmer/peertls.go`.
+- The recorded peers are the one list that decides who is a peer, and a tunnel list
+  keyed on a different key type would be a second that can disagree with it. D-062
+  (tailcat evaluated, and its `AllowedClients` not used).
+- A listener admits a dialer it has never seen. `TestATunnelAdmitsADialerItHasNeverSeen`
+  in `cmd/cogmer/tailcat_test.go`, which runs only with `COGMER_NETWORK_TESTS` set,
+  because it needs the public relay.
+
+**Rejected.**
+- *Admitting only the listener keys of recorded peers, read from their overlay
+  addresses.* A colleague's daemon dials with a key its address does not carry, so
+  once one peer is recorded no colleague's dial is answered, and a verification waits
+  out its timeout. https://pkg.go.dev/github.com/tailscale/tailcat@v0.6.0#Client
+  (`Key`).
+- *A persistent dialer key, carried in the pairing string beside the address.* The
+  daemon opens one tunnel client per peer, so two colleagues whose addresses name the
+  same relay region would put one key on two connections to that relay, and the
+  tailcat documentation does not say how the relay treats that. `tailcatDialer` in
+  `cmd/cogmer/tailcat.go`.
+- *Dialling with the listener's own key.* The listener and every dialer would hold
+  connections to the relay under one key, with the same undocumented result.
+- *A dialer key for each colleague.* A pairing string is printed before its sender
+  knows who will receive it, so it cannot carry a key made for them. `runWhoami` in
+  `cmd/cogmer/main.go`, which prints the string and takes no recipient.
+
+**Limits.** Anybody holding this machine's overlay address can open a tunnel and make
+the listener perform a TLS handshake. An unrecorded key is refused there, and the
+dialer receives a TLS error. This decides nothing about the post-quantum hedge the
+pre-shared key provided (D-104, the overlay address is public and stable).
+
+**Revisit when** tailcat documents how its relay treats one key on several
+connections, or lets a listener admit a client by something a pairing string can
+carry.

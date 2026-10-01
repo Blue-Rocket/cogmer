@@ -387,15 +387,13 @@ func runDaemon() {
 	advertised := peerAddr()
 	var tcListener net.Listener
 	if tailcatEnabled() {
-		// Built from the peers this machine has recorded. A peer not on it cannot
-		// open a tunnel at all, which puts admission a layer below the TLS pin and
-		// needs no secret in the published address (D-104).
-		l, endpoint, srv, err := StartTailcat(d.tunnelPeers())
+		l, endpoint, srv, err := StartTailcat()
 		if err != nil {
 			log.Printf("  tailcat unavailable (%v) — reachable only at %s", err, peerAddr())
 		} else {
-			tcListener, advertised, d.tunnel = l, endpoint, srv
+			tcListener, advertised = l, endpoint
 			defer l.Close()
+			defer srv.Close()
 		}
 	}
 	// Recorded so that `whoami` and `invite` -- separate processes -- publish the
