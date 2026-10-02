@@ -1383,9 +1383,6 @@ ones.
 view). What may start an exchange is D-162, what records a verification is D-163, and
 which words are shown is D-164.
 
-**Revisit when** a user has to verify a peer without that peer's own user acting at the
-same moment.
-
 ---
 
 ## D-053 — `pair` is the machine-scope act, and `invite` is the room-scope act
@@ -6319,8 +6316,7 @@ failed-verification state exists.
 - *Recording a failed verification.* It invites a retry, which is the one thing a
   mismatch must not offer.
 
-**Revisit when** a way exists to confirm that the voice on the call is the colleague that
-does not rest on the user's own judgement.
+**Revisit when** an approach is found that is equally secure with fewer manual steps.
 
 ---
 
@@ -6349,8 +6345,6 @@ room-name vocabulary.
 
 **Limits.** Nothing checks that the two lists share no word with the peer-name or
 room-name vocabularies.
-
-**Revisit when** users report mishearing a word of the list over a call.
 
 ---
 

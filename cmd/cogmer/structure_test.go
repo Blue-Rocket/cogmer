@@ -538,7 +538,7 @@ var decisionOrder = []struct {
 	{"Support.", true},
 	{"Rejected.", false},
 	{"Limits.", false},
-	{"Revisit when", true},
+	{"Revisit when", false},
 }
 
 // boldOpener returns the bold text a paragraph opens with.
@@ -652,6 +652,7 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 		{"complete", "## D-124 — T\n\n" + complete, nil},
 		{"complete, with Limits", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Some.\n\n**Revisit when**", 1), nil},
 		{"not built", "## D-124 — T\n\n" + strings.Replace(complete, "active", "not built", 1), nil},
+		{"no Revisit when", "## D-124 — T\n\n" + strings.Replace(complete, "\n\n**Revisit when** z.", "", 1), nil},
 		{"no Rejected", "## D-124 — T\n\n" + strings.Replace(complete, "**Rejected.** y\n\n", "", 1), nil},
 		{"missing Support", "## D-124 — T\n\n" + strings.Replace(complete, support, "", 1), []string{"D-124 has no **Support.**"}},
 		{"Support with no list", "## D-124 — T\n\n" + strings.Replace(complete, support, "**Support.** It is so.\n\n", 1), []string{"D-124 has **Support.** with no list"}},

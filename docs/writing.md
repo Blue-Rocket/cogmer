@@ -274,8 +274,8 @@ checks.>
 
 W-30. An entry follows this template: a **Date:** line whose status is "active" or
 "not built", then **Decision.**, **Support.** with a list under it, an optional
-**Rejected.**, an optional **Limits.** and **Revisit when**, in that order. Omit an
-optional field when it has nothing to hold.
+**Rejected.**, an optional **Limits.** and an optional **Revisit when**, in that order.
+Omit an optional field when it has nothing to hold.
 
 W-31. The title is the decision, not the topic: "`stop` finds a daemon by the
 addresses it holds", not "Stopping the daemon".
