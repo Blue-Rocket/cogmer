@@ -65,6 +65,20 @@ you lose collaboration, and nothing else. The session-start hook tells the model
 there is no binary yet, such as a download still running or one that failed, so that
 it can say so when a command does not work.
 
+## What leaves your machine
+
+- Your conversation goes to the colleagues in a room. Each turn reaches their machines and
+  their Claude sessions, and so their model provider under their account. Their turns reach your
+  provider, under yours.
+- A relay introduces two machines on different networks. cogmer uses the free relays that
+  Tailscale runs for its tailcat library. The first time the daemon starts it fetches the relay
+  list from `tailcat.dev`. The conversation is encrypted between the two machines and the relay
+  cannot read it. The relay sees both machines' keys and network addresses, when they connect and
+  how much passes between them. `COGMER_TAILCAT=off` stops the daemon using the relay, and
+  colleagues then reach you only at the address in `COGMER_PEER_ENDPOINT`.
+- The binary is downloaded from GitHub. GitHub sees your network address and which release
+  you fetched.
+
 ## Updating
 
 Claude Code learns that a new version exists only when it refreshes its copy of the

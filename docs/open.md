@@ -32,37 +32,16 @@ out.
 
 Nothing outside a room can read it, alter a colleague's words, or make a record a colleague holds unreadable, and what leaves the machine is known.
 
-**Whether the public relay is an acceptable dependency.** Reaching a peer across NAT
-works through a public relay operated by a third party, used with no account and no
-configuration of ours. It has to be settled before somebody else's conversation
-crosses it. It has three parts, with different answers: whether depending on a relay
-nobody here operates fits §4's rule that no transport is a prerequisite; what the
-relay observes, since it cannot read what it carries but sees which nodes talk, when,
-and how much; and whether unconfigured use of somebody's free infrastructure is
-something to build a product on.
-
 **What leaves the machine is recorded only for 0.6.0.**
 `84a0751:docs/what-leaves-findings.md` read every outbound path on 2026-09-21, at 0.6.0.
 Two have changed since: releases come from GitHub (`plugin/release-url.txt`), and peers
 reach each other through Tailscale's DERP relays, choosing a region in
-`loadTailcatRegion` in `cmd/cogmer/tailcat.go`, which may fetch a relay map from a
-server nobody has named (read on 2026-09-25, not traced further). D-115 (a centralized
+`loadTailcatRegion` in `cmd/cogmer/tailcat.go`, which fetches the relay map from
+`tailcat.dev` (read on 2026-10-02). D-115 (a centralized
 component must trace to a disclosed tradeoff) rests on that record. Reading every
-outbound path again at the current version, including where `loadTailcatRegion` fetches
-from, would say what leaves now. Three of the properties that do not leave are kept only
+outbound path again at the current version would say what leaves now. Three of the properties that do not leave are kept only
 by the absence of code, and each could be a test instead, such as one that the embedded
 view holds no absolute URL.
-
-**Nothing a user reads says what leaves their machine.** D-115 (a centralized component must trace to
-a disclosed tradeoff that benefits the person) requires that a user is told of a compromise in
-something they actually read. `README.md` and `plugin/README.md` say nothing of the relay, of the
-release host or that a colleague's words reach the user's own model provider (read on 2026-10-01),
-and the files in `plugin/commands/` are prompts. The relay and the model provider each trace and
-benefit the user and fail the disclosure test.
-
-The fix is a short section in `plugin/README.md`, for somebody who has installed cogmer, naming
-what leaves the machine and to whom. The item before this one says why the record it would be written from
-is out of date.
 
 **The specification does not say that Claude's thinking blocks are never published.**
 `cmd/cogmer/transcript.go` drops them and `cmd/cogmer/transcript_test.go` requires that, and
@@ -211,6 +190,13 @@ different answer for close pairing than for long solo stretches.
 ## Reaching a peer on another network
 
 Two peers on different networks, each behind its own router, reach each other with nothing configured.
+
+**Peers on one network meet through the relay.** Section 4 orders a direct connection on the
+same network before the relay. A pairing string carries one endpoint, a `tc://` address whenever
+the overlay is on, so two peers on one network dial the overlay and the relay introduces them
+before the path becomes direct (read from `AdvertisedEndpoint` and the dialer on 2026-10-02, not
+run). Advertising both endpoints and trying the direct one first would follow section 4, and it
+changes the pairing string, whose format is permanent once strings circulate.
 
 **Only one address is ever tried for a peer, and none is demoted, aged or
 rehabilitated.** Section 4 of the specification, "The lifecycle of a peer address",
