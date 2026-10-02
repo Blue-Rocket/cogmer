@@ -1,55 +1,29 @@
 # D-074 — A name means one key, and a collision is where a key change surfaces
 
-**Date:** 2026-09-19 · **Status:** active (implemented)
+**Date:** 2026-09-19 · **Status:** active · **Areas:** identity, pairing
 
-**Context.** Tracing a peer identity's lifecycle. It is created once from
-`identity.key`, never rotates, never expires, and the key is authoritative — if
-`identity.json` disagrees it is corrected, because an identifier that is not this
-key names an identity nothing can verify.
+**Decision.** A name a user gives a peer belongs to one key. `Allow` refuses a name held
+by a different key and returns a `NameTakenError` that carries both keys. Its explanation
+says that a changed key is indistinguishable from somebody else's key sent in their name,
+so the user should check on a call before recording it, and that the way to record a new
+key is to `forget` the old one first.
 
-`pair` ends by telling a person:
+**Support.**
+- A peer's identifier is a key, so a person who changes keys appears to this machine as a
+  peer it has never seen and is refused as a stranger, and nothing connects the new key to
+  the name on the old one. D-042 (peer identity is an Ed25519 key pair).
+- The one moment the two can be connected is when somebody records the new key under a name that is in use, which is also what a substitution looks like from the host's side, and
+  without the rule it passed silently. `cmd/cogmer/membership_test.go`, `TestANameMeansOneKey`.
+- Forgetting the old key discards its admissions, so the user invites the new one again on purpose and inherits no rooms. D-073 (forgetting a peer discards their admissions
+  with them).
 
-> if this key changes, that is an alarm rather than a new first meeting.
+**Rejected.**
+- *Two keys under one name.* A name would then admit whichever key was listed first,
+  which is the failure verification exists to prevent.
 
-**Nothing implemented that alarm**, and it is not obvious that anything could. A
-peerId **is** a key (D-042), so "the same person with a new key" is not expressible:
-to this machine that is a peer it has never seen, and it is refused as a stranger.
-Correct, and it is not an alarm — it never mentions the person whose name is on the
-old key.
+**Limits.** The rule does not detect a key change by itself. It catches only a key filed
+under a familiar name, and a peer that presents a new key is an unknown peer, refused
+without ceremony, which is the limit of self-certifying identifiers.
 
-**There is exactly one moment where the two can be connected**: when somebody
-records the new key under a name they already use. That is also precisely what a
-substitution looks like from the host's side — Mallory sends a pairing string in
-Alice's name, and David types `pair <key> alice`.
-
-**And it passed silently.** `known_peers.peer_id` is the primary key; `name` had no
-constraint. A second row was created, `peers` listed two alices, and `resolvePeer`
-returned whichever `KnownPeers()` yielded first — so `invite alice` could admit
-either, with nothing said. That is the failure the entire verification apparatus
-exists to prevent, reachable by typing a name twice.
-
-**Decision.** A name may belong to one key. `Allow` refuses a name already held by a
-different key and returns a typed `NameTakenError` carrying both, because the
-explanation must show what changed.
-
-The explanation says what the collision means rather than treating it as a naming
-mistake: a changed key is indistinguishable from somebody else's key sent in their
-name, so check on a call before recording it. And it gives the route — `forget` the
-old one first, which since D-073 discards its admissions too, so the person is
-invited again deliberately rather than inheriting rooms.
-
-**`resolvePeer` refuses an ambiguous name rather than choosing.** Recording two keys
-under one name is now prevented, but a database written before this could hold one,
-and picking between them would admit a peer nobody named. Same shape as D-161 (an ambiguous room name is reported and never guessed): report
-the ambiguity, name both, say what it probably means.
-
-**What this does not do.** It does not detect a key change by itself — only a key
-change that somebody tries to file under a familiar name. A peer that simply
-presents a new key is still an unknown peer, refused without ceremony. That is the
-honest limit of self-certifying identifiers, and it is why the alarm lives at the
-moment of recording rather than at the moment of contact.
-
-**Revisit when** identity rotation is wanted. There is none today: an identity is
-created once and lives until `identity.key` is lost, at which point the peer is a
-stranger to everyone and must pair again. Rotation would need a way for a new key to
-be vouched for by the old one, which is a real design and not a small one.
+**Revisit when** identity rotation is wanted. An identity is created once and lives until
+its key is lost, and rotation would need a way for the old key to vouch for a new one.

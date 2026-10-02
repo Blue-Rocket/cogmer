@@ -778,7 +778,7 @@ func TestOnlyASessionInTheRoomCanChangeIt(t *testing.T) {
 // Every room-scoped slash command must map to a subcommand that exists, and every
 // subcommand a person could want must be reachable from a session.
 //
-// The plugin and the binary version together (D-075), so a command file naming a
+// The plugin and the binary version together (D-120), so a command file naming a
 // subcommand the binary lacks is a release that half works — which is exactly what
 // v0.2.0 shipped, where /cogmer:room-status called `where` and got usage back.
 func TestEverySlashCommandNamesARealSubcommand(t *testing.T) {

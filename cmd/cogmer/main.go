@@ -660,9 +660,9 @@ func runLog() {
 // person need not paste a key to refer to a colleague they have met.
 // resolvePeer turns what a person typed into a key.
 //
-// It refuses an ambiguous name rather than choosing. Recording two keys under one
-// name is now prevented (D-074), but a database written before that could hold
-// one, and picking between them would admit a peer nobody named.
+// It refuses an ambiguous name rather than choosing (D-174). Recording two keys
+// under one name is prevented (D-074), but a database written before that could
+// hold one, and picking between them would admit a peer nobody named.
 // explainNameTaken says what a name collision means, because it is the one place a
 // key change can surface and it looks like a naming mistake.
 func explainNameTaken(err error) {
