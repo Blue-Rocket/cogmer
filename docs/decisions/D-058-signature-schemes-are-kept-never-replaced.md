@@ -21,6 +21,12 @@ not as a forgery.
   `cmd/cogmer/keys_test.go`, `TestAnUnknownSchemeIsRefusedAsAVersionProblem`.
 - Signing records the scheme, so nothing relies on a zero value meaning one. `cmd/cogmer/keys_test.go`,
   `TestSigningRecordsItsScheme` and `TestAnEventWithNoRecordedSchemeIsRefused`.
+- Every other signing test signs a fresh record and verifies it, so an edit to the signing bytes
+  changes signer and verifier together and none fails. Records signed once from a fixed key and
+  checked in are what an edit cannot change: two events under v3, and a sync request, an offer, a
+  verification step, the two pairing words and a commitment. Editing any signing function in turn
+  failed at least one of them. `cmd/cogmer/testdata/vectors.json`, `cmd/cogmer/vectors_test.go`,
+  `TestAnEventSignedUnderV3BeforeAnyEditStillVerifies`.
 
 **Rejected.**
 - *Editing the signing bytes in place and verifying every event under them.* Every

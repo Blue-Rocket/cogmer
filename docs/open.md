@@ -32,21 +32,6 @@ out.
 
 Nothing outside a room can read it, alter a colleague's words, or make a record a colleague holds unreadable, and what leaves the machine is known.
 
-**No test fails when a change to the signing bytes or the wire format stops an
-existing record from being read.** Every signing test in `cmd/cogmer/keys_test.go`
-signs a fresh event and then verifies it, so an edit to `signingBytesV3` or
-`eventBytes` changes the signer and the verifier together and every test still
-passes (read from the code on 2026-09-24). An event signed under scheme v3 before the
-edit, held on a colleague's machine, would then fail to verify, with an error that
-reads as a forgery. D-058 (signature schemes are kept, never replaced) depends on
-that edit never happening, and nothing detects it. The wire format has the same gap:
-nothing decodes a sync message written at `minWireVersion` with the current code.
-
-The fix is a v3 event signed once and checked in, as a constant or a file under
-`cmd/cogmer/testdata/`, with a test that `Verify` accepts it, and the same for a sync
-message at each version `speaks` accepts. Each new scheme or wire version adds its
-own frozen record when it ships.
-
 **Whether the public relay is an acceptable dependency.** Reaching a peer across NAT
 works through a public relay operated by a third party, used with no account and no
 configuration of ours. It has to be settled before somebody else's conversation
