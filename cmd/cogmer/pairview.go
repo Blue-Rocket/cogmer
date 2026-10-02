@@ -22,7 +22,7 @@ var pairTemplate = template.Must(template.New("pair").Parse(pairPageSrc))
 // D-055 is unchanged by this and must stay unchanged: two words, from a live
 // commit/reveal exchange, compared aloud on a call, by both people at once, with no
 // fallback. What moves is the surface. A terminal was never the point -- it was the
-// only thing available that was not the model (D-080), and the view is the other.
+// only thing available that was not the model (D-088), and the view is the other.
 //
 // EVERY PAIRING GETS ITS OWN URL, and that is load-bearing rather than tidy:
 //

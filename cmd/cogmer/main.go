@@ -1083,7 +1083,7 @@ func firstNonEmpty(a, b string) string {
 // It is a diagnostic, and a diagnostic wanted precisely when a room is misbehaving
 // — possibly with no healthy session to ask. Naming a room to READ it is not an
 // exercise of standing, which is why this is safe here and not in `invite`
-// (D-078, D-080).
+// (D-080).
 func reportConflicts(store *Store, room Room) {
 	cs, err := store.ListConflicts()
 	if err != nil {
@@ -1108,7 +1108,7 @@ func reportConflicts(store *Store, room Room) {
 // It is a diagnostic, and one wanted precisely when a room is misbehaving —
 // possibly with no healthy session to ask. Naming a room in order to READ it is not
 // an exercise of standing, which is why this is safe here and not in `invite`
-// (D-078, D-080).
+// (D-080).
 func runConflicts(args []string) {
 	if len(args) > 0 {
 		m, err := OpenMembership()

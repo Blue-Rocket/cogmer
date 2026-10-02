@@ -3,8 +3,7 @@
 **Date:** 2026-09-22 · **Status:** active (implemented, except the blocked-address message)
 
 **Context.** D-151 (the daemon outlives its session, and can be found and stopped)
-required the daemon to be discoverable and stoppable, and D-080 (a terminal command
-exists to be tested or to work when the plugin cannot) put its lifecycle at the
+required the daemon to be discoverable and stoppable, and D-175 (a terminal command exists for diagnostics, the daemon's lifecycle, a machine's identity and testing) put its lifecycle at the
 terminal. Nothing stops it. On 09-22 that
 cost a first run: a daemon left from a test, with its own `COGMER_HOME` and its
 hooks moved to 4799 but its peer sync on the default 4783, held that port when the

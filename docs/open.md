@@ -74,7 +74,7 @@ v2.1.221 a plugin installed mid-session is live in that session, with its comman
 and its per-prompt hooks. Only SessionStart has not run, and nothing re-runs it,
 since Claude Code runs no plugin code at install and reloading plugins does not
 fire it. So the binary is never fetched, the daemon never starts, and the standing
-policy for room content (D-081) is never given. Telling somebody to start again to
+policy for room content (D-176) is never given. Telling somebody to start again to
 finish something they think has finished costs them the session they were working
 in, and the README currently does exactly that.
 
@@ -88,7 +88,7 @@ The possible mitigations:
   `install.sh` already starts the daemon when the download lands, so starting the
   daemon needs nothing further.
 - Let the session you installed from enter rooms without the session-start policy.
-  D-081 could not show that policy helping: in-block framing alone produced the
+  D-176 could not show that policy helping: in-block framing alone produced the
   same refusal of a hostile turn. Rerunning that hostile-turn test in a session
   that installed the plugin mid-session would say whether this is safe.
 - Otherwise, have `join` and `create` refuse in a session that never got the policy,

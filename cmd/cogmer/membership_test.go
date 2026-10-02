@@ -726,7 +726,7 @@ func TestARoomResolvesOnlyThroughTheSession(t *testing.T) {
 // An environment variable is ambient: exported once in a profile, or inherited by
 // every session a machine starts, it answers for sessions that are in other rooms.
 // COGMER_ROOM was consulted ahead of the session's own room, which quietly
-// reinstated the failure D-064 removed, at higher precedence (D-077).
+// reinstated the failure D-064 removed, at higher precedence (D-080).
 func TestNoAmbientRoomOverride(t *testing.T) {
 	src, err := os.ReadFile("main.go")
 	if err != nil {

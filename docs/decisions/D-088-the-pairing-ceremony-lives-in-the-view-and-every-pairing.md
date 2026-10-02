@@ -10,7 +10,8 @@ letting it do anything rather than only show things.
 **D-055 is unchanged, and that is the point.** Two words, from a live commit/reveal
 exchange, compared aloud on a call, by both people at once, no fallback. What moved
 is the surface. A terminal was never the ceremony — it was the only thing available
-that was not the model (D-080), and the view is the other one.
+that was not the model (D-080, as
+`f288913:docs/decisions/D-080-there-is-no-current-room-a-terminal-command-exists-to-be.md` held it), and the view is the other one.
 
 **Every pairing gets its own URL**, and this is load-bearing rather than tidy:
 

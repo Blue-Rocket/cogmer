@@ -25,7 +25,7 @@ shared.
   conflation in the one case where it does the damage.
 
 **Limits.** A command at a terminal names a room for each invocation and stores none.
-D-077 (every room has its own URL, and no ambient value picks one).
+D-080 (there is no current room, and a room-scoped command gets its room from its session).
 
 **Revisit when** something other than a command at a terminal needs a room and has no
 session to ask.

@@ -43,7 +43,7 @@ start_daemon_if_needed
 # alongside untrusted data may be discounted precisely because the model is right
 # to be skeptical of that position. So the rule is delivered separately from the
 # data it governs, which is the one structural separation this channel allows
-# (D-081).
+# (D-176).
 #
 # It does not replace the framing inside each block. That framing is tested, and it
 # survives compaction and long context in a way a single statement at session start

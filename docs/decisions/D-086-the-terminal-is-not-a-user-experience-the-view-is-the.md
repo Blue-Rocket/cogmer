@@ -16,7 +16,7 @@ answer, and the CLI is nothing but a client of those two endpoints.
 So moving off the terminal is a **user-interface change, not an architectural one**.
 There is no protocol to redesign and no logic to relocate.
 
-**D-080's first reason is amended, not withdrawn.** It held that `pair` and `verify`
+**D-080's first reason, as `f288913:docs/decisions/D-080-there-is-no-current-room-a-terminal-command-exists-to-be.md` held it, is amended, not withdrawn.** It held that `pair` and `verify`
 "cannot pass through a model" — interactive, blocking on another person, and the
 words must reach a person's eyes unaltered. That is still true and still important.
 What no longer follows is the conclusion that they must therefore be typed at a
@@ -45,7 +45,7 @@ an adapter interface, or a speculative abstraction. Reducing what a second host 
 supply is the opposite of building for one. That is the cheapest possible preparation
 and it is justified on today's host alone.
 
-**What the terminal keeps** (D-080's other four reasons, all intact): diagnostics that
+**What the terminal keeps** (the other four reasons of D-080, as `f288913:docs/decisions/D-080-there-is-no-current-room-a-terminal-command-exists-to-be.md` held them, all intact): diagnostics that
 must work when the plugin path is broken, the daemon's own lifecycle, machine-scope
 identity, and testing. None of those is a user experience, which is the point — they
 are an operator surface, and it is legitimate for an operator surface to be a CLI.
