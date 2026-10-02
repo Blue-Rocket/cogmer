@@ -16,57 +16,21 @@ Being scratch is the point. Be untidy in it.
 
 A new user installs the plugin, and the first commands they run answer instead of failing.
 
-**`/cogmer:self-status` on first use fails instead of answering.** It is the first
-command a new person runs, because the pairing string is what they came for, and it
-runs before there is a binary. There are two ways that happens. The download takes
-time: 29MB, measured at 16s on 09-22. And a plugin installed inside a running
-session fetches nothing at all, because the fetch is started by the SessionStart
-hook and that session started before the plugin existed. Installing and then
-immediately trying the command, in the same session, is probably the commonest
-first use, and on 09-22 it was David's.
+**No check records that a command whose `!` line exits non-zero produces no model
+turn.** `cli.sh` now exits 0 on every path (D-191, a command answers at once and says
+what to do when the install is not finished), so a command typed before there is a
+binary answers. The reason it has to is a fact about Claude Code that nothing watches. A
+`!` line that exits non-zero abandons the command, and no model turn runs: in an
+interactive session the person sees the line's output under "Shell command failed for
+pattern …", labeled `[stderr]`, and with `claude -p` the result is the empty string.
+Both were observed on 09-22. `cmd/cogmer/cli_test.go` holds the script to exit 0, and
+nothing holds the premise, so an edit that let a path exit 1 again fails silently.
 
-The cause is in how Claude Code handles a command's `!` lines. A `!` line that exits
-non-zero abandons the command, and no model turn runs. In an interactive session the
-person sees the line's output under "Shell command failed for pattern …", labeled
-`[stderr]`; with `claude -p` the result is the empty string. Both were observed on
-09-22. `cli.sh` exits 1 from every branch where there is no binary, so the
-installing, failed and stalled explanations D-075 (say which of three reasons it
-is) wrote do reach the person, but framed as a crash, and the model never sees them,
-so it can neither explain them nor act on them.
-
-Five changes would make first use work. `cli.sh` should always exit 0 and send the
-binary's stderr to stdout, so that every explanation reaches the model. Nothing else
-reads its exit code, since the hooks go through `run.sh`.
-
-When nothing has been fetched, `cli.sh` should start the fetch itself instead of
-telling the person to start a new session. `install.sh` already takes a lock and
-decides for itself whether there is anything to do, so a command can run it exactly
-as the hook does. A command somebody typed is the right place to spend a download,
-which the session-start hook has to do detached so that it slows nothing.
-
-While an install is in progress, the command should wait for it within a bound and
-then answer with the pairing string, rather than saying to try again in a moment.
-The person asked for that string, and would otherwise type the command a second
-time to get it. Waiting inside a command somebody typed is arguably not what §3.1
-(first, do no harm) means by slowing a session, but that argument has to be settled
-first. A bound of around 30s covers the 16s measured.
-
-When the install failed or stalled, the command should say what to do as well as
-what happened. The failed branch already names `~/.cogmer/install-state` and the
-one-hour cooldown. The stalled branch says to start a new session, which cannot
-help if the crash left `.install.lock` behind, because every later install finds
-the lock and leaves.
-
-The behavior belongs in `behaviors.go` with a negative test, a command whose `!`
-line exits 1 producing no turn, because it fails silently and the registry exists
-for exactly that.
-
-The same cause hits other commands. `/cogmer:room-status` outside a room fails
-the same way, because its `guests` line exits 1, and that is the state everybody is in
-just after installing. Any `log.Fatal` a command reaches does the same. The `cli.sh`
-change covers every one of them, and each command still needs checking, because
-some exit non-zero on purpose. A fix reaches nobody until the version moves (D-120,
-the manifest version pins an installed plugin).
+The behavior belongs in `behaviors.go` with a negative test, a command whose `!` line
+exits 1 producing no turn, because it fails silently and the registry exists for
+exactly that. No command depends on the script's exit status. A fix reaches nobody
+until the version moves (D-120, the manifest version is the release version, and
+`release.sh` writes it).
 
 **Asking for a new session to finish an install is too much.** After `/plugin
 install` the person believes it is installed, and Claude Code agrees: since
@@ -78,15 +42,16 @@ policy for room content (D-176) is never given. Telling somebody to start again 
 finish something they think has finished costs them the session they were working
 in, and the README currently does exactly that.
 
-Which of these to do is the maintainer's decision, and it follows the `cli.sh` changes in the first item. The possible mitigations:
+A command typed after installing now starts the download itself and says to run it
+again (D-191), and `install.sh` starts the daemon when the download lands, so a new
+session is not needed to get a binary. What a session installed from still lacks is the
+policy, and the README still says to start a new session. Which of these to do is the
+maintainer's decision. The possible mitigations:
 
 - Start the fetch from the per-prompt hook when there is no binary, detached, so the
   first thing typed after installing begins the download without waiting on it.
   Unchecked: whether a slash command fires that hook at all.
-- Have `cli.sh` start the fetch and wait for it within a bound when a command finds
-  no binary, as the first-use item under "Installing and the first commands" describes.
-  `install.sh` already starts the daemon when the download lands, so starting the
-  daemon needs nothing further.
+
 - Let the session you installed from enter rooms without the session-start policy.
   D-176 could not show that policy helping: in-block framing alone produced the
   same refusal of a hostile turn. Rerunning that hostile-turn test in a session
@@ -96,8 +61,7 @@ Which of these to do is the maintainer's decision, and it follows the `cli.sh` c
   Everything before entering a room, such as pairing, `self-status` and `self-name`,
   reads no room content and needs no policy, so the cost falls only on entering a
   room. It needs a marker the SessionStart hook writes per session.
-- Shorten the wait with a smaller download, as "Whether the download is slow enough to
-  matter" describes.
+- Shorten the download, as "Whether the download is slow enough to matter" describes.
 - Ship the binary inside the plugin, ruled out there for what it adds to the
   history.
 

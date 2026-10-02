@@ -25,7 +25,8 @@ they arrive as a single command, and the first one fails.
 
 Then start a new session. When a session starts, a hook fetches the binary for your
 platform and starts a daemon on your machine. The session you installed from has not
-run that hook, so it has no binary, and its `/cogmer:` commands say so. The binary is
+run that hook, so it has no binary, and the first `/cogmer:` command you run there starts
+the download and tells you to run it again in about 15 to 20 seconds. The binary is
 about 30MB, and the download took 13 to 16 seconds when measured on 2026-09-22.
 Installing changes nothing about how Claude Code starts, edits no shell profile, and
 registers no service with the operating system.
