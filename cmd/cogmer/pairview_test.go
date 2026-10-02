@@ -167,6 +167,70 @@ func TestPairingReachabilityDistinguishesItsTwoCauses(t *testing.T) {
 	}
 }
 
+// A daemon that could not bind wrote why, and "start a session" is the wrong advice
+// when a session has started and the daemon is blocked.
+func TestPairingReachabilityNamesABlockedDaemon(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("COGMER_HOME", home)
+	if err := recordEndpoint("127.0.0.1:4783"); err != nil {
+		t.Fatal(err)
+	}
+	recordDaemonState("blocked", "the peer address 127.0.0.1:4783 is held by something that is not a cogmer daemon")
+
+	ok, why := pairingReachable("127.0.0.1:4783")
+	if ok {
+		t.Fatal("a loopback address was reported as reachable")
+	}
+	if !strings.Contains(why, "could not start") || !strings.Contains(why, "is held by something that is not a cogmer daemon") {
+		t.Errorf("the advice was %q; it should give the reason the daemon wrote", why)
+	}
+	if strings.Contains(why, "Start one") {
+		t.Errorf("the advice sends a person to start a session that has started: %q", why)
+	}
+}
+
+// A string whose address nobody can reach is not printed, because a note after it
+// still leaves a string to copy and send.
+func TestNoPairingStringIsPrintedWhenNobodyCanReachIt(t *testing.T) {
+	t.Setenv("COGMER_HOME", t.TempDir())
+	id := testIdentity(t)
+
+	var unreachable strings.Builder
+	writePairingInvitation(&unreachable, id, "127.0.0.1:4783")
+	if strings.Contains(unreachable.String(), id.PeerID) {
+		t.Errorf("a string with an address nobody can reach was printed: %q", unreachable.String())
+	}
+	if !strings.Contains(unreachable.String(), "no string to send yet") {
+		t.Errorf("nothing says why there is no string: %q", unreachable.String())
+	}
+
+	var reachable strings.Builder
+	writePairingInvitation(&reachable, id, "tc://SOMENEGOTIATEDVALUE")
+	if !strings.Contains(reachable.String(), id.PeerID+"@tc://SOMENEGOTIATEDVALUE") {
+		t.Errorf("a reachable string was not printed: %q", reachable.String())
+	}
+}
+
+// The notice about a guessed name is said once, where the identity first travels,
+// and not again by whoami.
+func TestTheGuessedNameNoticeIsSaidOnce(t *testing.T) {
+	t.Setenv("COGMER_HOME", t.TempDir())
+	id := testIdentity(t)
+	id.NameChosen = false
+	var out strings.Builder
+	writePairingInvitation(&out, id, "tc://SOMENEGOTIATEDVALUE")
+	if n := strings.Count(out.String(), "not a name anybody picked"); n != 1 {
+		t.Errorf("the notice appears %d times in one invitation, want 1: %q", n, out.String())
+	}
+
+	id.NameChosen = true
+	out.Reset()
+	writePairingInvitation(&out, id, "tc://SOMENEGOTIATEDVALUE")
+	if strings.Contains(out.String(), "Other people see you as") {
+		t.Errorf("a chosen name is announced by the invitation, which whoami already does: %q", out.String())
+	}
+}
+
 // confirm drives the confirm step the way the page does.
 func confirm(t *testing.T, d *Daemon, pairID string, matched bool) {
 	t.Helper()

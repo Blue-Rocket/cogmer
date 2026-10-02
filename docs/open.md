@@ -49,18 +49,6 @@ maintainer's decision. The possible mitigations:
 - Ship the binary inside the plugin, ruled out there for what it adds to the
   history.
 
-**`whoami` prints a pairing string it knows nobody can use.** `printPairingInvitation`
-prints the string first and then, when `pairingReachable` fails, a `NOTE:` after it,
-so a loopback address goes out looking sendable. On 09-22 `/cogmer:self-status` did
-exactly that: it advised holding off, then gave the string as "provisional" and
-"safe to send". When no address is reachable there should be no string to copy. The
-note for an unpublished address also says to start a session, which misleads when a
-session has started and the daemon is blocked: `pairingReachable` does not read
-`daemon-state`, which already has the real reason.
-
-**The username notice prints twice in `whoami`.** `runWhoami` prints `nameLine`, and
-then `printPairingInvitation` prints it again while the name is not chosen.
-
 **Whether the download is slow enough to matter.** Deliberately not addressed until
 people installing it say so. The darwin/arm64 binary is 29.3MB and took 16s on
 09-22; release binaries are already stripped. Compressed with `gzip -9` it is

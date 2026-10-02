@@ -1154,7 +1154,11 @@ func runWhoami() {
 		"identity": id, "peerName": id.PeerName, "room": room, "addr": addr(),
 	}, "", "  ")
 	fmt.Println(string(buf))
-	fmt.Printf("\n%s\n", nameLine(id))
+	if id.NameChosen {
+		// An unchosen name is said where the identity first travels, so it is not
+		// said twice.
+		fmt.Printf("\n%s\n", nameLine(id))
+	}
 	printPairingInvitation(id)
 
 	running, answering := daemonVersionAt(addr())
@@ -1720,28 +1724,34 @@ func invocation() string {
 // (D-088) rather than at a terminal, because meeting a colleague was never an
 // operator task.
 func printPairingInvitation(id *Identity) {
+	writePairingInvitation(os.Stdout, id, AdvertisedEndpoint())
+}
+
+// writePairingInvitation prints what a user sends a colleague, or says why there is
+// nothing to send. A string whose address nobody can reach is not printed at all: a
+// loopback address in a string that is copied and sent cannot complete a pairing,
+// and a note after it still leaves a string to copy.
+func writePairingInvitation(w io.Writer, id *Identity, endpoint string) {
 	if !id.NameChosen {
 		// Said here because this is the moment the name starts traveling: all
 		// three paths that hand your identity to somebody else come through this
 		// function (D-089 consolidated them), and the name is seen by nobody but
 		// other people.
-		fmt.Printf("\n%s\n", nameLine(id))
+		fmt.Fprintf(w, "\n%s\n", nameLine(id))
 	}
-	endpoint := AdvertisedEndpoint()
-	fmt.Printf("\nSend your colleague this — any channel will do, it is not a secret:\n\n  %s\n",
-		pairingString(id.PeerID, endpoint, chosenName(id)))
-	// Attached to the string rather than to a command: three commands print it,
-	// and only one of them used to warn.
 	if ok, why := pairingReachable(endpoint); !ok {
-		fmt.Printf("\nNOTE: %s\n", why)
+		fmt.Fprintf(w, "\nThere is no string to send yet: %s\n", why)
+		return
 	}
-	fmt.Printf("\nWhen they send you theirs, run:\n\n  /cogmer:peer-pair <their string> <what you call them>\n")
-	fmt.Printf("\nThe name is yours and is used everywhere you see them. Their key already\n")
-	fmt.Printf("gives them a name, but it is a word pair computed from the key and it will\n")
-	fmt.Printf("mean nothing to you in three weeks.\n")
-	fmt.Printf("\nA page then opens in your browser showing two words. Get on a call, both of\n")
-	fmt.Printf("you do this at the same time, and read the words to each other. They must\n")
-	fmt.Printf("match. Nothing is recorded until they do.\n")
+	fmt.Fprintf(w, "\nSend your colleague this — any channel will do, it is not a secret:\n\n  %s\n",
+		pairingString(id.PeerID, endpoint, chosenName(id)))
+	fmt.Fprintf(w, "\nWhen they send you theirs, run:\n\n  /cogmer:peer-pair <their string> <what you call them>\n")
+	fmt.Fprintf(w, "\nThe name is yours and is used everywhere you see them. Their key already\n")
+	fmt.Fprintf(w, "gives them a name, but it is a word pair computed from the key and it will\n")
+	fmt.Fprintf(w, "mean nothing to you in three weeks.\n")
+	fmt.Fprintf(w, "\nA page then opens in your browser showing two words. Get on a call, both of\n")
+	fmt.Fprintf(w, "you do this at the same time, and read the words to each other. They must\n")
+	fmt.Fprintf(w, "match. Nothing is recorded until they do.\n")
 }
 
 // pairingReachable reports whether a pairing string is usable by the person who
@@ -1770,6 +1780,11 @@ func pairingReachable(endpoint string) (bool, string) {
 		return false, "that address is not a host and port, so nobody can reach you at it."
 	}
 	if isLoopback(e.Value) {
+		// A daemon that could not bind wrote why, and that is the cause, so it is said
+		// before the guess that no session has started.
+		if detail, blocked := daemonBlockedReason(); blocked {
+			return false, "the daemon could not start, so no address was published.\n      " + detail
+		}
 		if !endpointRecorded() {
 			return false, "no daemon has published an address yet, so that one is a guess.\n" +
 				"      The daemon records a real one when it starts, which happens when a\n" +
@@ -1780,6 +1795,20 @@ func pairingReachable(endpoint string) (bool, string) {
 			"      and restart the daemon."
 	}
 	return true, ""
+}
+
+// daemonBlockedReason is what the daemon wrote when it could not bind its address,
+// if it did (D-177).
+func daemonBlockedReason() (string, bool) {
+	raw, err := os.ReadFile(daemonStateFile())
+	if err != nil {
+		return "", false
+	}
+	f := strings.SplitN(strings.TrimSpace(string(raw)), "\t", 3)
+	if len(f) == 3 && f[0] == "blocked" {
+		return f[2], true
+	}
+	return "", false
 }
 
 // endpointRecorded distinguishes "a daemon published this" from "we guessed".
