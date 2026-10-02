@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-22 · **Status:** active (implemented)
 
-**Context.** D-070 chose `/room-*` over `/team-*` on an empirical finding: a
+**Context.** D-070, as `f288913:docs/decisions/D-070-slash-commands-carry-a-distinctive-prefix-because.md` held it, chose `/room-*` over `/team-*` on an empirical finding: a
 subdirectory changes how a command is **displayed** and not what a person types,
 there was no `plugin:command` invocation form, and so two plugins defining the same
 name collided at the only thing a user touches. It named its own revisit trigger —
@@ -21,7 +21,8 @@ in `commands/` and one in `skills/`, surfaced as `nstest:legacyform` and
 
 **Decision.** The prefixes stay. `/cogmer:room-create`, not `/cogmer:create`.
 
-D-070's protection becomes belt and braces, which is precisely what D-070 said
+D-070's protection becomes belt and braces, which is precisely what D-070, as
+`f288913:docs/decisions/D-070-slash-commands-carry-a-distinctive-prefix-because.md` held it, said
 would happen. What keeps the prefixes is D-096: a prefix names its target, the set
 will grow, and `room-status` and `self-status` are two different questions that
 would collapse into one word without it. Losing that distinction to save six

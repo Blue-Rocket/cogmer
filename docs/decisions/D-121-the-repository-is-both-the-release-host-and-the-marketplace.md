@@ -30,6 +30,10 @@ the plugin still carries the hooks and the session-start hook still starts the
 daemon.
 
 **Rejected.**
+- *Serving release assets from a personally-operated droplet over plain HTTP.* It is a
+  component that failed D-115's benefit test outright, serving the maintainer and not the
+  person installing, and it is an availability dependency that a release host nobody here
+  operates is not.
 - *A DNS name in front of the droplet.* It hides the address without removing the
   component: still a machine one person operates, still plain HTTP or a certificate
   to keep alive, still failing D-115's benefit test. The address was the symptom.

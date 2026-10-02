@@ -31,9 +31,11 @@ changed is that the set of schemes worth keeping turned out to be empty. Once
 anybody else holds a room, it will not be empty again, and deleting a scheme stops
 being available.
 
-**The organization casing is fixed at the same time.** D-069 recorded that the
-inherited module path disagreed with the organization's actual name, which is why
-`go install` failed in D-066's test. A path that had never resolved was free to
+**The organization casing is fixed at the same time.** D-069, as
+`f288913:docs/decisions/D-069-signing-namespaces-and-the-state-directory-are-decoupled.md` held it,
+recorded that the inherited module path disagreed with the organization's actual name,
+which is why `go install` failed in the test D-066, as
+`f288913:docs/decisions/D-066-the-binary-is-fetched-and-verified-never-shipped-in-the.md` held it, recorded. A path that had never resolved was free to
 leave alone; one about to name a real repository is not.
 
 **Nothing cryptographic moved, which was the point of D-069.**
@@ -42,8 +44,8 @@ leave alone; one about to name a real repository is not.
 **The former name is struck from this log rather than preserved.** Where it was
 incidental — a path, a command, an environment variable, a module path — the
 current name is substituted as though it had always been there. Where the name
-itself was the subject, as in D-069's account of namespaces carrying a product
-name, the prose now says "the product name" and names nothing. A dead name in a
+itself was the subject, as in the account of namespaces carrying a product
+name in D-069, as `f288913:docs/decisions/D-069-signing-namespaces-and-the-state-directory-are-decoupled.md` held it, the prose now says "the product name" and names nothing. A dead name in a
 decision is a thing a reader must hold and resolve, and it buys no understanding:
 the reasoning was never about which name it was.
 
