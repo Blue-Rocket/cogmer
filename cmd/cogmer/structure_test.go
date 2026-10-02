@@ -463,7 +463,7 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 		} else {
 			for _, a := range strings.Split(m[1], ", ") {
 				if !areas[a] {
-					report(e.id, "names the area %q, which docs/decisions/README.md does not list (W-30)", a)
+					report(e.id, "names the area %q, which docs/decisions/areas.md does not list (W-30)", a)
 				}
 			}
 		}

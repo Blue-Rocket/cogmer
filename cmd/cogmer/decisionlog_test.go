@@ -64,23 +64,57 @@ func decisionID(doc string) (string, bool) {
 	return m[1], true
 }
 
-// decisionAreas returns the areas docs/decisions/README.md lists, one in each row
+// decisionAreas returns the areas docs/decisions/areas.md lists, one in each row
 // of its table, so that the list is held in one place.
 func decisionAreas(t *testing.T) map[string]bool {
 	t.Helper()
-	src, err := os.ReadFile("../../docs/decisions/README.md")
+	src, err := os.ReadFile("../../docs/decisions/areas.md")
 	if err != nil {
 		t.Fatal(err)
 	}
-	areas := map[string]bool{}
-	row := regexp.MustCompile(`(?m)^\| ([a-z-]+) \|`)
-	for _, m := range row.FindAllStringSubmatch(string(src), -1) {
-		areas[m[1]] = true
+	areas, problems := parseAreas(string(src))
+	for _, p := range problems {
+		t.Error(p)
 	}
 	if len(areas) == 0 {
-		t.Fatal("docs/decisions/README.md lists no areas")
+		t.Fatal("docs/decisions/areas.md lists no areas")
 	}
 	return areas
+}
+
+var areaRow = regexp.MustCompile(`(?m)^\| ([a-z-]+) \|(.*)$`)
+
+// parseAreas reads the table of areas, and reports a row that says nothing about
+// what its area covers.
+func parseAreas(src string) (map[string]bool, []string) {
+	areas := map[string]bool{}
+	var problems []string
+	for _, m := range areaRow.FindAllStringSubmatch(src, -1) {
+		areas[m[1]] = true
+		if strings.Trim(m[2], "| \t") == "" {
+			problems = append(problems, "docs/decisions/areas.md lists "+m[1]+" with no description of what it covers")
+		}
+	}
+	return areas, problems
+}
+
+func TestAreasEachSayWhatTheyCover(t *testing.T) {
+	cases := []struct {
+		name     string
+		src      string
+		wantArea string
+		problems int
+	}{
+		{"described", "| Area | What |\n|---|---|\n| rooms | what a room is |\n", "rooms", 0},
+		{"no description", "| rooms | |\n", "rooms", 1},
+		{"no second column", "| rooms |\n", "rooms", 1},
+	}
+	for _, c := range cases {
+		areas, problems := parseAreas(c.src)
+		if !areas[c.wantArea] || len(problems) != c.problems {
+			t.Errorf("%s: got areas %v and problems %q", c.name, areas, problems)
+		}
+	}
 }
 
 var slugBreak = regexp.MustCompile(`[^a-z0-9]+`)

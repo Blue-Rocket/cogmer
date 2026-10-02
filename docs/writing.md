@@ -274,7 +274,7 @@ checks.>
 
 W-30. An entry follows this template: a **Date:** line whose status is "active" or
 "not built" and which ends with **Areas:**, a comma-separated list of one or more areas
-from the table in `docs/decisions/README.md`, then **Decision.**, **Support.** with a list under it, an optional
+from `docs/decisions/areas.md`, then **Decision.**, **Support.** with a list under it, an optional
 **Rejected.**, an optional **Limits.** and an optional **Revisit when**, in that order.
 Omit an optional field when it has nothing to hold.
 
@@ -590,8 +590,8 @@ each behaviour's `Reliance` starts "If this changes".
 that is not in `decisionsNotRewritten`, reading the log as Markdown so that a field
 name inside code does not count as the field. The list holds the decisions written
 before this guide that are not yet rewritten, and it only shrinks: a listed entry that
-passes fails the test, so that it comes off the list in the commit that rewrote it. It checks W-30, W-33, W-34 and W-41 on each, reading each area against the table in
-`docs/decisions/README.md`; for W-41 it
+passes fails the test, so that it comes off the list in the commit that rewrote it. It checks W-30, W-33, W-34 and W-41 on each, reading each area against
+`docs/decisions/areas.md`; for W-41 it
 rejects a mention of `open.md` or `docs/work/`, or a link to a ClickUp, GitHub issue,
 Jira or Linear task. Every tombstone,
 whatever its number, must hold only its status line. A withdrawn entry must name the
@@ -604,6 +604,8 @@ A decision file is exempt from the word and structure checks while its number is
 `TestDecisionFilesAreNamedForTheirHeadings`, in `cmd/cogmer/decisionlog_test.go`, checks
 that each file under `docs/decisions/` holds one decision, that its name carries that
 decision's number and a slug of its title, and that no number appears twice.
+`TestAreasEachSayWhatTheyCover`, in the same file, checks that each row of
+`docs/decisions/areas.md` says what its area covers.
 
 `TestWritingRulesAreIndexed`, in `cmd/cogmer/writingrules_test.go`, checks that
 the rule index above and the checks agree. Every rule in the index has a paragraph
