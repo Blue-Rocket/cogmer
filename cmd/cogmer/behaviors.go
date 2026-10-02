@@ -277,7 +277,11 @@ var Behaviors = []Behavior{
 		Reliance: "If this changes, nobody sees a room: the daemon, started in the background by the session-start hook, is the only part of cogmer that can open the room view, since everything Claude Code offers delivers to the model rather than to a person (D-033, D-036). There is no error path back to the daemon, so it believes it showed the view while nothing appeared, and a first-time user is left with a loopback address nobody told them about. On Darwin 25.6 a background process keeps the logged-in GUI session, opens a URL and takes focus, whether or not it is in a new POSIX session.",
 		Tier:     TierOffline,
 		Check: func(p *Probe) error {
-			mgr := p.DetachedSessionManager
+			// An offline check is run with no probe at all.
+			mgr := ""
+			if p != nil {
+				mgr = p.DetachedSessionManager
+			}
 			if mgr == "" {
 				mgr = measureDetachedSessionManager()
 			}
@@ -340,6 +344,21 @@ var Behaviors = []Behavior{
 				if s, _ := pl["prompt"].(string); strings.HasPrefix(strings.TrimSpace(s), "/") {
 					return fmt.Errorf("slash command %q reached UserPromptSubmit; it would be published to the room", s)
 				}
+			}
+			return nil
+		},
+	},
+	{
+		ID:       "B24",
+		Title:    "A slash command whose ! line exits non-zero produces no model turn",
+		Reliance: "If this changes, nothing breaks: cli.sh exits 0 on every path, which is correct either way. The check fails so that the reason for that rule can be revisited, since a failing line that still ran a turn would let a command report failure by its exit status. Where it holds, a command that exits non-zero leaves the model unable to explain or act on what happened, and the person sees only a failed shell line, so a path that exited 1 again would fail silently.",
+		Tier:     TierSession,
+		Check: func(p *Probe) error {
+			if p.FailingLineOutput != "" {
+				return fmt.Errorf("a command whose line exits 1 now produced output (%.60q), so Claude Code runs a turn after a failed line; cli.sh still exits 0 on every path, but the reason for that rule has changed", p.FailingLineOutput)
+			}
+			if p.ControlLineOutput == "" {
+				return fmt.Errorf("the control command, whose line exits 0, produced no turn either, so commands did not load in the probe directory and the failing case shows nothing")
 			}
 			return nil
 		},

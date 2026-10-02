@@ -16,22 +16,6 @@ Being scratch is the point. Be untidy in it.
 
 A new user installs the plugin, and the first commands they run answer instead of failing.
 
-**No check records that a command whose `!` line exits non-zero produces no model
-turn.** `cli.sh` now exits 0 on every path (D-191, a command answers at once and says
-what to do when the install is not finished), so a command typed before there is a
-binary answers. The reason it has to is a fact about Claude Code that nothing watches. A
-`!` line that exits non-zero abandons the command, and no model turn runs: in an
-interactive session the person sees the line's output under "Shell command failed for
-pattern …", labeled `[stderr]`, and with `claude -p` the result is the empty string.
-Both were observed on 09-22. `cmd/cogmer/cli_test.go` holds the script to exit 0, and
-nothing holds the premise, so an edit that let a path exit 1 again fails silently.
-
-The behavior belongs in `behaviors.go` with a negative test, a command whose `!` line
-exits 1 producing no turn, because it fails silently and the registry exists for
-exactly that. No command depends on the script's exit status. A fix reaches nobody
-until the version moves (D-120, the manifest version is the release version, and
-`release.sh` writes it).
-
 **Asking for a new session to finish an install is too much.** After `/plugin
 install` the person believes it is installed, and Claude Code agrees: since
 v2.1.221 a plugin installed mid-session is live in that session, with its commands

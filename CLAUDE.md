@@ -92,8 +92,8 @@ every target cross-compiles with `CGO_ENABLED=0`.
 - **Test with `go test ./...`.** To drive a real session, run `claude -p …
   --settings <file>` with a throwaway `COGMER_HOME` per run, and `< /dev/null`, or it
   waits on stdin.
-- **`cogmer doctor` checks the behaviors we rely on**, in about 5s and one Claude
-  turn. `--deep` adds a compaction, in about 40s. It runs by itself when a room is
+- **`cogmer doctor` checks the behaviors we rely on**, in about 13s and two Claude
+  turns. `--deep` adds a compaction, in about 40s. It runs by itself when a room is
   formed under a Claude Code version this machine has not checked, and
   `COGMER_PREFLIGHT=off` turns that off for CI.
 - **`docs/relied-on-behaviors.md` is generated** by `cogmer behaviors --markdown`.

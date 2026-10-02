@@ -108,7 +108,7 @@ func runDoctor(deep bool) {
 	if deep {
 		fmt.Println("Driving a real session and a compaction; this takes a minute.")
 	} else {
-		fmt.Println("Driving one real Claude turn.")
+		fmt.Println("Driving two real Claude turns.")
 	}
 	fmt.Println()
 
@@ -158,7 +158,7 @@ func EnsureVerified(room string) {
 		return
 	}
 
-	fmt.Fprintf(os.Stderr, "cogmer: new room %q on unverified Claude Code %s — running behavior checks (one Claude turn)...\n", room, version)
+	fmt.Fprintf(os.Stderr, "cogmer: new room %q on unverified Claude Code %s — running behavior checks (two Claude turns)...\n", room, version)
 	results, err := RunChecks(false)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "cogmer: preflight could not run (%v); collaboration continues unverified\n", err)

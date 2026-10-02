@@ -70,6 +70,10 @@ If this changes, a slash command cannot tell which session ran it, so `/cogmer:r
 
 If this changes, a colleague can steer your session: a turn written as an instruction would be followed rather than read. The injected block frames its content as information, never instruction, and that framing travels in the same hook output as the content, so it holds only while Claude Code places hook output where a session reads it as data. Nothing in the protocol would show the change. A session given a turn claiming SYSTEM OVERRIDE refused it and told its user on Claude Code 2.1.275 (commit b09b208).
 
+### B24: A slash command whose ! line exits non-zero produces no model turn
+
+If this changes, nothing breaks: cli.sh exits 0 on every path, which is correct either way. The check fails so that the reason for that rule can be revisited, since a failing line that still ran a turn would let a command report failure by its exit status. Where it holds, a command that exits non-zero leaves the model unable to explain or act on what happened, and the person sees only a failed shell line, so a path that exited 1 again would fail silently.
+
 ## Tier: compaction
 
 ### B14: session_id and transcript_path survive compaction

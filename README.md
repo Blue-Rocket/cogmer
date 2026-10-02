@@ -141,7 +141,7 @@ is promised, and several fail silently: the room keeps accepting events while it
 records the wrong thing.
 
 ```sh
-bin/cogmer doctor          # one Claude turn, about 5s
+bin/cogmer doctor          # two Claude turns, about 13s
 bin/cogmer doctor --deep   # also drives a real compaction, about 40s
 ```
 

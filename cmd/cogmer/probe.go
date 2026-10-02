@@ -48,6 +48,12 @@ type Probe struct {
 	// itself; it is settable so the check can be exercised against a regression.
 	DetachedSessionManager string
 
+	// FailingLineOutput is what Claude Code printed for a slash command whose `!` line
+	// exits 1, and ControlLineOutput what it printed for one whose line exits 0. The
+	// control is what shows that commands load in the probe directory at all.
+	FailingLineOutput string
+	ControlLineOutput string
+
 	// compaction tier
 	PreCompactBytes      int64
 	PostCompactBytes     int64
@@ -242,6 +248,7 @@ func RunProbe(deep bool) (*Probe, error) {
 		p.ToolEnvSessionID = strings.TrimSpace(string(b))
 	}
 	p.freezeSessionEvidence()
+	p.FailingLineOutput, p.ControlLineOutput = runCommandProbe(claude, dir)
 
 	if deep {
 		if _, err := run("-p", "/compact", "--resume", p.SessionID, "--settings", settings); err != nil {
@@ -396,4 +403,40 @@ func assertGUISession(manager string) error {
 	return fmt.Errorf("a detached process reports the %q session manager rather than \"Aqua\": "+
 		"the daemon can no longer open the room view or raise a notification, and nothing anywhere will say so",
 		manager)
+}
+
+// runCommandProbe asks Claude Code to run two project commands, one whose `!` line
+// exits 1 and one whose line exits 0, and returns what each printed (B24). The
+// control runs only when the failing command printed nothing, which is the expected
+// outcome: it costs a model turn, and its job is to show that an empty answer means
+// "no turn ran" and not "commands did not load here".
+//
+// They run in a directory of their own and without the probe's settings, so the
+// probe's hooks do not record these prompts as if they were part of the probe turn.
+func runCommandProbe(claude, dir string) (failing, control string) {
+	work := filepath.Join(dir, "commandprobe")
+	cmds := filepath.Join(work, ".claude", "commands")
+	if err := os.MkdirAll(cmds, 0o700); err != nil {
+		return "", ""
+	}
+	write := func(name, exit, reply string) {
+		body := "---\ndescription: probe\nallowed-tools: Bash(sh:*)\n---\n" +
+			"!`sh -c 'echo before; exit " + exit + "'`\n\nReply with the single word " + reply + ".\n"
+		_ = os.WriteFile(filepath.Join(cmds, name+".md"), []byte(body), 0o600)
+	}
+	write("probe-fail", "1", "TURN-RAN-AFTER-FAILURE")
+	write("probe-ok", "0", "TURN-RAN")
+	run := func(command string) string {
+		cmd := exec.Command(claude, "-p", command)
+		cmd.Dir = work
+		cmd.Stdin = strings.NewReader("")
+		cmd.Env = append(os.Environ(), "COGMER_ADDR=127.0.0.1:1")
+		out, _ := cmd.CombinedOutput()
+		return strings.TrimSpace(string(out))
+	}
+	failing = run("/probe-fail")
+	if failing != "" {
+		return failing, ""
+	}
+	return failing, run("/probe-ok")
 }

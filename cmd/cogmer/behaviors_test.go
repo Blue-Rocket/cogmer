@@ -184,3 +184,22 @@ func TestB23DetectsLossOfGUISession(t *testing.T) {
 	mustDetect(t, "B23", &Probe{DetachedSessionManager: "StandardIO"}, "the daemon running outside the login session")
 	mustPass(t, "B23", &Probe{DetachedSessionManager: "Aqua"})
 }
+
+func TestB24DetectsATurnAfterAFailedLine(t *testing.T) {
+	mustDetect(t, "B24", &Probe{FailingLineOutput: "TURN-RAN-AFTER-FAILURE", ControlLineOutput: "TURN-RAN"}, "a turn running after a line that exits 1")
+	mustDetect(t, "B24", &Probe{}, "commands not loading, so an empty answer proves nothing")
+	mustPass(t, "B24", &Probe{ControlLineOutput: "TURN-RAN"})
+}
+
+// RunChecks runs each offline check with no probe, because they need no session. A
+// check that reads the probe panics there, and `cogmer doctor` dies before it reports
+// anything. Only B23 is run, because the others start the test binary as if it were
+// cogmer, which runs the tests again.
+func TestTheGUISessionCheckRunsWithNoProbe(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("B23 panicked when run with no probe: %v", r)
+		}
+	}()
+	_ = behavior(t, "B23").Check(nil)
+}
