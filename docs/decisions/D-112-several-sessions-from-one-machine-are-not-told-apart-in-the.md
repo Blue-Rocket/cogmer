@@ -1,53 +1,34 @@
 # D-112 — Several sessions from one machine are not told apart in the block
 
-**Date:** 2026-09-21 · **Status:** active (considered and not built)
+**Date:** 2026-09-21 · **Status:** active · **Areas:** capture
 
-**Context.** Nothing stops one machine having two live sessions in a room:
-`session_rooms` is keyed on the session because sessions are members (§22), while
-`room_guests` is keyed on `(room_id, peer_id)` because peers are admitted. They are
-different questions and the schema answers them separately. `UndeliveredFor`
-excludes `origin_session_id`, not the peer, so the two sessions correctly see each
-other's turns.
+**Decision.** The injected block does not mark which session of one machine a turn came from.
 
-But identity is per machine, so both carry the same `peerId`, the same derived
-`peerName` and the same `label`. The injected block's JSON has `speaker`,
-`peerName` and `label` and no session field, so a reader receives two threads
-interleaved under one name. `originSessionId` is on the event and unsurfaced, so
-the material for a discriminator is already there.
+**Support.**
+- One machine can have two live sessions in a room, since a session is keyed to its room because
+  sessions are members and a peer is admitted separately, and both carry the same `peerId`, the
+  same derived name and the same label. `UndeliveredFor` excludes the origin session and not the
+  peer, so the two see each other's turns. §3.6 (session-scoped rooms), `cmd/cogmer/store.go`.
+- A discriminator derived from `originSessionId`, which is on the event and not shown, reports the
+  topology of processes and not the work, so it says that turn 7 came from a different session than
+  turn 6 and nothing about whether that matters, and the reader cannot act on it. It also invites an
+  inference it cannot support, two marked streams read as two topics or two people, which is a false
+  affordance here as a data field. `cmd/cogmer/store.go`, `Event`.
+- The view leaves the derived name off a user's own turns, where it identifies nothing the user
+  does not know, and an identifier the machine can derive and the reader cannot use is the same
+  kind of thing. D-021 (peer names are word pairs derived from the identity, never chosen), D-094
+  (the name you chose leads in the view, with the derived name beside it).
+- A replacement after a crash is sequential, and unrelated work corrects itself, since a session
+  in no room captures nothing and joining is deliberate, which leaves knowingly split work,
+  where the person knows why and the reader does not. D-064 (a session's room is the one somebody
+  chose inside it, never a machine default).
 
-**Considered: a per-block discriminator derived from `originSessionId`**, stable
-within a block and not the raw identifier, so threads separate without naming the
-agent (D-043).
+**Rejected.**
+- *A per-block discriminator derived from `originSessionId`.* It distinguishes without informing.
 
-**Rejected, because it distinguishes without informing.** It reports process
-topology, not work. It says turn 7 came from a different session than turn 6 and
-nothing about whether that matters — two halves of one feature, or one continuing
-after a crash, or two unrelated things all render the same. The reader cannot act
-on it.
+**Limits.** What would carry information is a purpose the user supplies, such as "this is the
+frontend half", which is a feature with a real cost and is not justified without evidence that
+anybody runs split sessions.
 
-It is also worse than silence, because it invites an inference it cannot support:
-two marked streams read as two topics, or as two people. That is the false
-affordance this project already refuses in the view, appearing as a data field
-rather than as a control.
-
-**Consistent with how identity is displayed elsewhere.** The view leaves the derived
-name off your own turns, where it identifies nothing you did not know, since it
-exists to identify other peers (D-021, peer names are derived from the identity), and
-D-094 (the name you chose leads in the view, with the derived name beside it) prefers the label because a word pair means nothing to a person weeks later.
-A session discriminator is the same kind of thing: an identifier the machine can
-derive and the reader cannot use.
-
-**How narrow the problem actually is.** A crash replacement is sequential — the
-dead session emits nothing, so nothing interleaves. Unrelated work is
-self-correcting, because a session in no room captures nothing and joining is
-deliberate (D-064). That leaves deliberately split work, which is one collaboration
-by construction, and where **the person knows why and the reader does not**. An
-asymmetry of knowledge is not repaired by deriving a marker from a session
-identifier.
-
-**What would carry information is a purpose the person supplies** — "this is the
-frontend half" — which is a feature with a real cost, and is not justified without
-evidence that anybody runs split sessions.
-
-**Revisit when** there is evidence that two live sessions from one machine is an
-ordinary thing to do, rather than a thing the schema permits.
+**Revisit when** there is evidence that two live sessions from one machine is an ordinary thing to
+do, and not only a thing the schema permits.

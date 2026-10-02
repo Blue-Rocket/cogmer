@@ -8,7 +8,7 @@ combinations, rather than from two lists of 256 words each.
 **Support.**
 - With 8,280 names, the chance that two of 10 peers share one is about 0.5%, of 25 about
   3.6%, and of 100 about 45%, from the sizes of the lists in `cmd/cogmer/peername.go`.
-- Pairs are the case that exists. D-109 (two is the target, and nothing rules out more).
+- Pairs are the case that exists. D-109 (build for two people, and treat a design that cannot extend past two as a defect).
 - The lists name people, so each word is curated against being unkind to a person.
   §6 (naming people).
 

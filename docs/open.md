@@ -446,6 +446,16 @@ The fix is a test that the two lists equal a copy of the PGP list kept under
 `cmd/cogmer/testdata/`, and a test that no word of either list appears in the four
 name vocabularies. D-164's **Limits.** is deleted when the second test exists.
 
+**The specification does not say that Claude's thinking blocks are never published.**
+`cmd/cogmer/transcript.go` drops them and `cmd/cogmer/transcript_test.go` requires that, and
+the specification does not mention them (read on 2026-10-01). Section 15 (capturing Claude
+responses) says a response is published whole and never summarized, which reads as including
+everything Claude produced. A reader of the specification could conclude the opposite of what
+the code does, about content a user would not expect to leave their machine.
+
+The fix is a sentence in section 15 stating that a response never includes its thinking blocks,
+and a reason for it, which the code comment gives only as "deliberately never published".
+
 **What leaves the machine is recorded only for 0.6.0.**
 `84a0751:docs/what-leaves-findings.md` read every outbound path on 2026-09-21, at 0.6.0.
 Two have changed since: releases come from GitHub (`plugin/release-url.txt`), and peers
@@ -601,14 +611,13 @@ to split, adding 78 entries rather than 86:
 The 146 citations that mean something other than an entry's first decision have not
 been recounted.
 
-**Five citations in `docs/decisions/` credit an entry with something it does not
+**Four citations in `docs/decisions/` credit an entry with something it does not
 hold.** Each resolves, so the citation test passes, but the source says something
 else. "D-016 fixes that at the first prompt" describes what D-056 (a session's room
 is fixed at first sight) decided. D-017's Context says "D-015 gave rooms a generated
 id plus a human-chosen label", though D-015 holds no label. "The invitation format
 from D-017" names a format D-017 does not hold.  "`common.sh` and D-107 both attribute to §3.1" is untrue of D-107,
-which cites no § section. D-110 calls the thinking-block exclusion "§3.5's", but
-§15 (capturing Claude responses) holds it. These are fixed when the entries that hold
+which cites no § section. These are fixed when the entries that hold
 them are rewritten.
 
 **Two decisions' Status lines report what is no longer so.** D-041 (ship as a Claude
