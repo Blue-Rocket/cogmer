@@ -583,59 +583,6 @@ something `cogmer doctor` verifies. The code that relies on an entry cites it, a
 fact reaches a session when the work touches what it constrains rather than on every
 turn (W-26).
 
-**Most decision entries hold more than one decision, or history, and none is split
-yet.** W-40 in `docs/writing.md` says an entry records one decision. Reading all 126
-entries in full, as they stood at commit `f11e871`, gave this, with the number of
-decisions in parentheses. `docs/work/decision-split.md` holds the observations for
-each entry: where each decision sits, the alternative each extra one has, the parts
-that are not decisions, and what each citation means.
-
-- split (59): D-002 (2), D-008 (2), D-010 (2), D-014 (2), D-015 (2), D-016 (2),
-  D-017 (4), D-018 (2), D-019 (3), D-020 (2), D-021 (4), D-023 (3), D-024 (2),
-  D-025 (3), D-030 (2), D-032 (2), D-033 (2), D-035 (2), D-036 (2), D-037 (2),
-  D-040 (2), D-041 (3), D-042 (4), D-043 (4), D-045 (2), D-046 (4), D-050 (2),
-  D-052 (4), D-053 (3), D-056 (2), D-057 (3), D-059 (2), D-060 (2), D-061 (4),
-  D-062 (2), D-066 (2), D-067 (3), D-069 (2), D-074 (2), D-075 (2), D-077 (2),
-  D-080 (3), D-081 (2), D-082 (2), D-084 (2), D-086 (2), D-088 (3), D-090 (2),
-  D-091 (2), D-093 (2), D-094 (2), D-095 (3), D-096 (2), D-098 (2), D-100 (2),
-  D-104 (3), D-106 (3), D-117 (3), D-121 (2);
-- become tombstones under W-37 (a reversed decision becomes a tombstone): D-028,
-  which D-029 reversed, and D-047, which D-055 reversed; D-076 is one already;
-- one decision, with history or findings to move out (57): every entry not listed
-  here;
-- one decision and nothing to move (9): D-005, D-007, D-009, D-012, D-013, D-112,
-  D-124, D-125, D-126.
-
-The answers settled on 2026-09-29 change those counts, and they are rules in
-`docs/writing.md` now: the log is one file for each decision (W-28), a repeated decision folds into the
-entry that holds it, an entry is rewritten to what still holds before it is split (W-40),
-and a plan becomes a "removed" tombstone (W-37). Applied to the notes, 52 entries remain
-to split, adding 78 entries rather than 86:
-
-- no longer split: D-098 and D-100, moved to `docs/writing.md`; D-002 and D-032,
-  removed as plans; D-020 and D-056, whose second decisions fold into D-024 and D-016;
-  and D-062, whose first decision D-068 holds, so it is rewritten to its second;
-- still split with one decision fewer: D-080, whose prefix rule folds into D-096;
-- D-061 splits into its four decisions about the system, and its title about Phase 7
-  goes.
-
-The 146 citations that mean something other than an entry's first decision have not
-been recounted.
-
-**Four citations in `docs/decisions/` credit an entry with something it does not
-hold.** Each resolves, so the citation test passes, but the source says something
-else. "D-016 fixes that at the first prompt" describes what D-056 (a session's room
-is fixed at first sight) decided. D-017's Context says "D-015 gave rooms a generated
-id plus a human-chosen label", though D-015 holds no label. "The invitation format
-from D-017" names a format D-017 does not hold.  "`common.sh` and D-107 both attribute to §3.1" is untrue of D-107,
-which cites no § section. These are fixed when the entries that hold
-them are rewritten.
-
-**Two decisions' Status lines report what is no longer so.** D-041 (ship as a Claude
-Code plugin) says "specified; not implemented", and D-083 says "not yet
-implemented", yet the plugin, its commands and the first opening of the view at
-pairing all exist.
-
 **The view leaves the derived name off a user's own turns, and no decision records
 why.** Commit `33ce996` made the choice. D-021 (peer names are derived from the
 identity) is cited for it, but D-021 says only what the name is for; it says nothing
@@ -648,8 +595,8 @@ reading the help is told how something works that does not exist (read on
 2026-09-25).
 
 **Two comments describe the current-room pointer D-080 removed.** `main.go:878` and
-`membership.go:686-688` still explain a machine-wide current room. D-080 (a terminal
-command exists to be tested or to work when the plugin cannot) deleted
+`membership.go:686-688` still explain a machine-wide current room. D-080 (there is no
+current room, and a room-scoped command gets its room from its session) deleted
 `SetCurrentRoom` and `CurrentRoom`, so a maintainer reading either comment is told
 about a mechanism that does not exist. Found on 09-23, reading every decision for
 the split list.

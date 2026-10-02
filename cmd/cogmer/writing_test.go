@@ -32,14 +32,6 @@ var writingNeverChecked = map[string]string{
 	"docs/writing.md": "it quotes every word and mark it bans",
 }
 
-// decisionsNotRewritten lists the decisions written before docs/writing.md that
-// have not been rewritten to its template. It only shrinks: a listed entry that
-// passes the template check fails the test, so that it comes off the list in the
-// commit that rewrote it.
-var decisionsNotRewritten = map[string]bool{
-	"D-119": true, "D-120": true, "D-121": true, "D-123": true,
-}
-
 var (
 	bannedWords = regexp.MustCompile(`(?i)\b(load-bearing|honest|honestly|not merely|leverage|leveraged|leverages|utilise|utilised|utilize|utilized|utilizes|robust|robustly|seamless|seamlessly|comprehensive|ensure|ensured|ensures|ensuring|nuanced|testament|tapestry|delve|delves|delving|crucial|crucially)\b`)
 	// The guide permits some uses of these, so a use can carry an exception
@@ -92,11 +84,7 @@ func TestDocumentsFollowWritingGuide(t *testing.T) {
 		if _, skip := writingNeverChecked[doc]; skip {
 			continue
 		}
-		// An entry written before the guide is exempt until it is rewritten, and
-		// TestLaterDecisionsFollowTemplate fails once it follows the template.
-		if id, ok := decisionID(doc); ok && decisionsNotRewritten[id] {
-			continue
-		}
+
 		src, err := os.ReadFile(filepath.Join("../..", doc))
 		if err != nil {
 			t.Fatal(err)

@@ -341,7 +341,7 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 	}
 }
 
-// Every decision not in decisionsNotRewritten follows the decision template in
+// Every decision follows the decision template in
 // docs/writing.md, and every tombstone, whatever its number, keeps only its
 // status line. A withdrawn one names the decision whose **Rejected.** says why.
 func TestLaterDecisionsFollowTemplate(t *testing.T) {
@@ -454,8 +454,6 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 			}
 			continue
 		}
-		before := len(problems)
-
 		if len(e.body) == 0 || !decisionStatus.MatchString(nodeSource(e.body[0], src)) {
 			report(e.id, "has no **Date:** line whose status is active or not built (W-30)")
 		} else if m := decisionStatus.FindStringSubmatch(nodeSource(e.body[0], src)); m[1] == "" {
@@ -522,13 +520,7 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 				report(e.id, "points to open work, %q, which goes stale when it is resolved; state the decision's scope instead (W-41)", w)
 			}
 		}
-		if decisionsNotRewritten[e.id] {
-			if len(problems) == before {
-				report(e.id, "now follows the decision template: remove it from decisionsNotRewritten (W-30)")
-			} else {
-				problems = problems[:before]
-			}
-		}
+
 	}
 	return problems
 }
@@ -652,8 +644,7 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 		entry string
 		want  []string
 	}{
-		{"not yet rewritten", "# D-123 — Old\n\nAnything, already.\n", nil},
-		{"rewritten but still listed", "# D-123 — T\n\n" + complete, []string{"D-123 now follows the decision template"}},
+
 		{"complete", "# D-124 — T\n\n" + complete, nil},
 		{"complete, with Limits", "# D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Some.\n\n**Revisit when**", 1), nil},
 		{"no Areas", "# D-124 — T\n\n" + strings.Replace(complete, " · **Areas:** rooms, sync", "", 1), []string{"D-124 has no **Areas:** on its **Date:** line"}},
@@ -674,7 +665,7 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 		{"Limits pointing at a tracker task", "# D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Tracked in https://app.clickup.com/t/86abc123.\n\n**Revisit when**", 1), []string{"D-124 points to open work"}},
 		{"Limits pointing at working material", "# D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Detail in `docs/work/split.md`.\n\n**Revisit when**", 1), []string{"D-124 points to open work"}},
 		{"Limits stating scope", "# D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** It does not decide whether stop restarts the daemon.\n\n**Revisit when**", 1), nil},
-		{"open work in an entry not yet rewritten", "# D-123 — Old\n\nLeft open in `docs/open.md`.\n", nil},
+
 		{"tombstone", "# D-076 — T\n\n" + tombstone + replacement, nil},
 		{"tombstone with more", "# D-076 — T\n\n" + tombstone + "\nMore history.\n" + replacement, []string{"D-076 is a tombstone and has more"}},
 		{"tombstone with a Why", "# D-076 — T\n\n**Status:** withdrawn 2026-09-20. Replaced by D-126 (words). Why: `05f89c4`.\n" + replacement, []string{"D-076 is a tombstone whose status line"}},

@@ -588,11 +588,9 @@ limit: what it asks for is removing the header.
 `TestBehaviorRelianceStartsWithWhatBreaks`, in `structure_test.go`, checks that
 each behavior's `Reliance` starts "If this changes".
 
-`TestLaterDecisionsFollowTemplate`, in `structure_test.go`, checks every decision
-that is not in `decisionsNotRewritten`, reading the log as Markdown so that a field
-name inside code does not count as the field. The list holds the decisions written
-before this guide that are not yet rewritten, and it only shrinks: a listed entry that
-passes fails the test, so that it comes off the list in the commit that rewrote it. It checks W-30, W-33, W-34 and W-41 on each, reading each area against
+`TestLaterDecisionsFollowTemplate`, in `structure_test.go`, checks every decision,
+reading the log as Markdown so that a field name inside code does not count as the
+field. It checks W-30, W-33, W-34 and W-41 on each, reading each area against
 `docs/decisions/areas.md`; for W-41 it
 rejects a mention of `open.md` or `docs/work/`, or a link to a ClickUp, GitHub issue,
 Jira or Linear task. Every tombstone,
@@ -601,8 +599,7 @@ decision that replaced it, and that decision must have a **Rejected.**. A moved
 entry must name a rule or a heading this guide holds. A removed entry must say that it
 was a plan, with W-53.
 
-A decision file is exempt from the word and structure checks while its number is in
-`decisionsNotRewritten`, and is checked like any document once it comes off the list.
+
 `TestDecisionFilesAreNamedForTheirHeadings`, in `cmd/cogmer/decisionlog_test.go`, checks
 that each file under `docs/decisions/` holds one decision, that its name carries that
 decision's number and a slug of its title, and that no number appears twice.
