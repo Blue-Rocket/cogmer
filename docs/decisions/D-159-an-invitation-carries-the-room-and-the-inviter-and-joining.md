@@ -23,7 +23,7 @@ address against them.
 - *An invitation that leaves out the inviter's identifier.* The guest's guest list would
   refuse the host's requests, and collaboration would run one way.
 
-**Limits.** How an invitation reaches the guest is D-105 (an invitation travels over the
-channel that pairing established).
+**Limits.** How an invitation reaches the guest is D-105 (an invitation is delivered to a
+paired guest as an offer over the paired channel).
 
 **Revisit when** a guest has to join a room with no inviter named.

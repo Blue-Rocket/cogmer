@@ -47,7 +47,7 @@ TLS pin and the signed request, as on every other transport.
 **Limits.** Anybody holding this machine's overlay address can open a tunnel and make
 the listener perform a TLS handshake. An unrecorded key is refused there, and the
 dialer receives a TLS error. This decides nothing about the post-quantum hedge the
-pre-shared key provided (D-104, the overlay address is public and stable).
+pre-shared key provided (D-104, the overlay address holds no secret and is the same at every start).
 
 **Revisit when** tailcat documents how its relay treats one key on several
 connections, or lets a listener admit a client by something a pairing string can

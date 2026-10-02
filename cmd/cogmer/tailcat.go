@@ -234,7 +234,7 @@ func StartTailcat() (net.Listener, string, *tailcat.Server, error) {
 // can happen, not where it is. Left unpinned the library re-chooses by latency at
 // every start, with a random fallback when the probe fails, so the published
 // address could differ after a restart on another network — and a changed address
-// strands everybody holding the old one (D-104).
+// strands everybody holding the old one (D-187).
 //
 // Pinned, a machine that travels keeps an address its colleagues can still use, at
 // the cost of a relay that may no longer be the nearest. That is the right trade:

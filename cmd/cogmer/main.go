@@ -759,7 +759,7 @@ func runPeers() {
 		}
 		// Named, not counted. The usual room has two people in it, so a tally is
 		// always one and says nothing; what a person can act on is which
-		// colleague it is and what to type (D-106).
+		// colleague it is and what to type (D-188).
 		for _, who := range unfinished {
 			fmt.Printf("\nThere is still work to do with %s — nothing passes between you until\n", who)
 			fmt.Printf("you finish pairing. Two words, on a call, both at once:\n\n")

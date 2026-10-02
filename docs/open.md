@@ -169,7 +169,7 @@ recorded, replaced when the peer advertises another (read on 2026-09-28). D-103 
 address belongs to a peer, and is stored in one place) gave each address the owner
 the lifecycle needs, and nothing past that is built.
 
-**Re-pick the overlay relay when it cannot be reached.** D-104 pins it so the
+**Re-pick the overlay relay when it cannot be reached.** D-187 pins it so the
 address is stable. Nothing re-picks, so a machine that relocates past its pinned
 relay is unreachable and nothing says so. Change driven by failure, never by
 preference.
