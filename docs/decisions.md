@@ -1501,289 +1501,147 @@ read, and marks nobody verified.
 
 ---
 
-## D-056 — A session's room is fixed at first sight; the `injected` flag is removed
+## D-056 — A session's room is fixed when its first hook fires, and never changes
 
-**Date:** 2026-09-18 · **Status:** active (implemented)
+**Date:** 2026-09-18 · **Status:** active
 
-**Context.** Initialized CodeGraph and ran a dead-symbol sweep. Two results:
-`min`, which duplicated the Go 1.21 builtin, and `HasReceivedContext`, which
-`codegraph_callers` confirmed had none.
+**Decision.** A session binds to a room at first sight, and the binding does not change. No exception
+exists for a session that has received nothing, and nobody is asked at binding, since
+nothing knows a session exists until its first hook fires.
 
-The second is not dead code — it is a **rule recorded and never enforced**.
-`MarkInjected` wrote `session_rooms.injected = 1` after teammate context was
-offered; `HasReceivedContext` read it; nothing called `HasReceivedContext`. §12a's
-constraint was in fact enforced by something else entirely: `RoomForSession` returns
-the bound room unconditionally once a row exists, so a session can never move
-whether or not anything reached it.
+**Support.**
+- `RoomForSession` reports the bound room whatever the session has received, so no check
+  on what reached a session stands between it and its room. `cmd/cogmer/membership.go`,
+  `RoomForSession`, and `cmd/cogmer/membership_test.go`, `TestABoundSessionCannotBeMoved`.
+- Moving a session that has received nothing needs a judgement made from outside about
+  what a context window holds, which cannot be inspected, and one error is irreversible.
+  D-016 (a session is in one room at most, and never joins a second).
+- Correcting a room joined by mistake means starting a session, which costs less than
+  that judgement. §12a (room membership).
 
-**The specification was therefore looser than the code, in the direction that
-matters.** §12a said a session may not move *once teammate context has been
-injected*, which permits moving one that has had none — the ordinary case of joining
-the wrong room and correcting it before anything arrives. That narrower rule existed
-on paper and nowhere else, and nobody noticed for the same reason it was safe: the
-stricter behaviour is what anyone would want.
+**Rejected.**
+- *Letting a session that has received no colleague's turns move to another room.* The
+  rule has to be right about state nobody can inspect, and being wrong once cannot be
+  undone.
 
-**Decision.** Keep the strict rule and delete the machinery for the loose one. A
-session binds on first sight and stays. Nobody is asked at that moment, since nothing
-knows a session exists until its first hook fires. `injected`, `MarkInjected` and
-`HasReceivedContext` are gone, and `RoomForSession` carries the comment saying it is
-the whole of the constraint.
-
-Correcting a wrongly joined room now means starting a session. That is cheaper than
-a rule which has to be right about what a context window contains — a judgement made
-from the outside, about state that cannot be inspected, where being wrong once is
-irreversible.
-
-**The column is dropped, not left.** It would have been harmless: it has a default
-and nothing writes it. But a column encoding a rule that was removed is a rule
-somebody will later find and reinstate, so `migrateMembership` drops it from
-databases that predate this.
-
-**What the sweep says about the method.** This is the second finding of the same
-shape in two days — after `Fingerprint`, which also had no callers and also
-represented a decision recorded but never wired up (D-055, as `d37c77c:docs/decisions.md` held it). Both were invisible to
-every test, because a test exercises what is called. A symbol with no callers is
-worth treating as a question rather than as tidiness: it usually means something was
-decided, written down, and then satisfied some other way.
-
-**Tests.** `TestASessionsRoomNeverChanges` states the surviving rule directly: a
-bound session stays put when the current room changes, and a session starting
-afterwards gets the new one. `TestMigrationDropsTheInjectedColumn` writes a
-pre-change database and requires both that the column is gone and that the binding it
-carried survives.
-
-**Revisit when** a case appears for moving a session that has received nothing. It
-would need a way to know that from outside the session which does not depend on a
-flag nobody reads, and the flag is what failed here.
+**Revisit when** a case appears for moving a session that has received nothing, together
+with a way to know that from outside the session that depends on no flag.
 
 ---
 
-## D-057 — A slash command is a thin wrapper over the CLI; the session names itself
+## D-057 — A slash command is a thin wrapper over the CLI
 
-**Date:** 2026-09-18 · **Status:** decided; commands not yet built
+**Date:** 2026-09-18 · **Status:** active
 
-**Context.** §29 had already split commands between a session and a terminal
-(D-053, as `d37c77c:docs/decisions.md` held it). What it had not answered is how the in-session ones would be implemented,
-and the assumption underneath was that they would need a second implementation.
+**Decision.** A slash command shells out to the corresponding CLI command. There is one
+implementation with two entry points, and the CLI is the surface that can be tested
+without a Claude session.
 
-Proposed instead: every slash command simply calls the corresponding CLI command.
-One implementation, two entry points, and the CLI remains the surface that can be
-tested without a Claude session at all.
+**Support.**
+- A command file runs the binary through `cli.sh` and carries no logic of its own.
+  `plugin/commands/room-status.md`.
+- Every slash command names a subcommand the binary has. `cmd/cogmer/membership_test.go`,
+  `TestEverySlashCommandNamesARealSubcommand`.
 
-**The objection that had blocked this was wrong.** Binding a room to the session
-that asked for it appeared to require naming a session from outside one, which
-nothing at a terminal can do. Probed rather than assumed, and it is not required:
-**`CLAUDE_CODE_SESSION_ID` is exported into the environment of every Bash tool
-call**, and it equals the id the hooks report. Verified on 2.1.275 by running a
-prompt with a `UserPromptSubmit` hook recording `session_id` while the tool call
-recorded the variable — the two strings were identical.
+**Rejected.**
+- *A second implementation for the commands that run inside a session.* Two
+  implementations of one act drift apart, and the session-side one could not be tested
+  without a session.
 
-Recorded as **B21**, because it is undocumented, load-bearing, and has a silent
-failure mode: a variable that is present but names a *different* session would bind
-a room to a session that does not exist while the real one binds to nothing, and
-capture would stop with no error anywhere.
-
-**Decision.** Slash commands shell out. They pass no session id, because the CLI
-reads `CLAUDE_CODE_SESSION_ID` from its own environment.
-
-That yields the property that motivated the question — nobody would ever run
-`create` from a terminal — **by construction rather than by convention**. The
-variable is absent at a terminal, so a session-scoped command run there has no
-session to bind and refuses. It does not guess, and it does not fall back to a
-machine-level setting.
-
-**What it allows us to delete.** The machine-level *current room* exists only
-because a terminal command cannot name a session. Once `create` and `join` bind the
-session that invoked them, a session that has run neither is in no room, which is
-already what §12a wants — *before a room exists, a session is an ordinary Claude
-Code session*. That removes the hazard behind the original question: today a room is
-created, forgotten, and a session started weeks later in an unrelated repository
-silently joins it and begins publishing. Nothing about the directory scopes it,
-because D-015 forbids deriving a room from one.
-
-**Not every command can be wrapped**, and §29 already says which: `pair` and
-`verify` are interactive, block on another person, and must reach a person's eyes
-unaltered. Their slash counterparts print an instruction to run them in a terminal.
-A signpost is honest in a way a proxy would not be.
-
-**Two hazards to implement against.**
-
-- **The model may retry.** A wrapper is a model deciding to run a command, and a
-  model that reads a timeout as a failure may run it twice. `invite`, `join` and
-  `revoke` are idempotent already; `create` is not, and two rooms is a confusing
-  outcome rather than a harmless one. Either make creation idempotent per session —
-  a session that already has a room gets that room back — or have it refuse.
-- **Testing must not require a session.** Session-scoped commands accept an
-  explicit override so tests can pass a synthetic id; the environment variable is
-  the default, not the only source.
-
-**Revisit when** B21 is recorded as failing. At that point a session-scoped command
-cannot know its session, and the answer is to refuse rather than to reinstate a
-machine-level current room — which would restore the hazard this removed.
+**Limits.** How a command learns which session ran it is D-167.
 
 ---
 
 ## D-058 — Signature schemes are kept, never replaced
 
-**Date:** 2026-09-18 · **Status:** active (implemented)
+**Date:** 2026-09-18 · **Status:** active
 
-**Context.** Asked whether anything in the current approach would make backwards
-compatibility hard once a second host type exists. The adapter boundary turned out
-not to be the problem — it is clean, and `behaviors.go` already documents the
-interface. The problem is one layer down and has nothing to do with hosts.
+**Decision.** An event records the scheme it was signed under and is verified under that
+scheme. A new scheme is a new function beside the old ones, and an old one is never
+edited. An event whose scheme is missing or unknown is refused as a version problem and
+not as a forgery.
 
-`signingBytes()` hard-coded a single event tag and a fixed field list,
-and `Verify()` always recomputed with **today's** code. Adding a field to an event —
-which a second host would plausibly require — would therefore have stopped every
-historical event verifying.
+**Support.**
+- Events are immutable and cannot be re-signed, and they are relayed between peers and
+  refetched as recovery, so after a format change old events keep arriving and would be
+  rejected if they were verified under the new bytes. §7 (event model), §13 (transitive
+  synchronization), D-029 (losing a room database does not end membership).
+- The version is not covered by the signature. An attacker who alters it only makes
+  verification fail, since every scheme is Ed25519 over length-prefixed fields and there
+  is no weaker scheme to be downgraded to. `cmd/cogmer/store.go`, `Event`.
+- A refusal worded as a forgery sends a person hunting an attacker, and one worded as a
+  version problem sends them to install a build, and the two need opposite responses. A
+  test requires the message to say "upgrade" and not "does not match the peer id".
+  `cmd/cogmer/keys_test.go`, `TestAnUnknownSchemeIsRefusedAsAVersionProblem`.
+- Signing records the scheme, so nothing relies on a zero value meaning one. `cmd/cogmer/keys_test.go`,
+  `TestSigningRecordsItsScheme` and `TestAnEventWithNoRecordedSchemeIsRefused`.
 
-**Why that is unfixable rather than inconvenient.** Events are immutable (§7), so
-they can never be re-signed. And they do not sit still: §13 relays them between
-peers, and **D-029 makes refetching a room's history the designed recovery from
-local loss**. So after a format change, old events would still move between peers
-and be rejected on arrival — and the message would read `signature does not match
-the peer id that claims to have made it`, which sends someone hunting an attacker
-rather than installing a build.
+**Rejected.**
+- *Editing the signing bytes in place and verifying every event under them.* Every
+  historical event would stop verifying, and none can be re-signed.
 
-**Decision.** An event records the scheme it was signed under, and is verified under
-that scheme. Old `signingBytes` implementations are kept rather than edited. Adding
-a field to an event means adding `signingBytesV3` and leaving v2 intact.
-
-Three details that make it work:
-
-- **Zero means v2.** A row written before the column existed, and a peer on an older
-  build that omits the field, both read as the only scheme that existed then. No
-  migration rewrites anything, which matters because rewriting a signed record is
-  the operation §7 forbids.
-- **The version is not covered by the signature.** An attacker who alters it only
-  causes verification to fail. Every scheme is Ed25519 over length-prefixed fields,
-  so there is no weaker scheme to be downgraded to; if one is ever found weak, the
-  answer is to refuse that version rather than to have signed its number.
-- **An unknown scheme is refused as a version problem, not a forgery.** The two
-  demand opposite responses from a person — install a newer build, versus somebody
-  is attacking you — and a test asserts the message says "upgrade" and does not say
-  "does not match the peer id".
-
-**The related hazard, recorded and not fixed.** `wireVersion` is a hard refusal:
-a peer speaking a different version is rejected outright, so there is no rolling
-upgrade. Combined with an event-format change, an upgrade becomes a flag day. That
-is tolerable now, when every peer is on one machine's build, and will not be once
-anyone else uses this. The likely answer is a minimum-compatible version that allows
-reads from older peers.
-
-**What was already right**, and worth not disturbing: `originSessionId` rather than
-`claudeSessionId` (D-043), nothing on the wire naming the agent, host-specific
-values like `promptId` living in free-form `metadata` rather than as columns, and
-`EventType` being an open string whose only consumers test for one specific value —
-so an unknown type renders generically instead of failing.
-
-**Revisit when** a second scheme is actually added. That is the moment the mechanism
-is first exercised, and the test to write then is that an event signed under v2 by
-an older build still verifies against a build that signs v3.
+**Limits.** If a scheme is found weak, that version is refused. Its number is not signed.
 
 ---
 
-## D-059 — Only one side drives a verification; the other completes from inbound
+## D-059 — Either side completes a verification from inbound, so one side can drive it
 
-**Date:** 2026-09-18 · **Status:** active (implemented)
+**Date:** 2026-09-18 · **Status:** active
 
-**Context.** Phase 5's two-machine run. Pairing failed twice before it worked, in
-two different ways, and neither was reachable from one machine.
+**Decision.** A peer whose own session holds the other's revealed nonce has what
+the two words need and stops driving. Only one side has to run the exchange, and both
+learn the words. The loop checks for an inbound completion first and then attempts a
+round outbound.
 
-**First: whoever typed first lost.** The droplet sent its commitment four seconds
-before the Mac had recorded it, so `handleVerify` answered `401 Unauthorized` —
-an unknown peer. `RunVerification` retried only on 409 and treated 401 as final.
-The earlier caller failed at once; the later one waited ninety seconds and timed
-out. Both people fail, and the one who followed the instruction promptly fails
-faster.
+**Support.**
+- A side that completes ends its session, so a peer that began a moment later finds
+  nothing to answer and waits out the timeout, which happens whenever two people type a
+  few seconds apart. `cmd/cogmer/verify.go`, `RunVerification`.
+- The inbound path reads only a nonce that arrived through `handleVerify`, which refuses
+  a reveal without a commitment and a reveal that does not open it, so commit, commit,
+  reveal, reveal still holds. `cmd/cogmer/sas_test.go`, `TestRevealBeforeCommitIsRefused`
+  and `TestARevealMustOpenItsCommitment`.
+- One side reaches the words from an address on the other side alone, and the first to
+  type reaches them when the other types later. `cmd/cogmer/sas_test.go`,
+  `TestOnlyOneSideNeedsAnAddress` and `TestTheFirstToTypeWaitsForTheOther`.
 
-Fixed by answering **409 for "I do not know you yet"**, a state the other person
-resolves by typing. 401 now means only that a signature did not verify, which is
-the one answer here that waiting cannot fix.
+**Rejected.**
+- *Each side driving its own exchange.* It reads as symmetric and fails whenever the two
+  people type seconds apart, because the side that finishes strands the other.
 
-**Second, and deeper: the side that finished stranded the other.** Both sides drove
-their own exchange. The one that completed tore its session down in a `defer`, so
-the other's commitment arrived to nothing and waited out the timeout. It reads as
-symmetric and is not: it fails whenever two people type a few seconds apart.
-
-D-052, as `d37c77c:docs/decisions.md` held it, described the exchange as symmetric — "each side sends its commitment and
-receives the other's as the reply, so there is no initiator to elect and no race to
-resolve." That was true of a single round and false of the session around it.
-
-**Decision.** Either side may complete from **inbound**. A peer whose own session
-already holds the other's revealed nonce has everything the SAS needs and stops
-driving. Only one side has to run the exchange; both learn the words. The loop now
-checks inbound first, then attempts a round outbound, so the two orderings and the
-simultaneous case all converge.
-
-**The security argument is untouched.** Commit-commit-reveal-reveal still holds,
-because the inbound path only reads a nonce that arrived through `handleVerify`,
-which refuses a reveal without a commitment and refuses a reveal that does not open
-it. What changed is who runs the loop, not what the loop requires.
-
-**Why a test did not catch it.** `TestTwoDaemonsReachTheSameWords` starts both
-sides in goroutines with no delay, so neither finishes before the other begins —
-the one arrangement in which the bug cannot occur. The new test introduces the
-delay that makes it ordinary rather than rare.
-
-**Revisit when** a third peer verifies. Nothing here assumes two, but nothing has
+**Revisit when** a third peer verifies. Nothing here assumes two, and nothing has
 exercised more.
 
 ---
 
-## D-060 — A sequence is reserved outside the room before the event that uses it
+## D-060 — `Store.Append` takes the sequence it is given and never derives one
 
-**Date:** 2026-09-18 · **Status:** active (implemented)
+**Date:** 2026-09-18 · **Status:** active
 
-**Context.** Review C-1, the last open conformance item, and Phase 7's stated
-"database recovery". D-029 settled the design a fortnight ago: **lose the room,
-keep the sequence, resume above it and refetch.** None of it was built.
+**Decision.** `Store.Append` takes the sequence number as an argument and derives none.
+The number comes from `Membership.ReserveSequence`, which records it in `membership.db`
+before the event that uses it is published.
 
-`rooms.issued_sequence` existed in the schema and was written by nobody and read by
-nobody — the third such column found this week, after `injected` (D-056) and the
-verification flag before it. `nextSequence` derived the next sequence from
-`MAX(peer_sequence)` in the room's own database, which is exactly the value that
-goes to zero when that database is lost.
+**Support.**
+- A sequence derived from the highest one in the room's own database goes to zero when
+  that database is lost, so the peer would reissue numbers that others hold as different
+  events, which a receiver can only quarantine. D-029 (losing a room database does not
+  end membership), D-027 (a sequence conflict is quarantined, not dropped).
+- Reserving before publishing loses a number and never reissues one, and a lost number is
+  harmless because a gap makes peers wait and not skip. `cmd/cogmer/offline_test.go`,
+  `TestAReservationIsSpentEvenIfNothingIsWritten`.
+- No call derives a sequence, so the dangerous path is absent as well as unused.
+  `cmd/cogmer/store.go`, `Append`.
 
-**What that cost.** Delete a room database and the counter restarts at 1, so the
-peer reissues numbers it has already used. A reissued sequence is a *different
-event under an identifier other peers already hold* — the precise condition D-027
-quarantines on the receiving side, caused by a peer that is never told. Reproduced
-during the review: the daemon kept serving from its open file handle after the file
-was deleted, so nothing looked wrong until a restart hours later, and then the room
-simply went quiet.
+**Rejected.**
+- *Deriving the next sequence from the room's own events.* The counter restarts at 1
+  when the room is lost.
 
-**Decision.** `Membership.ReserveSequence` issues the number and records it in
-`membership.db`, beside the identity and outside the room. `Store.Append` takes the
-sequence rather than deriving one, so the dangerous path is not merely unused but
-absent.
-
-**Reserve, then publish**, and not the reverse. A crash between the two then loses a
-number instead of reissuing one, and losing one is harmless: the watermark is the
-highest *contiguous* sequence, so a gap makes peers wait rather than skip.
-`TestAReservationIsSpentEvenIfNothingIsWritten` fixes that order.
-
-**The loss is reported, because it is otherwise invisible.** `reportLostState` runs
-when a room is opened — the only moment it can, since a running daemon serves a
-deleted file from its handle. It says what §8 requires: state was lost, membership
-and sequence position are intact, history is being refetched and depends on a
-member being reachable, and teammate turns may be injected a second time.
-
-**Recovery needed no new mechanism.** Anti-entropy already refetches: a store
-holding nothing reports low watermarks, and peers resend. What was missing was only
-that the peer not corrupt the room on its way back.
-
-**Also fixed, from the partition run of 2026-09-18.** `log`, `conflicts` and `seed` resolved a
-room through `config.json`, which D-046 replaced. During a live room holding seven
-events, `cogmer log` printed `ROOM DEFAULT -- 0 events`. They now use the
-current room from `membership.db`. `whoami` deliberately does **not**: who you are
-is answerable in no room at all, and a command reporting your identity must not
-fail for want of one.
+**Limits.** Reporting a lost room is D-169.
 
 **Revisit when** a peer needs to reserve sequences for a room it has not joined, or
-across two machines under one identity. Neither is possible now, and the second
-would need the reservation to be shared rather than local — at which point this
-becomes a distributed counter and the argument changes entirely.
+across two machines under one identity. The reservation would then have to be shared and
+not local, which makes it a distributed counter.
 
 ---
 
@@ -6285,8 +6143,9 @@ must also be a peer this machine knows.
   dismiss is a poor place for a decision that matters, and it lets any peer that can
   reach the address put something on the host's screen.
 
-**Limits.** Which side drives the exchange, and the answer for a peer not yet recorded,
-are D-059 (only one side drives a verification).
+**Limits.** Which side drives the exchange is D-059 (either side completes a verification
+from inbound), and the answers that mean wait and the answer that means give up are D-168
+(409 for what waiting can fix, 401 for what it cannot).
 
 **Revisit when** a verification has to begin from the other side before its user has
 asked.
@@ -6369,3 +6228,97 @@ verification, and prints that the peer is UNVERIFIED and how to finish.
   accept.
 
 **Revisit when** a script or test can run a verification without a second person.
+
+---
+
+## D-166 — A column that encodes a rule the system does not hold is dropped by migration
+
+**Date:** 2026-09-18 · **Status:** active
+
+**Decision.** A column that encodes a rule the system does not hold is dropped, not left
+in place. `migrateMembership` drops `session_rooms.injected` from every store that has
+it.
+
+**Support.**
+- The migration drops the column and keeps the binding it carried. `cmd/cogmer/membership.go`,
+  `migrateMembership`, and `cmd/cogmer/membership_test.go`,
+  `TestMigrationDropsTheInjectedColumn`.
+
+**Rejected.**
+- *Leaving the column.* It is harmless, since it has a default and nothing writes it,
+  but a column encoding a removed rule is a rule somebody will later find and reinstate,
+  and a second mechanism for one rule is how one of them rots.
+
+---
+
+## D-167 — A command learns its session from the environment, never from an argument
+
+**Date:** 2026-09-18 · **Status:** active
+
+**Decision.** A session-scoped command reads its session from `CLAUDE_CODE_SESSION_ID` in
+its own environment, and a slash command passes no session id. Run at a terminal, where
+the variable is absent, a session-scoped command has no session to act on and refuses,
+and no machine-level setting stands in for it.
+
+**Support.**
+- Claude Code exports `CLAUDE_CODE_SESSION_ID` into every tool call's environment, and it
+  equals the id the hooks report. B21 (CLAUDE_CODE_SESSION_ID is exported into a tool
+  call's environment).
+- A command with no session says so and names the slash command to run inside a session.
+  `cmd/cogmer/main.go`, `sessionRoom`.
+
+**Rejected.**
+- *Passing the session id as an argument.* Binding a room to the session that asked for it
+  would need a name for a session that nothing at a terminal can supply.
+- *A machine-level current room for commands run outside a session.* A room created and
+  forgotten would be joined weeks later by a session in an unrelated repository, which
+  would begin publishing without anyone acting. D-080 (there is no current room).
+
+**Revisit when** B21 fails. A session-scoped command then cannot know its session, and
+the answer is to refuse and not to restore a machine-level current room.
+
+---
+
+## D-168 — A verification step answers 409 for what waiting can fix and 401 for what it cannot
+
+**Date:** 2026-09-18 · **Status:** active
+
+**Decision.** A verification step answers 409 when this daemon does not know the caller
+yet or is not expecting a verification, and 401 only when a signature does not verify.
+`RunVerification` retries on 409 and treats 401 as final.
+
+**Support.**
+- Two users pair within seconds of each other, so whoever types first reaches a daemon
+  that has not yet recorded the other. `cmd/cogmer/verify.go`, `handleVerify`.
+- The first to type waits for the other and does not fail. `cmd/cogmer/sas_test.go`,
+  `TestTheFirstToTypeWaitsForTheOther`.
+
+**Rejected.**
+- *401 for an unknown peer.* The first to type fails at once and the other waits out the
+  90 seconds of the timeout, so both users fail and the one who followed the instruction
+  promptly fails first.
+
+**Limits.** What may start an exchange is D-162.
+
+---
+
+## D-169 — A lost room state is reported when the room is opened
+
+**Date:** 2026-09-18 · **Status:** active
+
+**Decision.** When a room is opened, `reportLostState` compares the highest sequence the
+store holds for this peer with the highest this peer recorded as issued. If the room holds
+less, the daemon says that state was lost, that membership and sequence position are
+intact, that history is being refetched and depends on a member being reachable, and that
+colleagues' turns may be injected a second time.
+
+**Support.**
+- A running daemon serves a deleted database from its open file handle, so opening a room
+  is the only moment the loss can be seen, and otherwise it surfaces at a restart hours
+  later as a room that has gone quiet. `cmd/cogmer/daemon.go`, `reportLostState`.
+- The specification requires the check on every open and the report in terms a user can
+  act on. §8 (event identity and ordering).
+
+**Rejected.**
+- *Recovering silently.* A recovery nobody is told about looks the same as nothing having
+  gone wrong.

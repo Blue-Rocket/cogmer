@@ -268,6 +268,18 @@ has a closed room kept as an archive that can be read but never rejoined, and th
 specification freezes a room's sequences at that point. Membership ends per person
 through `leave` and `revoke`; the room itself has no closed state.
 
+**Nothing tests that a lost room is reported when it is opened.** D-169 (a lost room
+state is reported when the room is opened) has `reportLostState` in
+`cmd/cogmer/daemon.go` compare the highest sequence the store holds for this peer with
+the highest recorded as issued, and no test in `cmd/cogmer` calls it or looks for its
+"ROOM STATE LOST" line (read from the code on 2026-10-01). A change that stopped the
+comparison, or that skipped the call on open, would leave a user with a quiet room and
+no notice, and every test would pass.
+
+The fix is a test that issues events in a room, deletes the room's database, opens the
+room again, and requires the report, together with a test that a room holding what was
+issued reports nothing.
+
 **`leave`, run twice, says "this session is not in a room."** True, and unhelpful
 to somebody who left it a moment ago: it reads as a failure and sends them looking
 for a problem. It should say it has already left. `LeaveSession` returns that error
@@ -579,9 +591,8 @@ which cites no § section. D-110 calls the thinking-block exclusion "§3.5's", b
 §15 (capturing Claude responses) holds it. These are fixed when the entries that hold
 them are rewritten.
 
-**Three decisions' Status lines report what is no longer so.** D-041 (ship as a Claude
-Code plugin) says "specified; not implemented", D-057 (a slash command is a thin
-wrapper over the CLI) says "commands not yet built", and D-083 says "not yet
+**Two decisions' Status lines report what is no longer so.** D-041 (ship as a Claude
+Code plugin) says "specified; not implemented", and D-083 says "not yet
 implemented", yet the plugin, its commands and the first opening of the view at
 pairing all exist.
 

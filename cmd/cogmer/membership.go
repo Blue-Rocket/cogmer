@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS room_guests (
 -- session rather than on the daemon.
 -- A session's room is fixed at first sight and never changes. There is no
 -- "injected yet?" column: a second mechanism for one rule is how one of them rots,
--- and this one was written and never read (D-056).
+-- and this one was written and never read (D-166).
 CREATE TABLE IF NOT EXISTS session_rooms (
   session_id TEXT PRIMARY KEY,
   room_id    TEXT NOT NULL,
@@ -162,7 +162,7 @@ func migrateMembership(db *sql.DB) error {
 	}
 	// Dropped rather than left in place. It would be harmless -- it has a default
 	// and nothing writes it -- but a column encoding a rule that was removed is a
-	// rule somebody will later find and reinstate (D-056).
+	// rule somebody will later find and reinstate (D-166).
 	if err := dropColumnIfPresent(db, "session_rooms", "injected"); err != nil {
 		return err
 	}

@@ -172,7 +172,7 @@ is not listed, read the spec.
 | addresses, transport, reachability | D-019, D-091, D-101, D-103, D-104 |
 | another host | D-110, D-111, D-113, §3.8 |
 | the name, a slash command, the plugin manifest | D-117, D-118, D-095, D-096, D-085 |
-| sequences, recovery from local loss | D-029, D-060 |
+| sequences, recovery from local loss | D-029, D-060, D-169 |
 | what is unfinished or undecided | `docs/open.md` |
 
 @docs/values.md
