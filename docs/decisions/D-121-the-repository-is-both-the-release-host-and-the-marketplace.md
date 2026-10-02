@@ -6,7 +6,7 @@
 does not exist. Creating it turns out to settle two other open items in the same
 act, because both of them existed only because there was no repository.
 
-**The release host.** D-115 counts three centralized components and this was the one
+**The release host.** D-115, as `f288913:docs/decisions/D-115-a-centralized-component-must-trace-to-a-disclosed-tradeoff.md` held it, counts three centralized components and this was the one
 failing its benefit test outright — a personally-operated droplet, plain HTTP, bare
 IP, serving us rather than the person installing. GitHub serves a release's assets
 at `{owner}/{repo}/releases/download/{tag}/{asset}`, and `install.sh` already builds

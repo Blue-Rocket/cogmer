@@ -456,6 +456,17 @@ the code does, about content a user would not expect to leave their machine.
 The fix is a sentence in section 15 stating that a response never includes its thinking blocks,
 and a reason for it, which the code comment gives only as "deliberately never published".
 
+**Nothing a user reads says what leaves their machine.** D-115 (a centralized component must trace to
+a disclosed tradeoff that benefits the person) requires that a user is told of a compromise in
+something they actually read. `README.md` and `plugin/README.md` say nothing of the relay, of the
+release host or that a colleague's words reach the user's own model provider (read on 2026-10-01),
+and the files in `plugin/commands/` are prompts. The relay and the model provider each trace and
+benefit the user and fail the disclosure test.
+
+The fix is a short section in `plugin/README.md`, for somebody who has installed cogmer, naming
+what leaves the machine and to whom. The next item says why the record it would be written from
+is out of date.
+
 **What leaves the machine is recorded only for 0.6.0.**
 `84a0751:docs/what-leaves-findings.md` read every outbound path on 2026-09-21, at 0.6.0.
 Two have changed since: releases come from GitHub (`plugin/release-url.txt`), and peers

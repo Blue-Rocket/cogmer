@@ -15,4 +15,4 @@
   something else misleads.
 
 **Limits.** Claude Code adds the manifest's name in front of every command, which is
-D-118 (the plugin manifest name is the command namespace, and Claude Code forces it).
+D-118 (the plugin manifest name is the command namespace, and commands keep their prefixes under it).
