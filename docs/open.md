@@ -8,9 +8,37 @@ permanent home does not need one here too. Nothing here records status.
 
 Items are grouped by milestone: a set of related functionality, named in the sentence
 that opens its section. A milestone's section is deleted with its last item, and
-nothing records it afterwards.
+nothing records it afterwards. The sections are in the order the work is done, and those after "Somebody else uses it" wait for what that colleague does.
 
 Being scratch is the point. Be untidy in it.
+
+## A test suite that fails only when something is wrong
+
+A failing test means something broke, so a maintainer reads a failure and does not rerun it.
+
+**`TestTheThreeEndingsOfAPairing` fails about one run in four.** Its subtest
+"matched writes the name and the verification" fails at cleanup with "TempDir
+RemoveAll cleanup: unlinkat …/.cogmer: directory not empty", so something is still
+writing into the test's state directory after the subtest returns, most likely a
+goroutine the pairing starts. It failed 2 of 8 runs on 09-23 on committed code, so
+it is not caused by a recent change. A flaky test trains a maintainer to rerun
+failures instead of reading them. The fix is to make the test wait for whatever
+writes, or to stop that writer before the subtest returns.
+
+**`TestAnAddressBelongsToAPeer` fails when two random keys derive the same name.** It
+admits two fresh identities under `PeerName` of each, and when the two word pairs
+collide, `Allow` refuses the second: "you already know a different key as
+\"glad-bobcat\"". It failed once and passed six times in a row on 2026-09-25. Giving
+the two peers fixed, distinct names would remove the chance.
+
+**Two tests in `ui_test.go` assume an order the store does not promise.**
+`TestTheUnverifiedMarkerInTheViewIsAFact` takes the last event of a snapshot to be the
+user's own turn, and `TestTheViewCarriesTheNameYouChose` takes the first to be the named
+peer's. Events are ordered by timestamp and then by peer, and each test appends its
+events within one second under random peer identifiers, so the order varies from run
+to run. Each failed once in six or fewer runs on 2026-09-28 and 2026-09-29. Finding
+each event by its content or its peer, or giving the events distinct timestamps, would
+remove the chance.
 
 ## Installing and the first commands
 
@@ -78,7 +106,7 @@ policy for room content (D-176) is never given. Telling somebody to start again 
 finish something they think has finished costs them the session they were working
 in, and the README currently does exactly that.
 
-The possible mitigations:
+Which of these to do is the maintainer's decision, and it follows the `cli.sh` changes in the first item. The possible mitigations:
 
 - Start the fetch from the per-prompt hook when there is no binary, detached, so the
   first thing typed after installing begins the download without waiting on it.
@@ -125,6 +153,90 @@ downloaded. Shipping binaries inside the plugin removes the download entirely bu
 commits about 150MB per release into the history everybody clones, and is ruled
 out.
 
+## Safe for somebody else's conversation
+
+Nothing outside a room can read it, alter a colleague's words, or make a record a colleague holds unreadable, and what leaves the machine is known.
+
+**A web page can read the local API, and only the `Origin` check keeps it from
+writing, once its site's name points at 127.0.0.1.** A site can load its page from
+its own address on port 4782, then point its name at 127.0.0.1 (DNS rebinding). The
+browser then treats the page's requests to the daemon as same-origin, so it sends
+`X-Cogmer` without asking and lets the page read the replies. `/`, `/events` and
+`/stream` have no check, so the page can read a room once it knows the room's
+address, which was not checked. The state-changing routes are refused only because
+`guardLocal` in `cmd/cogmer/localguard.go` rejects the page's `Origin`, a check that
+passes a request with no `Origin` at all. The daemon answers a request whose `Host`
+names another site: on 2026-09-24, `curl -H 'Host: evil.example:4782'` got 200 from
+`/` and `/healthz`. None of this was reproduced in a browser.
+`docs/explanations/dns-rebinding.md` walks through each scenario.
+
+The fix is to refuse, on every local route, any request whose `Host` is not
+`127.0.0.1`, `localhost` or `[::1]` with the daemon's port. A page can reach the
+daemon under its own name, or name the daemon in `Host` and be treated as another
+origin, but not both. Demonstrate it before and after, as D-087 (the local API
+requires a header a web page cannot send) was demonstrated: a hosts-file entry
+pointing a made-up name at 127.0.0.1 reproduces the end state of rebinding. D-087
+calls the header check the one the defense rests on and the `Origin` check a second
+layer, so the change rewrites that part of it under W-38 (a partial change rewrites
+the earlier entry).
+
+**No test fails when a change to the signing bytes or the wire format stops an
+existing record from being read.** Every signing test in `cmd/cogmer/keys_test.go`
+signs a fresh event and then verifies it, so an edit to `signingBytesV3` or
+`eventBytes` changes the signer and the verifier together and every test still
+passes (read from the code on 2026-09-24). An event signed under scheme v3 before the
+edit, held on a colleague's machine, would then fail to verify, with an error that
+reads as a forgery. D-058 (signature schemes are kept, never replaced) depends on
+that edit never happening, and nothing detects it. The wire format has the same gap:
+nothing decodes a sync message written at `minWireVersion` with the current code.
+
+The fix is a v3 event signed once and checked in, as a constant or a file under
+`cmd/cogmer/testdata/`, with a test that `Verify` accepts it, and the same for a sync
+message at each version `speaks` accepts. Each new scheme or wire version adds its
+own frozen record when it ships.
+
+**Whether the public relay is an acceptable dependency.** Reaching a peer across NAT
+works through a public relay operated by a third party, used with no account and no
+configuration of ours. It has to be settled before somebody else's conversation
+crosses it. It has three parts, with different answers: whether depending on a relay
+nobody here operates fits §4's rule that no transport is a prerequisite; what the
+relay observes, since it cannot read what it carries but sees which nodes talk, when,
+and how much; and whether unconfigured use of somebody's free infrastructure is
+something to build a product on.
+
+**What leaves the machine is recorded only for 0.6.0.**
+`84a0751:docs/what-leaves-findings.md` read every outbound path on 2026-09-21, at 0.6.0.
+Two have changed since: releases come from GitHub (`plugin/release-url.txt`), and peers
+reach each other through Tailscale's DERP relays, choosing a region in
+`loadTailcatRegion` in `cmd/cogmer/tailcat.go`, which may fetch a relay map from a
+server nobody has named (read on 2026-09-25, not traced further). D-115 (a centralized
+component must trace to a disclosed tradeoff) rests on that record. Reading every
+outbound path again at the current version, including where `loadTailcatRegion` fetches
+from, would say what leaves now. Three of the properties that do not leave are kept only
+by the absence of code, and each could be a test instead, such as one that the embedded
+view holds no absolute URL.
+
+**Nothing a user reads says what leaves their machine.** D-115 (a centralized component must trace to
+a disclosed tradeoff that benefits the person) requires that a user is told of a compromise in
+something they actually read. `README.md` and `plugin/README.md` say nothing of the relay, of the
+release host or that a colleague's words reach the user's own model provider (read on 2026-10-01),
+and the files in `plugin/commands/` are prompts. The relay and the model provider each trace and
+benefit the user and fail the disclosure test.
+
+The fix is a short section in `plugin/README.md`, for somebody who has installed cogmer, naming
+what leaves the machine and to whom. The item before this one says why the record it would be written from
+is out of date.
+
+**The specification does not say that Claude's thinking blocks are never published.**
+`cmd/cogmer/transcript.go` drops them and `cmd/cogmer/transcript_test.go` requires that, and
+the specification does not mention them (read on 2026-10-01). Section 15 (capturing Claude
+responses) says a response is published whole and never summarized, which reads as including
+everything Claude produced. A reader of the specification could conclude the opposite of what
+the code does, about content a user would not expect to leave their machine.
+
+The fix is a sentence in section 15 stating that a response never includes its thinking blocks,
+and a reason for it, which the code comment gives only as "deliberately never published".
+
 ## Running the daemon
 
 The daemon a machine runs is the right one, and says so when something is in its way.
@@ -153,12 +265,115 @@ another version (D-158) can find the process holding a port there. `netstat -ano
 gives the pid there, or `stop` can report the port and fall back to moving this
 daemon aside.
 
-## Reaching a peer on another network
+## Checks and comments that say what is true
 
-Two peers on different networks, each behind its own router, reach each other with nothing configured.
+A decision, a comment or a test says what the code does, and a change that breaks it is caught.
+
+**Five behavior checks have no test that makes them fail.** D-130 (every behavior
+check has a test that makes it fail) requires one for each, and no test names B03,
+B05, B07, B11 or B20 (read on 2026-09-29). Nothing checks the requirement, so a check
+for any of the five could pass whatever Claude Code did. A test for each, and a test
+that every entry in the registry is named by one, would close it.
+
+**Nothing tests that a lost room is reported when it is opened.** D-169 (a lost room
+state is reported when the room is opened) has `reportLostState` in
+`cmd/cogmer/daemon.go` compare the highest sequence the store holds for this peer with
+the highest recorded as issued, and no test in `cmd/cogmer` calls it or looks for its
+"ROOM STATE LOST" line (read from the code on 2026-10-01). A change that stopped the
+comparison, or that skipped the call on open, would leave a user with a quiet room and
+no notice, and every test would pass.
+
+The fix is a test that issues events in a room, deletes the room's database, opens the
+room again, and requires the report, together with a test that a room holding what was
+issued reports nothing.
+
+**The tests for D-164 (the two words come from the PGP biometric word list, alternating
+by position) check less than the decision states.** `TestWordlistsAreWholeBytes` and
+`TestTheTwoWordsComeFromDifferentLists` in `cmd/cogmer/sas_test.go` require that each
+list holds 256 distinct words and that the two lists share none (read from the code on
+2026-10-01). Nothing requires that `sasEven` and `sasOdd` are the PGP biometric word
+list, so an edit that replaced words with others, or one that merged duplicates away
+and refilled the list, passes every test. Nothing requires that no word is also in
+`peerAdjectives`, `peerAnimals`, `roomSky` or `roomLand`, which the decision names and
+its **Limits.** records as unchecked. A user comparing two words beside a derived peer
+name could then compare the wrong one.
+
+The fix is a test that the two lists equal a copy of the PGP list kept under
+`cmd/cogmer/testdata/`, and a test that no word of either list appears in the four
+name vocabularies. D-164's **Limits.** is deleted when the second test exists.
+
+**The boundary around injected turns is removed from their text, when it could be
+chosen to be absent from it.** `FormatTeamContext` in `cmd/cogmer/daemon.go` generates
+a random value for the boundary, then deletes any copy of that value from each
+colleague's turn, so a turn that contains it arrives altered. A random 20-character
+value almost never occurs in a turn, so the effect is rare, but the text is changed
+when it does. Choosing a value that occurs in none of the turns in the block, and
+generating another in the rare case that one does, would leave every turn as written
+and need no removal. `TestTeammateContentCannotEscapeTheBlock` in
+`cmd/cogmer/transcript_test.go` checks the boundary and should pass unchanged. D-040
+(the injected block is fenced with an unforgeable value) records the removal, so the
+change rewrites that part of it under W-38 (a partial change rewrites the earlier
+entry).
+
+**`cogmer`'s usage text describes a current room, which D-080 removed.** `usage` in
+`cmd/cogmer/main.go` says `join` makes "a room current, so new sessions join it", and
+`leave` leaves "the current room". A room is the session's own (D-064), so a user
+reading the help is told how something works that does not exist (read on
+2026-09-25).
+
+**Two comments describe the current-room pointer D-080 removed.** `main.go:878` and
+`membership.go:686-688` still explain a machine-wide current room. D-080 (there is no
+current room, and a room-scoped command gets its room from its session) deleted
+`SetCurrentRoom` and `CurrentRoom`, so a maintainer reading either comment is told
+about a mechanism that does not exist. Found on 09-23, reading every decision for
+the split list.
+
+**The view leaves the derived name off a user's own turns, and no decision records
+why.** Commit `33ce996` made the choice. D-021 (peer names are derived from the
+identity) is cited for it, but D-021 says only what the name is for; it says nothing
+about a user's own turns.
+
+**D-007 (record `COMPACTION` events as observability) is not built.** No code records
+a compaction, so if the summarizer stops keeping a colleague's turns, a room's
+history shows nothing at the moment it happened. §7 lists the event type among those
+to design for later. Either the event is built, or D-007 is withdrawn.
+
+**Nothing lets a room show its conversation without injecting it.** Section 28 of the
+specification has a setting per room that keeps a room visible to its members while
+injecting none of it into their sessions, for a room whose conversation should not
+reach another user's model provider. No such setting exists in the code (read on
+2026-09-29), and no decision records it.
+
+## Somebody else uses it
+
+A colleague who did not write cogmer installs it, pairs, joins a room and works in it.
+
+**Somebody who did not write cogmer uses it.** The
+repository is public, carries the marketplace manifest beside the plugin, and serves
+releases the installer verifies against its pins (D-121, the repository is both the
+release host and the marketplace). What it needs is a colleague installing, pairing,
+joining, working, and saying what they hit in the order they hit it. It is the only
+remaining work that can fail in a way nothing else detects, and the failure looks like
+somebody quietly not using it again.
+
+Two things to watch for, because both have been argued about without evidence:
+whether the two-word comparison is performed or skipped, and whether the browser view
+is consulted or forgotten.
 
 **NAT to NAT, with a real colleague on a real home router.** The last unknown in the
 transport, and not testable alone.
+
+**What a person actually notices in the view.** D-090 left this open: the display
+name and the derived name are separate elements but carry similar weight, and
+nothing has been measured about whether a reader distinguishes them.
+
+**Whether arrival wants announcing.** D-039 (the browser view is the settled
+avenue) left this open. Do not build a notification on speculation — it has a
+different answer for close pairing than for long solo stretches.
+
+## Reaching a peer on another network
+
+Two peers on different networks, each behind its own router, reach each other with nothing configured.
 
 **Only one address is ever tried for a peer, and none is demoted, aged or
 rehabilitated.** Section 4 of the specification, "The lifecycle of a peer address",
@@ -177,38 +392,10 @@ preference.
 **Say when your own address changes.** Every pairing string and invitation already
 handed out is then stale, and only the daemon can know.
 
-**Whether the public relay is an acceptable dependency.** Reaching a peer across NAT
-works through a public relay operated by a third party, used with no account and no
-configuration of ours. It has to be settled before somebody else's conversation
-crosses it. It has three parts, with different answers: whether depending on a relay
-nobody here operates fits §4's rule that no transport is a prerequisite; what the
-relay observes, since it cannot read what it carries but sees which nodes talk, when,
-and how much; and whether unconfigured use of somebody's free infrastructure is
-something to build a product on.
-
-## Somebody else uses it
-
-A colleague who did not write cogmer installs it, pairs, joins a room and works in it.
-
-**Somebody who did not write cogmer uses it.** The
-repository is public, carries the marketplace manifest beside the plugin, and serves
-releases the installer verifies against its pins (D-121, the repository is both the
-release host and the marketplace). What it needs is a colleague installing, pairing,
-joining, working, and saying what they hit in the order they hit it. It is the only
-remaining work that can fail in a way nothing else detects, and the failure looks like
-somebody quietly not using it again.
-
-Two things to watch for, because both have been argued about without evidence:
-whether the two-word comparison is performed or skipped, and whether the browser view
-is consulted or forgotten.
-
-**What a person actually notices in the view.** D-090 left this open: the display
-name and the derived name are separate elements but carry similar weight, and
-nothing has been measured about whether a reader distinguishes them.
-
-**Whether arrival wants announcing.** D-039 (the browser view is the settled
-avenue) left this open. Do not build a notification on speculation — it has a
-different answer for close pairing than for long solo stretches.
+**Whether to rebuild the post-quantum hedge.** D-104 removed the pre-shared key,
+which was the only quantum-resistant element in the stack. It could be rebuilt at
+our own layer from material the pairing exchange already produces — per peer, which
+is better than one secret shared with everybody. Nothing depends on deciding this.
 
 ## First contact without a paste
 
@@ -257,28 +444,10 @@ that exist. Whether a room shows a colleague's session joining, leaving or worki
 is undecided, and "Whether arrival wants announcing" under "Somebody else uses it"
 is part of the same question.
 
-**Nothing lets a room show its conversation without injecting it.** Section 28 of the
-specification has a setting per room that keeps a room visible to its members while
-injecting none of it into their sessions, for a room whose conversation should not
-reach another user's model provider. No such setting exists in the code (read on
-2026-09-29), and no decision records it.
-
 **A room never closes, so nothing is archived.** D-132 (a closed room's log is archived)
 has a closed room kept as an archive that can be read but never rejoined, and the
 specification freezes a room's sequences at that point. Membership ends per person
 through `leave` and `revoke`; the room itself has no closed state.
-
-**Nothing tests that a lost room is reported when it is opened.** D-169 (a lost room
-state is reported when the room is opened) has `reportLostState` in
-`cmd/cogmer/daemon.go` compare the highest sequence the store holds for this peer with
-the highest recorded as issued, and no test in `cmd/cogmer` calls it or looks for its
-"ROOM STATE LOST" line (read from the code on 2026-10-01). A change that stopped the
-comparison, or that skipped the call on open, would leave a user with a quiet room and
-no notice, and every test would pass.
-
-The fix is a test that issues events in a room, deletes the room's database, opens the
-room again, and requires the report, together with a test that a room holding what was
-issued reports nothing.
 
 **`leave`, run twice, says "this session is not in a room."** True, and unhelpful
 to somebody who left it a moment ago: it reads as a failure and sends them looking
@@ -340,7 +509,6 @@ deleted on the strength of a reading from earlier in the session, and being
 untracked there is no copy. `/cogmer:peer-pair` repeated on a completed pairing was
 worked in D-107 and D-108, which may or may not be what it said.
 
-
 ## Compaction
 
 A colleague's turns survive a compaction, and a room shows when one happened.
@@ -359,118 +527,19 @@ against a 100k threshold, so `84a0751:docs/phase0a-findings.md` shows only that 
 started during that turn. Nobody has checked what turn reassembly does with a compaction
 marker and summary record in the middle of the turn it reassembles.
 
-**D-007 (record `COMPACTION` events as observability) is not built.** No code records
-a compaction, so if the summarizer stops keeping a colleague's turns, a room's
-history shows nothing at the moment it happened. §7 lists the event type among those
-to design for later. Either the event is built, or D-007 is withdrawn.
+## Tidying the commands
 
-## What reaches the machine, and what leaves it
+The plugin's commands sit in the layout Claude Code prefers, and each has a reason to exist.
 
-Nothing outside a room can read it, alter a colleague's words, or make a record a colleague holds unreadable, and what leaves the machine is known.
+**Move `plugin/commands/*.md` to the `skills/<name>/SKILL.md` layout.** The
+documentation calls `commands/` legacy and says the two are loaded identically. D-119
+deliberately did not do it in the same pass, because a directory restructure is a bad
+thing to bury a §3.1 fix inside. `TestNoCommandIsModelInvocable` reads the old path
+and would need to follow.
 
-**A web page can read the local API, and only the `Origin` check keeps it from
-writing, once its site's name points at 127.0.0.1.** A site can load its page from
-its own address on port 4782, then point its name at 127.0.0.1 (DNS rebinding). The
-browser then treats the page's requests to the daemon as same-origin, so it sends
-`X-Cogmer` without asking and lets the page read the replies. `/`, `/events` and
-`/stream` have no check, so the page can read a room once it knows the room's
-address, which was not checked. The state-changing routes are refused only because
-`guardLocal` in `cmd/cogmer/localguard.go` rejects the page's `Origin`, a check that
-passes a request with no `Origin` at all. The daemon answers a request whose `Host`
-names another site: on 2026-09-24, `curl -H 'Host: evil.example:4782'` got 200 from
-`/` and `/healthz`. None of this was reproduced in a browser.
-`docs/explanations/dns-rebinding.md` walks through each scenario.
-
-The fix is to refuse, on every local route, any request whose `Host` is not
-`127.0.0.1`, `localhost` or `[::1]` with the daemon's port. A page can reach the
-daemon under its own name, or name the daemon in `Host` and be treated as another
-origin, but not both. Demonstrate it before and after, as D-087 (the local API
-requires a header a web page cannot send) was demonstrated: a hosts-file entry
-pointing a made-up name at 127.0.0.1 reproduces the end state of rebinding. D-087
-calls the header check the one the defense rests on and the `Origin` check a second
-layer, so the change rewrites that part of it under W-38 (a partial change rewrites
-the earlier entry).
-
-**The boundary around injected turns is removed from their text, when it could be
-chosen to be absent from it.** `FormatTeamContext` in `cmd/cogmer/daemon.go` generates
-a random value for the boundary, then deletes any copy of that value from each
-colleague's turn, so a turn that contains it arrives altered. A random 20-character
-value almost never occurs in a turn, so the effect is rare, but the text is changed
-when it does. Choosing a value that occurs in none of the turns in the block, and
-generating another in the rare case that one does, would leave every turn as written
-and need no removal. `TestTeammateContentCannotEscapeTheBlock` in
-`cmd/cogmer/transcript_test.go` checks the boundary and should pass unchanged. D-040
-(the injected block is fenced with an unforgeable value) records the removal, so the
-change rewrites that part of it under W-38 (a partial change rewrites the earlier
-entry).
-
-**No test fails when a change to the signing bytes or the wire format stops an
-existing record from being read.** Every signing test in `cmd/cogmer/keys_test.go`
-signs a fresh event and then verifies it, so an edit to `signingBytesV3` or
-`eventBytes` changes the signer and the verifier together and every test still
-passes (read from the code on 2026-09-24). An event signed under scheme v3 before the
-edit, held on a colleague's machine, would then fail to verify, with an error that
-reads as a forgery. D-058 (signature schemes are kept, never replaced) depends on
-that edit never happening, and nothing detects it. The wire format has the same gap:
-nothing decodes a sync message written at `minWireVersion` with the current code.
-
-The fix is a v3 event signed once and checked in, as a constant or a file under
-`cmd/cogmer/testdata/`, with a test that `Verify` accepts it, and the same for a sync
-message at each version `speaks` accepts. Each new scheme or wire version adds its
-own frozen record when it ships.
-
-**The tests for D-164 (the two words come from the PGP biometric word list, alternating
-by position) check less than the decision states.** `TestWordlistsAreWholeBytes` and
-`TestTheTwoWordsComeFromDifferentLists` in `cmd/cogmer/sas_test.go` require that each
-list holds 256 distinct words and that the two lists share none (read from the code on
-2026-10-01). Nothing requires that `sasEven` and `sasOdd` are the PGP biometric word
-list, so an edit that replaced words with others, or one that merged duplicates away
-and refilled the list, passes every test. Nothing requires that no word is also in
-`peerAdjectives`, `peerAnimals`, `roomSky` or `roomLand`, which the decision names and
-its **Limits.** records as unchecked. A user comparing two words beside a derived peer
-name could then compare the wrong one.
-
-The fix is a test that the two lists equal a copy of the PGP list kept under
-`cmd/cogmer/testdata/`, and a test that no word of either list appears in the four
-name vocabularies. D-164's **Limits.** is deleted when the second test exists.
-
-**The specification does not say that Claude's thinking blocks are never published.**
-`cmd/cogmer/transcript.go` drops them and `cmd/cogmer/transcript_test.go` requires that, and
-the specification does not mention them (read on 2026-10-01). Section 15 (capturing Claude
-responses) says a response is published whole and never summarized, which reads as including
-everything Claude produced. A reader of the specification could conclude the opposite of what
-the code does, about content a user would not expect to leave their machine.
-
-The fix is a sentence in section 15 stating that a response never includes its thinking blocks,
-and a reason for it, which the code comment gives only as "deliberately never published".
-
-**Nothing a user reads says what leaves their machine.** D-115 (a centralized component must trace to
-a disclosed tradeoff that benefits the person) requires that a user is told of a compromise in
-something they actually read. `README.md` and `plugin/README.md` say nothing of the relay, of the
-release host or that a colleague's words reach the user's own model provider (read on 2026-10-01),
-and the files in `plugin/commands/` are prompts. The relay and the model provider each trace and
-benefit the user and fail the disclosure test.
-
-The fix is a short section in `plugin/README.md`, for somebody who has installed cogmer, naming
-what leaves the machine and to whom. The next item says why the record it would be written from
-is out of date.
-
-**What leaves the machine is recorded only for 0.6.0.**
-`84a0751:docs/what-leaves-findings.md` read every outbound path on 2026-09-21, at 0.6.0.
-Two have changed since: releases come from GitHub (`plugin/release-url.txt`), and peers
-reach each other through Tailscale's DERP relays, choosing a region in
-`loadTailcatRegion` in `cmd/cogmer/tailcat.go`, which may fetch a relay map from a
-server nobody has named (read on 2026-09-25, not traced further). D-115 (a centralized
-component must trace to a disclosed tradeoff) rests on that record. Reading every
-outbound path again at the current version, including where `loadTailcatRegion` fetches
-from, would say what leaves now. Three of the properties that do not leave are kept only
-by the absence of code, and each could be a test instead, such as one that the embedded
-view holds no absolute URL.
-
-**Whether to rebuild the post-quantum hedge.** D-104 removed the pre-shared key,
-which was the only quantum-resistant element in the stack. It could be rebuilt at
-our own layer from material the pairing exchange already produces — per peer, which
-is better than one secret shared with everybody. Nothing depends on deciding this.
+**Whether `verify` still earns its place.** `/cogmer:peer-pair <name> --again` now
+does the same job, and `verify` has no slash command, so it may be a subcommand
+nobody has a route to.
 
 ## Beyond one conversation
 
@@ -496,19 +565,17 @@ Every document follows `docs/writing.md`.
 
 **Nothing vets a proposed design against the documents it could conflict with.** The
 only process is `CLAUDE.md`'s instruction to read the decisions that govern an area
-before proposing a change, which points at a directory of about 170 files, and it names
+before proposing a change, which points at a directory of about 190 files, and it names
 none of the other documents. On 2026-09-25 and
 2026-09-28 a session proposed moving implementation detail out of the specification,
 restating decisions in it, and keeping the two-peer result because a decision said so,
 and each was caught by the maintainer rather than by a process. A skill run before a
 design is proposed, like `writing-review`, would take the areas the proposal touches
-from `CLAUDE.md`'s "Where to read before changing something" and a search of the
-documents, and report what the proposal must satisfy and what it conflicts with in the
+from the `decisions` skill's search and a search of the documents, and report what the proposal must satisfy and what it conflicts with in the
 values, the specification, the decisions and their **Rejected.** fields, the behavior
 registry, the patterns and `open.md`, and what records it would need. Each point would
 quote its source, and a test would drop a quote that is not in the file. It would run on
-any proposal that needs a decision entry or a change to the specification. It is only
-as good as the decision log, so it waits until the log is rewritten, and it checks
+any proposal that needs a decision entry or a change to the specification. It checks
 consistency, not judgment: whether to proceed stays the maintainer's call.
 
 **Nothing records which decisions and rules the maintainer ratified.** A Claude session
@@ -556,64 +623,6 @@ external reliance in one place: an entry without a check keeps its `Title` and
 `Reliance`, says how a person can confirm the fact by hand, and appears in
 `docs/relied-on-behaviors.md` in a group of its own, so it is never mistaken for
 something `cogmer doctor` verifies. The code that relies on an entry cites it, and
-`CLAUDE.md`'s "Where to read before changing something" points at entries by area, so a
-fact reaches a session when the work touches what it constrains rather than on every
+something that routes a session to entries by area, as the `decisions` skill does for
+decisions, would reach it when the work touches what it constrains rather than on every
 turn (W-26).
-
-**The view leaves the derived name off a user's own turns, and no decision records
-why.** Commit `33ce996` made the choice. D-021 (peer names are derived from the
-identity) is cited for it, but D-021 says only what the name is for; it says nothing
-about a user's own turns.
-
-**`cogmer`'s usage text describes a current room, which D-080 removed.** `usage` in
-`cmd/cogmer/main.go` says `join` makes "a room current, so new sessions join it", and
-`leave` leaves "the current room". A room is the session's own (D-064), so a user
-reading the help is told how something works that does not exist (read on
-2026-09-25).
-
-**Two comments describe the current-room pointer D-080 removed.** `main.go:878` and
-`membership.go:686-688` still explain a machine-wide current room. D-080 (there is no
-current room, and a room-scoped command gets its room from its session) deleted
-`SetCurrentRoom` and `CurrentRoom`, so a maintainer reading either comment is told
-about a mechanism that does not exist. Found on 09-23, reading every decision for
-the split list.
-
-**`TestAnAddressBelongsToAPeer` fails when two random keys derive the same name.** It
-admits two fresh identities under `PeerName` of each, and when the two word pairs
-collide, `Allow` refuses the second: "you already know a different key as
-\"glad-bobcat\"". It failed once and passed six times in a row on 2026-09-25. Giving
-the two peers fixed, distinct names would remove the chance.
-
-**Five behavior checks have no test that makes them fail.** D-130 (every behavior
-check has a test that makes it fail) requires one for each, and no test names B03,
-B05, B07, B11 or B20 (read on 2026-09-29). Nothing checks the requirement, so a check
-for any of the five could pass whatever Claude Code did. A test for each, and a test
-that every entry in the registry is named by one, would close it.
-
-**Two tests in `ui_test.go` assume an order the store does not promise.**
-`TestTheUnverifiedMarkerInTheViewIsAFact` takes the last event of a snapshot to be the
-user's own turn, and `TestTheViewCarriesTheNameYouChose` takes the first to be the named
-peer's. Events are ordered by timestamp and then by peer, and each test appends its
-events within one second under random peer identifiers, so the order varies from run
-to run. Each failed once in six or fewer runs on 2026-09-28 and 2026-09-29. Finding
-each event by its content or its peer, or giving the events distinct timestamps, would
-remove the chance.
-
-**`TestTheThreeEndingsOfAPairing` fails about one run in four.** Its subtest
-"matched writes the name and the verification" fails at cleanup with "TempDir
-RemoveAll cleanup: unlinkat …/.cogmer: directory not empty", so something is still
-writing into the test's state directory after the subtest returns, most likely a
-goroutine the pairing starts. It failed 2 of 8 runs on 09-23 on committed code, so
-it is not caused by a recent change. A flaky test trains a maintainer to rerun
-failures instead of reading them. The fix is to make the test wait for whatever
-writes, or to stop that writer before the subtest returns.
-
-**Move `plugin/commands/*.md` to the `skills/<name>/SKILL.md` layout.** The
-documentation calls `commands/` legacy and says the two are loaded identically. D-119
-deliberately did not do it in the same pass, because a directory restructure is a bad
-thing to bury a §3.1 fix inside. `TestNoCommandIsModelInvocable` reads the old path
-and would need to follow.
-
-**Whether `verify` still earns its place.** `/cogmer:peer-pair <name> --again` now
-does the same job, and `verify` has no slash command, so it may be a subcommand
-nobody has a route to.
