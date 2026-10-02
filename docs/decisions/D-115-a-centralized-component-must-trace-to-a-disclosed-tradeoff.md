@@ -68,7 +68,7 @@ defensible as it stands, the other is defensible only as long as the tag is true
 **The disclosure test cannot currently be satisfied by anything.** There is no
 user-facing documentation: `plugin/README.md`, the browser view and terminal output
 are the only surfaces reaching a person, none mentions what is transmitted, and the
-files in `plugin/commands/` are prompts rather than documentation (D-086). So this
+files in `plugin/commands/` are prompts rather than documentation (D-178). So this
 rule presently creates an obligation nothing can meet, which is a fact about the
 project rather than a defect in the rule. `84a0751:docs/what-leaves-findings.md` is the
 evidence any disclosure would be written from.

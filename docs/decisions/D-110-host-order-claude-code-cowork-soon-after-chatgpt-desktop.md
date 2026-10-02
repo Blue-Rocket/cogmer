@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-21 · **Status:** active (ordering; alters neither D-043 nor D-086)
 
-**Context.** The order of target hosts was recorded nowhere. One sentence in D-086
+**Context.** The order of target hosts was recorded nowhere. One sentence in D-086, as `f288913:docs/decisions/D-086-the-terminal-is-not-a-user-experience-the-view-is-the.md` held it,
 (the terminal is not a user experience) carries it as context for a user-interface
 argument — "Claude Code is the first host; Claude CoWork is wanted as a fast follow"
 — and ChatGPT Desktop appears nowhere in the repository. An ordering that governs

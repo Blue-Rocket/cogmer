@@ -53,7 +53,7 @@ genuine commit/reveal between them, matching words rendered in both browser page
 and both sides recording `verified` only after a human clicked. Nothing was recorded
 before the click.
 
-**Also settled from D-083's open list:** later pairings do re-open the view, because
+**Also settled from the list D-083, as `f288913:docs/decisions/D-083-the-view-is-opened-at-a-first-pairing-not-at-room-creation.md` held it, left open:** later pairings do re-open the view, because
 each one is a new URL and therefore a new tab. Whether the view *drives* or merely
 *displays* is now answered — it drives, since the confirmation is the one bit that
 was keeping a terminal in the path.
