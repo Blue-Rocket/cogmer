@@ -346,7 +346,7 @@ type verifyStartRequest struct {
 	Peer string `json:"peer"`
 	// PairID lets the view name a pairing rather than a peer. The page never
 	// carries an identifier it could start an exchange with on its own: it holds a
-	// link, and the daemon decides what that link means (D-088).
+	// link, and the daemon decides what that link means (D-180).
 	PairID string `json:"pairId,omitempty"`
 }
 

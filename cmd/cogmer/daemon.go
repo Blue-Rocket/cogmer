@@ -81,7 +81,7 @@ type Daemon struct {
 	verifying map[string]*verifySession
 	verifyMu  sync.Mutex
 
-	// Pairings awaiting their ceremony, one per opened page (D-088).
+	// Pairings awaiting their ceremony, one per opened page (D-180).
 	pairs pairRegistry
 
 	// The certificate this daemon presents to peers, derived from the identity

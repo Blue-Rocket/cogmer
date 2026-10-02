@@ -601,8 +601,6 @@ to split, adding 78 entries rather than 86:
 The 146 citations that mean something other than an entry's first decision have not
 been recounted.
 
-Five entries lack a **Decision.** field: D-068, D-083, D-086, D-088 and D-089.
-
 **Six citations in `docs/decisions/` credit an entry with something it does not
 hold.** Each resolves, so the citation test passes, but the source says something
 else. "D-016 fixes that at the first prompt" describes what D-056 (a session's room
