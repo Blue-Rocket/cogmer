@@ -66,7 +66,7 @@ The daemon now refuses any state-changing request that lacks the header
 4. The cogmer CLI and the hooks aren't browsers. They send `X-Cogmer: 1` directly,
    nothing asks permission first, and the daemon accepts their requests.
 
-**Result:** the attack fails. The defence depends on step 3, where the browser asks
+**Result:** the attack fails. The defense depends on step 3, where the browser asks
 permission because the origins differ.
 
 ## Scenario 3: DNS rebinding against the daemon as it is today

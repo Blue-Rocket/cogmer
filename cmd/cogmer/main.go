@@ -195,7 +195,7 @@ func syncInterval() time.Duration {
 // session is in.
 //
 // There is nowhere else to look, by design. Every room-scoped command exists to
-// fulfil a slash command, and a slash command always runs inside a session — so a
+// fulfill a slash command, and a slash command always runs inside a session — so a
 // terminal that wants one emulates a session, which is what every test here already
 // does. The machine-level pointer that used to answer this is gone (D-080): it had
 // no user left once the browser view took per-room URLs, and while it existed it
@@ -708,7 +708,7 @@ func resolvePeer(m *Membership, arg string) (string, error) {
 	}
 	b.WriteString("\n\nTwo keys under one name is what a substituted key looks like once it has been")
 	b.WriteString("\nrecorded. If you did not knowingly record both, ask the person which is theirs")
-	b.WriteString("\nover a channel you can recognise them on, and `" + invocation() + " forget` the other.")
+	b.WriteString("\nover a channel you can recognize them on, and `" + invocation() + " forget` the other.")
 	return "", errors.New(b.String())
 }
 
@@ -900,7 +900,7 @@ func runJoin(args []string) {
 			if err := m.RecordRoom(roomID, name); err != nil {
 				log.Fatalf("join: %v", err)
 			}
-			// Admit whoever offered the invitation. Synchronisation is a pull in
+			// Admit whoever offered the invitation. Synchronization is a pull in
 			// both directions, so a guest that records the room and not its host
 			// can read that room and never be read -- which looks like one-way
 			// collaboration and is really a one-sided guest list.
@@ -1207,7 +1207,7 @@ func versionReport(plugin, binary, daemon string, answering bool) string {
 }
 
 // runVerify is the two-word check (D-048). Both people run it, at the same time,
-// on a call where each can recognise the other's voice.
+// on a call where each can recognize the other's voice.
 //
 // The recognition is the point and cannot be automated: the exchange proves both
 // sides hold the keys they named, and only a person can say that the voice saying
@@ -1260,7 +1260,7 @@ func postLocal(path string, body, out any) error {
 // It carries the sender's chosen name when there is one, so the receiver has a
 // sensible default for the label they must supply (D-093) rather than being asked
 // to invent one for somebody whose name they obviously know. A GUESSED name is
-// never carried: `Ec2-user` travelling as though somebody picked it is worse than
+// never carried: `Ec2-user` traveling as though somebody picked it is worse than
 // carrying nothing, because the derived name is at least honest about being
 // machine-made (D-097, a pairing string carries a chosen name, never a guessed
 // one).
@@ -1353,7 +1353,7 @@ func runPair(args []string) {
 	peerID, endpoint, theirName := parsePairing(args[0])
 
 	// A name rather than a pairing string: somebody finishing what they started.
-	// Pairing is the act people recognise, and verifying is our word for a step
+	// Pairing is the act people recognize, and verifying is our word for a step
 	// inside it, so the same command has to serve both halves — otherwise the
 	// second half has no name anybody would guess, and this one silently hashes
 	// "alice" into a peer nobody has ever met.
@@ -1694,7 +1694,7 @@ func portOf(address string) string {
 // of them, and precisely the ones least equipped to work out why. The binary knows
 // where it is; a path it prints about itself cannot go stale.
 //
-// $HOME is spelled ~ because that is what a person recognises, and it pastes into
+// $HOME is spelled ~ because that is what a person recognizes, and it pastes into
 // any shell unchanged.
 func invocation() string {
 	exe, err := os.Executable()
@@ -1721,7 +1721,7 @@ func invocation() string {
 // operator task.
 func printPairingInvitation(id *Identity) {
 	if !id.NameChosen {
-		// Said here because this is the moment the name starts travelling: all
+		// Said here because this is the moment the name starts traveling: all
 		// three paths that hand your identity to somebody else come through this
 		// function (D-089 consolidated them), and the name is seen by nobody but
 		// other people.

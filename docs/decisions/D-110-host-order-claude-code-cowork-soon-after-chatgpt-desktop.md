@@ -20,7 +20,7 @@ for any given piece of host-independence, whether it is preparation or speculati
 **This licenses nothing.** D-043 (a second host is prepared for by naming, never by machinery) forbids
 `source`/adapter machinery, and D-086 already considered this exact move and refused
 it: "naming a second host does not change that." Naming a third does not either. The
-reasoning is untouched — capture generalises, injection does not, and every hard
+reasoning is untouched — capture generalizes, injection does not, and every hard
 problem so far has been host-specific. This entry records an intention, not a
 permission.
 
@@ -34,7 +34,7 @@ surfaces, and not a reason to abstract anything.
 
 **What the long interval settles** is that nothing is designed against ChatGPT
 Desktop. Different vendor, unknown extension model, and the parts most likely to
-differ are precisely the ones D-043 named as non-generalising: §3.5's thinking-block
+differ are precisely the ones D-043 named as non-generalizing: §3.5's thinking-block
 exclusion is a fact about one transcript format, D-014 (delivery is confirmed by
 observation) depends on evidence appearing in a specific file, and the whole
 injection path assumes a hook that runs before a turn. A host with no hook

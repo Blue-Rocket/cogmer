@@ -32,7 +32,7 @@ all and requires both to reach the same words.
 **Seven more instruction sites were still naming a bare `cogmer`** (D-085),
 including the one in this path. Fixed, and the ones about pairing now point at
 `/peer-pair` rather than at `verify`, since the ceremony is in the view (D-088).
-Operator surfaces — the daemon log, `doctor`'s stderr, the generated behaviours
+Operator surfaces — the daemon log, `doctor`'s stderr, the generated behaviors
 header — keep the short form, because you are already at a prompt when you read them.
 
 **Revisit when:** D-091 lands, at which point a pairing string carries a set and

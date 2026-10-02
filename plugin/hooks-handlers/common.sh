@@ -134,7 +134,7 @@ daemon_state() {
 # waiting out a cooldown. Telling a person "it may still be arriving" when nothing
 # is arriving sends them to wait for something that will not happen (D-075).
 #
-# One file, three readers: the installer sets it and honours the cooldown, the
+# One file, three readers: the installer sets it and honors the cooldown, the
 # command wrapper explains it, and the session-start hook passes it to the model so
 # an answer to "why isn't this working" is true rather than invented.
 

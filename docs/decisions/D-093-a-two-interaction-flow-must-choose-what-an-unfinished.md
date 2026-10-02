@@ -8,7 +8,7 @@ person across weeks of inactivity. The answer turned on a general principle stat
 during the discussion: anything that happens in two user interactions has to choose
 what happens if the second is not completed.
 
-**Optional did not mean unlabelled.** `Allow` filled an empty name with the derived
+**Optional did not mean unlabeled.** `Allow` filled an empty name with the derived
 one, so somebody who never thought about a name got exactly the label that stops
 meaning anything. The default was the failure mode.
 
@@ -27,8 +27,8 @@ with the pairing string, held in the pending pairing, and written only on a matc
 
 | second interaction | what remains |
 |---|---|
-| never happened | the key, unverified, labelled with the derived placeholder — resumable |
-| words matched | the key, verified, labelled with the chosen name |
+| never happened | the key, unverified, labeled with the derived placeholder — resumable |
+| words matched | the key, verified, labeled with the chosen name |
 | words differed | nothing, if this pairing created the row |
 
 The last was the substantive bug. Abandoning and mismatching left identical state —

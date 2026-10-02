@@ -4,7 +4,7 @@
 
 **Context.** D-111 stated the install clause as "something the host would load
 anyway". That says what the test is asking and not how to check it: *would load
-anyway* is a claim about a host's behaviour, and behaviour is the one thing nobody
+anyway* is a claim about a host's behavior, and behavior is the one thing nobody
 outside the vendor can establish. Against a host nobody here has examined — D-110
 names two — it is unfalsifiable, which is fatal for a test whose whole merit is
 being applicable without argument.
@@ -33,12 +33,12 @@ argument about what counts as the host, since Node genuinely does load it. Asked
 "is a require hook among Claude Code's documented extension mechanisms", it is
 simply no.
 
-**This does not conflict with the behaviour registry**, which is the first
+**This does not conflict with the behavior registry**, which is the first
 objection a reader will raise, because `behaviors.go` records undocumented
-behaviours this project depends on and there are many. The axes are different. The
+behaviors this project depends on and there are many. The axes are different. The
 registry governs how a *documented mechanism behaves* — hooks are documented,
 `Stop.last_assistant_message` carrying only the tail (B04) is not. This rule governs
-what *type of artifact* is installed. Depending on undocumented behaviour of a
+what *type of artifact* is installed. Depending on undocumented behavior of a
 documented mechanism is the ordinary condition here, and is exactly why the registry
 has checks with negative tests. An undocumented artifact type has no such recourse:
 there is nothing to check against, because nothing was promised.
@@ -52,7 +52,7 @@ there is nothing to check against, because nothing was promised.
   Demonstration establishes that a mechanism exists today and never that anybody
   intends to keep it.
 - *Documented alone.* Costs nothing to drop the other word and leaves us installing
-  against a documentation page the shipped version does not honour — which is the
+  against a documentation page the shipped version does not honor — which is the
   failure `doctor` exists to catch, so the second half is already paid for.
 
 **Revisit when** a host's documentation lags a mechanism this project needs and the

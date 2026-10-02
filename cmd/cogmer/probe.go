@@ -192,7 +192,7 @@ func RunProbe(deep bool) (*Probe, error) {
 	// The block the probe injects is the block the daemon injects, built by the
 	// same function. A check that measured a hand-written approximation would
 	// verify a format nothing ships (B22): the framing and the JSON encoding ARE
-	// the defence, so they are what has to reach the model.
+	// the defense, so they are what has to reach the model.
 	inject := FormatTeamContext([]Event{{
 		PeerID:          "ed25519:probe",
 		UserDisplayName: "Alice",

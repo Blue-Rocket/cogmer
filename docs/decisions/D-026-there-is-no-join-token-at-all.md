@@ -13,7 +13,7 @@ of a key, or a present host's approval of a request.
   and such a host has to act before that guest can enter under any scheme, since
   somebody has to issue the token. §12 (forming a room).
 - A token admits whoever holds it, so it has to be kept secret in transit, cannot be
-  checked afterwards, and enrols whoever intercepts it under a name the room's members
+  checked afterwards, and enrolls whoever intercepts it under a name the room's members
   will treat as familiar. §12.
 
 **Rejected.**

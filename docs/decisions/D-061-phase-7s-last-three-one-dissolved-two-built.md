@@ -51,7 +51,7 @@ the one the list made sound redundant.
 
 **On estimated token count**, which §21 also asked for: derived from characters at
 four to one rather than measured. A tokenizer would have to track a model this
-system does not choose, and the figure is wanted for judgement rather than
+system does not choose, and the figure is wanted for judgment rather than
 arithmetic.
 
 **Revisit when** a room routinely exceeds the block budget. §21 treats these as a

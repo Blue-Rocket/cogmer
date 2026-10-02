@@ -19,7 +19,7 @@ artifact it does not load, or knowledge of how it renders is out.
 **Rejected.**
 - *Searching Claude Code for an undocumented way to display something.* The installed
   artifact is a native binary with no source to read, and a seam found that way would be
-  undocumented, unversioned, and beyond what the behaviour registry can check, since
+  undocumented, unversioned, and beyond what the behavior registry can check, since
   whether something appears on screen needs somebody watching.
 
 **Revisit when** Claude Code documents a way for an extension to show something to a

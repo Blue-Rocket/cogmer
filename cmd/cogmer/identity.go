@@ -31,7 +31,7 @@ type Identity struct {
 	UserID          string             `json:"userId"`
 	UserDisplayName string             `json:"userDisplayName"`
 	// NameChosen distinguishes a name somebody picked from one this program
-	// guessed. The guess is $USER capitalised, which is "David" on a laptop and
+	// guessed. The guess is $USER capitalized, which is "David" on a laptop and
 	// "Ec2-user" in a container -- and the difference matters because the name is
 	// seen only by OTHER people. Without the flag there is no way to tell "David
 	// because I meant it" from "David because the OS said so", and comparing
@@ -53,7 +53,7 @@ const stateDirName = ".cogmer"
 // homeDir is where identity, membership, rooms and the fetched binary live.
 //
 // COGMER_HOME overrides it. That is not only for tests: the plugin's
-// installer already honoured the variable while the binary ignored it, so a
+// installer already honored the variable while the binary ignored it, so a
 // person who set it got a binary in one place and its state in another, and
 // nothing said so.
 func homeDir() string {

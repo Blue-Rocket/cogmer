@@ -17,7 +17,7 @@ or sent, and guessing the name gains nothing.
 
 **Rejected.**
 - *A join secret, kept until identity is cryptographic.* A secret has to remain secret
-  in transit, is spent on each first meeting, and enrols whoever intercepts it, while a
+  in transit, is spent on each first meeting, and enrolls whoever intercepts it, while a
   public identifier is sent once per colleague and reveals nothing if intercepted.
   Identity is cryptographic (D-042), and there is no join token (D-026).
 - *Admitting on the room's name on a trusted network.* The name is guessable (D-134),

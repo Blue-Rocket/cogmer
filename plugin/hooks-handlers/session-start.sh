@@ -41,7 +41,7 @@ start_daemon_if_needed
 # Every other word we say about it travels in the same blob as the untrusted
 # content itself — and Anthropic's guidance is explicit that instructions placed
 # alongside untrusted data may be discounted precisely because the model is right
-# to be sceptical of that position. So the rule is delivered separately from the
+# to be skeptical of that position. So the rule is delivered separately from the
 # data it governs, which is the one structural separation this channel allows
 # (D-081).
 #

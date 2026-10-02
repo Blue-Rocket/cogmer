@@ -25,7 +25,7 @@ this moves to a public release host, publish.sh is replaced and release.sh is
 untouched.
 
 **Plain HTTP, and the checksum is why.** The binaries are not secret, and what
-authorises running one is a sha256 pinned in the plugin rather than the transport.
+authorizes running one is a sha256 pinned in the plugin rather than the transport.
 A tampered response is refused exactly as a tampered file is — demonstrated in
 D-066. HTTPS would still be better and is one of the things a public release host
 would hand us for free; until then the pin is load-bearing rather than

@@ -10,7 +10,7 @@ A file is named for the decision's number and a slug of its title, such as
 next number, and a number is never reused.
 
 An entry's revisit condition names the automated check that would show it wrong, where
-one exists: `cogmer doctor`, or an entry in the behaviour registry in
+one exists: `cogmer doctor`, or an entry in the behavior registry in
 `cmd/cogmer/behaviors.go`. When that condition occurs, the decision is due for review.
 It is not automatically wrong.
 

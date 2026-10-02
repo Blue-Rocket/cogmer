@@ -33,7 +33,7 @@ how convenient; the gate is only as strong as the weakest ceremony that satisfie
 
 **D-043 still holds: no adapter machinery, and naming a second host does not change
 that.** CoWork is wanted, not present. Its extension model is not something to design
-against on assumption. The argument in D-043 was that capture generalises and
+against on assumption. The argument in D-043 was that capture generalizes and
 injection does not, and that every hard problem so far has been host-specific — none
 of which a second host being *anticipated* falsifies.
 

@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-16 · **Status:** active · **Areas:** behaviors
 
-**Decision.** A failed behaviour check reports which behaviour changed and what that
+**Decision.** A failed behavior check reports which behavior changed and what that
 breaks, and the room forms anyway.
 
 **Support.**

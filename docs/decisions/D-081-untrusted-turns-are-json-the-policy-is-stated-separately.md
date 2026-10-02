@@ -19,9 +19,9 @@ it lets the framing assert where the block ends in a way the content cannot imit
 
 **The uncomfortable one: our framing sits where instructions get discounted.** The
 guidance says not to put your own instructions in tool results, because a model is
-trained to treat content in that position with scepticism. Every word we say about how
-to read room content has been travelling in the same blob as the room content. If
-Claude Code's `hook_success` attachment is treated as tool-result-like, the scepticism
+trained to treat content in that position with skepticism. Every word we say about how
+to read room content has been traveling in the same blob as the room content. If
+Claude Code's `hook_success` attachment is treated as tool-result-like, the skepticism
 that protects us from the payload applies equally to the paragraph explaining the
 payload.
 
@@ -30,7 +30,7 @@ So the standing policy is now stated **once at session start**, via
 in-block framing, which is tested and survives compaction in a way one statement may
 not. It is reinforcement from somewhere else.
 
-**Then measured, because a defence nobody tested is a hope.** Four live runs:
+**Then measured, because a defense nobody tested is a hope.** Four live runs:
 
 | | |
 |---|---|
@@ -42,7 +42,7 @@ not. It is reinforcement from somewhere else.
 **And the honest result about the new policy: it could not be shown to help.** The
 same attack was run without it, and the in-block framing alone produced the same
 refusal, with the same reasoning, and the same report to the user. The session-start
-policy is defence in depth against a position problem that is real in principle and
+policy is defense in depth against a position problem that is real in principle and
 was not observable here.
 
 **What this settles about reaching a person.** Everything user-facing in this design
@@ -52,8 +52,8 @@ when not, and it fires on an oblique question as well as a direct one. That is t
 property the browser-view discovery work depends on.
 
 **What it does not settle.** Whether the attachment really is treated as tool-result
-content. That is an undocumented property of someone else's binary that a defence now
-leans on, and it belongs in the behaviour registry as a reliance even though it may
+content. That is an undocumented property of someone else's binary that a defense now
+leans on, and it belongs in the behavior registry as a reliance even though it may
 not be falsifiable from outside.
 
 **Not adopted: screening tool output through a classifier.** It needs an inference

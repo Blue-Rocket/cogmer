@@ -18,9 +18,9 @@ disable-model-invocation: true
 
 ## Your task
 
-Summarise in a few lines: which room this session is in, and who may enter it.
+Summarize in a few lines: which room this session is in, and who may enter it.
 Mark anyone unverified as unverified — their turns are not being exchanged.
 
 Give them the watch address from above verbatim. It is a link they open in a
-browser and leave open beside this session, not something to summarise — the room
+browser and leave open beside this session, not something to summarize — the room
 is read there, and this session is read here.

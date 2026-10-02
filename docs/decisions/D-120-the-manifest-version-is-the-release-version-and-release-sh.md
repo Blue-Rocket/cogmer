@@ -15,11 +15,11 @@ marketplace entry also sets one, `plugin.json` wins.
 **So the stale number was a release nobody would receive.** Everything the plugin
 carries rides on that delivery: the commands, the hooks, `plugin/VERSION` — which is
 what `install.sh` reads to decide which asset to fetch — and `checksums.txt`, the
-only thing authorising a downloaded binary to run. A manifest frozen at `0.1.0`
+only thing authorizing a downloaded binary to run. A manifest frozen at `0.1.0`
 leaves every installed copy fetching the binary an old `VERSION` names, verified
 against the hashes an old `checksums.txt` pins, indefinitely. The symptom is not an
 error: it is a person on an old build with nothing anywhere reporting it, which is
-the same failure shape as the registry's behaviours, one layer further out.
+the same failure shape as the registry's behaviors, one layer further out.
 
 **Decision.** One number for a release. `release.sh` writes the manifest version
 from the same argument it writes `VERSION` and `checksums.txt` from, and refuses
@@ -37,7 +37,7 @@ assets that were never built.
 - *Deleting the field.* It is optional, and without it the version comes from the
   install source, so updates flow without anybody bumping anything — which would
   have fixed the drift by removing the gate. Rejected because the plugin people
-  receive would then carry no version at all while the binaries it authorises are
+  receive would then carry no version at all while the binaries it authorizes are
   pinned by number, and nothing in the repository could say which plugin goes with
   which binary.
 - *Two numbers meaning different things* — one for commands and hooks, one for the
@@ -48,7 +48,7 @@ assets that were never built.
 - *Having `release.sh` refuse unless the manifest already names the version.* That
   makes a hand-edit mandatory at exactly the point where the hand-edit was forgotten.
 
-**Not in the behaviour registry**, for D-118's reason: registry checks observe a
+**Not in the behavior registry**, for D-118's reason: registry checks observe a
 live session through hook payloads, and update delivery happens in the plugin
 manager before any session exists. Unlike the registry's entries, this one is also
 documented.

@@ -13,7 +13,7 @@ neither borrows its context nor interrupts it.
   ability to reason about what their own session has seen. §3.7 (a remote event never
   drives an interactive session).
 - Claude Code edits files and runs commands, so an event that could start a turn on a
-  receiving machine would be execution on that machine, authorised by whoever sent the
+  receiving machine would be execution on that machine, authorized by whoever sent the
   event. §3.7.
 - Claude Code offers ways to start a run, such as `claude --bg`, so a daemon could drive
   a session, and only this rule prevents it. §3.7.

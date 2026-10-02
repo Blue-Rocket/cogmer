@@ -19,7 +19,7 @@ import (
 // --- an invitation delivered over the channel pairing established (D-105) ---
 //
 // A host admits a guest by writing a guest-list row, which is the admission and is
-// the host's judgement alone. This carries the news of it, so that forming a room
+// the host's judgment alone. This carries the news of it, so that forming a room
 // costs one command rather than a command plus a string pasted into a chat window.
 //
 // Delivering an offer admits nobody. The row already exists on the host's side;

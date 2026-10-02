@@ -30,7 +30,7 @@ about 30MB, and the download took 13 to 16 seconds when measured on 2026-09-22.
 Installing changes nothing about how Claude Code starts, edits no shell profile, and
 registers no service with the operating system.
 
-Each binary is authorised by a SHA-256 hash pinned in the plugin. A download whose
+Each binary is authorized by a SHA-256 hash pinned in the plugin. A download whose
 hash does not match is deleted without being run. If there is no verified download
 and the machine has Go installed, the binary is built from source instead.
 
@@ -81,7 +81,7 @@ Then work as you normally would. A session that has been in one room can never j
 a second, so start a new session to join a different room.
 
 The room is also a page in your browser, at `http://127.0.0.1:4782`, which updates as
-turns arrive. It shows who said what, and when. Each colleague is labelled with a name
+turns arrive. It shows who said what, and when. Each colleague is labeled with a name
 derived from their key as well as the name they chose, so two people who choose the
 same name still read as two. The page is served by the binary and makes no requests
 to anywhere else.
@@ -112,7 +112,7 @@ A plugin install puts the binary in `~/.cogmer/bin`, which is not on `PATH`, so
 command the binary prints for you to type carries its full path.
 
 `COGMER_ADDR` sets the local address, `COGMER_PEER_ADDR` the peer address, and
-`COGMER_PEERS` extra peer addresses. `COGMER_PREFLIGHT=off` skips the behaviour checks
+`COGMER_PEERS` extra peer addresses. `COGMER_PREFLIGHT=off` skips the behavior checks
 when a room is formed. `COGMER_MAX_EVENTS`, `COGMER_MAX_EVENT_CHARS` and
 `COGMER_MAX_BLOCK_CHARS` bound the context injected into a session (§21, context
 window management).
@@ -131,9 +131,9 @@ a native binary, so a colleague may have no Node installed.
 | [`docs/open.md`](docs/open.md) | actions not yet taken, and decisions not yet made |
 | [`docs/relied-on-behaviors.md`](docs/relied-on-behaviors.md) | what Claude Code does that cogmer depends on, generated from the registry |
 
-### Behaviour checks
+### Behavior checks
 
-cogmer depends on Claude Code behaviours that are not documented: how a hook reports a
+cogmer depends on Claude Code behaviors that are not documented: how a hook reports a
 turn, what the transcript contains, what compaction keeps, and whether a daemon
 running in the background can still open a window in front of a person. None of them
 is promised, and several fail silently: the room keeps accepting events while it
@@ -147,7 +147,7 @@ bin/cogmer doctor --deep   # also drives a real compaction, about 40s
 The session checks run by themselves the first time a room is formed under a Claude
 Code version this machine has not checked, and the result is kept for that version,
 so forming another room costs nothing. A failed check never blocks the room. It names
-the behaviour that changed, and each behaviour's `Reliance` says what breaks as a
+the behavior that changed, and each behavior's `Reliance` says what breaks as a
 result.
 
 Apache-2.0. Copyright 2026 Blue Rocket, Inc.

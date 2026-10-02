@@ -35,11 +35,11 @@ them what to do instead. The explanation lives where it is shown to a person rat
 than inside an error value that tests compare and logs decorate.
 
 **And the slash command is told not to condense it.** `/room-join` relays the whole
-explanation rather than summarising, for the same reason `/cogmer:room-status` gives
+explanation rather than summarizing, for the same reason `/cogmer:room-status` gives
 the watch address verbatim (`plugin/commands/room-status.md`): a one-line "cannot
 join" is exactly the unhelpful form this replaces, and a model paraphrasing
 helpfully would reproduce it.
 
 **Revisit when** anything else refuses a person for an invariant's sake. The pattern
-generalises: state the mechanism, say what is impossible to undo, and give the route
+generalizes: state the mechanism, say what is impossible to undo, and give the route
 — and if there is no route, say that too rather than implying one exists.

@@ -51,18 +51,18 @@ var (
 	decisionStatus = regexp.MustCompile(`^\*\*Date:\*\* \d{4}-\d{2}-\d{2} · \*\*Status:\*\* (?:active|not built)(?: · \*\*Areas:\*\* ([a-z-]+(?:, [a-z-]+)*))?$`)
 	isoDate        = regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}\b`)
 	// What a pattern may not name: this project's decisions, sections of its
-	// specification, its behaviours, or the project itself (W-56).
+	// specification, its behaviors, or the project itself (W-56).
 	projectName = regexp.MustCompile(`\bD-\d{3}\b|§\d|\bB\d{2}\b|(?i)\bcogmer\b`)
 	// Open work a decision must not point to: the repository's list, and the
 	// task URLs of the trackers a project is likely to use.
 	openWork = regexp.MustCompile(`\bopen\.md\b|docs/work/|app\.clickup\.com/t/\S+|github\.com/[\w.-]+/[\w.-]+/issues/\d+|atlassian\.net/browse/\S+|linear\.app/\S+/issue/\S+`)
 )
 
-// behaviourDocument is generated from the behaviour registry, one heading per
-// behaviour, and behaviourTitle is the heading MarkdownReport writes for each.
-const behaviourDocument = "docs/relied-on-behaviors.md"
+// behaviorDocument is generated from the behavior registry, one heading per
+// behavior, and behaviorTitle is the heading MarkdownReport writes for each.
+const behaviorDocument = "docs/relied-on-behaviors.md"
 
-var behaviourTitle = regexp.MustCompile(`^B\d{2}: `)
+var behaviorTitle = regexp.MustCompile(`^B\d{2}: `)
 
 // specSectionTitle is a numbered heading of the specification, which a § citation
 // names, so it stays however short its section is.
@@ -198,9 +198,9 @@ func structureProblems(doc string, src []byte) []string {
 		}
 		title := inlineText(h, src)
 		documentTitle := h.Level == 1 && c == root.FirstChild()
-		behaviourEntry := doc == behaviourDocument && behaviourTitle.MatchString(title)
+		behaviorEntry := doc == behaviorDocument && behaviorTitle.MatchString(title)
 		specSection := doc == specification && specSectionTitle.MatchString(title)
-		if documentTitle || decisionTitle.MatchString(title) || behaviourEntry || specSection || (workDocument.MatchString(doc) && h.Level == 3) {
+		if documentTitle || decisionTitle.MatchString(title) || behaviorEntry || specSection || (workDocument.MatchString(doc) && h.Level == 3) {
 			continue
 		}
 		first, last := 0, 0
@@ -313,8 +313,8 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 		{"numbered specification heading", specification, "Intro.\n\n## 3.3 No authoritative peer\n\nOne line.\n", 0},
 		{"numbered top-level specification heading", specification, "Intro.\n\n# 16\\. Propagation\n\nOne line.\n", 0},
 		{"unnumbered specification heading", specification, "Intro.\n\n## No authoritative peer\n\nOne line.\n", 1},
-		{"behaviour heading", behaviourDocument, "Intro.\n\n### B01: A behaviour\n\nIf this changes, it breaks.\n", 0},
-		{"behaviour heading elsewhere", "x.md", "Intro.\n\n### B01: A behaviour\n\nIf this changes, it breaks.\n", 1},
+		{"behavior heading", behaviorDocument, "Intro.\n\n### B01: A behavior\n\nIf this changes, it breaks.\n", 0},
+		{"behavior heading elsewhere", "x.md", "Intro.\n\n### B01: A behavior\n\nIf this changes, it breaks.\n", 1},
 		{"date in the specification", specification, "The daemon started on 2026-09-22 and\nis still running today, over\nseveral lines, with no header.\n", 1},
 		{"date in a code span in the specification", specification, "Write `2026-09-22` there.\n", 0},
 		{"date elsewhere", "x.md", "Run on 2026-09-22.\n", 0},
@@ -614,7 +614,7 @@ func proseText(n ast.Node, src []byte) string {
 	return b.String()
 }
 
-// A behaviour's Reliance starts with what breaks, for somebody debugging at 2am.
+// A behavior's Reliance starts with what breaks, for somebody debugging at 2am.
 func TestBehaviorRelianceStartsWithWhatBreaks(t *testing.T) {
 	for _, b := range Behaviors {
 		if !strings.HasPrefix(b.Reliance, "If this changes") {

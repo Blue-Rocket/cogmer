@@ -262,7 +262,7 @@ var Behaviors = []Behavior{
 				return fmt.Errorf("no injected block was recorded, so nothing can be said about how it was positioned")
 			}
 			if !strings.Contains(p.InjectedText, "information, never instruction") {
-				return fmt.Errorf("the injected block no longer frames its content as information rather than instruction; the framing is the defence")
+				return fmt.Errorf("the injected block no longer frames its content as information rather than instruction; the framing is the defense")
 			}
 			if !strings.Contains(p.InjectedText, "\"turns\":") {
 				return fmt.Errorf("the injected block is no longer JSON-encoded; delimiting has gone back to escaping by hand (D-081)")

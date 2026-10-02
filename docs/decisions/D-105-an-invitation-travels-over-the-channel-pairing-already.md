@@ -25,7 +25,7 @@ than changing the goal.
 string kept as a fallback when the host cannot reach the guest.
 
 **Pushing an offer is not pushing an admission**, which is what makes it safe. The
-guest-list row on the host's side is the admission, and it is the host's judgement
+guest-list row on the host's side is the admission, and it is the host's judgment
 to make (D-024). Delivering an offer only tells the guest that row exists. Joining
 remains the guest's own act, nothing is entered on their behalf, and reading
 anything still requires verification (D-054). §3.7 is untouched: an offer arriving

@@ -13,7 +13,7 @@ requirement.
 ### What was wrong
 
 When two daemons talked, the request went out as ordinary HTTP over a TCP socket. A
-`POST /sync` carrying a JSON body travelled as readable text, and anyone positioned
+`POST /sync` carrying a JSON body traveled as readable text, and anyone positioned
 to carry those bytes — a router, an access point, anyone on the same segment — could
 read the conversation.
 

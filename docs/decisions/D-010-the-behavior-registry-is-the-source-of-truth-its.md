@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-16 · **Status:** active · **Areas:** behaviors
 
-**Decision.** Each behaviour and its check live together in
+**Decision.** Each behavior and its check live together in
 `cmd/cogmer/behaviors.go`, and `docs/relied-on-behaviors.md` is generated from them by
 `cogmer behaviors --markdown`.
 
@@ -14,4 +14,4 @@
 - *A document written by hand beside the checks.* It drifts from them, and a stale list
   of safety properties is worse than none, because it is believed.
 
-**Revisit when** the registry needs to hold a behaviour that no check can confirm.
+**Revisit when** the registry needs to hold a behavior that no check can confirm.

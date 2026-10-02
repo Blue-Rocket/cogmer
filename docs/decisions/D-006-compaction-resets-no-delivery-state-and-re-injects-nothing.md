@@ -18,7 +18,7 @@ is injected again afterwards.
 - *Injecting a bounded number of recent turns after every compaction.* The same cost,
   and the same absence of benefit.
 
-**Limits.** Survival is the summarizer's judgement, not a guarantee of the format, and
+**Limits.** Survival is the summarizer's judgment, not a guarantee of the format, and
 could change with a different model, a longer conversation or repeated compactions.
 Only one compaction per session was tested.
 

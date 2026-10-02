@@ -70,7 +70,7 @@ it can say so when a command does not work.
 Claude Code learns that a new version exists only when it refreshes its copy of the
 `blue-rocket` marketplace, and for a marketplace from outside Anthropic it does that
 on its own only once auto-update is on. Until then, the plugin's update button stays
-greyed out.
+grayed out.
 
 In the desktop app, open Manage plugins, choose Manage marketplaces from the menu on
 the Add button at the top right, and choose Check for updates from the `blue-rocket`

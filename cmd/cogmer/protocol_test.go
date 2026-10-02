@@ -140,7 +140,7 @@ func TestEndpointsCarryTheirTransport(t *testing.T) {
 
 // A transport this build cannot reach must be refused by name, not dialled as
 // though it were an address. The failure otherwise is a TCP connection to a
-// two-hundred-character hostname, which reports something unrecognisable.
+// two-hundred-character hostname, which reports something unrecognizable.
 func TestAnUnreachableTransportIsRefusedByName(t *testing.T) {
 	saved := dialers
 	dialers = map[string]Dialer{schemeTCP: tcpDialer{}}

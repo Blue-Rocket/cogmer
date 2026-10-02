@@ -31,8 +31,8 @@ changed is that the set of schemes worth keeping turned out to be empty. Once
 anybody else holds a room, it will not be empty again, and deleting a scheme stops
 being available.
 
-**The organisation casing is fixed at the same time.** D-069 recorded that the
-inherited module path disagreed with the organisation's actual name, which is why
+**The organization casing is fixed at the same time.** D-069 recorded that the
+inherited module path disagreed with the organization's actual name, which is why
 `go install` failed in D-066's test. A path that had never resolved was free to
 leave alone; one about to name a real repository is not.
 

@@ -317,7 +317,7 @@ func TestAPairedPeerIsReachableWithoutARoom(t *testing.T) {
 // A session is in a room because somebody put it there, and never because a
 // machine-level setting happened to point somewhere when it started (D-064).
 //
-// The behaviour this replaces bound any session on its first prompt to whatever
+// The behavior this replaces bound any session on its first prompt to whatever
 // room was last created or joined. A room created and forgotten was therefore
 // silently joined weeks later by a session in an unrelated repository, which began
 // capturing and publishing without anyone doing anything — and nothing derives a

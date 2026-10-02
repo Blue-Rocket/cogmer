@@ -4,7 +4,7 @@
 
 **Context.** Two questions, a few hours apart. How can a peer's daemon know which
 address suits the network topology between two particular machines? And does a
-machine travelling between networks change the answer? It does, and it changes the
+machine traveling between networks change the answer? It does, and it changes the
 shape of the answer rather than a detail of it.
 
 **The sender cannot know which address works, and should not try.** Topology is a
@@ -70,7 +70,7 @@ failure rather than kept. It is a hint, not a record.
 **On ordering, asked directly: no, a daemon should not have a configurable sort.**
 
 The receiver holds the information, so any order the sender expresses is a
-preference rather than knowledge — and one the receiver would be honouring on the
+preference rather than knowledge — and one the receiver would be honoring on the
 word of the peer whose address it is.
 
 Order by *class* instead, which is derivable rather than configured — same-host,

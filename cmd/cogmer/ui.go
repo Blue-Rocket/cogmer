@@ -269,7 +269,7 @@ func (d *Daemon) handleStream(w http.ResponseWriter, r *http.Request) {
 // Peer health.
 //
 // A peer that cannot be reached is reported when it STOPS being reachable and when
-// it starts again, not once per poll. Polling is every second, so the old behaviour
+// it starts again, not once per poll. Polling is every second, so the old behavior
 // wrote two lines a second saying the same thing, which fills a log during a
 // partition. A message repeated that often is not a signal; it buries
 // the one line that matters, which is the transition.

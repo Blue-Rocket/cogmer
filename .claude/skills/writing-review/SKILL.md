@@ -39,13 +39,13 @@ go test ./cmd/cogmer -run 'TestCitations|TestLaterDecisions' -count=1
 The first runs the word, mark and structure checks on the named files even when
 they are exempt. Report its output under its own heading, as test results, and do
 not report those problems again as findings. The guide's rule index marks each rule
-checked or judgement; the checked rules are the tests' job, and every judgement
+checked or judgment; the checked rules are the tests' job, and every judgment
 rule is this review's.
 
 ## 4. Review
 
 Read each document whole before judging any part of it. For each rule the guide's
-index marks judgement, look for places the text breaks it. Report a finding only
+index marks judgment, look for places the text breaks it. Report a finding only
 when you can name the rule's ID and point to the sentence of the guide that the
 text breaks. When a reading is
 arguable, report it as a question rather than a finding.

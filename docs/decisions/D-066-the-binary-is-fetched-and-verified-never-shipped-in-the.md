@@ -42,7 +42,7 @@ undo it at the last step.
 **What a registry would have given us, and what we gave up.** Version resolution for
 free, the platform matrix handled by somebody else, provenance and revocation, and a
 fetch path corporate networks already proxy. Checksum pinning is a thin hand-rolled
-substitute for the third of those. Set against it: `npx pkg@latest` re-authorises
+substitute for the third of those. Set against it: `npx pkg@latest` re-authorizes
 whatever the registry serves on every single launch, with no pin at all. The trade
 is not convenience against rigour in one direction — we lost provenance
 infrastructure and gained a pin they do not have.
@@ -54,9 +54,9 @@ for a reason that still holds.
 
 **Decision.** Fetch at first run into `~/.cogmer/bin`, and **run nothing that
 cannot be verified**. `plugin/checksums.txt` is committed to the plugin repository
-and is the only thing that authorises execution. A download whose hash is not
+and is the only thing that authorizes execution. A download whose hash is not
 listed is deleted rather than run, and `scripts/release.sh` generates the file from
-the bytes it just built, because a hash typed rather than computed authorises
+the bytes it just built, because a hash typed rather than computed authorizes
 something nobody has seen.
 
 That is the same shape as the rest of this design: the thing that arrives is

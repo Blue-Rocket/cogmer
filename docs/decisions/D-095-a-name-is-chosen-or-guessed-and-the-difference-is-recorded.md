@@ -4,11 +4,11 @@
 
 **Context.** D-094 stopped short of defaulting a peer's label to the name they had
 picked, because a peer does not pick one: `UserDisplayName` is `$USER` with the first
-letter capitalised, fixed at identity creation, with no way to change it. Asked what
+letter capitalized, fixed at identity creation, with no way to change it. Asked what
 the natural point is for somebody to choose their own.
 
 **The name has one function: to be seen by other people.** You never see yourself
-labelled — the view leaves the derived name off your own turns, because it exists to
+labeled — the view leaves the derived name off your own turns, because it exists to
 identify other peers (D-021, peer names are derived from the identity), and your
 turns are marked as yours. So there is no moment when its owner notices it is wrong, which is exactly
 why `Ec2-user` could travel for weeks.
@@ -48,4 +48,4 @@ That is what makes this cosmetic enough to defer and to change.
 default to it (D-094's revisit condition).
 
 **Revisit when:** something other than a person needs a display name, or the name
-starts travelling somewhere other than a pairing string and an event.
+starts traveling somewhere other than a pairing string and an event.

@@ -34,7 +34,7 @@ type syncRequest struct {
 	Timestamp string `json:"timestamp"`
 	Nonce     string `json:"nonce"`
 	Signature string `json:"signature"`
-	// Endpoint is where the caller listens. Synchronisation is a pull, so a peer
+	// Endpoint is where the caller listens. Synchronization is a pull, so a peer
 	// that never says where it is can be read from and never read.
 	Endpoint string `json:"endpoint,omitempty"`
 }

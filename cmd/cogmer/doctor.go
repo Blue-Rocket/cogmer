@@ -133,7 +133,7 @@ func runDoctor(deep bool) {
 	}
 	if len(failures) > 0 {
 		fmt.Println("\nA failure means Claude Code changed under an assumption this project depends on.")
-		fmt.Println("Read the failing behaviour in docs/relied-on-behaviors.md before trusting the room.")
+		fmt.Println("Read the failing behavior in docs/relied-on-behaviors.md before trusting the room.")
 		os.Exit(1)
 	}
 }

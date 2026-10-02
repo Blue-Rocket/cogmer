@@ -16,7 +16,7 @@ and how to run it.
   goes in the replacing decision's Rejected field.
 - **Read `docs/writing.md` before writing any document or commit message**, and
   follow it. It holds the rules and a template for each kind of item.
-- **Read the code before characterising it.** A grep result shows the line that
+- **Read the code before characterizing it.** A grep result shows the line that
   mentions something, not what the function does, so read the function.
 - **Check `git log` before concluding something was removed.** `git log -S` across
   all commits answers "was this ever written?", which is a different question from
@@ -61,7 +61,7 @@ documents rot.
 | `plugin/README.md` | what somebody who has installed it needs |
 
 - **Evidence never goes in the spec.** Put the requirement it justifies there.
-- **What someone else's software does goes in the behaviour registry**, which tests
+- **What someone else's software does goes in the behavior registry**, which tests
   itself, and what our own code does is a test. Neither is retold anywhere else.
 - **An open item is deleted when it is done, never marked done.** `open.md` groups
   items by milestone, and nothing records a milestone once its last item is gone
@@ -92,7 +92,7 @@ every target cross-compiles with `CGO_ENABLED=0`.
 - **Test with `go test ./...`.** To drive a real session, run `claude -p …
   --settings <file>` with a throwaway `COGMER_HOME` per run, and `< /dev/null`, or it
   waits on stdin.
-- **`cogmer doctor` checks the behaviours we rely on**, in about 5s and one Claude
+- **`cogmer doctor` checks the behaviors we rely on**, in about 5s and one Claude
   turn. `--deep` adds a compaction, in about 40s. It runs by itself when a room is
   formed under a Claude Code version this machine has not checked, and
   `COGMER_PREFLIGHT=off` turns that off for CI.
@@ -123,10 +123,10 @@ index holds. Hooks keep it fresh, but only for edits the current session made.
 - **`release.sh` builds five targets and rewrites every file that names the
   version:** `plugin/checksums.txt`, computed from the bytes it just built,
   `plugin/VERSION`, and the `version` in `plugin.json`. `checksums.txt` is the only
-  thing that authorises a downloaded binary to run, so never edit it by hand: a hash
-  typed rather than computed authorises something nobody has seen.
+  thing that authorizes a downloaded binary to run, so never edit it by hand: a hash
+  typed rather than computed authorizes something nobody has seen.
 - **The manifest `version` is what pins an installed plugin** (D-120). A user receives
-  a new plugin, and with it the checksums that authorise the new binary, only when
+  a new plugin, and with it the checksums that authorize the new binary, only when
   that string moves. A test fails if it and `plugin/VERSION` disagree.
 - **Publishing without rerunning `release.sh` leaves the installer refusing the new
   asset.** That is the correct failure, not a bug to work around.
@@ -142,15 +142,15 @@ index holds. Hooks keep it fresh, but only for edits the current session made.
   person** (D-033, D-036). A person sees only what the model then says. MCP as a
   display channel was tested exhaustively and surfaces nowhere anybody looks, so do
   not try it again. Nothing checks this, which is why it is written here.
-- **Whether injected context survives a compaction is the summarizer's judgement**,
+- **Whether injected context survives a compaction is the summarizer's judgment**,
   not a format guarantee, so no assertion can cover it. Re-run Test B from
   `84a0751:docs/phase0a-findings.md` when the model or the Claude Code version
   changes.
-- **The Claude Code behaviours this project relies on are undocumented, and several
+- **The Claude Code behaviors this project relies on are undocumented, and several
   fail silently:** the room keeps accepting events while recording the wrong thing. If
   you find a new reliance, add it to `behaviors.go` with a negative test, because a
   check that cannot fail reads as protection. Write its `Reliance` for someone
-  debugging at 2am: what breaks, not what the behaviour is.
+  debugging at 2am: what breaks, not what the behavior is.
 - **Assistant records carry no `promptId`** (B09), which is why turns are segmented by
   position rather than by key. B04, B05 and B09 would report improvements as well as
   breakage, so watch for those, since they would let us simplify.
@@ -159,7 +159,7 @@ index holds. Hooks keep it fresh, but only for edits the current session made.
 
 ## Where to read before changing something
 
-This table maps an area to what to read first, and summarises none of it. If the area
+This table maps an area to what to read first, and summarizes none of it. If the area
 is not listed, read the spec.
 
 | touching | read first |

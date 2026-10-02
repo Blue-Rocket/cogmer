@@ -8,7 +8,7 @@
 # release-url.txt alone (D-121).
 #
 # The release is created on the tag, and the tag must name a commit whose
-# checksums.txt pins these assets, because the plugin at that tag is what authorises
+# checksums.txt pins these assets, because the plugin at that tag is what authorizes
 # them. GitHub creates a missing tag on its default branch when the commit named is
 # not one it holds, and says nothing, so this checks before it publishes rather than
 # trusting the call.
@@ -58,7 +58,7 @@ else
   gh release create "$tag" dist/* \
     --target "$head" \
     --title "$tag" \
-    --notes "Binaries for $tag. Each is authorised by the sha256 pinned in plugin/checksums.txt at this tag; a download that does not match is deleted rather than run."
+    --notes "Binaries for $tag. Each is authorized by the sha256 pinned in plugin/checksums.txt at this tag; a download that does not match is deleted rather than run."
 fi
 
 # Verify what is actually served, against the same hashes the installer will check.

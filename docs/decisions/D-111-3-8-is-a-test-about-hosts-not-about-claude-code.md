@@ -17,7 +17,7 @@ different launch command, installing something the host does not already load, o
 depending on how the host renders. It still rules out the PTY wrapper (D-034) and
 still permits a view outside the session, on the same grounds as before.
 
-**Generalising exposed two things that had been resting on the single host.**
+**Generalizing exposed two things that had been resting on the single host.**
 
 *First, "things the host already loads" was ambiguous, and had been carrying an
 unstated word.* The original said "already loads **on its own**", and dropping it in
@@ -37,7 +37,7 @@ not serve, and is never an argument for wrapping one. This does not conflict wit
 D-110's note that a host lacking a hook equivalent needs a different design rather
 than a smaller adapter: that concerns hosts with some other way in.
 
-**The rule generalises; the evidence for it does not.** The reach argument — Claude
+**The rule generalizes; the evidence for it does not.** The reach argument — Claude
 Code is a terminal program, a desktop application and an editor extension, and
 extending it through its own mechanisms reaches all three — is a fact about one
 product and stays stated as one. A different host has different surfaces, which
@@ -48,7 +48,7 @@ changes which mechanisms exist and changes nothing about the reasoning.
 - *Leave §3.8 naming Claude Code, and add a note that it applies to other hosts.* It
   is consulted as a test, and a test carrying a footnote about which product it
   governs is a test people apply inconsistently.
-- *Generalise the whole specification.* §3.8 is the framing test; the rest of the
+- *Generalize the whole specification.* §3.8 is the framing test; the rest of the
   document describes Claude Code's actual mechanisms and is correct as written.
   Host-general language throughout would claim a generality nothing else in the
   document has earned, and would make every section quietly harder to check.

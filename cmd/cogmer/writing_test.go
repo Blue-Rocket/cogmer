@@ -53,11 +53,15 @@ var (
 	bannedWords = regexp.MustCompile(`(?i)\b(load-bearing|honest|honestly|not merely|leverage|leveraged|leverages|utilise|utilised|utilize|utilized|utilizes|robust|robustly|seamless|seamlessly|comprehensive|ensure|ensured|ensures|ensuring|nuanced|testament|tapestry|delve|delves|delving|crucial|crucially)\b`)
 	// The guide permits some uses of these, so a use can carry an exception
 	// marker, <!-- writing: <reason> -->, directly after the word.
-	judgementWords = regexp.MustCompile(`(?i)\b(deliberately|exactly|precisely)\b`)
-	writingMarker  = regexp.MustCompile(`(?s)^<!--\s*writing:(.*?)-->$`)
+	judgmentWords = regexp.MustCompile(`(?i)\b(deliberately|exactly|precisely)\b`)
+	writingMarker = regexp.MustCompile(`(?s)^<!--\s*writing:(.*?)-->$`)
 	// The words of W-21's table; the rest of bannedWords is W-23's list.
 	tableWords = regexp.MustCompile(`(?i)^(load-bearing|honest|honestly|not merely)$`)
-	thePoint   = regexp.MustCompile(`(?i)\bthe point\b`)
+	// The guide uses American spelling. Each stem names the endings that are
+	// British, so that "optimism" and "organism" are not read as "optimise" and
+	// "organise".
+	britishSpelling = regexp.MustCompile(`(?i)\b(?:behaviours?|judgements?|defences?|honour(?:s|ed|ing|able)?|labelled|unlabelled|travell(?:ed|ing|er|ers)|signalling|sceptic(?:al|ism|s)?|greyed|modelling|enrols|fulfils|(?:recognis|authoris|summaris|generalis|organis|synchronis|optimis|sanitis|characteris|capitalis|normalis)(?:e|es|ed|ing|able|ation|ations))\b`)
+	thePoint        = regexp.MustCompile(`(?i)\bthe point\b`)
 	// "the point at which" and "the point where" name a moment, not a purpose.
 	thePointOfTime = regexp.MustCompile(`(?i)^\s+(at which|where)\b`)
 	decoration     = regexp.MustCompile(`\b(Note|NOTE|Important|IMPORTANT):`)
@@ -225,7 +229,12 @@ func writingProblems(doc string, src []byte) []string {
 			report(m[0], "%q (W-23)", w)
 		}
 	}
-	for _, m := range judgementWords.FindAllStringIndex(s, -1) {
+	if !workDocument.MatchString(doc) {
+		for _, m := range britishSpelling.FindAllStringIndex(s, -1) {
+			report(m[0], "%q is a British spelling, and the guide uses the American (W-21)", s[m[0]:m[1]])
+		}
+	}
+	for _, m := range judgmentWords.FindAllStringIndex(s, -1) {
 		excused := false
 		for _, mk := range markers {
 			if mk.at >= m[1] && strings.TrimSpace(s[m[1]:mk.at]) == "" {
@@ -324,8 +333,14 @@ func TestWritingProblemsCatchesEachRule(t *testing.T) {
 		{"status label", "x.md", "Note: this.\n", 1},
 		{"check mark", "x.md", "Done ✓\n", 1},
 		{"arrow", "x.md", "a → b\n", 0},
-		{"judgement word", "x.md", "Chosen deliberately.\n", 1},
-		{"judgement word with a marker", "x.md", "Chosen deliberately<!-- writing: not by accident --> here.\n", 0},
+		{"British spelling", "x.md", "The behaviour of a colleague.\n", 1},
+		{"British spelling, recognised", "x.md", "It was recognised.\n", 1},
+		{"American spelling", "x.md", "The behavior of a colleague, recognized.\n", 0},
+		{"a word that only begins like a British one", "x.md", "An organism, and optimism.\n", 0},
+		{"British spelling in code", "x.md", "`behaviour` here.\n", 0},
+		{"British spelling in working material", "docs/work/x.md", "The behaviour of a colleague.\n", 0},
+		{"judgment word", "x.md", "Chosen deliberately.\n", 1},
+		{"judgment word with a marker", "x.md", "Chosen deliberately<!-- writing: not by accident --> here.\n", 0},
 		{"marker after a space", "x.md", "It is exactly <!-- writing: a measurement --> 16s.\n", 0},
 		{"marker with no reason", "x.md", "Chosen deliberately<!-- writing: --> here.\n", 1},
 		{"marker away from its word", "x.md", "Chosen deliberately, then kept<!-- writing: why --> here.\n", 2},

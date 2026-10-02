@@ -4,7 +4,7 @@
 
 **Context.** Asked why a newer address would not update both stores, and then more
 pointedly why an address is stored in more than one place at all. Following that
-found a modelling error underneath several problems that had been treated as
+found a modeling error underneath several problems that had been treated as
 separate.
 
 **Addresses live in two tables.** `known_peers.endpoint` holds one per peer, written

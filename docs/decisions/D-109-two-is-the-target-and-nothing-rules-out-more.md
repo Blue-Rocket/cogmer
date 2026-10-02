@@ -34,10 +34,10 @@ identity is not possible once events exist.
 **Rejected.**
 
 - *Design for N now.* Every hard problem so far has been specific to the pair in
-  front of us, and a generalisation written before the second case is a guess. It
+  front of us, and a generalization written before the second case is a guess. It
   also costs the thing the prototype is for: evidence about whether two people
   actually use it.
-- *Optimise for exactly two and revisit later.* This is the position that sounds
+- *Optimize for exactly two and revisit later.* This is the position that sounds
   identical to the decision and is not. It permits the ceiling, and the moment an
   event format or an identity scheme has one, D-058 (signature schemes are added,
   never edited) and §7's immutability make it permanent.

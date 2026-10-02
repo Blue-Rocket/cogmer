@@ -94,7 +94,7 @@ trap 'rm -rf "$tmp"; rmdir "$lock" 2>/dev/null' EXIT
 # better and is what a public release host will give us.
 if [ -n "$expected" ] && command -v curl > /dev/null 2>&1; then
   # Where assets live is data, not code, and it travels beside the hashes that
-  # authorise them -- moving hosts is then one commit that changes both together.
+  # authorize them -- moving hosts is then one commit that changes both together.
   # An unreachable or wrong host costs a failed download; a hash that did not move
   # with it would cost a refusal nobody could explain.
   base="${COGMER_RELEASE_URL:-$(grep -v '^#' "$root/release-url.txt" 2>/dev/null | head -1 | tr -d '[:space:]')}"
@@ -114,7 +114,7 @@ if [ -n "$expected" ] && command -v curl > /dev/null 2>&1; then
         exit 0
       fi
     fi
-    # The hash is the authorisation. Without a match there is nothing to weigh.
+    # The hash is the authorization. Without a match there is nothing to weigh.
     say "REFUSED: $asset hashed $got, expected $expected — deleted, not run"
   else
     say "download failed"

@@ -36,7 +36,7 @@ principle.
 **What this unifies.** §3.7 (a remote event never drives a session), §21 (context
 limits), D-150 (starting the daemon never delays the session) and D-038 (the view is a
 separate program, so a busy room never costs somebody their pane) are all the same
-obligation, and nothing said so. Each read as a local judgement; together they are
+obligation, and nothing said so. Each read as a local judgment; together they are
 one duty with six known cases.
 
 **Rejected.**

@@ -38,7 +38,7 @@ from work they were never shown.
 session's own room, reinstating this failure at higher precedence the same
 afternoon. D-077 gave every room its own URL, removing the pointer's last consumer,
 and D-080 deleted it. `current_room` no longer exists anywhere. Its schema comment
-outlived it and described the removed behaviour as the design, which is most of why
+outlived it and described the removed behavior as the design, which is most of why
 this entry was hard to recover; the comment is gone as of 2026-09-21, along with the
 `settings` table it annotated, which nothing had ever read or written.
 

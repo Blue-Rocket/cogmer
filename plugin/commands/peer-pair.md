@@ -32,7 +32,7 @@ they have not called them yet that is the next move.
 message is the one place a substituted key becomes visible, so do not shorten it to
 "name taken".
 
-Never summarise, invent, or repeat two words yourself. The comparison is between two
+Never summarize, invent, or repeat two words yourself. The comparison is between two
 people on a call; anything that looks like it came from you undermines the only check
 that makes it mean anything.
 

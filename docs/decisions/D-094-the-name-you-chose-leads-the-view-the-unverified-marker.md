@@ -42,7 +42,7 @@ a field addition, and it deserves its own entry rather than being smuggled in he
 **Not done, and blocked: defaulting the label to the name the peer chose.** Proposed
 that the pairing string carry it, so `/peer-pair <string>` could offer a sensible
 default. **A peer does not choose their name.** `UserDisplayName` is `$USER` with the
-first letter capitalised, computed once at identity creation, with no command, flag
+first letter capitalized, computed once at identity creation, with no command, flag
 or environment override to change it — which is why two daemons asserted the same one
 during the first two-peer run. Shipping that in a pairing string would be worse than
 the derived name: `quiet-otter` is honest about being machine-made, while `Ec2-user`

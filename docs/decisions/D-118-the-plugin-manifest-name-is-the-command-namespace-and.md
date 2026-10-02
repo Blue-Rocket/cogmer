@@ -51,7 +51,7 @@ would otherwise break every instruction string the binary prints, with
 nothing failing until a person typed one. Both branches confirmed to fail when the
 defect is introduced.
 
-**Not in the behaviour registry, and the reason is a limitation.** Registry checks
+**Not in the behavior registry, and the reason is a limitation.** Registry checks
 run against hook payloads inside a live session; this is a plugin load-time
 property, which none of them can observe. The half of this finding that does belong
 there — that `commands/*.md` is loaded identically to a skill, and so every command
@@ -59,6 +59,6 @@ is **model-invocable** — is in `open.md`, because which commands should be rea
 by the model is a decision and not a sweep.
 
 **Revisit when** Claude Code offers an unprefixed alias deliberately rather than as
-the behaviour reported in `anthropics/claude-code` issue 15882, or when `commands/`
+the behavior reported in `anthropics/claude-code` issue 15882, or when `commands/`
 stops being loaded at all — the documentation already calls it legacy and prefers
 `skills/<name>/SKILL.md`.

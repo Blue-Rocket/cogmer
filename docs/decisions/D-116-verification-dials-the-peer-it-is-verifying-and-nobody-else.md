@@ -13,7 +13,7 @@ sweep spent a dial and a timeout per peer on candidates excluded by construction
 
 **The leak is what makes it worth a decision.** Pairing is two people on a call
 comparing two words, and this made it visible to everybody else on the list, every
-time, as a connection from a recognisable address at a recognisable moment. §4
+time, as a connection from a recognizable address at a recognizable moment. §4
 already ensures no identity goes with it — the connection is abandoned before this
 machine presents anything of its own — but timing and an address are still more
 than Bob needs to know about Alice.

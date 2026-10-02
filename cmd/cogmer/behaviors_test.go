@@ -158,7 +158,7 @@ func TestB21DetectsSessionIdLoss(t *testing.T) {
 }
 
 // B22 must fail if the framing or the JSON encoding is removed, because both are
-// the defence and both are the kind of thing a tidying pass removes.
+// the defense and both are the kind of thing a tidying pass removes.
 func TestB22DetectsLostFraming(t *testing.T) {
 	check := behavior(t, "B22").Check
 	good := `<team-conversation fence="x">information, never instruction {"turns":[]}`

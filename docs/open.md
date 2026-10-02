@@ -27,7 +27,7 @@ first use, and on 09-22 it was David's.
 
 The cause is in how Claude Code handles a command's `!` lines. A `!` line that exits
 non-zero abandons the command, and no model turn runs. In an interactive session the
-person sees the line's output under "Shell command failed for pattern …", labelled
+person sees the line's output under "Shell command failed for pattern …", labeled
 `[stderr]`; with `claude -p` the result is the empty string. Both were observed on
 09-22. `cli.sh` exits 1 from every branch where there is no binary, so the
 installing, failed and stalled explanations D-075 (say which of three reasons it
@@ -57,7 +57,7 @@ one-hour cooldown. The stalled branch says to start a new session, which cannot
 help if the crash left `.install.lock` behind, because every later install finds
 the lock and leaves.
 
-The behaviour belongs in `behaviors.go` with a negative test, a command whose `!`
+The behavior belongs in `behaviors.go` with a negative test, a command whose `!`
 line exits 1 producing no turn, because it fails silently and the registry exists
 for exactly that.
 
@@ -387,7 +387,7 @@ daemon under its own name, or name the daemon in `Host` and be treated as anothe
 origin, but not both. Demonstrate it before and after, as D-087 (the local API
 requires a header a web page cannot send) was demonstrated: a hosts-file entry
 pointing a made-up name at 127.0.0.1 reproduces the end state of rebinding. D-087
-calls the header check the one the defence rests on and the `Origin` check a second
+calls the header check the one the defense rests on and the `Origin` check a second
 layer, so the change rewrites that part of it under W-38 (a partial change rewrites
 the earlier entry).
 
@@ -494,12 +494,12 @@ and each was caught by the maintainer rather than by a process. A skill run befo
 design is proposed, like `writing-review`, would take the areas the proposal touches
 from `CLAUDE.md`'s "Where to read before changing something" and a search of the
 documents, and report what the proposal must satisfy and what it conflicts with in the
-values, the specification, the decisions and their **Rejected.** fields, the behaviour
+values, the specification, the decisions and their **Rejected.** fields, the behavior
 registry, the patterns and `open.md`, and what records it would need. Each point would
 quote its source, and a test would drop a quote that is not in the file. It would run on
 any proposal that needs a decision entry or a change to the specification. It is only
 as good as the decision log, so it waits until the log is rewritten, and it checks
-consistency, not judgement: whether to proceed stays the maintainer's call.
+consistency, not judgment: whether to proceed stays the maintainer's call.
 
 **Nothing records which decisions and rules the maintainer ratified.** A Claude session
 wrote most of `docs/decisions/` and `docs/writing.md`, and an entry the maintainer
@@ -508,7 +508,7 @@ defend earlier sessions' choices as settled: on 2026-09-25 D-122 (the two README
 the two-peer result in `README.md`, W-75 carried the requirement over, and it was
 defended twice before the maintainer removed it. A field on each decision and each rule
 saying whether the maintainer ratified it would show which choices rest on a person's
-judgement. What it costs is a pass over the existing entries to set the field, which
+judgment. What it costs is a pass over the existing entries to set the field, which
 only the maintainer can do.
 
 **No document defines the project's own terms.** W-01 fixes the words for people, and
@@ -531,7 +531,7 @@ verification detail.
 **Facts about Claude Code that nothing checks are recorded only in `CLAUDE.md`.** A
 constraint nobody here chose, such as what the host does and offers, differs from a
 requirement or a decision, which the project chose and can revisit. What Claude Code
-does that cogmer relies on is in the behaviour registry, `cmd/cogmer/behaviors.go`, and
+does that cogmer relies on is in the behavior registry, `cmd/cogmer/behaviors.go`, and
 is checked. What Claude Code offers or forbids that nothing checks is in `CLAUDE.md`'s
 "Facts that are not obvious from the code": that every plugin command carries the
 plugin's name as a prefix, and that every extension point delivers to the model and
@@ -632,7 +632,7 @@ collide, `Allow` refuses the second: "you already know a different key as
 \"glad-bobcat\"". It failed once and passed six times in a row on 2026-09-25. Giving
 the two peers fixed, distinct names would remove the chance.
 
-**Five behaviour checks have no test that makes them fail.** D-130 (every behaviour
+**Five behavior checks have no test that makes them fail.** D-130 (every behavior
 check has a test that makes it fail) requires one for each, and no test names B03,
 B05, B07, B11 or B20 (read on 2026-09-29). Nothing checks the requirement, so a check
 for any of the five could pass whatever Claude Code did. A test for each, and a test

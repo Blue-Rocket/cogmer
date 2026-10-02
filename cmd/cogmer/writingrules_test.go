@@ -12,7 +12,7 @@ import (
 // always checked.
 
 var (
-	ruleIndexRow = regexp.MustCompile(`^\| (W-\d{2}) \| .+ \| (checked|judgement) \|$`)
+	ruleIndexRow = regexp.MustCompile(`^\| (W-\d{2}) \| .+ \| (checked|judgment) \|$`)
 	// An ID inside a Go string literal is one a check reports.
 	citedRule = regexp.MustCompile(`"[^"\n]*\b(W-\d{2})\b[^"\n]*"`)
 )
@@ -57,8 +57,8 @@ func TestWritingRulesAreIndexed(t *testing.T) {
 		switch indexed[id] {
 		case "":
 			t.Errorf("%s reports %s, which docs/writing.md does not index", f, id)
-		case "judgement":
-			t.Errorf("%s reports %s, which docs/writing.md marks judgement; mark it checked", f, id)
+		case "judgment":
+			t.Errorf("%s reports %s, which docs/writing.md marks judgment; mark it checked", f, id)
 		}
 	}
 	for id, enforcement := range indexed {

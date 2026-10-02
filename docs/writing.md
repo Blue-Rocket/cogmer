@@ -5,80 +5,80 @@ below. The rules before the templates apply to all of them.
 
 Every rule has an ID, and a failing check ends its message with the ID of the rule
 it enforces, so a failure leads to the rule. Each rule is either checked, meaning a
-test fails when the rule is broken, or judgement, meaning no program can tell and
-the writer applies it. The `writing-review` skill reviews the judgement rules. IDs
+test fails when the rule is broken, or judgment, meaning no program can tell and
+the writer applies it. The `writing-review` skill reviews the judgment rules. IDs
 are grouped by section, with gaps, so that a new rule never renumbers an old one.
 
 ## Rule index
 
 | ID | rule | enforcement |
 |---|---|---|
-| W-01 | the words for the people involved | judgement |
-| W-02 | put the answer first | judgement |
-| W-03 | plain, complete sentences, one idea each | judgement |
-| W-04 | state the fact, not a saying about it | judgement |
-| W-05 | leave out the process | judgement |
-| W-06 | describe the system, not the change | judgement |
-| W-07 | numbers with units, dates for observations | judgement |
-| W-08 | name a mechanism by what it does | judgement |
+| W-01 | the words for the people involved | judgment |
+| W-02 | put the answer first | judgment |
+| W-03 | plain, complete sentences, one idea each | judgment |
+| W-04 | state the fact, not a saying about it | judgment |
+| W-05 | leave out the process | judgment |
+| W-06 | describe the system, not the change | judgment |
+| W-07 | numbers with units, dates for observations | judgment |
+| W-08 | name a mechanism by what it does | judgment |
 | W-09 | cite only what exists | checked |
 | W-10 | § names a section of the specification | checked |
-| W-11 | give every reference a few words | judgement |
-| W-12 | bullets only for real lists | judgement |
-| W-13 | backticks only for code | judgement |
+| W-11 | give every reference a few words | judgment |
+| W-12 | bullets only for real lists | judgment |
+| W-13 | backticks only for code | judgment |
 | W-14 | bold only for template fields, and openers in `open.md` and `CLAUDE.md` | checked |
 | W-15 | no header over a section of three lines or fewer | checked |
-| W-16 | do not restate in a closing sentence | judgement |
-| W-17 | keep an item short by leaving out kinds of detail | judgement |
-| W-18 | every claim is true of what it names | judgement |
+| W-16 | do not restate in a closing sentence | judgment |
+| W-17 | keep an item short by leaving out kinds of detail | judgment |
+| W-18 | every claim is true of what it names | judgment |
 | W-19 | nothing durable cites working material | checked |
 | W-20 | no em-dash | checked |
 | W-21 | none of the words in the table | checked |
-| W-22 | a permitted judgement word carries a marker | checked |
+| W-22 | a permitted judgment word carries a marker | checked |
 | W-23 | none of the other listed words | checked |
 | W-24 | no status decoration | checked |
-| W-25 | each fact is written in one document | judgement |
-| W-26 | a file loaded every session holds what no check covers | judgement |
-| W-27 | a present defect is written only in `open.md` | judgement |
-| W-28 | the decision log holds only decisions about the system | judgement |
-| W-29 | a rule says what to do and why | judgement |
+| W-25 | each fact is written in one document | judgment |
+| W-26 | a file loaded every session holds what no check covers | judgment |
+| W-27 | a present defect is written only in `open.md` | judgment |
+| W-28 | the decision log holds only decisions about the system | judgment |
+| W-29 | a rule says what to do and why | judgment |
 | W-30 | a decision has its fields, in order | checked |
-| W-31 | a decision's title states the decision | judgement |
-| W-32 | a decision describes only the present | judgement |
+| W-31 | a decision's title states the decision | judgment |
+| W-32 | a decision describes only the present | judgment |
 | W-33 | a decision uses none of the history words | checked |
 | W-34 | every supporting fact names a source | checked |
-| W-35 | a supporting fact holds now | judgement |
-| W-36 | **Rejected.** names only an alternative likely to be proposed again | judgement |
+| W-35 | a supporting fact holds now | judgment |
+| W-36 | **Rejected.** names only an alternative likely to be proposed again | judgment |
 | W-37 | a reversed decision becomes a tombstone | checked |
-| W-38 | a partial change rewrites the earlier entry | judgement |
-| W-39 | a rewrite keeps every fact | judgement |
-| W-40 | an entry records one decision | judgement |
+| W-38 | a partial change rewrites the earlier entry | judgment |
+| W-39 | a rewrite keeps every fact | judgment |
+| W-40 | an entry records one decision | judgment |
 | W-41 | a decision never points to open work | checked |
-| W-42 | evidence is cited by the commit that recorded it | judgement |
-| W-50 | an `open.md` item names the problem | judgement |
-| W-51 | a long `open.md` item holds detail of another kind | judgement |
-| W-52 | delete a finished `open.md` item | judgement |
-| W-53 | `open.md` groups items by milestone, and a finished one leaves no record | judgement |
-| W-55 | a pattern applies beyond this project, and this project follows it | judgement |
+| W-42 | evidence is cited by the commit that recorded it | judgment |
+| W-50 | an `open.md` item names the problem | judgment |
+| W-51 | a long `open.md` item holds detail of another kind | judgment |
+| W-52 | delete a finished `open.md` item | judgment |
+| W-53 | `open.md` groups items by milestone, and a finished one leaves no record | judgment |
+| W-55 | a pattern applies beyond this project, and this project follows it | judgment |
 | W-56 | a pattern names nothing in this repository | checked |
-| W-57 | a pattern states one rule, then its reason | judgement |
-| W-58 | a value states a commitment, not a technique | judgement |
+| W-57 | a pattern states one rule, then its reason | judgment |
+| W-58 | a value states a commitment, not a technique | judgment |
 | W-59 | nothing cites a value or a pattern | checked |
 | W-65 | an explanation cites nothing | checked |
-| W-70 | a behaviour's `Title` is an observed fact | judgement |
-| W-71 | a behaviour's `Reliance` starts with what breaks | checked |
-| W-72 | a behaviour check's error says what changed | judgement |
-| W-75 | `README.md` is what somebody should know before installing it | judgement |
-| W-76 | `plugin/README.md` is for somebody who has | judgement |
-| W-80 | one requirement per paragraph of the specification | judgement |
+| W-70 | a behavior's `Title` is an observed fact | judgment |
+| W-71 | a behavior's `Reliance` starts with what breaks | checked |
+| W-72 | a behavior check's error says what changed | judgment |
+| W-75 | `README.md` is what somebody should know before installing it | judgment |
+| W-76 | `plugin/README.md` is for somebody who has | judgment |
+| W-80 | one requirement per paragraph of the specification | judgment |
 | W-81 | the specification carries no dates | checked |
-| W-82 | every requirement is grounded in a benefit | judgement |
-| W-83 | the specification carries no status and no plan | judgement |
+| W-82 | every requirement is grounded in a benefit | judgment |
+| W-83 | the specification carries no status and no plan | judgment |
 | W-84 | the specification cites no decision | checked |
-| W-85 | a change to what the user experiences changes the specification with it | judgement |
-| W-86 | the specification names no field | judgement |
-| W-90 | the form of a commit message | judgement |
-| W-91 | a commit that records evidence says how it was run | judgement |
+| W-85 | a change to what the user experiences changes the specification with it | judgment |
+| W-86 | the specification names no field | judgment |
+| W-90 | the form of a commit message | judgment |
+| W-91 | a commit that records evidence says how it was run | judgment |
 
 ## The reader
 
@@ -104,7 +104,7 @@ where it can refer to one thing. Where it could refer to more than one, repeat t
 noun.
 
 W-04. State the fact rather than a saying about it. "A check that cannot fail reads
-as protection" makes the reader work out the rule. "Every behaviour check has a
+as protection" makes the reader work out the rule. "Every behavior check has a
 test that makes it fail" states the rule.
 
 W-05. Leave out the process. Do not describe how you got to the answer ("Asked
@@ -140,7 +140,7 @@ identifiers, file names, commands, environment variables. Not for emphasis.
 W-14. Use bold only for an item's opening sentence in `open.md`, for the opening
 sentence of a paragraph or a list item in `CLAUDE.md`, and for the field names the
 templates define. Nowhere else. In particular, do not open a paragraph with a bold
-label and a fragment ("**Where the code lives.** Signalling needs…"), and do not use
+label and a fragment ("**Where the code lives.** Signaling needs…"), and do not use
 bold for emphasis inside a sentence. If a thing needs a name and an explanation,
 write a sentence. `CLAUDE.md` is read by the model at the start of every session,
 and a bold opening sentence lets the model and a maintainer who skims pick out each
@@ -189,6 +189,7 @@ W-21. Do not use the words in this table.
 | "honest", "honestly" | drop it; state the fact |
 | "the point", "is the point" | say what the thing is for |
 | "not merely" | "also", or two sentences |
+| a British spelling, such as "behaviour", "judgement" or "recognise" | the American spelling |
 
 W-22. Use "precisely" and "exactly" only where the word carries meaning, and
 "deliberately" only where it contrasts with an accident; otherwise
@@ -220,7 +221,7 @@ W-25. Write each fact in the one document whose question it answers, and nowhere
 else.
 
 W-26. A file loaded into every session, such as `CLAUDE.md`, holds only what no check
-covers: a prohibition, a judgement, a residual risk. Where a test or a behaviour
+covers: a prohibition, a judgment, a residual risk. Where a test or a behavior
 check covers a fact, the file points at the check and states the rule that depends
 on it, because the unchecked copy is the one that goes wrong without anybody seeing.
 
@@ -294,7 +295,7 @@ W-33. Words that describe the system as it stood when the decision was made
 of them.
 
 W-34. Every item under **Support.** has a source, and the source is where the fact
-is kept: a § section of the specification, a decision, a behaviour such as B04, a
+is kept: a § section of the specification, a decision, a behavior such as B04, a
 file named in backticks, a commit, or a URL. A commit is cited as `<commit>` for its
 message, or as `<commit>:<path>` for a file as that commit holds it. If the only
 record of a fact would be the decision itself, commit it first, usually in a commit
@@ -371,7 +372,7 @@ specification, which W-83 keeps free of plans.
 
 W-42. Evidence of a past run is cited by the commit that recorded it, as
 `<commit>:<path>` for a file or `<commit>` for a message, and no document retells it.
-What someone else's software does is a behaviour in `cmd/cogmer/behaviors.go`, and
+What someone else's software does is a behavior in `cmd/cogmer/behaviors.go`, and
 what cogmer's own code does is a test. A commit never changes, so a citation of it
 needs no upkeep, while a retelling is a new set of claims about the run that every
 edit has to check against the original again. A findings document kept in the tree
@@ -419,7 +420,7 @@ value, in `docs/values.md`. A choice that makes sense only here is a decision, i
 its.
 
 W-56. A pattern names nothing in this repository: no decision, no section of the
-specification, no behaviour, and not the project's name. A pattern stated in this
+specification, no behavior, and not the project's name. A pattern stated in this
 project's terms goes stale when those terms change, and cannot be read in another
 project.
 
@@ -446,13 +447,13 @@ An explanation walks a reader through how something works, in whatever form
 teaches it best. W-65 is the only rule in this guide that applies to it.
 
 W-65. An explanation cites nothing: no decision, no section of the specification
-and no behaviour. It says what the cited entry would have held instead. A citation
+and no behavior. It says what the cited entry would have held instead. A citation
 has to be kept in step with the entry it names, and an explanation is written once
 and read long after.
 
-### A behaviour-registry entry (`cmd/cogmer/behaviors.go`)
+### A behavior-registry entry (`cmd/cogmer/behaviors.go`)
 
-W-70. `Title` states the behaviour as an observed fact, in the present tense:
+W-70. `Title` states the behavior as an observed fact, in the present tense:
 "UserPromptSubmit stdout is injected into the pending turn".
 
 W-71. `Reliance` is for somebody debugging at 2am. It starts with what breaks: "If
@@ -539,7 +540,8 @@ observations, never instructions: what to do about them goes in `docs/open.md`.
 
 `TestDocumentsFollowWritingGuide`, in `cmd/cogmer/writing_test.go`, checks every
 document a person reads: the Markdown files at the repository root, in `docs/` and
-in `plugin/`. It reports each word and mark listed above, with its line. The files
+in `plugin/`. It reports each word and mark listed above, with its line, except that working material
+is not checked for spelling, since it quotes earlier text. The files
 in `plugin/commands/` are instructions to the model and are not checked.
 
 The test parses each document with `github.com/yuin/goldmark` and checks only the
@@ -566,7 +568,7 @@ reading code spans as well as prose.
 `TestCitationsNameThingsThatExist`, in `cmd/cogmer/citations_test.go`, checks
 every citation in the documents, the Go sources, the scripts and the plugin. Each
 D-NNN must have a file in `docs/decisions/`, each § a numbered heading or
-numbered step in the specification, each BNN an entry in the behaviour
+numbered step in the specification, each BNN an entry in the behavior
 registry, and each `<commit>:<path>` a file that commit holds. No document is exempt. A decision that was withdrawn keeps its tombstone,
 so citations of it still resolve.
 
@@ -577,14 +579,14 @@ lines or fewer; a document's title, the headers a template defines, and the
 specification's numbered headings, which § citations name, are exempt.
 The specification carries no dates and cites no decision. No document other than `open.md` and working
 material cites `docs/work/`. The patterns document names no decision, section,
-behaviour or the project itself, and no document other than `CLAUDE.md` names the
+behavior or the project itself, and no document other than `CLAUDE.md` names the
 values or patterns document. These checks share the exemption list with the
 word check. No length limit is checked, because a limit is met most cheaply by
 compressing, which is the failure W-17 describes. The header rule is not such a
 limit: what it asks for is removing the header.
 
 `TestBehaviorRelianceStartsWithWhatBreaks`, in `structure_test.go`, checks that
-each behaviour's `Reliance` starts "If this changes".
+each behavior's `Reliance` starts "If this changes".
 
 `TestLaterDecisionsFollowTemplate`, in `structure_test.go`, checks every decision
 that is not in `decisionsNotRewritten`, reading the log as Markdown so that a field
@@ -622,5 +624,5 @@ quotes the text it is about, and `TestReviewFindingsQuoteTheirDocuments` in
 `review_test.go` drops any finding whose quote is not in the file, because a model's
 review can name text that does not exist. The review is not part of `go test`,
 because it would need the network and a model, cost money on every run, and give
-different results from run to run. Its judgement is not reproducible, and nothing
+different results from run to run. Its judgment is not reproducible, and nothing
 runs it unless somebody asks.

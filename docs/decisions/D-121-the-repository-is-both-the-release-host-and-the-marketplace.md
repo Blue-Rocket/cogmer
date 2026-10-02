@@ -13,7 +13,7 @@ at `{owner}/{repo}/releases/download/{tag}/{asset}`, and `install.sh` already bu
 `${base}/v${want}/${asset}`. Those are the same shape, so the installer does not
 change at all: `release-url.txt` and `publish.sh` are the whole of it, which is what
 that split was for. What is gained is HTTPS and a host nobody here operates. What is
-not gained is trust — the sha256 in `checksums.txt` is still what authorises a
+not gained is trust — the sha256 in `checksums.txt` is still what authorizes a
 binary, exactly as it was when the transport was plain HTTP.
 
 **The address is also removed from the history**, not just the tip. A public

@@ -23,7 +23,7 @@ from them.
 5. **Testing**, by emulating a session.
 
 **What is absent: no room-scoped operation has a terminal-only reason to exist.**
-Every one of them fulfils a slash command or is being tested. So the machine-level
+Every one of them fulfills a slash command or is being tested. So the machine-level
 pointer had no remaining user — the browser view was its last consumer that could
 not be handed a session, and per-room URLs (D-077) removed that.
 

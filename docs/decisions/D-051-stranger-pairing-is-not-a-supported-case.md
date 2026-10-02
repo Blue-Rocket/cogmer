@@ -6,7 +6,7 @@
 presents it as intended, and no claim is made that verification protects it.
 
 **Support.**
-- Verification needs a channel on which the other party can be recognised, and people
+- Verification needs a channel on which the other party can be recognized, and people
   who have never met have none. §25 (security).
 - A match between strangers shows that two parties hold the same key and says nothing
   about whose, so the ceremony would give the appearance of assurance, and people act on
@@ -24,8 +24,8 @@ presents it as intended, and no claim is made that verification protects it.
   available, so it buys convenience and not capability.
 
 **Limits.** The mechanism does not forbid it. A host who approves a request from someone
-unknown has paired with a stranger, and that is the host's judgement.
+unknown has paired with a stranger, and that is the host's judgment.
 
 **Revisit when** there is a concrete use for pairing with someone unknown that a call
-cannot serve, or a verification channel exists that does not depend on recognising the
+cannot serve, or a verification channel exists that does not depend on recognizing the
 other party.

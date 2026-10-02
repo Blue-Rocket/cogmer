@@ -53,7 +53,7 @@ been a one-time fix: it is the command added later by somebody who does not know
 frontmatter is load-bearing. Confirmed to fail when the flag is removed from one
 file.
 
-**Not in the behaviour registry**, for D-118's reason: registry checks observe a
+**Not in the behavior registry**, for D-118's reason: registry checks observe a
 live session through hook payloads, and this is a plugin load-time property that
 none of them can see.
 

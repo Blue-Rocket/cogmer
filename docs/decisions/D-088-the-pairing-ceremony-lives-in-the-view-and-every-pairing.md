@@ -28,7 +28,7 @@ page start that exchange.
 even for an identical URL — tab count climbed 2→3→4→5 across repeated opens — and
 focus was taken in all six trials, same-URL and unique-URL alike. So in Chrome the
 silent-background-rewrite case does not arise from `open` itself. Unique URLs are
-still right: they do not depend on that behaviour, and the correctness argument above
+still right: they do not depend on that behavior, and the correctness argument above
 stands on its own.
 
 **The page names a pairing, never a peer.** `/verify/start` and `/verify/confirm`

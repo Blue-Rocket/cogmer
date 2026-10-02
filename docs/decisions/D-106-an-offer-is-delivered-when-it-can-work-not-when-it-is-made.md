@@ -15,7 +15,7 @@ there is — a line a command printed, relayed by a model.
 
 **So the admission is recorded and the offer is withheld.** Inviting an unverified
 peer still writes the guest-list row, immediately. Whom to admit remains the host's
-judgement and §25's separation of the two questions is untouched. What waits is the
+judgment and §25's separation of the two questions is untouched. What waits is the
 *delivery of a notification*, and it waits only as long as it would be useless.
 
 **Why the gate stays open at all, which is the load-bearing half.** Refusing to
@@ -29,7 +29,7 @@ proposed on the grounds of fewer combinations, and that is the answer: the extra
 state is one pending offer with one flush point, bought with the only moment this
 system gets somebody's attention for free.
 
-**Which decides the wording, not only the behaviour.** The difference between a
+**Which decides the wording, not only the behavior.** The difference between a
 block and a path is whether the invitation succeeded and is waiting. It must read as
 admitted, queued, and one step from done — with that step offered where it is
 stated, since the two-word check opens in a browser from the same place (D-088). An
@@ -70,7 +70,7 @@ what to type. It must also stop being said once the pairing completes, rather th
 persisting as a record of work already done.
 
 **The appeal is to finish pairing, not to verify.** Pairing is the act a person
-recognises; verifying is our word for a step inside it, and nobody thinks "I must
+recognizes; verifying is our word for a step inside it, and nobody thinks "I must
 verify Alice". So the prompt says there is work to do with Alice and offers
 `/peer-pair alice`.
 

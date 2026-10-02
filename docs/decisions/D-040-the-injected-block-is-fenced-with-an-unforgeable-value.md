@@ -20,7 +20,7 @@ is part of the block, and the framing is stated again after the content.
 **Rejected.**
 - *Escaping the delimiters.* It is whack-a-mole against prose, and assumes the boundary is
   syntactic when the model reads it as language.
-- *Truncating or sanitising content.* A colleague's words are not the system's to edit.
+- *Truncating or sanitizing content.* A colleague's words are not the system's to edit.
   §3.4 (preserve actual conversation).
 
 **Limits.** A turn that contains the fence value arrives with that value removed.

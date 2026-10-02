@@ -832,7 +832,7 @@ holds the offer until she accepts it. Nothing secret is typed, spoken or sent, a
 the room's name, which is guessable, grants nothing to whoever guesses it.
 
 Delivering an offer admits nobody. The admission is the entry on the host's guest
-list, which is the host's judgement. The offer says only that the entry exists,
+list, which is the host's judgment. The offer says only that the entry exists,
 joining is the guest's own act, and reading the room waits on verification
 (section 25).
 
@@ -874,7 +874,7 @@ can happen before any room exists. The address need only be correct once
 A pairing string may also carry the name its sender goes by, so that the user who
 receives it has a sensible default for the name they must supply. It carries the name
 only when somebody chose it, because a name inferred from an operating-system account
-travelling as though a user picked it is worse than carrying nothing. The name is a
+traveling as though a user picked it is worse than carrying nothing. The name is a
 claim by whoever sent the string, so it is recorded only after the two words match.
 
 No part of a pairing string is a secret. An identifier is a public key, an address is
@@ -1022,7 +1022,7 @@ that would want pairing with a stranger almost always have a call or a message
 available anyway.
 
 A host who approves a request from someone unknown to them has paired with a stranger,
-and that is the host's judgement to make. Nothing presents it as intended, and nothing
+and that is the host's judgment to make. Nothing presents it as intended, and nothing
 claims that verification protects it.
 
 ## There is no join token
@@ -1030,7 +1030,7 @@ claims that verification protects it.
 Admission is an entry on a guest list, or a host's approval. There is no code, no
 invitation secret, and nothing a user can hold that would let them into a room. A
 token that admits its holder has to be kept secret while it is sent, cannot be
-checked afterwards, and enrols whoever intercepts it under a name the room's members
+checked afterwards, and enrolls whoever intercepts it under a name the room's members
 will treat as familiar.
 
 Inviting someone in advance needs no token either. A host may admit a peer it knows
@@ -1335,10 +1335,10 @@ Neither a turn's internal reasoning nor the records of a subagent are published:
 reasoning is not part of a shared conversation, and a subagent's records belong to a
 nested session, not to the room.
 
-## These are observed behaviours
+## These are observed behaviors
 
 None of this is documented by Claude Code, and any of it can change without notice,
-one part of it under a fix rather than a regression. Each behaviour it rests on is
+one part of it under a fix rather than a regression. Each behavior it rests on is
 checked against the installed version of Claude Code, and what the check finds is
 recorded.
 
@@ -1638,7 +1638,7 @@ Injection has limits, which can be configured:
 
 An estimate of the tokens is derived from the character count, not measured, because
 a tokenizer would have to track a model cogmer does not choose, and the figure is for
-judgement, not arithmetic.
+judgment, not arithmetic.
 
 The limits are a safety valve, not the ordinary path. Exceeding them means an unusually
 long or busy pairing.
@@ -1795,7 +1795,7 @@ learning one needs no confidentiality.
 
 An identifier proves possession of a key, and never which person holds it. Until the
 two words are compared, whoever's pairing string was received is the peer recorded,
-and a string that was replaced on the way enrols the wrong peer, durably, under a name
+and a string that was replaced on the way enrolls the wrong peer, durably, under a name
 the user will treat as familiar. Verifying once, when pairing, is what establishes
 whose key it is, and it never needs doing again.
 
@@ -1895,8 +1895,8 @@ back name the peer, and the command that clears it, because a room silenced by a
 looks the same as a room where nobody is talking.
 
 Inviting an unverified peer is permitted, and has no effect until they are verified.
-Whom to admit is the host's judgement, and the gate is a different question asked of a
-different party, not a second opinion about that judgement.
+Whom to admit is the host's judgment, and the gate is a different question asked of a
+different party, not a second opinion about that judgment.
 
 What waits is the delivery of the invitation, not the admission. The entry on the
 guest list is written when the host makes it, and the guest is told about it once

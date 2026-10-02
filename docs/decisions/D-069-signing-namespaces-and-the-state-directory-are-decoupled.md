@@ -31,13 +31,13 @@ outlives it, so there is no history to keep faith with.
 **The state directory.** `~/.cogmer` is where the name reaches the filesystem.
 It is now a single constant, so a rename is one line rather than a search.
 
-**And a latent bug found by looking.** `install.sh` honoured `COGMER_HOME`
+**And a latent bug found by looking.** `install.sh` honored `COGMER_HOME`
 while the binary ignored it, so anyone setting it got a binary in one place and its
 state in another, with nothing saying so. It was invisible because the only thing
 that set it was my own testing, which set `HOME` as well and so never noticed.
 
 **What is deliberately not done.** The module path still says
-`github.com/Blue-Rocket/cogmer`, and the organisation is actually
+`github.com/Blue-Rocket/cogmer`, and the organization is actually
 `Blue-Rocket` — a path that has never resolved, which is why `go install` failed in
 D-066's test. It is left alone because a module path must match the repository URL,
 and that needs the name. Nothing external imports it, so it costs nothing to wait.

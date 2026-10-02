@@ -17,7 +17,7 @@ belong to more than one. These are the areas a decision may name, and what each 
 | commands | slash commands, the plugin manifest and the product name |
 | release | installing, versions and releasing |
 | storage | the stored tables, their migration and their archive |
-| behaviors | the behaviour registry and the checks that watch Claude Code |
+| behaviors | what we rely on Claude Code doing, and the checks that notice when it stops |
 | hosts | hosts other than Claude Code |
 | trust | what untrusted input and a local web page may do |
 | project | what cogmer is for, and the choices that shape all of it |

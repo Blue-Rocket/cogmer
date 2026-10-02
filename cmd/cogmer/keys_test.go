@@ -187,7 +187,7 @@ func TestSigningRecordsItsScheme(t *testing.T) {
 }
 
 // The state directory is where the product name reaches the filesystem, and the
-// installer already honoured this variable while the binary ignored it -- so a
+// installer already honored this variable while the binary ignored it -- so a
 // person who set it got a binary in one place and its state in another, silently.
 func TestStateDirectoryIsOverridable(t *testing.T) {
 	t.Setenv("COGMER_HOME", "/tmp/somewhere-else")
@@ -196,7 +196,7 @@ func TestStateDirectoryIsOverridable(t *testing.T) {
 	}
 	t.Setenv("COGMER_HOME", "   ")
 	if got := homeDir(); !strings.HasSuffix(got, stateDirName) {
-		t.Errorf("a blank override was honoured, giving %q", got)
+		t.Errorf("a blank override was honored, giving %q", got)
 	}
 }
 

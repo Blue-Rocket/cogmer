@@ -30,7 +30,7 @@ definition, the one holding the address. It need not be this installation's, and
 `cogmer`. A build renamed by hand is then not stopped, which is the safe way for
 that check to be wrong.
 
-**Where the code lives.** Signalling a process needs `syscall`, and finding one
+**Where the code lives.** Signaling a process needs `syscall`, and finding one
 needs `os/exec` for `lsof`. §3.7 (a remote event never drives an interactive
 session) keeps both out of `daemon.go`, `store.go`, `sync.go` and `transcript.go`,
 and a test enforces it. `stop` and the SIGTERM handler live in `main.go`, beside

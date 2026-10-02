@@ -10,11 +10,11 @@ nothing knows a session exists until its first hook fires.
 - `RoomForSession` reports the bound room whatever the session has received, so no check
   on what reached a session stands between it and its room. `cmd/cogmer/membership.go`,
   `RoomForSession`, and `cmd/cogmer/membership_test.go`, `TestABoundSessionCannotBeMoved`.
-- Moving a session that has received nothing needs a judgement made from outside about
+- Moving a session that has received nothing needs a judgment made from outside about
   what a context window holds, which cannot be inspected, and one error is irreversible.
   D-016 (a session is in one room at most, and never joins a second).
 - Correcting a room joined by mistake means starting a session, which costs less than
-  that judgement. §12a (room membership).
+  that judgment. §12a (room membership).
 
 **Rejected.**
 - *Letting a session that has received no colleague's turns move to another room.* The

@@ -10,7 +10,7 @@ import (
 // The manifest's version is what Claude Code pins an installed plugin to: a person
 // receives a new plugin only when that string moves. Everything else the plugin
 // carries rides on that delivery -- the commands, the hooks, plugin/VERSION naming
-// the binary to install, and checksums.txt, which is the only thing authorising a
+// the binary to install, and checksums.txt, which is the only thing authorizing a
 // downloaded binary to run. So a manifest left at an older version does not look
 // like a stale number; it looks like a release nobody receives, and the symptom is
 // a person still on the old binary with no error anywhere.

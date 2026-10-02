@@ -35,7 +35,7 @@ never presented as a transient error worth repeating.
   only as strong as the weakest ceremony that opens it. D-055 (one way to verify a
   peer).
 
-**Limits.** Two people who have never met gain nothing, since recognising a voice
+**Limits.** Two people who have never met gain nothing, since recognizing a voice
 presumes acquaintance. D-051 (stranger pairing is not a supported case). Nothing
 rate-limits attempts, so protection against repetition rests on a mismatch stopping a
 person, which is a claim about the interface and not the protocol. A commitment step
