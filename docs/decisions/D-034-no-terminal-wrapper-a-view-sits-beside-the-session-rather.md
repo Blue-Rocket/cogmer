@@ -1,6 +1,6 @@
 # D-034 — No terminal wrapper; a view sits beside the session rather than around it
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** view
 
 **Decision.** No pseudo-terminal wrapper launches Claude Code. A view of the room is a
 separate program beside the session, never around it.

@@ -1,6 +1,6 @@
 # D-053 — `pair` is the machine-scope act, and `invite` is the room-scope act
 
-**Date:** 2026-09-18 · **Status:** active
+**Date:** 2026-09-18 · **Status:** active · **Areas:** pairing, admission, commands
 
 **Decision.** `cogmer pair <identifier>[@address] [name]` records the peer, records a
 bootstrap address and runs the two-word comparison, in one command that both users run

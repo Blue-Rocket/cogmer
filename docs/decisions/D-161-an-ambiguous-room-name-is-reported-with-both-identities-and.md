@@ -1,6 +1,6 @@
 # D-161 — An ambiguous room name is reported with both identities and never guessed
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** rooms
 
 **Decision.** Looking up a room by name has three outcomes: one room, no such room, and
 more than one. For more than one, `FindRoom` names each room's identifier and asks which

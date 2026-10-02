@@ -1,6 +1,6 @@
 # D-157 — The overlay listener admits any dialer
 
-**Date:** 2026-10-01 · **Status:** active
+**Date:** 2026-10-01 · **Status:** active · **Areas:** transport, trust
 
 **Decision.** The overlay listener accepts a tunnel from a dialer whatever key the
 dialer presents. Whether the other side is a peer is decided above the tunnel, by the

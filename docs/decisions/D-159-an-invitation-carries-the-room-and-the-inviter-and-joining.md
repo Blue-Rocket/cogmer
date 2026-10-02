@@ -1,6 +1,6 @@
 # D-159 — An invitation carries the room and the inviter, and joining admits the inviter
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** admission, rooms
 
 **Decision.** An invitation carries the room's name, the room's identifier, an address
 where the inviting peer can be reached, and the inviting peer's identifier, all of them

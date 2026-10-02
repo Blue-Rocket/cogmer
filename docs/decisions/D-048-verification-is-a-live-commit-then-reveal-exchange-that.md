@@ -1,6 +1,6 @@
 # D-048 — Verification is a live commit-then-reveal exchange that derives two words
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** pairing
 
 **Decision.** Each side commits to a hash of its contribution, and then both reveal.
 The string derives from both long-term identity keys and both fresh nonces, and each

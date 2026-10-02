@@ -1,6 +1,6 @@
 # D-012 — The preflight probe uses the `cogmer` binary as its own hook
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** behaviors, daemon
 
 **Decision.** The probe registers `cogmer probe-hook <name> <dir>` as its hook
 command, rather than writing a shell script to a temporary directory.

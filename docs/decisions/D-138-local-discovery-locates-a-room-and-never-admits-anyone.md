@@ -1,6 +1,6 @@
 # D-138 — Local discovery locates a room, and never admits anyone
 
-**Date:** 2026-09-16 · **Status:** not built
+**Date:** 2026-09-16 · **Status:** not built · **Areas:** rooms, transport, trust
 
 **Decision.** Peers on the same network can find a room by local service discovery,
 without an address being typed. Discovery locates the room, and never admits anyone to

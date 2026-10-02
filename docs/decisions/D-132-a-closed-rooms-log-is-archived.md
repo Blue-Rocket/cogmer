@@ -1,6 +1,6 @@
 # D-132 — A closed room's log is archived
 
-**Date:** 2026-09-16 · **Status:** not built
+**Date:** 2026-09-16 · **Status:** not built · **Areas:** rooms, storage
 
 **Decision.** When a room closes, its event log is archived. An archived room can be
 read and searched, and is never rejoined, synchronized or injected.

@@ -1,6 +1,6 @@
 # D-019 — No network provider is required
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** transport
 
 **Decision.** No network provider is part of a room's identity, its membership or
 replication, and none is a prerequisite: cogmer works with no virtual private network

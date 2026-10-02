@@ -1,6 +1,6 @@
 # D-165 — `allow` records a peer without verifying it, for scripts and tests
 
-**Date:** 2026-09-18 · **Status:** active
+**Date:** 2026-09-18 · **Status:** active · **Areas:** pairing, commands
 
 **Decision.** `cogmer allow <identifier> [name]` records a known peer without running a
 verification, and prints that the peer is UNVERIFIED and how to finish.

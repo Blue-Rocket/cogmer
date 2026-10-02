@@ -1,6 +1,6 @@
 # D-015 — Rooms are scoped to sessions, not to projects
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** rooms
 
 **Decision.** A room is a set of linked Claude Code sessions, identified by a generated
 identifier and entered by invitation. It closes when every member has explicitly left,

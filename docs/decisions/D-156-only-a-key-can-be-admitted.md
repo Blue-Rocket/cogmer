@@ -1,6 +1,6 @@
 # D-156 — Only a key can be admitted
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** admission, identity
 
 **Decision.** Recording a known peer and admitting a guest both refuse an identifier that
 names no key.

@@ -1,6 +1,6 @@
 # D-050 — Room names may collide locally, so the room table does not require a unique name
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** rooms, storage
 
 **Decision.** `rooms.room_name` has no uniqueness constraint. `CreateRoom` asks whether
 a name is free before it mints one, and `migrateMembership` rebuilds a table created

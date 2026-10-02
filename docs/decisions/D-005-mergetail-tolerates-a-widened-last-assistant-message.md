@@ -1,6 +1,6 @@
 # D-005 — `mergeTail` tolerates a widened `last_assistant_message`
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** capture
 
 **Decision.** When `last_assistant_message` contains what the transcript supplied,
 `mergeTail` uses it alone rather than appending it.

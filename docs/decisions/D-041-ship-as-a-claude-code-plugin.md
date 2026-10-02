@@ -1,6 +1,6 @@
 # D-041 — Ship as a Claude Code plugin
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** release, commands
 
 **Decision.** cogmer is packaged as a Claude Code plugin that carries its hooks and its
 commands, installed by adding the marketplace and then the plugin.

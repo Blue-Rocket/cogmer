@@ -1,6 +1,6 @@
 # D-031 — Peer synchronization polls; the push worth building is the local UI's
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** sync, view
 
 **Decision.** Peers synchronize by polling, and push between peers is not built without a
 reason beyond latency. The push that is built is the daemon's to the local view, by

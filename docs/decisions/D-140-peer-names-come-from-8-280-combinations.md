@@ -1,6 +1,6 @@
 # D-140 — Peer names come from 8,280 combinations
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** identity
 
 **Decision.** Peer names are drawn from 92 adjectives and 90 animals, which give 8,280
 combinations, rather than from two lists of 256 words each.

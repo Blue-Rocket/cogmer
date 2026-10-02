@@ -1,6 +1,6 @@
 # D-147 — No MCP server cogmer ships exposes sampling
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** trust, hosts
 
 **Decision.** Any MCP server cogmer ships exposes no sampling, the MCP mechanism by which a
 server asks the client to run inference.

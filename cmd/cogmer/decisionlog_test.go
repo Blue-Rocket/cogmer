@@ -64,6 +64,25 @@ func decisionID(doc string) (string, bool) {
 	return m[1], true
 }
 
+// decisionAreas returns the areas docs/decisions/README.md lists, one in each row
+// of its table, so that the list is held in one place.
+func decisionAreas(t *testing.T) map[string]bool {
+	t.Helper()
+	src, err := os.ReadFile("../../docs/decisions/README.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	areas := map[string]bool{}
+	row := regexp.MustCompile(`(?m)^\| ([a-z-]+) \|`)
+	for _, m := range row.FindAllStringSubmatch(string(src), -1) {
+		areas[m[1]] = true
+	}
+	if len(areas) == 0 {
+		t.Fatal("docs/decisions/README.md lists no areas")
+	}
+	return areas
+}
+
 var slugBreak = regexp.MustCompile(`[^a-z0-9]+`)
 
 // decisionSlug is the part of a decision file's name that follows its number: the

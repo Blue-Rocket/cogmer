@@ -1,6 +1,6 @@
 # D-008 — Key behavior verification on Claude Code version, not on the room
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** behaviors
 
 **Decision.** The result of the behaviour checks is recorded against `claude --version`,
 in `~/.cogmer/verified.json`, and a version that has been checked is not checked again.

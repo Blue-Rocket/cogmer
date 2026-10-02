@@ -1,6 +1,6 @@
 # D-018 — Identity and reachability are separate
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** transport, identity
 
 **Decision.** A machine's label is for attribution and display, and nothing routes by
 it. An endpoint is where a peer can be reached. It is opaque to the protocol, and the

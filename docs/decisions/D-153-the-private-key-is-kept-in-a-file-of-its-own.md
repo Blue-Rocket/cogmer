@@ -1,6 +1,6 @@
 # D-153 — The private key is kept in a file of its own
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** identity, trust
 
 **Decision.** A peer's private key is in `~/.cogmer/identity.key`, never in `identity.json`,
 which `whoami` prints and a user may hand to a colleague.

@@ -1,6 +1,6 @@
 # D-043 — A second host is prepared for by naming, never by machinery
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** hosts, sync
 
 **Decision.** Nothing in cogmer names the agent that produced a turn: the session a turn
 came from is an origin session, opaque to the host. There is no field saying which host

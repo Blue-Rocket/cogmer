@@ -1,6 +1,6 @@
 # D-011 — Hooks fail open: exit 0, empty stdout
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** daemon
 
 **Decision.** Every path by which a hook fails exits 0 and writes nothing to stdout,
 so a dead daemon means no collaboration and never a broken session.

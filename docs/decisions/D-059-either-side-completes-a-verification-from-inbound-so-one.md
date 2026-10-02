@@ -1,6 +1,6 @@
 # D-059 — Either side completes a verification from inbound, so one side can drive it
 
-**Date:** 2026-09-18 · **Status:** active
+**Date:** 2026-09-18 · **Status:** active · **Areas:** pairing
 
 **Decision.** A peer whose own session holds the other's revealed nonce has what
 the two words need and stops driving. Only one side has to run the exchange, and both

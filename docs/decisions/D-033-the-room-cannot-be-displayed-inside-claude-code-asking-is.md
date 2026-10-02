@@ -1,6 +1,6 @@
 # D-033 — The room cannot be displayed inside Claude Code; asking is the free affordance
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** view, capture
 
 **Decision.** Nothing shows the room inside a Claude Code session. Inside a session, a user
 learns what the room holds by asking their own Claude, which answers from the context

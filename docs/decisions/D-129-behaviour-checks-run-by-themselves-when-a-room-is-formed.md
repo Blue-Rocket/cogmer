@@ -1,6 +1,6 @@
 # D-129 — Behaviour checks run by themselves when a room is formed
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** behaviors
 
 **Decision.** The session tier of the behaviour checks runs by itself the first time a
 room is formed under a Claude Code version this machine has not checked.

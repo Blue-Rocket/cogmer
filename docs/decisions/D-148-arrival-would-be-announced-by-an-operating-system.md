@@ -1,6 +1,6 @@
 # D-148 — Arrival would be announced by an operating-system notification
 
-**Date:** 2026-09-17 · **Status:** not built
+**Date:** 2026-09-17 · **Status:** not built · **Areas:** view
 
 **Decision.** If a colleague's arrival is announced, the daemon raises an
 operating-system notification itself, touching no Claude Code surface.

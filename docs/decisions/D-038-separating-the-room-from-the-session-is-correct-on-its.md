@@ -1,6 +1,6 @@
 # D-038 — Separating the room from the session is correct on its merits
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** rooms, view
 
 **Decision.** The room is shown outside the session, in a view of its own, and would be
 even if Claude Code could show it inside one.

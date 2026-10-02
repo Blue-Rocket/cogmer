@@ -1,6 +1,6 @@
 # D-009 — A failed behavior check never blocks the room
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** behaviors
 
 **Decision.** A failed behaviour check reports which behaviour changed and what that
 breaks, and the room forms anyway.

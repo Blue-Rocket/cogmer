@@ -1,6 +1,6 @@
 # D-024 — Admission is a guest list
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** admission
 
 **Decision.** Admission to a room is an entry on the host's guest list for a peer the
 host knows, proved by possession of the key the host holds for it. The room's name

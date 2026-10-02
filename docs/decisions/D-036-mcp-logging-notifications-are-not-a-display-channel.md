@@ -1,6 +1,6 @@
 # D-036 — MCP logging notifications are not a display channel
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** view
 
 **Decision.** cogmer shows nothing to a user through MCP. MCP carries capability to the
 model, and nothing to a person.

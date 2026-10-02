@@ -479,11 +479,10 @@ numbers for ten areas, and nothing checks that a row is complete or that it cite
 active entries: a row named D-047 after D-055 withdrew it (read on 2026-10-01). Bullets
 elsewhere in the file cite decisions too.
 
-The fix is to give each decision file, as it is rewritten, an **Areas:** list drawn from a
-fixed vocabulary on its Date line, with a test that requires one for every rewritten
-active entry. A decisions skill, whose one-line description loads each session, would find
-entries by area with `rg`. `CLAUDE.md` would then lose the table and its decision numbers
-and keep the instruction to use the skill.
+A decisions skill, whose one-line description loads each session, would find entries by
+the areas on their date lines with `rg`. `CLAUDE.md` would then lose the table and its
+decision numbers and keep the instruction to use the skill. It waits until every entry
+has areas, since the skill would otherwise miss the entries not yet rewritten.
 
 **Nothing vets a proposed design against the documents it could conflict with.** The
 only process is `CLAUDE.md`'s instruction to read the decisions that govern an area

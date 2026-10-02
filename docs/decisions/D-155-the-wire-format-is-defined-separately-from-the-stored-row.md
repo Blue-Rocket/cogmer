@@ -1,6 +1,6 @@
 # D-155 — The wire format is defined separately from the stored row
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** sync
 
 **Decision.** The wire format is its own type, in `cmd/cogmer/protocol.go`, with explicit
 conversion to and from the stored row.

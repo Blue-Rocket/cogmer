@@ -1,6 +1,6 @@
 # D-142 — Identities are exchanged through pairing strings, with no directory
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** identity, pairing
 
 **Decision.** A peer learns another's identity from the pairing string that other peer
 sends, and there is no directory of peers to consult.

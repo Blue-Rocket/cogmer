@@ -1,6 +1,6 @@
 # D-137 — A room's name is never a credential
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** rooms, trust
 
 **Decision.** Nothing admits a peer to a room on the strength of the room's name.
 

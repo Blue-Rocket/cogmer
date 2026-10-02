@@ -1,6 +1,6 @@
 # D-035 — A remote event never makes an interactive session take a turn
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** capture, trust
 
 **Decision.** A session a user is working in takes a turn when that user asks it to, and
 at no other time. A remote event never prompts, resumes or otherwise drives an

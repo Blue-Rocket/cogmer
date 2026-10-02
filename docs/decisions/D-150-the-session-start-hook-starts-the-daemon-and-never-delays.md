@@ -1,6 +1,6 @@
 # D-150 — The session-start hook starts the daemon, and never delays the session
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** daemon
 
 **Decision.** The session-start hook starts the daemon when it is not running. Starting it
 never delays the session, finding it running is the ordinary case, and a failure

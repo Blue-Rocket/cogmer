@@ -1,6 +1,6 @@
 # D-135 — A room's name is unique only among one peer's rooms
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** rooms
 
 **Decision.** A peer keeps the names of its own live rooms distinct, generating another
 on a collision, and no name is unique beyond one peer.

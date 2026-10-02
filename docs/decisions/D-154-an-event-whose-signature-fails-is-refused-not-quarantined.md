@@ -1,6 +1,6 @@
 # D-154 — An event whose signature fails is refused, not quarantined
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** sync, identity
 
 **Decision.** An event whose signature does not verify is refused and logged, and never
 kept aside.

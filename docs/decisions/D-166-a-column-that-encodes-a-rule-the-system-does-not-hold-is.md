@@ -1,6 +1,6 @@
 # D-166 — A column that encodes a rule the system does not hold is dropped by migration
 
-**Date:** 2026-09-18 · **Status:** active
+**Date:** 2026-09-18 · **Status:** active · **Areas:** storage, rooms
 
 **Decision.** A column that encodes a rule the system does not hold is dropped, not left
 in place. `migrateMembership` drops `session_rooms.injected` from every store that has

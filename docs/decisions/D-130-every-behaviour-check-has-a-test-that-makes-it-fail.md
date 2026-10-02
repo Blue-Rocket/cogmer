@@ -1,6 +1,6 @@
 # D-130 — Every behaviour check has a test that makes it fail
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** behaviors
 
 **Decision.** Each behaviour check has a test showing that it fails on the change it is
 meant to catch.

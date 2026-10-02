@@ -1,6 +1,6 @@
 # D-001 — Go, not TypeScript/Node or Python
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** project, release
 
 **Decision.** cogmer is written in Go, with `modernc.org/sqlite`, a SQLite written in
 Go, so that nothing needs cgo.

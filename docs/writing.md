@@ -252,7 +252,7 @@ W-84 says how a decision relates to the specification.
 ```markdown
 # D-NNN — <what was decided, as a statement>
 
-**Date:** YYYY-MM-DD · **Status:** active | not built
+**Date:** YYYY-MM-DD · **Status:** active | not built · **Areas:** <one or more>
 
 **Decision.** <One to three sentences saying what we do. The first sentence must
 make sense on its own.>
@@ -273,7 +273,8 @@ checks.>
 ```
 
 W-30. An entry follows this template: a **Date:** line whose status is "active" or
-"not built", then **Decision.**, **Support.** with a list under it, an optional
+"not built" and which ends with **Areas:**, a comma-separated list of one or more areas
+from the table in `docs/decisions/README.md`, then **Decision.**, **Support.** with a list under it, an optional
 **Rejected.**, an optional **Limits.** and an optional **Revisit when**, in that order.
 Omit an optional field when it has nothing to hold.
 
@@ -589,7 +590,8 @@ each behaviour's `Reliance` starts "If this changes".
 that is not in `decisionsNotRewritten`, reading the log as Markdown so that a field
 name inside code does not count as the field. The list holds the decisions written
 before this guide that are not yet rewritten, and it only shrinks: a listed entry that
-passes fails the test, so that it comes off the list in the commit that rewrote it. It checks W-30, W-33, W-34 and W-41 on each; for W-41 it
+passes fails the test, so that it comes off the list in the commit that rewrote it. It checks W-30, W-33, W-34 and W-41 on each, reading each area against the table in
+`docs/decisions/README.md`; for W-41 it
 rejects a mention of `open.md` or `docs/work/`, or a link to a ClickUp, GitHub issue,
 Jira or Linear task. Every tombstone,
 whatever its number, must hold only its status line. A withdrawn entry must name the

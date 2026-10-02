@@ -1,6 +1,6 @@
 # D-014 — Derive delivery state from transcript evidence, not from recorded intent
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** capture
 
 **Decision.** A colleague's turn counts as delivered to a session only when the daemon
 finds the injected block in that session's transcript, matched by a SHA-256 hash of

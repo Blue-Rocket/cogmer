@@ -1,6 +1,6 @@
 # D-054 — Verification gates synchronization and injection, not just a marker
 
-**Date:** 2026-09-18 · **Status:** active
+**Date:** 2026-09-18 · **Status:** active · **Areas:** pairing, sync, capture, trust
 
 **Decision.** An unverified peer's events are not served, not stored and not injected,
 and they are held and not discarded. Serving refuses a sync request from an unverified

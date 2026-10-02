@@ -1,6 +1,6 @@
 # D-058 — Signature schemes are kept, never replaced
 
-**Date:** 2026-09-18 · **Status:** active
+**Date:** 2026-09-18 · **Status:** active · **Areas:** identity, sync
 
 **Decision.** An event records the scheme it was signed under and is verified under that
 scheme. A new scheme is a new function beside the old ones, and an old one is never

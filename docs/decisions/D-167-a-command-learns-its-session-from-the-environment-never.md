@@ -1,6 +1,6 @@
 # D-167 — A command learns its session from the environment, never from an argument
 
-**Date:** 2026-09-18 · **Status:** active
+**Date:** 2026-09-18 · **Status:** active · **Areas:** commands, rooms
 
 **Decision.** A session-scoped command reads its session from `CLAUDE_CODE_SESSION_ID` in
 its own environment, and a slash command passes no session id. Run at a terminal, where

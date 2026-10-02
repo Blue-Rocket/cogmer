@@ -1,6 +1,6 @@
 # D-152 — Events are signed at origin over length-prefixed fields
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** identity, sync
 
 **Decision.** Every event is signed by the peer that created it, over a length-prefixed
 encoding of its own fields with a leading purpose tag, and every receiver checks it

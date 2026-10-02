@@ -1,6 +1,6 @@
 # D-010 — The behavior registry is the source of truth; its documentation is generated
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** behaviors
 
 **Decision.** Each behaviour and its check live together in
 `cmd/cogmer/behaviors.go`, and `docs/relied-on-behaviors.md` is generated from them by

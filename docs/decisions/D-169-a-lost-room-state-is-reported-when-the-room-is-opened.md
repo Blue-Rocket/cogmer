@@ -1,6 +1,6 @@
 # D-169 — A lost room state is reported when the room is opened
 
-**Date:** 2026-09-18 · **Status:** active
+**Date:** 2026-09-18 · **Status:** active · **Areas:** sync, rooms
 
 **Decision.** When a room is opened, `reportLostState` compares the highest sequence the
 store holds for this peer with the highest this peer recorded as issued. If the room holds

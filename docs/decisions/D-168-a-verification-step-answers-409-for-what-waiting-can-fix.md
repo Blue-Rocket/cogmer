@@ -1,6 +1,6 @@
 # D-168 — A verification step answers 409 for what waiting can fix and 401 for what it cannot
 
-**Date:** 2026-09-18 · **Status:** active
+**Date:** 2026-09-18 · **Status:** active · **Areas:** pairing
 
 **Decision.** A verification step answers 409 when this daemon does not know the caller
 yet or is not expecting a verification, and 401 only when a signature does not verify.

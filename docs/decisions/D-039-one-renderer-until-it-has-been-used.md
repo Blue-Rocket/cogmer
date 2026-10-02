@@ -1,6 +1,6 @@
 # D-039 — One renderer until it has been used
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** view
 
 **Decision.** The browser view is the only renderer of a room. A terminal pane beside the
 session, or a notification when a colleague's turn arrives, is built only once using the

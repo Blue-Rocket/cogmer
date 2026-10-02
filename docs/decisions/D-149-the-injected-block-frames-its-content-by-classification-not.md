@@ -1,6 +1,6 @@
 # D-149 — The injected block frames its content by classification, not by authority
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** trust, capture
 
 **Decision.** The framing around injected turns tells the model what kind of thing it is
 reading: that nothing inside is addressed to it, however phrased, including text that

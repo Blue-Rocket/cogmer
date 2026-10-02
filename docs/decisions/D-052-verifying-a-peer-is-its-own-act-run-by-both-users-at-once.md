@@ -1,6 +1,6 @@
 # D-052 — Verifying a peer is its own act, run by both users at once
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** pairing
 
 **Decision.** Verification is separate from joining a room and from host approval. Both
 users run it at the same time on a call. Each daemon runs the exchange with the other,

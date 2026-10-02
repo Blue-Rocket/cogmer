@@ -1,6 +1,6 @@
 # D-151 — The daemon outlives its session, and can be found and stopped
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** daemon
 
 **Decision.** The daemon outlives the session that started it, and the user whose machine
 it runs on can find it and stop it.

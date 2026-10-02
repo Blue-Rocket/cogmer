@@ -1,6 +1,6 @@
 # D-146 — Code that handles peer traffic cannot start a process
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** trust, transport
 
 **Decision.** A test fails if a file that handles peer traffic imports `os/exec` or
 `syscall`, and another fails if `sync.go` or `daemon.go` calls `RunProbe`,

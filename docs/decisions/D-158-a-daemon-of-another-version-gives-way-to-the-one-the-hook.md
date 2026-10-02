@@ -1,6 +1,6 @@
 # D-158 — A daemon of another version gives way to the one the hook starts
 
-**Date:** 2026-10-01 · **Status:** active
+**Date:** 2026-10-01 · **Status:** active · **Areas:** daemon, release
 
 **Decision.** When the daemon answering on this installation's hooks address
 reports a version other than the binary's, the session-start hook starts the

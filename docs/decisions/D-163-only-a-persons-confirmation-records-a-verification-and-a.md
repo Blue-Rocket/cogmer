@@ -1,6 +1,6 @@
 # D-163 — Only a person's confirmation records a verification, and a mismatch records nothing
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** pairing
 
 **Decision.** `MarkVerified` is reached only from a user's confirmation that the other
 user read out the same words, never from the protocol. A mismatch records nothing, and no

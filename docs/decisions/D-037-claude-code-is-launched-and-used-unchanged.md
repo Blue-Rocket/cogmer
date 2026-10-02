@@ -1,6 +1,6 @@
 # D-037 — Claude Code is launched and used unchanged
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** hosts, project
 
 **Decision.** A user starts and uses Claude Code the same way they would without cogmer,
 and installs only what Claude Code loads as an extension: hooks, skills, MCP servers and

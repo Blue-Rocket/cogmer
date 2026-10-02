@@ -1,6 +1,6 @@
 # D-056 — A session's room is fixed when its first hook fires, and never changes
 
-**Date:** 2026-09-18 · **Status:** active
+**Date:** 2026-09-18 · **Status:** active · **Areas:** rooms
 
 **Decision.** A session binds to a room at first sight, and the binding does not change. No exception
 exists for a session that has received nothing, and nobody is asked at binding, since

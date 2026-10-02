@@ -1,6 +1,6 @@
 # D-030 — Two listeners: hooks on loopback, peer sync separately
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** daemon, transport, trust
 
 **Decision.** Hooks and the local view are served on one listener, `COGMER_ADDR`, which
 refuses to bind anything but loopback. Synchronization with peers is served on a separate

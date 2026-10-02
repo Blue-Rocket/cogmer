@@ -1,6 +1,6 @@
 # D-055 — A peer is verified in one way, the two-word comparison
 
-**Date:** 2026-09-18 · **Status:** active
+**Date:** 2026-09-18 · **Status:** active · **Areas:** pairing
 
 **Decision.** The live two-word comparison is the only way to verify a peer, with no
 whole-key comparison beside it. `Fingerprint` renders an identifier for a person to

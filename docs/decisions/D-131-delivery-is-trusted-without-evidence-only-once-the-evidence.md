@@ -1,6 +1,6 @@
 # D-131 — Delivery is trusted without evidence only once the evidence is known broken
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** capture, behaviors
 
 **Decision.** When a completed turn's transcript holds no injected block, the pending
 turns remain pending and are offered again at the next prompt. The daemon counts them as

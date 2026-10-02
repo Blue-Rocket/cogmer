@@ -1,6 +1,6 @@
 # D-022 — A room begins when someone is invited into it, and never earlier
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** rooms, admission
 
 **Decision.** A room's identifier and name are generated when a user creates the room,
 and creating a room is the act of inviting someone into it. The creating session

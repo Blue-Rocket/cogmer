@@ -1,6 +1,6 @@
 # D-023 — A peer identifier must be safe to know
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** identity, pairing
 
 **Decision.** A peer's identifier is its public key, so knowing it grants nothing. An
 identifier is safe to know only because signatures are checked: every event is signed by

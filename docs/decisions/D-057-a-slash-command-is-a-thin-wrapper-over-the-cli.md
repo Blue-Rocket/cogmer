@@ -1,6 +1,6 @@
 # D-057 — A slash command is a thin wrapper over the CLI
 
-**Date:** 2026-09-18 · **Status:** active
+**Date:** 2026-09-18 · **Status:** active · **Areas:** commands
 
 **Decision.** A slash command shells out to the corresponding CLI command. There is one
 implementation with two entry points, and the CLI is the surface that can be tested

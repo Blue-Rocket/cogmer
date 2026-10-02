@@ -1,6 +1,6 @@
 # D-162 — A daemon takes part in a verification only while its own user has asked for one
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** pairing, trust
 
 **Decision.** A daemon answers a peer's verification step only when it holds a session its
 own user opened, and otherwise answers 409 and displays nothing to anyone. The caller

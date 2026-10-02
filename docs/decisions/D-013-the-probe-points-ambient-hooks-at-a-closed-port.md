@@ -1,6 +1,6 @@
 # D-013 — The probe points ambient hooks at a closed port
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** behaviors
 
 **Decision.** The probe runs its Claude session with `COGMER_ADDR` set to a closed port,
 so that any `cogmer` hook from the user's own settings fails open inside the probe and

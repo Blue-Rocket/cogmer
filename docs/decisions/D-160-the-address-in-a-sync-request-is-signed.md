@@ -1,6 +1,6 @@
 # D-160 — The address in a sync request is signed
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** sync, transport, identity
 
 **Decision.** A sync request carries the address its sender listens on, and the
 signature covers that address along with the request's other signed fields.

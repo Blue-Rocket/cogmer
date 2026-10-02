@@ -1,6 +1,6 @@
 # D-143 — Admission is proved by signing a fresh challenge
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** admission, identity, trust
 
 **Decision.** A peer that joins presents its identifier, the host finds it among the
 room's guests and issues a fresh, unpredictable challenge, and the peer signs it with

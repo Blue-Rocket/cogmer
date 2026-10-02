@@ -1,6 +1,6 @@
 # D-136 — A room's name never changes
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** rooms
 
 **Decision.** A room's name is fixed for the life of the room.
 

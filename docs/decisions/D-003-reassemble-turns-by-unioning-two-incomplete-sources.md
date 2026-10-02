@@ -1,6 +1,6 @@
 # D-003 — Reassemble turns by unioning two incomplete sources
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** capture
 
 **Decision.** A completed turn is reassembled in `ReassembleLastTurn` from the union
 of the transcript, read when the turn completes, and the Stop hook's

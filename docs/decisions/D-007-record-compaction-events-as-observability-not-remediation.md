@@ -1,6 +1,6 @@
 # D-007 — Record `COMPACTION` events as observability, not remediation
 
-**Date:** 2026-09-16 · **Status:** not built
+**Date:** 2026-09-16 · **Status:** not built · **Areas:** capture, behaviors
 
 **Decision.** The daemon records an event when a session is compacted, so that a room's
 history shows when compaction happened. The event changes nothing about delivery.

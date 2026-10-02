@@ -1,6 +1,6 @@
 # D-049 — The sync request addresses a room by id, never by name
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** sync, rooms
 
 **Decision.** A sync request carries `roomId` in both directions, and an identifier a
 peer supplies resolves through `RoomByID`. `FindRoom` accepts a name, which suits a

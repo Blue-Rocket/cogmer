@@ -1,6 +1,6 @@
 # D-060 — `Store.Append` takes the sequence it is given and never derives one
 
-**Date:** 2026-09-18 · **Status:** active
+**Date:** 2026-09-18 · **Status:** active · **Areas:** sync, storage
 
 **Decision.** `Store.Append` takes the sequence number as an argument and derives none.
 The number comes from `Membership.ReserveSequence`, which records it in `membership.db`

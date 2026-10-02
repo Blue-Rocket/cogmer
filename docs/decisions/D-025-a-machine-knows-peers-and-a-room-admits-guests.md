@@ -1,6 +1,6 @@
 # D-025 — A machine knows peers, and a room admits guests
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** admission, pairing
 
 **Decision.** There are two lists at two scopes. A machine's known peers are the
 identifiers it has learned and the names it knows them by, durable and outlasting every

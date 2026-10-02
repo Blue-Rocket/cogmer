@@ -1,6 +1,6 @@
 # D-026 — There is no join token at all
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** admission
 
 **Decision.** There is no join token, code or invitation secret, and nothing a user can
 hold admits them to a room. Admission is an entry on a guest list, proved by possession

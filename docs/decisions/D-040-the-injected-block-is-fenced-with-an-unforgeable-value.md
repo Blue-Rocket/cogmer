@@ -1,6 +1,6 @@
 # D-040 — The injected block is fenced with an unforgeable value
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** trust, capture
 
 **Decision.** Each injected block is delimited by a value generated for that injection,
 which the content cannot know. Any copy of the value in the content is removed, the

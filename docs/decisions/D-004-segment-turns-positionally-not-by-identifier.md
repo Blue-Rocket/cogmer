@@ -1,6 +1,6 @@
 # D-004 — Segment turns positionally, not by identifier
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** capture
 
 **Decision.** A turn's assistant records are every assistant record after the last user
 record that carries a `promptSource`.

@@ -1,6 +1,6 @@
 # D-042 — Peer identity is an Ed25519 key pair
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** identity
 
 **Decision.** A peer's identifier is its Ed25519 public key, written `ed25519:<base64url>`,
 not a fingerprint of it.

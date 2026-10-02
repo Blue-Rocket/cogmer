@@ -1,6 +1,6 @@
 # D-127 — A change to a stored table is applied to existing stores when they open
 
-**Date:** 2026-09-24 · **Status:** active
+**Date:** 2026-09-24 · **Status:** active · **Areas:** storage
 
 **Decision.** A column or constraint added to a stored table is also applied by the
 migration its store runs when it opens: `migrate()` for a room store and

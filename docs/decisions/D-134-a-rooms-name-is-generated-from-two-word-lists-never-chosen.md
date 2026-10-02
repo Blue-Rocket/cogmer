@@ -1,6 +1,6 @@
 # D-134 — A room's name is generated from two word lists, never chosen
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** rooms
 
 **Decision.** A room's name is generated from two curated word lists, one of weather or
 sky and one of landscape, such as misty-canyon, and nobody chooses it.

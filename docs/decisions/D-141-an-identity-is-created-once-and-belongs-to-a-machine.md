@@ -1,6 +1,6 @@
 # D-141 — An identity is created once, and belongs to a machine
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** identity
 
 **Decision.** A peer identity is created once, on a machine's first use of cogmer, and
 persists, outliving every room, session and invitation. It belongs to a machine, not a

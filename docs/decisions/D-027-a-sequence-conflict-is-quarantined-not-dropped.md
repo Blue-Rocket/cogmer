@@ -1,6 +1,6 @@
 # D-027 — A sequence conflict is quarantined, not dropped
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** sync
 
 **Decision.** Each event received is classified as stored, duplicate or conflict, where a
 conflict is the same peer and sequence number arriving with a different event

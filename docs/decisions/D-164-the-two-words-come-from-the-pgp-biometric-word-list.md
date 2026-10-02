@@ -1,6 +1,6 @@
 # D-164 — The two words come from the PGP biometric word list, alternating by position
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** pairing
 
 **Decision.** The first word comes from one list of 256 words and the second from
 another, both from the PGP biometric word list, and neither list is the peer-name or the

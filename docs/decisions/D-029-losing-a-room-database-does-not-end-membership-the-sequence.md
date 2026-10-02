@@ -1,6 +1,6 @@
 # D-029 — Losing a room database does not end membership; the sequence lives with the identity
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** sync, rooms
 
 **Decision.** A peer that loses a room's database keeps its membership. Its highest issued
 sequence for each room is stored outside the room's database, in the membership index,

@@ -1,6 +1,6 @@
 # D-133 — Presence is not membership
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** rooms, view
 
 **Decision.** Membership is held by a session's ID, and ends only when the session
 explicitly leaves or the room closes. Presence says whether a member can be reached now,

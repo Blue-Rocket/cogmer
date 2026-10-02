@@ -1,6 +1,6 @@
 # D-016 — A session is in one room at most, and never joins a second
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** rooms
 
 **Decision.** A Claude Code session is a member of one room at most, and a session that
 has been in one room never joins a second. It may leave its room and rejoin it.

@@ -1,6 +1,6 @@
 # D-145 — The peer listener may be exposed, and says so when it is
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** transport, trust
 
 **Decision.** The peer listener defaults to loopback. It may be bound where other machines
 can reach it, and the daemon then notes at start that it is reachable.

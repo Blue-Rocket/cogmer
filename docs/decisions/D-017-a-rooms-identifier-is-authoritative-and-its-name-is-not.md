@@ -1,6 +1,6 @@
 # D-017 — A room's identifier is authoritative, and its name is not
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** rooms, sync
 
 **Decision.** Every room has a UUID, globally unique, never reused and never changed,
 which every event carries and on which replication, deduplication and storage all key.

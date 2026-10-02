@@ -1,6 +1,6 @@
 # D-044 — Sync requests are signed; authentication is not admission
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** sync, identity, admission
 
 **Decision.** Every sync request carries the caller's identifier, a timestamp and a nonce,
 signed with a purpose tag. The receiver checks the signature against the key the

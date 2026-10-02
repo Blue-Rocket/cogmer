@@ -1,6 +1,6 @@
 # D-021 — Peer names are word pairs derived from the identity, never chosen
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** identity
 
 **Decision.** A peer's name, an adjective and an animal such as quiet-otter, is derived
 by `PeerName()` from a hash of the peer's identifier when the identity is loaded. It is

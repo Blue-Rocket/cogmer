@@ -1,6 +1,6 @@
 # D-144 — A refused peer's request goes to a host who is present
 
-**Date:** 2026-09-16 · **Status:** not built
+**Date:** 2026-09-16 · **Status:** not built · **Areas:** admission, pairing
 
 **Decision.** A peer that is not a guest is refused, and the host is told that it asked,
 with the identifier and derived name it presented. The host may admit it, by its

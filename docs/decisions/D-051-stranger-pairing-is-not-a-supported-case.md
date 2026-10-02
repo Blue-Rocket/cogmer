@@ -1,6 +1,6 @@
 # D-051 — Stranger pairing is not a supported case
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** pairing, admission
 
 **Decision.** Pairing with someone unknown is not a design target. No affordance
 presents it as intended, and no claim is made that verification protects it.

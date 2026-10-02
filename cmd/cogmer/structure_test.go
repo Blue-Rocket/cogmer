@@ -30,7 +30,7 @@ var (
 	// allowed outside an open.md item's opening sentence.
 	decisionFields = map[string]bool{
 		"Date:": true, "Status:": true, "Decision.": true, "Support.": true,
-		"Rejected.": true, "Limits.": true, "Revisit when": true,
+		"Areas:": true, "Rejected.": true, "Limits.": true, "Revisit when": true,
 	}
 	workFields = map[string]bool{"Run:": true, "Result:": true}
 
@@ -48,7 +48,7 @@ var (
 	// The rule it names is assembled, so that the rule index check does not read it
 	// as a rule this test enforces.
 	removedPlan    = regexp.MustCompile(`^\*\*Status:\*\* removed \d{4}-\d{2}-\d{2}:\s+a\s+plan\s+for\s+the\s+work,\s+not\s+a\s+decision\s+about\s+the\s+system\s+\(` + "W-" + `53\)\.$`)
-	decisionStatus = regexp.MustCompile(`^\*\*Date:\*\* \d{4}-\d{2}-\d{2} · \*\*Status:\*\* (active|not built)$`)
+	decisionStatus = regexp.MustCompile(`^\*\*Date:\*\* \d{4}-\d{2}-\d{2} · \*\*Status:\*\* (?:active|not built)(?: · \*\*Areas:\*\* ([a-z-]+(?:, [a-z-]+)*))?$`)
 	isoDate        = regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}\b`)
 	// What a pattern may not name: this project's decisions, sections of its
 	// specification, its behaviours, or the project itself (W-56).
@@ -345,7 +345,7 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 // docs/writing.md, and every tombstone, whatever its number, keeps only its
 // status line. A withdrawn one names the decision whose **Rejected.** says why.
 func TestLaterDecisionsFollowTemplate(t *testing.T) {
-	for _, p := range decisionProblems(readDecisionLog(t), guideHeadings) {
+	for _, p := range decisionProblems(readDecisionLog(t), guideHeadings, decisionAreas(t)) {
 		t.Error(p)
 	}
 }
@@ -375,7 +375,7 @@ var ruleOpening = regexp.MustCompile(`^(W-\d{2})\. `)
 // block or quoted in a sentence is not mistaken for the field (docs/writing.md,
 // "Enforcement"). An entry runs from its heading to the
 // next heading of level 2 or above.
-func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool)) []string {
+func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool), areas map[string]bool) []string {
 	src := []byte(log)
 	root := goldmark.New(goldmark.WithExtensions(extension.GFM)).Parser().Parse(text.NewReader(src))
 	var problems []string
@@ -458,6 +458,14 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 
 		if len(e.body) == 0 || !decisionStatus.MatchString(nodeSource(e.body[0], src)) {
 			report(e.id, "has no **Date:** line whose status is active or not built (W-30)")
+		} else if m := decisionStatus.FindStringSubmatch(nodeSource(e.body[0], src)); m[1] == "" {
+			report(e.id, "has no **Areas:** on its **Date:** line (W-30)")
+		} else {
+			for _, a := range strings.Split(m[1], ", ") {
+				if !areas[a] {
+					report(e.id, "names the area %q, which docs/decisions/README.md does not list (W-30)", a)
+				}
+			}
 		}
 		next := 0
 		for i, c := range e.body {
@@ -632,7 +640,8 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 		}
 		return nil, false
 	}
-	date := "**Date:** 2026-09-23 · **Status:** active\n\n"
+	date := "**Date:** 2026-09-23 · **Status:** active · **Areas:** rooms, sync\n\n"
+	areas := map[string]bool{"rooms": true, "sync": true}
 	support := "**Support.**\n- A fact. `84a0751:docs/x-findings.md`, \"Why it went\".\n- Another, over\n  two lines. D-001 (Go).\n\n"
 	complete := date + "**Decision.** x\n\n" + support + "**Rejected.** y\n\n**Revisit when** z.\n"
 	tombstone := "**Status:** withdrawn 2026-09-20. Replaced by D-126\n(words).\n"
@@ -647,6 +656,8 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 		{"rewritten but still listed", "# D-123 — T\n\n" + complete, []string{"D-123 now follows the decision template"}},
 		{"complete", "# D-124 — T\n\n" + complete, nil},
 		{"complete, with Limits", "# D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Some.\n\n**Revisit when**", 1), nil},
+		{"no Areas", "# D-124 — T\n\n" + strings.Replace(complete, " · **Areas:** rooms, sync", "", 1), []string{"D-124 has no **Areas:** on its **Date:** line"}},
+		{"an area the README does not list", "# D-124 — T\n\n" + strings.Replace(complete, "rooms, sync", "rooms, elsewhere", 1), []string{"D-124 names the area \"elsewhere\""}},
 		{"not built", "# D-124 — T\n\n" + strings.Replace(complete, "active", "not built", 1), nil},
 		{"no Revisit when", "# D-124 — T\n\n" + strings.Replace(complete, "\n\n**Revisit when** z.", "", 1), nil},
 		{"no Rejected", "# D-124 — T\n\n" + strings.Replace(complete, "**Rejected.** y\n\n", "", 1), nil},
@@ -679,7 +690,7 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 		{"moved with more", "# D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, \"Enforcement\".\n\nMore.\n", []string{"D-124 is a tombstone and has more"}},
 	}
 	for _, c := range cases {
-		got := decisionProblems("# Log\n\n"+c.entry, headings)
+		got := decisionProblems("# Log\n\n"+c.entry, headings, areas)
 		if len(got) != len(c.want) {
 			t.Errorf("%s: got %q, want %d problems", c.name, got, len(c.want))
 			continue

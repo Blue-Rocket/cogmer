@@ -1,6 +1,6 @@
 # D-006 — Compaction resets no delivery state and re-injects nothing
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** capture
 
 **Decision.** A session's delivery state is left as it is at a compaction, and nothing
 is injected again afterwards.

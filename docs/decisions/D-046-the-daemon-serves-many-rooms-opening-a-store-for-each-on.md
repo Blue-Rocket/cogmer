@@ -1,6 +1,6 @@
 # D-046 — The daemon serves many rooms, opening a store for each on demand
 
-**Date:** 2026-09-17 · **Status:** active
+**Date:** 2026-09-17 · **Status:** active · **Areas:** rooms, daemon
 
 **Decision.** The daemon is the machine's local service and is not a room. It opens a
 store for a room on demand, and starting the process creates no room.

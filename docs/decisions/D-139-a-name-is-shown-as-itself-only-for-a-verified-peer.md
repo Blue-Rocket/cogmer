@@ -1,6 +1,6 @@
 # D-139 — A name is shown as itself only for a verified peer
 
-**Date:** 2026-09-16 · **Status:** active
+**Date:** 2026-09-16 · **Status:** active · **Areas:** identity, view
 
 **Decision.** A peer's name is shown as itself only when its identity has been verified.
 Any other peer is shown as unverified, with its identifier, and an unverified speaker is
