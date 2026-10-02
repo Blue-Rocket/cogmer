@@ -33,7 +33,7 @@ rather than as a control.
 **Consistent with how identity is displayed elsewhere.** The view leaves the derived
 name off your own turns, where it identifies nothing you did not know, since it
 exists to identify other peers (D-021, peer names are derived from the identity), and
-D-099 prefers the label because a word pair means nothing to a person weeks later.
+D-094 (the name you chose leads in the view, with the derived name beside it) prefers the label because a word pair means nothing to a person weeks later.
 A session discriminator is the same kind of thing: an identifier the machine can
 derive and the reader cannot use.
 

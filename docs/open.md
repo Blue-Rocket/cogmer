@@ -601,14 +601,12 @@ to split, adding 78 entries rather than 86:
 The 146 citations that mean something other than an entry's first decision have not
 been recounted.
 
-**Six citations in `docs/decisions/` credit an entry with something it does not
+**Five citations in `docs/decisions/` credit an entry with something it does not
 hold.** Each resolves, so the citation test passes, but the source says something
 else. "D-016 fixes that at the first prompt" describes what D-056 (a session's room
 is fixed at first sight) decided. D-017's Context says "D-015 gave rooms a generated
 id plus a human-chosen label", though D-015 holds no label. "The invitation format
-from D-017" names a format D-017 does not hold. "D-099 prefers
-the label because a word pair means nothing to a person weeks later" gives a reason
-D-094 holds. "`common.sh` and D-107 both attribute to §3.1" is untrue of D-107,
+from D-017" names a format D-017 does not hold.  "`common.sh` and D-107 both attribute to §3.1" is untrue of D-107,
 which cites no § section. D-110 calls the thinking-block exclusion "§3.5's", but
 §15 (capturing Claude responses) holds it. These are fixed when the entries that hold
 them are rewritten.
