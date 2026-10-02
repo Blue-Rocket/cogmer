@@ -292,8 +292,8 @@ const downRepeat = 10 * time.Minute
 // fact worth seeing, not an absence.
 //
 // It reports every address this daemon would try, not only those named in the
-// environment -- peers learned by pairing or by joining a room were invisible here
-// until D-061, which is most of them.
+// environment, because peers learned by pairing or by joining a room are most of
+// them.
 func (d *Daemon) peerStatus() []uiPeer {
 	targets := d.syncTargets()
 	d.peerMu.Lock()

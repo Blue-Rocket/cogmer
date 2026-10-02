@@ -29,7 +29,8 @@ yet defensible, and names which part is missing.
 **Applied to what exists**, which is what makes this operative rather than
 aspirational.
 
-- **The DERP relay.** *Traces* — D-062 evaluated it, and Phase 13's question
+- **The DERP relay.** *Traces* — D-062, as
+  `f288913:docs/decisions/D-062-tailcat-evaluated-for-phase-15-a-good-fit-adopted-behind-an.md` held it, evaluated it, and Phase 13's question
   asks openly whether depending on a relay nobody here operates is acceptable.
   *Benefits the person* — two people behind strict NAT cannot reach each other
   otherwise, so the alternative is not a purer system but no collaboration. *Not

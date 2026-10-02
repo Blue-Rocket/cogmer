@@ -17,7 +17,7 @@ import (
 // §4 calls an endpoint a bootstrap hint that is opaque to the protocol: whatever
 // the transport in use can reach. The address a daemon binds and the address a peer
 // can reach it at are the same only when nothing sits between two machines, which
-// for two people working from home is never (D-063). An endpoint that is the bound
+// for two people working from home is never (D-068). An endpoint that is the bound
 // address advertises the host's own 127.0.0.1, and the other peer then retries an
 // address it can never reach.
 //

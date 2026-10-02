@@ -23,7 +23,8 @@ addressing.
 **The arithmetic.** Five targets at 11 MB stripped is 56 MB of binaries. Every
 install would download all of them to obtain the one it can run, because four fifths
 are for platforms that machine is not — against a plugin that is otherwise about
-100 KB of text. Tailcat would roughly double it (D-062).
+100 KB of text. Tailcat would roughly double it (D-062, as
+`f288913:docs/decisions/D-062-tailcat-evaluated-for-phase-15-a-good-fit-adopted-behind-an.md` held it).
 
 A git repository also keeps every version of every file forever, and binaries do not
 delta-compress, so ten releases would accumulate half a gigabyte of history. Whether

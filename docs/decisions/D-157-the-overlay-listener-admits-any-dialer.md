@@ -22,7 +22,7 @@ TLS pin and the signed request, as on every other transport.
   address. §12, and `peerCert` in `cmd/cogmer/peertls.go`.
 - The recorded peers are the one list that decides who is a peer, and a tunnel list
   keyed on a different key type would be a second that can disagree with it. D-062
-  (tailcat evaluated, and its `AllowedClients` not used).
+  (tailcat's own client allowlist is not used).
 - A listener admits a dialer it has never seen. `TestATunnelAdmitsADialerItHasNeverSeen`
   in `cmd/cogmer/tailcat_test.go`, which runs only with `COGMER_NETWORK_TESTS` set,
   because it needs the public relay.

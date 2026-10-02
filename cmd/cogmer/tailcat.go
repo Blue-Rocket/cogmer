@@ -22,7 +22,7 @@ import (
 // Two people working from home are behind two routers and neither can bind an
 // address the other can reach. An SSH tunnel works around it only by a person
 // performing NAT traversal by hand, which for a pair who pair daily is the product
-// failing at its first step (D-063).
+// failing at its first step (D-068).
 //
 // Tailcat is Tailscale's data plane -- WireGuard, hole punching, DERP -- with no
 // control plane, no account and no tailnet. A peer publishes an address, the other
@@ -35,7 +35,7 @@ import (
 // direct succeeds through consumer routers, and that is a question about latency
 // rather than correctness. For turns of about a kilobyte it is unlikely to matter.
 //
-// It sits UNDER everything and decides nothing (D-019, D-062). A tailcat
+// It sits UNDER everything and decides nothing (D-019, D-068). A tailcat
 // connection reaches the door. A signed request (D-044), the guest list (D-045)
 // and a person's verification (D-054) decide whether anyone comes in -- unchanged,
 // and applied to this connection exactly as to a TCP one, because both arrive at

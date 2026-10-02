@@ -1,45 +1,33 @@
 # D-065 — The daemon reads a range of wire versions, so upgrading is not a flag day
 
-**Date:** 2026-09-18 · **Status:** active (implemented) · **reconstructed 2026-09-21**
+**Date:** 2026-09-18 · **Status:** active · **Areas:** sync
 
-**This entry was never written**, for the same reason and in the same commit as
-D-064. Reconstructed from `protocol.go:19-27` and `sync.go:250-256`, which carry
-the reasoning nearly in full.
+**Decision.** A build declares the newest wire version it speaks, `wireVersion`, and the
+oldest it reads, `minWireVersion`, and accepts any version between. A peer outside the
+range is reported with which side is older and what to do about it, and a peer that sends
+no version is read as speaking version 1.
 
-**Context.** `wireVersion` names the protocol a build speaks. Comparing it for
-equality is the obvious implementation and makes every protocol change a flag day:
-both people must upgrade at the same moment or the room goes silent, and the
-failure names a version rather than saying what to do.
+**Support.**
+- A change that needs both users to upgrade at the same moment silences the room for
+  whoever upgrades last, and the failure names a version and not what to do.
+  `cmd/cogmer/protocol.go`, `minWireVersion`.
+- Accepting events of an unknown shape silently is how a field comes to mean two things,
+  so a peer outside the range is reported and its events are not read. `cmd/cogmer/sync.go`.
+- A peer that predates the field spoke version 1. `cmd/cogmer/protocol.go`, `speaks`.
+- A version on the wire is what lets the far end refuse a field it does not understand,
+  and the wire format is separate from the stored row so that a column added for local
+  bookkeeping cannot become protocol. D-155 (the wire format is defined separately from
+  the stored row).
 
-**Decision.** A build declares the newest version it speaks (`wireVersion`) and the
-oldest it can still read (`minWireVersion`); `speaks` accepts anything between.
-Today that is 2 and 1. A peer outside the range is reported rather than guessed at,
-because silently accepting unknown-shaped events is how a field comes to mean two
-things — and the error says which side is older and what to do about it.
+**Rejected.**
+- *Requiring both sides to speak the same version.* Every protocol change becomes a flag
+  day.
+- *No version on the wire.* Nothing is then refused, and an event of an unknown shape is
+  accepted as though understood.
 
-**Zero means one.** A peer predating the field spoke v1, so an absent version reads
-as 1 rather than as unknown.
+**Limits.** The floor rises only when an older version cannot be understood, which is a
+statement about the events on the wire and not about tidiness. Raising it to delete a
+branch silences the room for whoever upgrades last.
 
-**Why this stopped being optional at Phase 11.** A flag day is tolerable while one
-person builds both sides, because both sides upgrade when he says so. Phase 11
-shipped the plugin, which is the point at which the two sides belong to two people
-upgrading on their own schedules. The constraint did not change; the number of
-people did.
-
-**Why the floor moves rarely.** Raise `minWireVersion` only when an older version
-genuinely cannot be understood — a statement about the events on the wire, not
-about tidiness. Raising it to delete a branch is how the room goes silent for
-whoever upgrades last.
-
-**Rejected** — what the code rules out, not what was considered:
-
-- *Hard equality on the version.* The flag day above.
-- *No version on the wire at all.* Then there is nothing to refuse, and an
-  unknown-shaped event is accepted as though understood. D-155 (the wire format is
-  defined separately from the stored row) keeps the two structs separate precisely so a column added
-  for local bookkeeping cannot become protocol by accident; a version is what makes
-  that refusable at the far end.
-
-**Revisit when** a change cannot be expressed so that a v1 reader can skip it. The
-floor rises then, the range narrows, and whatever announces a release has to say
-so.
+**Revisit when** a change cannot be expressed so that a version 1 reader can skip it. The
+floor rises then, the range narrows, and whatever announces a release has to say so.

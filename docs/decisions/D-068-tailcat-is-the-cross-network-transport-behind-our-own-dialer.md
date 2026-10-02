@@ -3,7 +3,9 @@
 **Date:** 2026-09-18 · **Status:** active (implemented); **NAT-to-NAT still unproven**
 
 **Context.** Phase 15. Two people working from home are behind two routers and
-neither can bind an address the other can reach (D-063). Phases 2 and 5 substituted
+neither can bind an address the other can reach (D-063, as
+`f288913:docs/decisions/D-063-the-first-pair-is-remote-so-cross-network-reach-comes.md`
+held it). Phases 2 and 5 substituted
 an SSH tunnel, which is a person performing NAT traversal by hand.
 
 **What was verified, stated precisely because the first version of this was
@@ -57,7 +59,8 @@ because convergence is what it measured; its session attribution was degenerate 
 injection would not have worked. D-064's explicit binding is what surfaced it.
 
 **Costs, measured.** 566 dependencies against 40 before; 21 MB stripped against
-11 MB. Both are prices D-063 already accepted, and both are worth restating at the
+11 MB. Both are prices D-063, as
+`f288913:docs/decisions/D-063-the-first-pair-is-remote-so-cross-network-reach-comes.md` held it, already accepted, and both are worth restating at the
 point they were actually paid.
 
 **Confined to one file.** Tailcat promises no API stability, so `tailcat.go` holds
