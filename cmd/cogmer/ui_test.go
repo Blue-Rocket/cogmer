@@ -221,12 +221,12 @@ func TestTheViewCarriesTheNameYouChose(t *testing.T) {
 	if len(st.Events) != 2 {
 		t.Fatalf("want 2 events, got %d", len(st.Events))
 	}
-	if st.Events[0].Label != "alice" {
-		t.Errorf("label is %q, want alice; the name chosen at pairing did not reach the view", st.Events[0].Label)
+	if got := eventFrom(t, st, named).Label; got != "alice" {
+		t.Errorf("label is %q, want alice; the name chosen at pairing did not reach the view", got)
 	}
 	// A placeholder is not a choice, and offering it as one would be a lie.
-	if st.Events[1].Label != "" {
-		t.Errorf("an unnamed peer carries label %q; the derived placeholder was offered as a chosen name", st.Events[1].Label)
+	if got := eventFrom(t, st, unnamed).Label; got != "" {
+		t.Errorf("an unnamed peer carries label %q; the derived placeholder was offered as a chosen name", got)
 	}
 	// Both still carry the derived name, which is what a key change surfaces on.
 	for _, e := range st.Events {
@@ -266,10 +266,10 @@ func TestTheUnverifiedMarkerInTheViewIsAFact(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !st.Events[0].Verified {
+	if !eventFrom(t, st, verified).Verified {
 		t.Error("a verified peer's turn is still marked unverified, so the marker says nothing")
 	}
-	if st.Events[1].Verified {
+	if eventFrom(t, st, stranger).Verified {
 		t.Error("an unverified peer's turn is reported verified; the marker is the backstop for a failed filter")
 	}
 	// Your own turns need no marker and no anchor (D-021).
@@ -277,8 +277,22 @@ func TestTheUnverifiedMarkerInTheViewIsAFact(t *testing.T) {
 		t.Fatal(err)
 	}
 	st, _ = d.snapshot(room)
-	own := st.Events[len(st.Events)-1]
+	own := eventFrom(t, st, d.id.PeerID)
 	if !own.Mine || !own.Verified {
 		t.Error("your own turn is reported as somebody else's, or as unverified")
 	}
+}
+
+// eventFrom finds the event a peer wrote. Events are ordered by timestamp and then
+// by peer, and a test appends its events within one second under random peer
+// identifiers, so their position in a snapshot varies from run to run.
+func eventFrom(t *testing.T, st uiState, peerID string) uiEvent {
+	t.Helper()
+	for _, e := range st.Events {
+		if e.PeerID == peerID {
+			return e
+		}
+	}
+	t.Fatalf("the snapshot holds no event from %s", peerID)
+	return uiEvent{}
 }

@@ -12,34 +12,6 @@ nothing records it afterwards. The sections are in the order the work is done, a
 
 Being scratch is the point. Be untidy in it.
 
-## A test suite that fails only when something is wrong
-
-A failing test means something broke, so a maintainer reads a failure and does not rerun it.
-
-**`TestTheThreeEndingsOfAPairing` fails about one run in four.** Its subtest
-"matched writes the name and the verification" fails at cleanup with "TempDir
-RemoveAll cleanup: unlinkat …/.cogmer: directory not empty", so something is still
-writing into the test's state directory after the subtest returns, most likely a
-goroutine the pairing starts. It failed 2 of 8 runs on 09-23 on committed code, so
-it is not caused by a recent change. A flaky test trains a maintainer to rerun
-failures instead of reading them. The fix is to make the test wait for whatever
-writes, or to stop that writer before the subtest returns.
-
-**`TestAnAddressBelongsToAPeer` fails when two random keys derive the same name.** It
-admits two fresh identities under `PeerName` of each, and when the two word pairs
-collide, `Allow` refuses the second: "you already know a different key as
-\"glad-bobcat\"". It failed once and passed six times in a row on 2026-09-25. Giving
-the two peers fixed, distinct names would remove the chance.
-
-**Two tests in `ui_test.go` assume an order the store does not promise.**
-`TestTheUnverifiedMarkerInTheViewIsAFact` takes the last event of a snapshot to be the
-user's own turn, and `TestTheViewCarriesTheNameYouChose` takes the first to be the named
-peer's. Events are ordered by timestamp and then by peer, and each test appends its
-events within one second under random peer identifiers, so the order varies from run
-to run. Each failed once in six or fewer runs on 2026-09-28 and 2026-09-29. Finding
-each event by its content or its peer, or giving the events distinct timestamps, would
-remove the chance.
-
 ## Installing and the first commands
 
 A new user installs the plugin, and the first commands they run answer instead of failing.

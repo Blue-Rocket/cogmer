@@ -22,6 +22,9 @@ func testDaemon(t *testing.T) (*Daemon, Room) {
 	}
 	d := &Daemon{id: id, members: m}
 	t.Cleanup(d.closeStores)
+	// Registered last, so it runs first: work a request left running must finish
+	// before the stores close and the state directory is removed.
+	t.Cleanup(d.background.Wait)
 	return d, room
 }
 
@@ -815,8 +818,10 @@ func TestAnAddressBelongsToAPeer(t *testing.T) {
 	m := testMembership(t)
 	alice := testIdentity(t).PeerID
 	bob := testIdentity(t).PeerID
-	for _, p := range []string{alice, bob} {
-		if err := m.Allow(p, PeerName(p)); err != nil {
+	// Fixed, distinct names: two random keys can derive the same name, and Allow
+	// refuses a name that already means another key.
+	for p, name := range map[string]string{alice: "alice", bob: "bob"} {
+		if err := m.Allow(p, name); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -448,7 +448,7 @@ func (d *Daemon) handleVerifyConfirm(w http.ResponseWriter, r *http.Request) {
 	// Whatever this peer was admitted to before they could be told about it goes
 	// now (D-106). Backgrounded: delivering is a network act and the person who
 	// just compared two words is waiting on this response.
-	go d.deliverPending(req.Peer)
+	d.inBackground(func() { d.deliverPending(req.Peer) })
 
 	// Only now is the label a true statement about who holds this key.
 	if havePair && pair.name != "" {

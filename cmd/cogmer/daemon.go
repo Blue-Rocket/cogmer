@@ -75,6 +75,12 @@ type Daemon struct {
 	verifying map[string]*verifySession
 	verifyMu  sync.Mutex
 
+	// Work started on behalf of a request that outlives it, such as delivering what
+	// was waiting for a peer. A test waits on it before it removes the directory the
+	// work writes to; the daemon does not wait, since a stopping daemon should not
+	// hold up a replacement for a network call.
+	background sync.WaitGroup
+
 	// Pairings awaiting their ceremony, one per opened page (D-180).
 	pairs pairRegistry
 
@@ -183,6 +189,15 @@ func (d *Daemon) storeFor(roomID string) (*Store, error) {
 		d.reportLostState(r, s)
 	}
 	return s, nil
+}
+
+// inBackground runs work after the request that asked for it has been answered.
+func (d *Daemon) inBackground(work func()) {
+	d.background.Add(1)
+	go func() {
+		defer d.background.Done()
+		work()
+	}()
 }
 
 func (d *Daemon) closeStores() {
