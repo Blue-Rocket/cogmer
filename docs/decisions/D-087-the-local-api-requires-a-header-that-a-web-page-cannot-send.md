@@ -2,9 +2,10 @@
 
 **Date:** 2026-09-20 · **Status:** active · **Areas:** view, trust
 
-**Decision.** A route that changes state requires the method POST and the header
-`X-Cogmer: 1`. A request whose `Origin` does not match is also refused, as a second layer.
-Routes that only read are not guarded.
+**Decision.** The local listener serves a request only when its `Host` is `127.0.0.1`,
+`localhost` or `[::1]` with the daemon's port. A route that changes state also requires the
+method POST and the header `X-Cogmer: 1`, and a request whose `Origin` does not match is
+refused as a further layer. Routes that only read are guarded by the `Host` check alone.
 
 **Support.**
 - Loopback keeps other machines out and does nothing about a page open in this machine's
@@ -21,9 +22,16 @@ Routes that only read are not guarded.
   `cmd/cogmer/localguard_test.go`, `TestLocalGuardRefusesAWebPage`.
 - State-changing routes require POST, so no navigation or image source reaches a handler
   that reads a body. `cmd/cogmer/localguard_test.go`, `TestLocalGuardRefusesNonPost`.
-- The reads `/healthz`, `/events`, `/stream` and the page are unguarded because the daemon
-  sends no CORS headers, so a cross-origin page cannot read their responses, and guarding
-  them would break the view. `cmd/cogmer/localguard.go`.
+- The reads `/healthz`, `/events`, `/stream` and the page need no header, because the daemon
+  sends no CORS headers, so a cross-origin page cannot read their responses, and a header
+  requirement would break the view. `cmd/cogmer/localguard.go`.
+- DNS rebinding makes a page same-origin with the daemon: the browser sends `X-Cogmer`
+  without asking and lets the page read replies, so the header stops nothing and only the
+  `Origin` check, which passes a request with no `Origin`, is left on a write. The browser
+  still sends the page's own name as `Host`, so refusing any other `Host` closes writes and
+  reads together. With `curl --resolve evil.example:47820:127.0.0.1`, which reproduces the
+  end state of rebinding, a request to `evil.example` got 403 and one to `localhost` got 200.
+  `cmd/cogmer/localguard_test.go`, `TestTheLocalListenerRefusesAHostThatIsNotLoopback`.
 
 **Rejected.**
 - *Requiring a `Referer`.* A page suppresses its own referrer with one `<meta>` tag, and an
@@ -34,7 +42,7 @@ Routes that only read are not guarded.
   may strip, such as the view's own `Referrer-Policy`, an extension or a proxy, and nothing
   strips a header it has never heard of.
 
-**Limits.** A malicious program running as the user can set any header and could edit
+**Limits.** The rebinding case was reproduced with `curl`, not in a browser. A malicious program running as the user can set any header and could edit
 `membership.db` directly, so the guard closes the threat of a web page and no other.
 
 **Revisit when** the view stops being loopback-only. A secret in the address then takes the

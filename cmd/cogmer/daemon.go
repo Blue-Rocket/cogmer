@@ -141,6 +141,10 @@ func (d *Daemon) LocalRoutes() *http.ServeMux {
 	return mux
 }
 
+// LocalHandler is LocalRoutes behind the Host check (D-087), and is what the local
+// listener serves.
+func (d *Daemon) LocalHandler() http.Handler { return onlyLoopbackHost(d.LocalRoutes()) }
+
 // PeerRoutes serves other peers. It carries synchronization and nothing else.
 //
 // The two are separate listeners rather than one mux with a filter, because the

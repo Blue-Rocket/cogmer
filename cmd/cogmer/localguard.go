@@ -45,6 +45,32 @@ const (
 	localGuardValue  = "1"
 )
 
+// onlyLoopbackHost refuses a request whose Host is not this daemon's own address.
+//
+// DNS rebinding defeats the checks below. A page from evil.example that has its name
+// pointed at 127.0.0.1 is same-origin with the daemon in the browser's eyes, so the
+// browser sends X-Cogmer without asking and lets the page read replies, and only the
+// Origin check is left, which passes a request with no Origin. But the browser sends
+// the page's own name as Host, and the page cannot both reach the daemon under its
+// own name and send a loopback Host. A Host of 127.0.0.1, localhost or [::1] with the
+// daemon's port is what our own code and a person typing the address send.
+func onlyLoopbackHost(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !isOwnHost(r.Host) {
+			http.Error(w, "this address is not served here", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// isOwnHost reports whether a Host header names this daemon by a loopback spelling
+// and its port. A Host with no port is refused: the daemon's port is never the
+// scheme's default, so a browser always sends it.
+func isOwnHost(hostport string) bool {
+	return isOwnOrigin("http://" + hostport)
+}
+
 // guardLocal wraps a state-changing local route.
 func guardLocal(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

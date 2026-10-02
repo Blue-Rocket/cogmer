@@ -131,3 +131,34 @@ func TestLocalGuardDoesNotAnswerPreflight(t *testing.T) {
 		t.Fatal("preflight reached the handler")
 	}
 }
+
+// DNS rebinding: a page whose name points at 127.0.0.1 is same-origin with the
+// daemon, sends X-Cogmer freely, and may send no Origin. Its Host is its own name.
+func TestTheLocalListenerRefusesAHostThatIsNotLoopback(t *testing.T) {
+	t.Setenv("COGMER_ADDR", "127.0.0.1:4782")
+	d, _ := testDaemon(t)
+	h := d.LocalHandler()
+	for _, tc := range []struct {
+		host, method, path string
+		want               int
+	}{
+		{"evil.example:4782", "GET", "/healthz", http.StatusForbidden},
+		{"evil.example:4782", "GET", "/events", http.StatusForbidden},
+		{"evil.example:4782", "GET", "/", http.StatusForbidden},
+		{"evil.example:4782", "POST", "/verify/confirm", http.StatusForbidden},
+		{"127.0.0.1:4799", "GET", "/healthz", http.StatusForbidden},
+		{"127.0.0.1", "GET", "/healthz", http.StatusForbidden},
+		{"127.0.0.1:4782", "GET", "/healthz", http.StatusOK},
+		{"localhost:4782", "GET", "/healthz", http.StatusOK},
+		{"[::1]:4782", "GET", "/healthz", http.StatusOK},
+	} {
+		req := httptest.NewRequest(tc.method, tc.path, strings.NewReader("{}"))
+		req.Host = tc.host
+		req.Header.Set(localGuardHeader, localGuardValue)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		if rec.Code != tc.want {
+			t.Errorf("Host %q on %s %s got %d, want %d", tc.host, tc.method, tc.path, rec.Code, tc.want)
+		}
+	}
+}

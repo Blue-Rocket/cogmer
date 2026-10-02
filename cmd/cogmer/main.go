@@ -547,7 +547,7 @@ func runDaemon() {
 			log.Fatalf("peer server: %v", err)
 		}
 	}()
-	if err := http.Serve(local, d.LocalRoutes()); err != nil && !stopping.Load() {
+	if err := http.Serve(local, d.LocalHandler()); err != nil && !stopping.Load() {
 		log.Fatal(err)
 	}
 }
