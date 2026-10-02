@@ -23,3 +23,12 @@ the session-start hook's `additionalContext`, in addition to the framing inside 
 and without it, and the in-block framing alone produced the same refusal and the same report
 to the user, so it is defense in depth against a position problem that is real in principle
 and was not observed. `f288913:docs/decisions/D-081-untrusted-turns-are-json-the-policy-is-stated-separately.md`.
+
+A session in which the plugin was installed mid-session never runs the session-start hook, so it
+enters a room with the framing inside each block and without this policy. That is accepted, because
+no attack was found that the policy stops and refusing to enter a room would cost the user the
+session they installed from. §3.1 (first, do no harm).
+
+**Revisit when** a hostile turn succeeds against a session that lacks the policy. A session that
+lacks it would then refuse `join` and `create` until a marker written by the session-start hook
+exists, and offer `/clear`.

@@ -16,39 +16,6 @@ Being scratch is the point. Be untidy in it.
 
 A new user installs the plugin, and the first commands they run answer instead of failing.
 
-**Asking for a new session to finish an install is too much.** After `/plugin
-install` the person believes it is installed, and Claude Code agrees: since
-v2.1.221 a plugin installed mid-session is live in that session, with its commands
-and its per-prompt hooks. Only SessionStart has not run, and nothing re-runs it,
-since Claude Code runs no plugin code at install and reloading plugins does not
-fire it. So the binary is never fetched, the daemon never starts, and the standing
-policy for room content (D-176) is never given. Telling somebody to start again to
-finish something they think has finished costs them the session they were working
-in, and the README currently does exactly that.
-
-A command typed after installing now starts the download itself and says to run it
-again (D-191), and `install.sh` starts the daemon when the download lands, so a new
-session is not needed to get a binary. What a session installed from still lacks is the
-policy, and the README still says to start a new session. Which of these to do is the
-maintainer's decision. The possible mitigations:
-
-- Start the fetch from the per-prompt hook when there is no binary, detached, so the
-  first thing typed after installing begins the download without waiting on it.
-  Unchecked: whether a slash command fires that hook at all.
-
-- Let the session you installed from enter rooms without the session-start policy.
-  D-176 could not show that policy helping: in-block framing alone produced the
-  same refusal of a hostile turn. Rerunning that hostile-turn test in a session
-  that installed the plugin mid-session would say whether this is safe.
-- Otherwise, have `join` and `create` refuse in a session that never got the policy,
-  and offer `/clear`, which fires SessionStart but discards the conversation so far.
-  Everything before entering a room, such as pairing, `self-status` and `self-name`,
-  reads no room content and needs no policy, so the cost falls only on entering a
-  room. It needs a marker the SessionStart hook writes per session.
-- Shorten the download, as "Whether the download is slow enough to matter" describes.
-- Ship the binary inside the plugin, ruled out there for what it adds to the
-  history.
-
 **Whether the download is slow enough to matter.** Deliberately not addressed until
 people installing it say so. The darwin/arm64 binary is 29.3MB and took 16s on
 09-22; release binaries are already stripped. Compressed with `gzip -9` it is
