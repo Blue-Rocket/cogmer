@@ -23,6 +23,10 @@ number is ignored.
 
 **Rejected.**
 - *The caps on events and on one turn alone.* Neither bounds what the block holds.
+- *Deriving an estimate of the tokens from the character count.* Nothing reads the figure, and a
+  tokenizer would have to follow whichever model the session uses, which cogmer does not choose,
+  so the limits are counted in characters and nothing is derived from them.
+  `655f0bf:docs/decisions/D-171-the-token-count-of-injected-context-is-estimated-from.md`.
 
 **Revisit when** a room routinely exceeds the block budget. A room is scoped to a session,
 so hitting a limit means an unusually long pairing, and hitting one often means rooms are

@@ -1636,9 +1636,7 @@ Injection has limits, which can be configured:
 - on the characters in the whole block, the only one of the three that bounds what
   reaches a context window.
 
-An estimate of the tokens is derived from the character count, not measured, because
-a tokenizer would have to track a model cogmer does not choose, and the figure is for
-judgment, not arithmetic.
+
 
 The limits are a safety valve, not the ordinary path. Exceeding them means an unusually
 long or busy pairing.

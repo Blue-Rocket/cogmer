@@ -280,18 +280,6 @@ The fix is a test that issues events in a room, deletes the room's database, ope
 room again, and requires the report, together with a test that a room holding what was
 issued reports nothing.
 
-**Nothing derives the token estimate that section 21 describes.** Section 21 says an
-estimate of the tokens is derived from the character count, and D-171 (the token count of
-injected context is estimated from characters) records how. `estimatedTokens` in
-`cmd/cogmer/daemon.go` does the arithmetic and no code calls it (read from the code on
-2026-10-01), so no estimate exists for a user or a log to see. The specification does not
-say where the figure appears.
-
-Either the estimate is shown, by logging it when context is injected or by putting it in
-the note that says earlier turns were left out, or section 21 and D-171 stop describing
-one. Logging costs a line for each prompt in the daemon's log, and the note puts a figure
-in front of the model that it does not need.
-
 **`leave`, run twice, says "this session is not in a room."** True, and unhelpful
 to somebody who left it a moment ago: it reads as a failure and sends them looking
 for a problem. It should say it has already left. `LeaveSession` returns that error
