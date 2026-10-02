@@ -58,7 +58,7 @@ func envInt(name string, def int) int {
 	return def
 }
 
-// estimatedTokens is the figure §21 asks be available alongside the character
+// estimatedTokens is the estimate §21 describes, derived from the character
 // count. Four characters per token is the usual rough English ratio; it is
 // deliberately an estimate, because the alternative is a tokenizer that must track
 // a model this code does not choose.
