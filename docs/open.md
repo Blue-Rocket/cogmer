@@ -506,17 +506,6 @@ the name is now settled (section 37), so that reason no longer holds.
 
 Every document follows `docs/writing.md`.
 
-**Finding the decisions that govern an area means searching the log, and `CLAUDE.md` cites
-decisions to shorten the search.** The reading-map table in `CLAUDE.md` names decision
-numbers for ten areas, and nothing checks that a row is complete or that it cites only
-active entries: a row named D-047 after D-055 withdrew it (read on 2026-10-01). Bullets
-elsewhere in the file cite decisions too.
-
-A decisions skill, whose one-line description loads each session, would find entries by
-the areas on their date lines with `rg`. `CLAUDE.md` would then lose the table and its
-decision numbers and keep the instruction to use the skill. It waits until every entry
-has areas, since the skill would otherwise miss the entries not yet rewritten.
-
 **Nothing vets a proposed design against the documents it could conflict with.** The
 only process is `CLAUDE.md`'s instruction to read the decisions that govern an area
 before proposing a change, which points at a directory of about 170 files, and it names

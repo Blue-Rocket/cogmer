@@ -8,10 +8,10 @@ and how to run it.
 
 ## How we work
 
-- **Read the decisions in `docs/decisions/` that govern an area before proposing a change to how it works.**
-  They record why each choice was made, and the alternatives somebody would be likely
-  to propose again, and several choices that look awkward have something depending
-  on them. Add an entry whenever a real choice about the system is made. Never
+- **Use the `decisions` skill before proposing a change to how anything here works.**
+  It finds the decisions in `docs/decisions/` that govern an area. They record why
+  each choice was made, and the alternatives somebody would be likely to propose
+  again, and several choices that look awkward have something depending on them. Add an entry whenever a real choice about the system is made. Never
   renumber: a reversed decision becomes a tombstone, and the reason for reversing it
   goes in the replacing decision's Rejected field.
 - **Read `docs/writing.md` before writing any document or commit message**, and
@@ -33,9 +33,9 @@ and how to run it.
   a human as distinct from the model or a program. Never say developer, since a user
   may not write code.
 - **Never describe cogmer by a number of participants**, such as a tool for two.
-  Pairs are the case that exists, and nothing rules out more (D-109).
+  Pairs are the case that exists, and nothing rules out more.
 - **Never call the project local-first.** It claims more than cogmer delivers, since
-  rendezvous needs a relay somebody else operates, and D-029 (losing a room database)
+  rendezvous needs a relay somebody else operates, and losing a room database
   makes recovery a fetch from peers. §3.1 (first, do no harm) is the principle it was
   standing in for.
 
@@ -125,7 +125,7 @@ index holds. Hooks keep it fresh, but only for edits the current session made.
   `plugin/VERSION`, and the `version` in `plugin.json`. `checksums.txt` is the only
   thing that authorizes a downloaded binary to run, so never edit it by hand: a hash
   typed rather than computed authorizes something nobody has seen.
-- **The manifest `version` is what pins an installed plugin** (D-120). A user receives
+- **The manifest `version` is what pins an installed plugin.** A user receives
   a new plugin, and with it the checksums that authorize the new binary, only when
   that string moves. A test fails if it and `plugin/VERSION` disagree.
 - **Publishing without rerunning `release.sh` leaves the installer refusing the new
@@ -136,10 +136,10 @@ index holds. Hooks keep it fresh, but only for edits the current session made.
 ## Facts that are not obvious from the code
 
 - **Claude Code prefixes every plugin command with the plugin manifest's `name`, and
-  offers no unprefixed form** (D-118). A user types `/cogmer:room-create`, so changing
+  offers no unprefixed form.** A user types `/cogmer:room-create`, so changing
   the manifest name renames every command at once.
 - **Every Claude Code extension point delivers to the model, and nothing displays to a
-  person** (D-033, D-036). A person sees only what the model then says. MCP as a
+  person.** A person sees only what the model then says. MCP as a
   display channel was tested exhaustively and surfaces nowhere anybody looks, so do
   not try it again. Nothing checks this, which is why it is written here.
 - **Whether injected context survives a compaction is the summarizer's judgment**,
@@ -154,26 +154,8 @@ index holds. Hooks keep it fresh, but only for edits the current session made.
 - **Assistant records carry no `promptId`** (B09), which is why turns are segmented by
   position rather than by key. B04, B05 and B09 would report improvements as well as
   breakage, so watch for those, since they would let us simplify.
-- **Nothing cryptographic depends on the product name** (D-069). Signing uses the
+- **Nothing cryptographic depends on the product name.** Signing uses the
   `protocolNamespace` constant, which is arbitrary on purpose and never changes.
-
-## Where to read before changing something
-
-This table maps an area to what to read first, and summarizes none of it. If the area
-is not listed, read the spec.
-
-| touching | read first |
-|---|---|
-| pairing, verification, the two words | D-055, D-048, D-054, D-088, D-093, §25 |
-| the local HTTP API or the view | D-087, D-038, D-039, D-090, D-099 |
-| capture, reassembly, injection | D-014, D-040, D-043, and B04/B05/B09 |
-| rooms, membership, session binding | D-015, D-016, D-046, D-064, D-071, D-077 |
-| identity, keys, admission | D-042, D-152, D-153, D-044, D-053, D-058, D-073, D-054 |
-| addresses, transport, reachability | D-019, D-091, D-101, D-103, D-104 |
-| another host | D-110, D-111, D-113, §3.8 |
-| the name, a slash command, the plugin manifest | D-117, D-118, D-095, D-096, D-085 |
-| sequences, recovery from local loss | D-029, D-060, D-169 |
-| what is unfinished or undecided | `docs/open.md` |
 
 @docs/values.md
 
