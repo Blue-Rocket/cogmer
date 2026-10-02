@@ -36,7 +36,7 @@ room and a person.
 types before every colon, so changing `plugin.json`'s `name` renames every command
 at once. It is not a cosmetic field.
 
-**D-096's overview command cannot be what D-096 reserved.** It wanted
+**D-096's overview command, as `f288913:docs/decisions/D-096-a-command-prefix-names-its-target-self-status-is-where-you.md` held it, cannot be what D-096 reserved.** It wanted
 `/<product-name>` as an entry point saying what the tool is, held back because the
 name was unsettled. There is no bare `/cogmer`; it would be `/cogmer:cogmer`. The
 compensation is that D-096's stated blocker is gone — Claude Code owns `/help`, but

@@ -209,7 +209,7 @@ func peerLabel(t *testing.T, d *Daemon, peerID string) (string, bool) {
 
 // A flow with two interactions has to choose what an unfinished second one means,
 // and these three endings are genuinely different. Abandoning is not mismatching,
-// and neither used to be distinguishable from the other (D-093).
+// and neither used to be distinguishable from the other (D-184).
 func TestTheThreeEndingsOfAPairing(t *testing.T) {
 	t.Run("abandoned leaves a nameless, unverified row", func(t *testing.T) {
 		d, _ := testDaemon(t)

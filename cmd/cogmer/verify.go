@@ -420,7 +420,7 @@ func (d *Daemon) handleVerifyConfirm(w http.ResponseWriter, r *http.Request) {
 	}
 	req.Peer = peer
 	// A flow with two interactions has to say what an unfinished second one means,
-	// and the three endings here are genuinely different (D-093). Abandoned leaves
+	// and the three endings here are genuinely different (D-184). Abandoned leaves
 	// a nameless unverified row you can resume from. Matched writes the label the
 	// person chose before they started. Differed removes what this pairing created,
 	// because nothing about it was ever established -- and leaving the attacker's

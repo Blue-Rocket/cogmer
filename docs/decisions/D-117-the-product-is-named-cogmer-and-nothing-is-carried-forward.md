@@ -54,7 +54,7 @@ the ones that put them there. See D-118.
 
 **What this unblocks.** The repository, and through it Phase 13 — which is now
 blocked on the repository existing rather than on the name. Also D-096's overview
-command, though not in the form D-096 planned for it; D-118 says why.
+command, as `f288913:docs/decisions/D-096-a-command-prefix-names-its-target-self-status-is-where-you.md` held it, though not in the form D-096 planned for it; D-118 says why.
 
 **Revisit when** somebody other than the author holds a room. At that point the
 latitude this entry used — deleting a scheme, deleting state — is gone, and D-058's

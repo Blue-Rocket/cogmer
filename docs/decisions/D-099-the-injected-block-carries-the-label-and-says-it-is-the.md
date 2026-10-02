@@ -1,8 +1,9 @@
 # D-099 — The injected block carries the label, and says it is the name to use
 
-**Date:** 2026-09-20 · **Status:** active (implemented) · **Completes** D-094
+**Date:** 2026-09-20 · **Status:** active (implemented) · **Completes** D-094, as `f288913:docs/decisions/D-094-the-name-you-chose-leads-the-view-the-unverified-marker.md` held it
 
-**Context.** D-094 put the label in the view and deferred the same field in the
+
+**Context.** D-094, as `f288913:docs/decisions/D-094-the-name-you-chose-leads-the-view-the-unverified-marker.md` held it, put the label in the view and deferred the same field in the
 injected block, because `FormatTeamContext` took `verified func(string) bool` across
 twenty-two call sites and adding a second function was a signature decision rather
 than a field addition.

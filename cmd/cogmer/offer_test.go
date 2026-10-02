@@ -75,7 +75,7 @@ func TestAnOfferFromAnUnverifiedPeerIsRefused(t *testing.T) {
 
 	// Each records the other — enough to connect, since the pin is on recorded
 	// rather than verified (D-101) — but the guest never verifies the host, which
-	// is the state an abandoned pairing leaves behind (D-093).
+	// is the state an abandoned pairing leaves behind (D-184).
 	if err := host.members.Allow(guest.id.PeerID, "g"); err != nil {
 		t.Fatal(err)
 	}

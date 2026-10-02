@@ -1794,7 +1794,7 @@ func endpointRecorded() bool {
 // Both, not one or the other. The name is the literal answer to "who am I", so it
 // is always shown; saying "you chose this" in the other case is noise about
 // something the person already knows. The offer appears exactly while it is true
-// and stops at the first deliberate act (D-095).
+// and stops at the first deliberate act (D-186).
 func nameLine(id *Identity) string {
 	if id.NameChosen {
 		return fmt.Sprintf("Other people see you as %s.", id.UserDisplayName)
@@ -1806,7 +1806,7 @@ func nameLine(id *Identity) string {
 // runName shows or sets what other people call you.
 //
 // Self scope, not peer scope: `peer-` is for commands about somebody else, and a
-// command that sets your own name has no business in that namespace (D-095).
+// command that sets your own name has no business in that namespace (D-096).
 func runName(args []string) {
 	if len(args) == 0 {
 		withMembership(func(_ *Membership, id *Identity) {

@@ -1,10 +1,10 @@
 # D-097 — A pairing string carries a chosen name, never a guessed one
 
-**Date:** 2026-09-20 · **Status:** active (implemented) · **Completes** D-094's revisit
+**Date:** 2026-09-20 · **Status:** active (implemented) · **Completes** the revisit of D-094, as `f288913:docs/decisions/D-094-the-name-you-chose-leads-the-view-the-unverified-marker.md` held it,
 
 **Context.** D-093 made a label compulsory at pairing, which meant somebody had to
-type a name for a colleague whose name they obviously know. D-094 wanted the default
-to be the name the peer picked, and D-095 made picking one possible. This connects
+type a name for a colleague whose name they obviously know. D-094, as `f288913:docs/decisions/D-094-the-name-you-chose-leads-the-view-the-unverified-marker.md` held it, wanted the default
+to be the name the peer picked, and D-095, as `f288913:docs/decisions/D-095-a-name-is-chosen-or-guessed-and-the-difference-is-recorded.md` held it, made picking one possible. This connects
 them.
 
 **The format gains an optional trailing name:**
