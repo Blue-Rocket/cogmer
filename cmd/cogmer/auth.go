@@ -138,7 +138,7 @@ func (d *Daemon) verifyRequest(req syncRequest, roomID string) error {
 	// Authentication says WHO holds the key. Admission says WHETHER that key may
 	// enter. Neither says the key is the person's -- only a verification does, and
 	// without one every check above passes just as well for whoever substituted it
-	// in transit (D-047). So no transcript crosses to an unverified peer.
+	// in transit (D-054, verification gates synchronization). So no transcript crosses to an unverified peer.
 	//
 	// Not a disclosure: a caller reaching this line is already a recorded guest,
 	// so it learns nothing it did not put there itself, and the message has to be

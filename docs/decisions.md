@@ -1172,348 +1172,152 @@ or a host's approval.
 
 ---
 
-## D-046 — The daemon serves many rooms; a session says which one it is in
+## D-046 — The daemon serves many rooms, opening a store for each on demand
 
-**Date:** 2026-09-17 · **Status:** active (implemented)
+**Date:** 2026-09-17 · **Status:** active
 
-**Context.** A daemon served exactly one room, chosen by an environment variable at
-startup — so it invented a room when pointed at one nobody had created. That
-contradicted §12 and D-022, where a room begins when somebody is invited, and it was
-recorded as a bridge rather than hidden.
+**Decision.** The daemon is the machine's local service and is not a room. It opens a
+store for a room on demand, and starting the process creates no room.
 
-**Decision.** The daemon is the machine's local service, not a room. It opens a
-store per room on demand, and a **session** binds to a room on first sight. A
-session in no room is an ordinary Claude Code session: nothing captured, nothing
-injected, nothing shared.
+**Support.**
+- A room begins when somebody is invited into it, so a daemon that held a room from
+  startup would hold one nobody created. D-022 (a room begins when someone is invited
+  into it).
+- A user can be in several rooms across different sessions, and a room outlives the
+  session that created it. §12a (room membership).
+- Which room a session is in is settled when its first hook fires, and a session in no
+  room is an ordinary Claude Code session with nothing captured, injected or shared.
+  D-056 (a session's room is fixed at first sight), §12a.
 
-**Binding at first sight rather than asking**, because nothing knows a session exists
-until its first hook fires, and there is nobody to ask at that moment. A machine-level
-*current room* answers instead: `join` sets it, and sessions started afterwards enter
-it. Once a session has been offered teammate context it is marked, because §12a
-forbids moving it and there is no later moment at which moving it would be safe.
+**Rejected.**
+- *One room per daemon, chosen by an environment variable at startup.* The daemon
+  would invent a room when pointed at one nobody had created, which D-022 forbids, and
+  it could serve one room only.
 
-**Two gaps only the end-to-end test exposed.** Both had the same shape — one side of
-a symmetric arrangement.
-
-*A guest knew no room existed.* Invitation recorded admission on the host's side
-alone, so the guest had nothing to join. An invitation now carries the room's name,
-its identity, and where to reach it — all public, no token (D-026).
-
-*Synchronisation was one-way.* The guest could read the host and never be read, for
-two compounding reasons. The host had no address for the guest, since a pull needs
-somewhere to pull from — so a peer now advertises where it listens, signed, because a
-peer acts on that address by polling it and an unsigned one would redirect polling.
-And the guest had recorded the room without its host, leaving a one-sided guest list
-that refused the host's requests. An invitation now carries the inviting peer's
-identifier, and joining admits them.
-
-The second is worth keeping in mind generally: **a guest list is per-peer, so two
-peers can disagree about who belongs.** Here it presented as one-way collaboration
-and was really an asymmetric list.
-
-**What this makes possible that was not before.** A person can be in several
-rooms across different sessions, which §12a's constraint describes and a one-room
-daemon could not express. A room outlives the session that created it. And nothing
-is created by starting a process — the bridge is gone, not because it was removed but
-because the situation it papered over no longer arises.
+**Revisit when** a user needs more than one daemon on a machine, such as one for each
+account.
 
 ---
 
 ## D-047 — The fingerprint is the only manual link, and had the least careful encoding
 
-**Date:** 2026-09-17 · **Status:** CLOSED, not implemented — the construction it
-argued about was removed. See the closing note at the end of this entry; the
-measurements below are kept because they are what justified removing it.
-
-**Context.** Asked what a fingerprint is and what it accomplishes. Demonstrating it
-made the answer sharper than expected.
-
-**What it accomplishes, precisely.** Every cryptographic guarantee here binds a key
-to itself: the peer speaking today holds the same key as yesterday, nobody forged
-its events, nobody replayed its requests. None of it binds a key to a **person**,
-and no amount of cryptography can — that is not a mathematical question.
-
-Demonstrated: an attacker substituted her own identifier in transit, was recorded and
-invited under the name `alice`, read a private room, and replied into it. **Zero
-refusals.** Nothing was wrong, because nothing was wrong — the host invited exactly
-the key he was given.
-
-The fingerprint closes that by comparison over a **second channel**. The attacker who
-controlled the first would have to control the second too. What is protected is not a
-secret: the identifier is a public key and intercepting it is harmless. The risk was
-never that someone reads it — it is that someone **swaps** it. A fingerprint does not
-guard a secret; it detects a swap.
-
-**Why the whole key — stated too loosely at first, and corrected.** Truncation is
-not itself the fault; the cost of grinding a matching key is exactly the entropy
-shown, and an attacker must know the target first, which interception provides.
-Measured: three characters fell in 339,297 tries and under a second; four take about
-thirty seconds; eight are 2^48 and within reach of a resourced attacker; sixteen are
-2^96 and are not. Showing the whole key is therefore not strictly necessary — sixteen
-characters would do — it is the rule that avoids reasoning about thresholds, and it
-costs nothing at 43 characters.
-
-**The number that actually binds is not how much is displayed but how much a person
-compares.** Show someone forty-three characters of base64 to check over a telephone
-and they will read the first group, the last group, and skim the middle. That is
-ordinary behaviour, and it quietly reduces the verified entropy to whatever was
-genuinely checked — plausibly the three-to-four character range that falls in under a
-second.
-
-This makes the encoding argument and the grinding argument the same argument. Words
-are not preferable because they are prettier: a word is compared as a unit. Somebody
-either says "badger" or does not, where an eye slides over `ol5v` without stopping.
-Security here is bounded by what a person will actually do rather than by what the
-system displays.
-
-**The problem, which the shape of the output exposed.** This is the *only* manual
-step in the design. Everything else is automatic. The entire chain — admission,
-attribution, signatures, the unverified markers — rests on one person, once, reading
-a string aloud correctly.
-
-That step has the most error-prone encoding available. Base64url is case-sensitive
-and the alphabet contains `l`, `I` and `_`, which are indistinguishable from `1` and
-from each other when spoken: `ol5v` must be dictated as "lowercase-o, lowercase-L,
-five, lowercase-v". §25 asks for "a sequence of words or grouped digits"; grouped
-base64 is neither.
-
-A comparison that is tiresome to do accurately is one people do badly or skip — and
-skipping it reproduces the demonstration above exactly, where nothing looks wrong.
-
-**Decision at the time.** Render the fingerprint as words. Digits would also work
-and are what Signal uses, but curated wordlists already exist here, and this is the
-one place where slow to read beats quick to mishear.
-
-**Closed without implementing it (2026-09-18).** The question "how should the
-fingerprint be rendered for comparison" stopped having an answer when comparing a
-fingerprint stopped being a way to verify anything. D-052 built the two-word
-comparison and D-055 removed the whole-key comparison entirely, so there is one
-ceremony and the fingerprint is not it.
-
-The argument above is what closed it rather than what was overtaken by it. Its
-finding — that security here is bounded by what a person will actually do, not by
-what the system displays — is the reason a second, harder ceremony could not be left
-standing beside an easier one. Two accepted ceremonies means the weaker is what gets
-performed, and this entry measured exactly how weak that is: three characters fell in
-339,297 tries and under a second, and a reader shown forty-three of them checks the
-first group, the last group, and skims the middle.
-
-`Fingerprint` survives as a **display**, used where a person genuinely reads an
-identifier — when a key has changed and two are side by side. Nothing about looking
-at one marks a peer verified, and its test now asserts that it is lossless rather
-than that it is a comparison.
-
-**The general point worth keeping.** The weakest link in this system is a human
-reading a string, and it was given the least design attention of anything in it.
-Where a design has exactly one manual step, that step deserves the most care rather
-than the least.
+**Status:** withdrawn 2026-09-18. Replaced by D-055 (one way to verify a peer).
 
 ---
 
-## D-048 — Verification should bind a live exchange, not a standing identifier (ZRTP's SAS)
+## D-048 — Verification is a live commit-then-reveal exchange that derives two words
 
-**Date:** 2026-09-17 · **Status:** active as to construction; its **placement** was
-superseded by D-052 (its own act, not part of join) and then by D-053 (at pairing).
-D-047 remains held.
+**Date:** 2026-09-17 · **Status:** active
 
-**Context.** Tracing the manual steps produced a count: there are **two**. Alice runs
-`whoami` and her identifier reaches David somehow (transfer); David then asks her to
-confirm the fingerprint (confirmation). §12 says transfer is safe "over any channel
-whatsoever, because holding it confers nothing" — true of **confidentiality** and
-silent about **integrity**, which is where the entire risk lives. Nothing is lost when
-an interceptor reads an identifier; everything is lost when one swaps it, which D-047
-demonstrated end to end with zero refusals.
+**Decision.** Each side commits to a hash of its contribution, and then both reveal.
+The string derives from both long-term identity keys and both fresh nonces, and each
+side prints two words for the two users to compare aloud on the call they
+are on. A mismatch refuses, says plainly that something intercepted the exchange, and is
+never presented as a transient error worth repeating.
 
-Confirmation only means something across a channel boundary. Alice pasting into Slack
-and David asking in Slack is one step performed twice: same bytes, same path, same
-attacker.
+**Support.**
+- A standing identifier can be ground against offline at a cost of the entropy shown,
+  so it has to be compared in full. A committed, freshly randomised value cannot be
+  aimed at in advance, so a short form is sound. `cmd/cogmer/sas.go`, and ZRTP's short
+  authentication string, https://www.rfc-editor.org/rfc/rfc6189.
+- The commitment makes each side fix what it presents before it sees the other's, so
+  a relaying attacker is reduced to one blind guess, and the nonces leave nothing to
+  precompute. `cmd/cogmer/sas_test.go`, `TestARevealMustOpenItsCommitment`.
+- The two words carry 16 bits, so a blind guess succeeds once in 65,536. A short
+  string with silent retries is weak, which is why a mismatch has to stop a person.
+  `cmd/cogmer/sas.go`.
+- Every other guarantee binds a key to itself and none binds a key to a person. An
+  attacker who substituted her own identifier in transit was invited under the name
+  `alice`, read a private room and replied into it, with no refusal anywhere.
+  `249ddd0:docs/decisions.md`, the entry D-047 held there.
+- A reader shown forty-three characters of base64 to check over a telephone compares
+  the first group and the last and skims the middle, so the entropy verified is far
+  less than the entropy shown. `249ddd0:docs/decisions.md`, the entry D-047 held there.
+- The exchange authenticates whichever key arrived, so the identifier can be sent by any
+  means. §12 (forming a room), `cmd/cogmer/sas.go`.
 
-And the two steps collapse into one when done properly — on a call, Alice reads the
-identifier out and transfer and confirmation are a single act. **The two-step shape is
-the asynchronous convenience, not a stronger construction.** It exists because reading
-43 base64 characters aloud is miserable and pasting is not. Worth labelling as an
-ergonomic trade so nobody later defends it on security grounds.
+**Rejected.**
+- *Comparing the whole key as well, for peers whose daemons cannot reach each other.*
+  A second, harder ceremony beside an easier one is a downgrade path, and the gate is
+  only as strong as the weakest ceremony that opens it. D-055 (one way to verify a
+  peer).
 
-**What ZRTP does.** Two parties agree a fresh Diffie-Hellman over the media path,
-derive a **Short Authentication String** — around 16–20 bits, rendered as words —
-from a hash of the shared secret and both public values, and read it aloud over the
-voice call they are already on. Two properties make that sound at a length we had
-assumed was unusable:
+**Limits.** Two people who have never met gain nothing, since recognising a voice
+presumes acquaintance. D-051 (stranger pairing is not a supported case). Nothing
+rate-limits attempts, so protection against repetition rests on a mismatch stopping a
+person, which is a claim about the interface and not the protocol. A commitment step
+implemented wrongly degrades to a value that can be ground while still looking like a
+ceremony, and the test above fails when the check is removed.
 
-- a **hash commitment** forces each side to fix its contribution before seeing the
-  other's, so a relaying attacker cannot search for a substitution that collides on
-  both sides — he is reduced to one blind guess;
-- the compared value is **fresh**, so there is nothing to precompute against.
-
-Key continuity does the rest: the secret is cached and chained into later calls, so
-the ceremony happens once and a later mismatch is an alarm. That is our known-peers
-list, structurally.
-
-**What it corrects here.** §25 said a short mnemonic "catches an accident and not an
-adversary, because the bits it does not cover are free to differ." The conclusion is
-right for the construction we chose and the reason given was wrong, and the wrong
-reason made the rule look universal. The real line is **offline precomputation versus
-one online guess**:
-
-- a standing identifier can be ground against offline, at a cost of exactly the
-  entropy displayed (D-047 measured it), so it must be compared in full;
-- a committed, freshly randomised value cannot be aimed at in advance, so a short
-  form is sound.
-
-"Render the whole key" is therefore a consequence of having chosen a static
-construction, not a law of the domain. §25 now says so, because as written it
-foreclosed the better option while appearing to rule it out on principle.
-
-**Decision.** Adopt the live-exchange form: each side commits to a hash of its
-contribution, both reveal, the string derives from both long-term identity keys plus
-both fresh nonces, and each side prints two words for the people to compare on the
-call they are already on.
-
-This entry placed that at **join**, reasoning that both daemons are connected there.
-D-052 rejected the placement: the ceremony is its own act, because it is interactive,
-because it blocks on another person, and because joining is a room operation while
-verifying a key is not. D-053 then moved it to **pairing**, which is the act that
-happens once between two machines. Read the placement below from D-052 and D-053; the
-construction below is as built.
-
-Three consequences, in order of how much they change:
-
-1. Confirmation costs **two words instead of 43 characters**. The friction that makes
-   people skip it mostly disappears — and disappears for a principled reason rather
-   than by making the same long string prettier.
-2. Transfer stops needing to be trustworthy. What is authenticated is whichever key
-   actually arrived, however it arrived, so §12's "any channel whatsoever" becomes
-   true about integrity as well.
-3. **D-047 is held, not cancelled.** Words beat grouped base64 under either
-   construction, but it is a rendering change to a construction we may not keep, and a
-   two-word SAS makes the question much smaller. Decide the construction first and the
-   rendering falls out. A `verified` flag — which today does not exist anywhere in
-   `membership.go`, so the `unverified` marker is a constant true of every peer
-   forever — should record whichever ceremony is actually built, and is therefore
-   sequenced behind this rather than ahead of it.
-
-**What this does not fix.** Nothing, for two people who have never met. ZRTP rests on
-recognising a voice, which presumes prior acquaintance; §25's "case with no answer"
-survives untouched. This improves the ergonomics of the case that *can* be handled.
-Do not let a cheap ceremony be read as having closed the expensive gap.
-
-**The hazard to implement against.** A short string with unlimited silent retries is
-weak — the attacker simply tries again. What protects it is that failure is
-**conspicuous**: a mismatch must refuse the join, say plainly that something
-intercepted it, and never present itself as a transient error worth repeating. And a
-commitment step implemented incorrectly degrades to a grindable value while still
-looking like a ceremony, producing the confidence without the property. That is worse
-than performing no ceremony at all.
-
-**Revisit when** the construction is built, or if verification is ever wanted at a
-moment when the two peers are **not** simultaneously connected. The short form is
-unavailable there and the full-length comparison of D-047 is the only option, so both
-renderings may need to exist — the live one for joining, the static one for
-confirming a peer after the fact.
+**Revisit when** verification is wanted between peers that cannot be connected at the
+same moment, since the short form is unavailable there.
 
 ---
 
 ## D-049 — The sync request addresses a room by id, never by name
 
-**Date:** 2026-09-17 · **Status:** active (implemented)
+**Date:** 2026-09-17 · **Status:** active
 
-**Context.** Asked whether the room creator's daemon signs its polling requests. It
-does — there is one polling path, `pullRoom`, every daemon takes it for every room,
-and no host role exists in the code. Reading it turned up something else: the request
-carried `room: <roomName>`, `handleSync` resolved it with `FindRoom`, which matches
-`room_id = ? OR room_name = ?`, and the **name** was what the signature covered.
+**Decision.** A sync request carries `roomId` in both directions, and an identifier a
+peer supplies resolves through `RoomByID`. `FindRoom` accepts a name, which suits a
+command line and not the wire.
 
-**What the collision actually costs — the first reading was wrong.** The obvious
-worry is that a name resolves to the wrong room. It cannot: `rooms.room_name` is
-`NOT NULL UNIQUE`, so a daemon never holds two rooms under one name and the lookup is
-unambiguous. No confidentiality was at stake and nothing read the wrong room.
+**Support.**
+- A room's identifier is authoritative and its name is not. D-017 (a room's
+  identifier is authoritative, and its name is not).
+- Names collide by design, so a name on the wire could match more than one room, and
+  the local schema holds no uniqueness rule for a peer to rely on. D-050 (room names
+  may collide locally).
+- A request that is correct in every other respect, from a genuine guest with a
+  genuine signature, is refused with 401 when it names its room, and accepted when it
+  gives the id. `cmd/cogmer/auth_test.go`, `TestTheWireRefusesARoomName` and
+  `TestTheWireAcceptsARoomID`.
 
-The real cost sits one step earlier. `CreateRoom` regenerates on a local name
-collision, but `RecordRoom` — the path taken when **joining** a room someone else
-named — has `ON CONFLICT(room_id)` only. Joining a second room whose generated name
-matches one already held violates the unique index, `runJoin` calls `log.Fatalf`, and
-the person is told they cannot join a room for a reason that names nothing they
-did. 7,656 names make that unlikely per pair and certain at some scale. **That bug is
-not fixed by this entry** and is recorded here so it is not mistaken for fixed.
+**Rejected.**
+- *Addressing a room by name and relying on the store to keep names unique.* The
+  guarantee would live in a local schema that no peer can see and nothing obliges the
+  next schema change to keep.
 
-**Decision.** `roomId` on the wire, in both directions, and peer-supplied
-identifiers resolve through `RoomByID` rather than `FindRoom`. `FindRoom` keeps
-accepting a name, which is right at a command line and wrong on the wire.
+**Limits.** A person types a name, the person's own daemon resolves it, and only the
+identifier travels.
 
-`wireVersion` 1 → 2 and the sync-request signing tag to its v3, because
-the signed bytes changed meaning rather than shape. A peer on the old version is
-refused with a version mismatch instead of failing a signature check, which is the
-difference between a diagnosis and a mystery.
-
-**Why bother, given nothing was exploitable.** D-017 says never key on the name, and
-the wire was keying on the name. The property protecting it lived somewhere else
-entirely — a unique index in a local schema, which no peer can see and nothing
-obliges the next schema change to keep. A guarantee held at that distance from the
-thing it guards is one nobody will think to preserve.
-
-**Tests.** `TestTheWireRefusesARoomName` presents a request correct in every other
-respect — genuine guest, genuine signature, a room it really is a guest of, named —
-and requires 401. Confirmed to fail with 200 when the lookup is reverted to
-`FindRoom`. `TestTheWireAcceptsARoomID` pairs with it so a future failure of the
-first is read as the lookup breaking rather than the fixture rotting.
-
-**Revisit when** a room identifier needs to be typed by a person on a path that
-reaches a peer. It should not: a person types a name, their own daemon resolves it,
-and only the id travels.
+**Revisit when** a room identifier needs to be typed by a person on a path that reaches
+a peer.
 
 ---
 
-## D-050 — Room names may collide locally; the schema stops forbidding it
+## D-050 — Room names may collide locally, so the room table does not require a unique name
 
-**Date:** 2026-09-17 · **Status:** active (implemented)
+**Date:** 2026-09-17 · **Status:** active
 
-**Context.** Found while making the wire address rooms by id (D-049).
-`rooms.room_name` was `NOT NULL UNIQUE`. `CreateRoom` coped by regenerating on a
-clash, but `RecordRoom` — the path taken when **joining** a room somebody else
-named — had `ON CONFLICT(room_id)` only, so the insert violated the index and
-`runJoin` called `log.Fatalf`. The person was told they could not join a room,
-for a reason naming nothing they had done and nothing they could change.
+**Decision.** `rooms.room_name` has no uniqueness constraint. `CreateRoom` asks whether
+a name is free before it mints one, and `migrateMembership` rebuilds a table created
+with the constraint.
 
-Not hypothetical at any real scale. Names are drawn from 7,656 combinations, the
-table accumulates **every room ever recorded** rather than the ones currently in
-use, and the clash is with rooms other peers named — which this machine cannot
-influence. Around a hundred rooms over a machine's lifetime makes it a coin flip.
+**Support.**
+- Names collide by design, and the table holds rooms other peers named, so a
+  uniqueness rule would make this machine refuse to record a room another peer named.
+  D-017 (a room's identifier is authoritative, and its name is not),
+  `cmd/cogmer/membership.go`, `RecordRoom`.
+- The table holds every room ever recorded and not only those in use, and names are
+  drawn from 7,656 combinations, so about a hundred rooms make a clash as likely as
+  not. D-135 (a room's name is unique only among one peer's rooms).
+- A name this peer mints can be minted differently, so `CreateRoom` can avoid a local
+  clash at no cost, which a name arriving with a room cannot. `cmd/cogmer/membership.go`,
+  `CreateRoom`.
+- SQLite has no `DROP CONSTRAINT`, so a table created with the rule keeps it until it
+  is rebuilt. `cmd/cogmer/membership_test.go`, `TestMigrationDropsTheNameConstraint`.
+- Joining a second room whose name matches a recorded one succeeds.
+  `cmd/cogmer/membership_test.go`, `TestJoiningTwoRoomsWithOneNameSucceeds`.
 
-**Decision.** Drop the constraint. Names collide by design (D-017) and this table
-holds rooms other peers named, so uniqueness here was never a rule about the world:
-it was this machine refusing to record something that had already happened
-elsewhere.
+**Rejected.**
+- *Renaming a joined room locally to keep names unique.* This machine would then
+  disagree with the host about what the room is called, so the name one user says
+  aloud is not the name the other sees, and a name that differs per peer is not a
+  mnemonic.
 
-Three consequences, each a place the constraint was silently doing work:
-
-- `CreateRoom` **asks** whether a name is free instead of catching the violation. A
-  name this peer mints it is free to mint differently, so avoiding a local clash
-  still costs nothing — unlike one arriving with a room already named.
-- `FindRoom` reports **three** outcomes, not two. Answering "no such room" for an
-  ambiguous name would send someone looking for a room they are already in, and
-  returning whichever row came back first would choose for them without saying so.
-  It now names both identities and asks which was meant.
-- `migrateMembership` rebuilds the table, since SQLite has no `DROP CONSTRAINT`.
-  `CREATE TABLE IF NOT EXISTS` leaves an older table exactly as it was, so without
-  this the relaxed schema would apply only to databases created after it — the same
-  trap `migrate()` exists for on the room stores.
-
-**What was not done.** Renaming a joined room locally to keep names unique was the
-obvious alternative and is worse: it makes this machine disagree with the host about
-what the room is called, so the name David says aloud is not the name Alice sees.
-A name is a mnemonic for a room, and one that differs per peer is not a mnemonic.
-Ambiguity is the honest state and is reported as such.
-
-**Tests.** `TestJoiningTwoRoomsWithOneNameSucceeds` is the bug itself;
-`TestAnAmbiguousNameIsReportedNotGuessed` requires the report to be distinguishable
-from "unknown" and to name both ids; `TestMigrationDropsTheNameConstraint` writes a
-pre-change database, opens it, and requires both that the old room survives and that
-the second insert succeeds. All three confirmed to fail against the pre-change
-schema with the migration disabled.
-
-**Revisit when** a person needs to refer to a room across peers by name in a context
-with no host to resolve it against. §12 says a name is only ever resolved against a
-specific peer; anything that breaks that assumption reopens this.
+**Revisit when** a user has to refer to a room by name across peers where no host
+resolves it. §12 (forming a room) has a name resolved only against a specific peer.
 
 ---
 
@@ -1581,8 +1385,8 @@ appetite.
 
 **Date:** 2026-09-17 · **Status:** active (implemented)
 
-**Context.** D-048 accepted ZRTP's short authentication string in principle and put
-it "at join, where both daemons are connected." Asked for the two-word approach
+**Context.** D-048, as `249ddd0:docs/decisions.md` held it, accepted ZRTP's short
+authentication string in principle and put it "at join, where both daemons are connected." Asked for the two-word approach
 directly, and asked whether that was the same thing as the host-approval path
 (§12a). It is not, and conflating them would have made a verification feature wait
 on an admission feature nobody has decided to build.
@@ -1730,8 +1534,8 @@ context without verification.
 the host's judgement — but that is an answer to a different question. Admission
 decides whether a key may enter. Verification decides whether the key is the
 person's. Every check in the system passes for a key substituted in transit, because
-a substituted key is a real key held by whoever substituted it, and D-047
-demonstrated exactly that end to end with **zero refusals**. A marker is the right
+a substituted key is a real key held by whoever substituted it, and D-047, as
+`249ddd0:docs/decisions.md` held it, demonstrated exactly that end to end with **zero refusals**. A marker is the right
 thing to show once content is in front of a reader; it is not a control, and the one
 manual step the whole chain rests on will be skipped if skipping it costs nothing.
 
@@ -1796,7 +1600,7 @@ verified by the two-word comparison.
 **It is a downgrade path.** A gate is only as strong as the weakest ceremony that
 satisfies it, and a second, harder ceremony beside an easier one is not a choice
 people make on the merits — it is what gets reached for when the other is
-inconvenient. D-047 measured the cost: shown forty-three characters to check over a
+inconvenient. D-047, as `249ddd0:docs/decisions.md` held it, measured the cost: shown forty-three characters to check over a
 telephone, a reader takes the first group, the last group, and skims the middle.
 
 **It did not exist.** `Fingerprint` had no callers outside its own test, and nothing
@@ -1823,6 +1627,12 @@ comparison looking like a shortcut.
 **Consequence.** D-047 is closed without being implemented. "How should the
 fingerprint be rendered for comparison" has no answer once comparing a fingerprint
 verifies nothing.
+
+**Rejected.**
+- *Rendering the fingerprint as words to compare, beside the two words.* Two ceremonies
+  leave the weaker one to be performed, and a reader shown forty-three characters of
+  base64 compares the first group and the last and skims the middle.
+  `249ddd0:docs/decisions.md`, the entry D-047 held there.
 
 **Revisit when** a case appears where two people must verify and their daemons
 cannot reach each other. The honest response is probably still that they cannot
@@ -1853,7 +1663,8 @@ on paper and nowhere else, and nobody noticed for the same reason it was safe: t
 stricter behaviour is what anyone would want.
 
 **Decision.** Keep the strict rule and delete the machinery for the loose one. A
-session binds on first sight and stays. `injected`, `MarkInjected` and
+session binds on first sight and stays. Nobody is asked at that moment, since nothing
+knows a session exists until its first hook fires. `injected`, `MarkInjected` and
 `HasReceivedContext` are gone, and `RoomForSession` carries the comment saying it is
 the whole of the constraint.
 
@@ -2225,7 +2036,8 @@ signs events and is what a person verifies. Two keys, two jobs.
 **Do not use `AllowedClients`.** Tailcat can restrict connections by peer public
 key, which would be a third allowlist, keyed on a different key type, needing to
 agree with `known_peers` and `room_guests`. Two lists that can disagree is precisely
-the defect behind the asymmetric guest list (D-046). One authority.
+the defect behind the asymmetric guest list (D-159, an invitation carries the room and
+the inviter). One authority.
 
 **Measured, not assumed.** Built against a trivial program, `CGO_ENABLED=0`, all
 four targets:
@@ -2902,7 +2714,7 @@ neither another peer nor the room's own creator, who is its first guest. The fir
 is confirmed to fail without the cascade.
 
 **Revisit when** a peer needs to be forgotten on one machine while remaining a guest
-elsewhere. Guest lists are per-peer (D-046), so two peers can already disagree about
+elsewhere. Guest lists are per-peer (D-159, an invitation carries the room and the inviter), so two peers can already disagree about
 who belongs; this changes nothing about that, and a host forgetting somebody does
 not tell them so.
 
@@ -2950,7 +2762,7 @@ invited again deliberately rather than inheriting rooms.
 
 **`resolvePeer` refuses an ambiguous name rather than choosing.** Recording two keys
 under one name is now prevented, but a database written before this could hold one,
-and picking between them would admit a peer nobody named. Same shape as D-050: report
+and picking between them would admit a peer nobody named. Same shape as D-161 (an ambiguous room name is reported and never guessed): report
 the ambiguity, name both, say what it probably means.
 
 **What this does not do.** It does not detect a key change by itself — only a key
@@ -4805,8 +4617,8 @@ any design that *cannot* extend past two as a defect to be argued for explicitly
 not a saving to be taken quietly.
 
 The distinction is between a **cost** and a **ceiling**. Sync is a pull against a
-per-peer watermark and guest lists are per-peer (D-046, the daemon serves many
-rooms); both would be O(n) work with more peers and neither breaks — those are
+per-peer watermark and guest lists are per-peer (D-159, an invitation carries the
+room and the inviter); both would be O(n) work with more peers and neither breaks — those are
 costs, and they are fine. A pairwise ceremony assumed to be the only shape of
 admission, or a room identity derived from exactly two identifiers, would be
 ceilings. So would describing the tool by a count, which is why the word "several"
@@ -6507,3 +6319,83 @@ binary is the one the hook finds.
 
 **Revisit when** two installations on one machine share addresses and run
 different versions, since each would replace the other at every session.
+
+---
+
+## D-159 — An invitation carries the room and the inviter, and joining admits the inviter
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Decision.** An invitation carries the room's name, the room's identifier, an address
+where the inviting peer can be reached, and the inviting peer's identifier, all of them
+public. Joining records the room, admits the inviter to its guest list, and stores the
+address against them.
+
+**Support.**
+- A guest did not create the room and cannot invent its identity, so the identity comes
+  from the invitation. `cmd/cogmer/main.go`, `runJoin`.
+- Synchronization is a pull in both directions, and a guest list is held by each peer,
+  so a guest that recorded the room without its host could read the host and never be
+  read. `cmd/cogmer/main.go`, `runJoin`.
+- Storing an address updates a row that must exist, so joining admits the
+  inviter before it stores the address. D-103 (an address belongs to a peer, and is
+  stored in one place).
+- Nothing in an invitation admits anybody, because there is no token to hold. D-026
+  (there is no join token at all).
+
+**Rejected.**
+- *An invitation that leaves out the inviter's identifier.* The guest's guest list would
+  refuse the host's requests, and collaboration would run one way.
+
+**Limits.** How an invitation reaches the guest is D-105 (an invitation travels over the
+channel that pairing established).
+
+**Revisit when** a guest has to join a room with no inviter named.
+
+---
+
+## D-160 — The address in a sync request is signed
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Decision.** A sync request carries the address its sender listens on, and the
+signature covers that address along with the request's other signed fields.
+
+**Support.**
+- A peer acts on the address by polling it, so an unsigned one would let anybody
+  redirect a peer's polling, which forges nothing and denies a great deal.
+  `cmd/cogmer/auth.go`, `requestBytes`.
+- The sender signs the address it advertises. `cmd/cogmer/sync.go`.
+- The other signed fields are D-044 (sync requests are signed; authentication is not
+  admission).
+
+**Rejected.**
+- *Leaving the address unsigned because it forges nothing.* It lets a third party send a
+  peer's polling to an address of their choosing.
+
+**Revisit when** a peer learns another's address by a path that does not carry a signed
+request.
+
+---
+
+## D-161 — An ambiguous room name is reported with both identities and never guessed
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Decision.** Looking up a room by name has three outcomes: one room, no such room, and
+more than one. For more than one, `FindRoom` names each room's identifier and asks which
+was meant.
+
+**Support.**
+- Answering "no such room" for an ambiguous name would send a user looking for a room
+  they are in, and returning whichever row came first would choose for them
+  without saying so. `cmd/cogmer/membership.go`, `FindRoom`.
+- The report is distinguishable from an unknown name and names both identifiers.
+  `cmd/cogmer/membership_test.go`, `TestAnAmbiguousNameIsReportedNotGuessed`.
+- Names collide by design. D-050 (room names may collide locally).
+
+**Rejected.**
+- *Answering that no such room exists.* It misdirects the user.
+- *Taking the first match.* It chooses on the user's behalf without telling them.
+
+**Revisit when** a user has to refer to a room somewhere that cannot ask which was meant.

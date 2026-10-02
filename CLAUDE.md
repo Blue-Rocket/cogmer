@@ -164,7 +164,7 @@ is not listed, read the spec.
 
 | touching | read first |
 |---|---|
-| pairing, verification, the two words | D-055, D-088, D-093, D-047, §25 |
+| pairing, verification, the two words | D-055, D-048, D-054, D-088, D-093, §25 |
 | the local HTTP API or the view | D-087, D-038, D-039, D-090, D-099 |
 | capture, reassembly, injection | D-014, D-040, D-043, and B04/B05/B09 |
 | rooms, membership, session binding | D-015, D-016, D-046, D-064, D-071, D-077 |
