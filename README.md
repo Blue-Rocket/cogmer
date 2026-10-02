@@ -126,7 +126,7 @@ a native binary, so a colleague may have no Node installed.
 | | |
 |---|---|
 | [`Shared Claude Sessions.md`](Shared%20Claude%20Sessions.md) | the specification: the system as a user experiences it |
-| [`docs/decisions.md`](docs/decisions.md) | the detail beneath the specification, and why; read it before proposing a simplification, because some awkward-looking choices are there for a reason |
+| [`docs/decisions/`](docs/decisions/) | the detail beneath the specification, and why; read it before proposing a simplification, because some awkward-looking choices are there for a reason |
 | [`docs/writing.md`](docs/writing.md) | how every document here is written |
 | [`docs/open.md`](docs/open.md) | actions not yet taken, and decisions not yet made |
 | [`docs/relied-on-behaviors.md`](docs/relied-on-behaviors.md) | what Claude Code does that cogmer depends on, generated from the registry |

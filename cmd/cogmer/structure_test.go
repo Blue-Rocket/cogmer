@@ -88,7 +88,7 @@ func structureProblems(doc string, src []byte) []string {
 
 	fields := map[string]bool{}
 	switch {
-	case doc == "docs/decisions.md":
+	case decisionFile.MatchString(doc):
 		fields = decisionFields
 	case workDocument.MatchString(doc):
 		fields = workFields
@@ -292,9 +292,9 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 		{"bold label opening a paragraph", "x.md", "**Where it lives.** In a file.\n", 1},
 		{"bold in a code span", "x.md", "Write `**x**` there.\n", 0},
 		{"italic", "x.md", "Some *emphasis*.\n", 0},
-		{"decision field", "docs/decisions.md", "**Date:** 2026-09-23 · **Status:** active\n\n**Decision.** X.\n", 0},
+		{"decision field", "docs/decisions/D-124-t.md", "**Date:** 2026-09-23 · **Status:** active\n\n**Decision.** X.\n", 0},
 		{"decision field elsewhere", "x.md", "**Decision.** X.\n", 1},
-		{"bold label in the log", "docs/decisions.md", "**Where it lives.** In a file.\n", 1},
+		{"bold label in the log", "docs/decisions/D-124-t.md", "**Where it lives.** In a file.\n", 1},
 		{"open.md item", "docs/open.md", "**The command fails.** It exits 1.\n", 0},
 		{"open.md bold mid-paragraph", "docs/open.md", "It **fails**.\n", 1},
 		{"open.md bold in a list", "docs/open.md", "- **Fails.** Yes.\n", 1},
@@ -309,7 +309,7 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 		{"header over a subsection", "x.md", "Intro.\n\n## T\n\n### U\n\na\nb\nc\nd\n", 0},
 		{"header over a short list", "x.md", "Intro.\n\n## T\n\n- a\n- b\n", 1},
 		{"a second level-1 header over one line", "x.md", "# T\n\na\nb\nc\nd\n\n# U\n\nOne line.\n", 1},
-		{"decision heading", "docs/decisions.md", "## D-124 — T\n\n**Date:** 2026-09-23 · **Status:** active\n", 0},
+		{"decision heading", "docs/decisions/D-124-t.md", "# D-124 — T\n\n**Date:** 2026-09-23 · **Status:** active\n", 0},
 		{"numbered specification heading", specification, "Intro.\n\n## 3.3 No authoritative peer\n\nOne line.\n", 0},
 		{"numbered top-level specification heading", specification, "Intro.\n\n# 16\\. Propagation\n\nOne line.\n", 0},
 		{"unnumbered specification heading", specification, "Intro.\n\n## No authoritative peer\n\nOne line.\n", 1},
@@ -345,11 +345,7 @@ func TestStructureProblemsCatchesEachRule(t *testing.T) {
 // docs/writing.md, and every tombstone, whatever its number, keeps only its
 // status line. A withdrawn one names the decision whose **Rejected.** says why.
 func TestLaterDecisionsFollowTemplate(t *testing.T) {
-	src, err := os.ReadFile("../../docs/decisions.md")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, p := range decisionProblems(string(src), guideHeadings) {
+	for _, p := range decisionProblems(readDecisionLog(t), guideHeadings) {
 		t.Error(p)
 	}
 }
@@ -394,9 +390,9 @@ func decisionProblems(log string, headingsOf func(string) (map[string]bool, bool
 	var entries []*entry
 	var current *entry
 	for c := root.FirstChild(); c != nil; c = c.NextSibling() {
-		if h, ok := c.(*ast.Heading); ok && h.Level <= 2 {
+		if h, ok := c.(*ast.Heading); ok && h.Level <= 1 {
 			current = nil
-			if m := decisionTitle.FindStringSubmatch(inlineText(h, src)); m != nil && h.Level == 2 {
+			if m := decisionTitle.FindStringSubmatch(inlineText(h, src)); m != nil && h.Level == 1 {
 				current = &entry{id: "D-" + m[1]}
 				entries = append(entries, current)
 			}
@@ -641,46 +637,46 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 	complete := date + "**Decision.** x\n\n" + support + "**Rejected.** y\n\n**Revisit when** z.\n"
 	tombstone := "**Status:** withdrawn 2026-09-20. Replaced by D-126\n(words).\n"
 	// The decision that replaced the tombstone's, which holds the reason.
-	replacement := "\n---\n\n## D-126 — R\n\n" + complete
+	replacement := "\n\n# D-126 — R\n\n" + complete
 	cases := []struct {
 		name  string
 		entry string
 		want  []string
 	}{
-		{"not yet rewritten", "## D-123 — Old\n\nAnything, already.\n", nil},
-		{"rewritten but still listed", "## D-123 — T\n\n" + complete, []string{"D-123 now follows the decision template"}},
-		{"complete", "## D-124 — T\n\n" + complete, nil},
-		{"complete, with Limits", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Some.\n\n**Revisit when**", 1), nil},
-		{"not built", "## D-124 — T\n\n" + strings.Replace(complete, "active", "not built", 1), nil},
-		{"no Revisit when", "## D-124 — T\n\n" + strings.Replace(complete, "\n\n**Revisit when** z.", "", 1), nil},
-		{"no Rejected", "## D-124 — T\n\n" + strings.Replace(complete, "**Rejected.** y\n\n", "", 1), nil},
-		{"missing Support", "## D-124 — T\n\n" + strings.Replace(complete, support, "", 1), []string{"D-124 has no **Support.**"}},
-		{"Support with no list", "## D-124 — T\n\n" + strings.Replace(complete, support, "**Support.** It is so.\n\n", 1), []string{"D-124 has **Support.** with no list"}},
-		{"superseded status", "## D-124 — T\n\n" + strings.Replace(complete, "active", "superseded by D-126", 1), []string{"D-124 has no **Date:** line whose status"}},
-		{"a date that is not one", "## D-124 — T\n\n" + strings.Replace(complete, "2026-09-23", "d", 1), []string{"D-124 has no **Date:** line whose status"}},
-		{"out of order", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when** z.", "**Revisit when** z.\n\n**Decision.** Again.", 1), []string{"D-124 has **Decision.** out of order"}},
-		{"a field only in a code block", "## D-124 — T\n\n" + strings.Replace(complete, "**Decision.** x\n\n", "```\n**Decision.** x\n```\n\n", 1), []string{"D-124 has no **Decision.**"}},
-		{"support with no source", "## D-124 — T\n\n" + strings.Replace(complete, "D-001 (Go).", "It is so.", 1), []string{"D-124 has a support item with no source"}},
-		{"history word", "## D-124 — T\n\n" + strings.Replace(complete, "**Decision.** x", "**Decision.** It stays as it is.", 1), []string{"D-124 says \"stays\""}},
-		{"history word in code", "## D-124 — T\n\n" + strings.Replace(complete, "**Decision.** x", "**Decision.** Run `stays`.", 1), nil},
-		{"Limits pointing at open.md", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Three questions are open in `docs/open.md`.\n\n**Revisit when**", 1), []string{"D-124 points to open work"}},
-		{"Limits pointing at a tracker task", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Tracked in https://app.clickup.com/t/86abc123.\n\n**Revisit when**", 1), []string{"D-124 points to open work"}},
-		{"Limits pointing at working material", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Detail in `docs/work/split.md`.\n\n**Revisit when**", 1), []string{"D-124 points to open work"}},
-		{"Limits stating scope", "## D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** It does not decide whether stop restarts the daemon.\n\n**Revisit when**", 1), nil},
-		{"open work in an entry not yet rewritten", "## D-123 — Old\n\nLeft open in `docs/open.md`.\n", nil},
-		{"tombstone", "## D-076 — T\n\n" + tombstone + replacement, nil},
-		{"tombstone with more", "## D-076 — T\n\n" + tombstone + "\nMore history.\n" + replacement, []string{"D-076 is a tombstone and has more"}},
-		{"tombstone with a Why", "## D-076 — T\n\n**Status:** withdrawn 2026-09-20. Replaced by D-126 (words). Why: `05f89c4`.\n" + replacement, []string{"D-076 is a tombstone whose status line"}},
-		{"replacement with no Rejected", "## D-076 — T\n\n" + tombstone + strings.Replace(replacement, "**Rejected.** y\n\n", "", 1), []string{"D-076 is replaced by D-126, which has no **Rejected.**"}},
-		{"replacement missing", "## D-076 — T\n\n" + tombstone, []string{"D-076 is replaced by D-126, which has no **Rejected.**"}},
-		{"moved to a rule", "## D-128 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, " + rule + "42\n(evidence is cited).\n", nil},
-		{"moved to a section", "## D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, \"Enforcement\".\n", nil},
-		{"moved to a missing rule", "## D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, " + rule + "99 (x).\n", []string{"D-124 moved to " + rule + "99"}},
-		{"moved to a missing section", "## D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, \"Elsewhere\".\n", []string{"D-124 moved to \"Elsewhere\""}},
-		{"removed as a plan", "## D-002 — T\n\n**Status:** removed 2026-09-29: a plan for the work, not a decision\nabout the system (" + rule + "53).\n", nil},
-		{"removed without its reason", "## D-002 — T\n\n**Status:** removed 2026-09-29.\n", []string{"D-002 is a removed tombstone without"}},
-		{"removed with more", "## D-002 — T\n\n**Status:** removed 2026-09-29: a plan for the work, not a decision about the system (" + rule + "53).\n\nMore.\n", []string{"D-002 is a tombstone and has more"}},
-		{"moved with more", "## D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, \"Enforcement\".\n\nMore.\n", []string{"D-124 is a tombstone and has more"}},
+		{"not yet rewritten", "# D-123 — Old\n\nAnything, already.\n", nil},
+		{"rewritten but still listed", "# D-123 — T\n\n" + complete, []string{"D-123 now follows the decision template"}},
+		{"complete", "# D-124 — T\n\n" + complete, nil},
+		{"complete, with Limits", "# D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Some.\n\n**Revisit when**", 1), nil},
+		{"not built", "# D-124 — T\n\n" + strings.Replace(complete, "active", "not built", 1), nil},
+		{"no Revisit when", "# D-124 — T\n\n" + strings.Replace(complete, "\n\n**Revisit when** z.", "", 1), nil},
+		{"no Rejected", "# D-124 — T\n\n" + strings.Replace(complete, "**Rejected.** y\n\n", "", 1), nil},
+		{"missing Support", "# D-124 — T\n\n" + strings.Replace(complete, support, "", 1), []string{"D-124 has no **Support.**"}},
+		{"Support with no list", "# D-124 — T\n\n" + strings.Replace(complete, support, "**Support.** It is so.\n\n", 1), []string{"D-124 has **Support.** with no list"}},
+		{"superseded status", "# D-124 — T\n\n" + strings.Replace(complete, "active", "superseded by D-126", 1), []string{"D-124 has no **Date:** line whose status"}},
+		{"a date that is not one", "# D-124 — T\n\n" + strings.Replace(complete, "2026-09-23", "d", 1), []string{"D-124 has no **Date:** line whose status"}},
+		{"out of order", "# D-124 — T\n\n" + strings.Replace(complete, "**Revisit when** z.", "**Revisit when** z.\n\n**Decision.** Again.", 1), []string{"D-124 has **Decision.** out of order"}},
+		{"a field only in a code block", "# D-124 — T\n\n" + strings.Replace(complete, "**Decision.** x\n\n", "```\n**Decision.** x\n```\n\n", 1), []string{"D-124 has no **Decision.**"}},
+		{"support with no source", "# D-124 — T\n\n" + strings.Replace(complete, "D-001 (Go).", "It is so.", 1), []string{"D-124 has a support item with no source"}},
+		{"history word", "# D-124 — T\n\n" + strings.Replace(complete, "**Decision.** x", "**Decision.** It stays as it is.", 1), []string{"D-124 says \"stays\""}},
+		{"history word in code", "# D-124 — T\n\n" + strings.Replace(complete, "**Decision.** x", "**Decision.** Run `stays`.", 1), nil},
+		{"Limits pointing at open.md", "# D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Three questions are open in `docs/open.md`.\n\n**Revisit when**", 1), []string{"D-124 points to open work"}},
+		{"Limits pointing at a tracker task", "# D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Tracked in https://app.clickup.com/t/86abc123.\n\n**Revisit when**", 1), []string{"D-124 points to open work"}},
+		{"Limits pointing at working material", "# D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** Detail in `docs/work/split.md`.\n\n**Revisit when**", 1), []string{"D-124 points to open work"}},
+		{"Limits stating scope", "# D-124 — T\n\n" + strings.Replace(complete, "**Revisit when**", "**Limits.** It does not decide whether stop restarts the daemon.\n\n**Revisit when**", 1), nil},
+		{"open work in an entry not yet rewritten", "# D-123 — Old\n\nLeft open in `docs/open.md`.\n", nil},
+		{"tombstone", "# D-076 — T\n\n" + tombstone + replacement, nil},
+		{"tombstone with more", "# D-076 — T\n\n" + tombstone + "\nMore history.\n" + replacement, []string{"D-076 is a tombstone and has more"}},
+		{"tombstone with a Why", "# D-076 — T\n\n**Status:** withdrawn 2026-09-20. Replaced by D-126 (words). Why: `05f89c4`.\n" + replacement, []string{"D-076 is a tombstone whose status line"}},
+		{"replacement with no Rejected", "# D-076 — T\n\n" + tombstone + strings.Replace(replacement, "**Rejected.** y\n\n", "", 1), []string{"D-076 is replaced by D-126, which has no **Rejected.**"}},
+		{"replacement missing", "# D-076 — T\n\n" + tombstone, []string{"D-076 is replaced by D-126, which has no **Rejected.**"}},
+		{"moved to a rule", "# D-128 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, " + rule + "42\n(evidence is cited).\n", nil},
+		{"moved to a section", "# D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, \"Enforcement\".\n", nil},
+		{"moved to a missing rule", "# D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, " + rule + "99 (x).\n", []string{"D-124 moved to " + rule + "99"}},
+		{"moved to a missing section", "# D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, \"Elsewhere\".\n", []string{"D-124 moved to \"Elsewhere\""}},
+		{"removed as a plan", "# D-002 — T\n\n**Status:** removed 2026-09-29: a plan for the work, not a decision\nabout the system (" + rule + "53).\n", nil},
+		{"removed without its reason", "# D-002 — T\n\n**Status:** removed 2026-09-29.\n", []string{"D-002 is a removed tombstone without"}},
+		{"removed with more", "# D-002 — T\n\n**Status:** removed 2026-09-29: a plan for the work, not a decision about the system (" + rule + "53).\n\nMore.\n", []string{"D-002 is a tombstone and has more"}},
+		{"moved with more", "# D-124 — T\n\n**Status:** moved 2026-09-25 to `docs/writing.md`, \"Enforcement\".\n\nMore.\n", []string{"D-124 is a tombstone and has more"}},
 	}
 	for _, c := range cases {
 		got := decisionProblems("# Log\n\n"+c.entry, headings)

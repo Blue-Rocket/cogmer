@@ -174,7 +174,7 @@ open item before it is deleted.
 ## Words and marks to avoid
 
 W-20. Do not use an em-dash. The one allowed is the one in a decision's heading,
-`## D-NNN — <title>`. The em-dash is banned for what it usually does here: it lets
+`# D-NNN — <title>`. The em-dash is banned for what it usually does here: it lets
 a finished sentence carry a second idea, often as a twist or a reveal ("handshakes
 — seconds of work"), or holds a sentence open around an aside. Replacing it with a
 comma or a semicolon keeps that structure and defeats the rule. Split the sentence
@@ -231,8 +231,8 @@ specification it makes the text around it false with it.
 W-28. The decision log holds only decisions about the system: what it does, and the
 detail beneath the specification. How a document is written, where a thing is
 written, and how the documents are checked are rules in this guide, where a rule and
-its reason can be corrected together. The log is one file, `docs/decisions.md`, which
-every check of decisions reads.
+its reason can be corrected together. The log is the directory `docs/decisions/`, one file
+for each decision, which every check of decisions reads.
 
 W-29. A rule in this guide states what to do. It gives a reason only where the rule
 would surprise a reader, and the reason says what the rule protects, in general
@@ -241,7 +241,7 @@ where a maintainer would otherwise be likely to propose it again, in one sentenc
 
 ## Templates
 
-### A decision (`docs/decisions.md`)
+### A decision (a file in `docs/decisions/`)
 
 A decision entry is a log of what was decided and what supports it. It is not the
 story of how the decision was reached, and what was observed on the way is cited
@@ -250,7 +250,7 @@ under W-42.
 W-84 says how a decision relates to the specification.
 
 ```markdown
-## D-NNN — <what was decided, as a statement>
+# D-NNN — <what was decided, as a statement>
 
 **Date:** YYYY-MM-DD · **Status:** active | not built
 
@@ -314,7 +314,7 @@ tombstone. A tombstone keeps the number and the title, so that references to it
 still resolve, and nothing else:
 
 ```markdown
-## D-NNN — <original title>
+# D-NNN — <original title>
 
 **Status:** withdrawn YYYY-MM-DD. Replaced by D-MMM (<words>).
 ```
@@ -353,7 +353,7 @@ of its own and could be reversed without reversing the first, gets its own entry
 Two signs that an entry holds more than one: a title joining two statements with a
 semicolon or "and", and a paragraph opening with a bold statement that is not a
 template field. When an entry is split, the decision most citations mean keeps the
-number, each other decision takes a new number at the bottom of the log, and every
+number, each other decision takes the next number, and every
 citation of the old number is checked against its few words (W-11) and pointed at
 the entry that now holds what it describes. A second decision that another entry
 already holds folds into that entry rather than taking a number. An entry that a later
@@ -414,7 +414,7 @@ hundreds of other projects, chosen because they suit this project and followed b
 A pattern is stated in neutral, general terms. A pattern is a technique: a way of building, with a mechanism a reader can apply to code
 or data. A commitment about whom the project serves is a
 value, in `docs/values.md`. A choice that makes sense only here is a decision, in
-`docs/decisions.md`. A pattern this project does not follow belongs in no list of
+`docs/decisions/`. A pattern this project does not follow belongs in no list of
 its.
 
 W-56. A pattern names nothing in this repository: no decision, no section of the
@@ -564,7 +564,7 @@ reading code spans as well as prose.
 
 `TestCitationsNameThingsThatExist`, in `cmd/cogmer/citations_test.go`, checks
 every citation in the documents, the Go sources, the scripts and the plugin. Each
-D-NNN must have an entry in `docs/decisions.md`, each § a numbered heading or
+D-NNN must have a file in `docs/decisions/`, each § a numbered heading or
 numbered step in the specification, each BNN an entry in the behaviour
 registry, and each `<commit>:<path>` a file that commit holds. No document is exempt. A decision that was withdrawn keeps its tombstone,
 so citations of it still resolve.
@@ -596,6 +596,12 @@ whatever its number, must hold only its status line. A withdrawn entry must name
 decision that replaced it, and that decision must have a **Rejected.**. A moved
 entry must name a rule or a heading this guide holds. A removed entry must say that it
 was a plan, with W-53.
+
+A decision file is exempt from the word and structure checks while its number is in
+`decisionsNotRewritten`, and is checked like any document once it comes off the list.
+`TestDecisionFilesAreNamedForTheirHeadings`, in `cmd/cogmer/decisionlog_test.go`, checks
+that each file under `docs/decisions/` holds one decision, that its name carries that
+decision's number and a slug of its title, and that no number appears twice.
 
 `TestWritingRulesAreIndexed`, in `cmd/cogmer/writingrules_test.go`, checks that
 the rule index above and the checks agree. Every rule in the index has a paragraph

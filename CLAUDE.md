@@ -8,8 +8,8 @@ and how to run it.
 
 ## How we work
 
-- **Read `docs/decisions.md` before proposing a change to how anything here works.**
-  It records why each choice was made, and the alternatives somebody would be likely
+- **Read the decisions in `docs/decisions/` that govern an area before proposing a change to how it works.**
+  They record why each choice was made, and the alternatives somebody would be likely
   to propose again, and several choices that look awkward have something depending
   on them. Add an entry whenever a real choice about the system is made. Never
   renumber: a reversed decision becomes a tombstone, and the reason for reversing it
@@ -50,7 +50,7 @@ documents rot.
 | `Shared Claude Sessions.md` | the system as the user experiences it, the constraints on the system's boundaries, and the negative outcomes it avoids (W-84) |
 | `docs/values.md` | what this project holds itself to |
 | `docs/patterns.md` | general patterns selected because they suit this project |
-| `docs/decisions.md` | smaller-grained detail too mundane or technical for the spec, necessary exceptions to it, and why (W-84) |
+| `docs/decisions/` | smaller-grained detail too mundane or technical for the spec, necessary exceptions to it, and why (W-84) |
 | `docs/writing.md` | how a document is written, where a thing goes, and how the documents are checked |
 | a commit, cited as `<commit>:<path>` or `<commit>` (W-42 in `docs/writing.md`) | what we observed when we tried it, where no test can hold the evidence |
 | `cmd/cogmer/behaviors.go` | what someone else's software does that we rely on |
@@ -68,7 +68,7 @@ documents rot.
   (W-53).
 - **A change to what the user experiences changes the spec in the same commit**
   (W-85).
-- **`docs/decisions.md` holds only decisions about the system.** How documents are
+- **`docs/decisions/` holds only decisions about the system.** How documents are
   written, where a thing goes and how they are checked are rules in `docs/writing.md`
   (W-28).
 

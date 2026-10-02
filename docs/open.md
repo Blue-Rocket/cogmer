@@ -2,7 +2,7 @@
 
 Actions not yet taken and decisions not yet made. Nothing here is durable: every item
 either becomes a decision, a change to the specification, or code — and is then
-**deleted**, not marked done. The record of why lives in `decisions.md` and the
+**deleted**, not marked done. The record of why lives in `docs/decisions/` and the
 record of what the system is lives in the specification, so an item that has earned a
 permanent home does not need one here too. Nothing here records status.
 
@@ -473,9 +473,22 @@ the name is now settled (section 37), so that reason no longer holds.
 
 Every document follows `docs/writing.md`.
 
+**Finding the decisions that govern an area means searching the log, and `CLAUDE.md` cites
+decisions to shorten the search.** The reading-map table in `CLAUDE.md` names decision
+numbers for ten areas, and nothing checks that a row is complete or that it cites only
+active entries: a row named D-047 after D-055 withdrew it (read on 2026-10-01). Bullets
+elsewhere in the file cite decisions too.
+
+The fix is to give each decision file, as it is rewritten, an **Areas:** list drawn from a
+fixed vocabulary on its Date line, with a test that requires one for every rewritten
+active entry. A decisions skill, whose one-line description loads each session, would find
+entries by area with `rg`. `CLAUDE.md` would then lose the table and its decision numbers
+and keep the instruction to use the skill.
+
 **Nothing vets a proposed design against the documents it could conflict with.** The
-only process is `CLAUDE.md`'s "Read `docs/decisions.md` before proposing a change", a
-log of about 6,800 lines, and it names none of the other documents. On 2026-09-25 and
+only process is `CLAUDE.md`'s instruction to read the decisions that govern an area
+before proposing a change, which points at a directory of about 170 files, and it names
+none of the other documents. On 2026-09-25 and
 2026-09-28 a session proposed moving implementation detail out of the specification,
 restating decisions in it, and keeping the two-peer result because a decision said so,
 and each was caught by the maintainer rather than by a process. A skill run before a
@@ -490,7 +503,7 @@ as good as the decision log, so it waits until the log is rewritten, and it chec
 consistency, not judgement: whether to proceed stays the maintainer's call.
 
 **Nothing records which decisions and rules the maintainer ratified.** A Claude session
-wrote most of `docs/decisions.md` and `docs/writing.md`, and an entry the maintainer
+wrote most of `docs/decisions/` and `docs/writing.md`, and an entry the maintainer
 approved reads the same as one a session made and logged by itself. Later sessions then
 defend earlier sessions' choices as settled: on 2026-09-25 D-122 (the two READMEs) put
 the two-peer result in `README.md`, W-75 carried the requirement over, and it was
@@ -562,7 +575,7 @@ that are not decisions, and what each citation means.
   D-124, D-125, D-126.
 
 The answers settled on 2026-09-29 change those counts, and they are rules in
-`docs/writing.md` now: the log stays one file (W-28), a repeated decision folds into the
+`docs/writing.md` now: the log is one file for each decision (W-28), a repeated decision folds into the
 entry that holds it, an entry is rewritten to what still holds before it is split (W-40),
 and a plan becomes a "removed" tombstone (W-37). Applied to the notes, 52 entries remain
 to split, adding 78 entries rather than 86:
@@ -579,7 +592,7 @@ been recounted.
 
 Five entries lack a **Decision.** field: D-068, D-083, D-086, D-088 and D-089.
 
-**Six citations in `docs/decisions.md` credit an entry with something it does not
+**Six citations in `docs/decisions/` credit an entry with something it does not
 hold.** Each resolves, so the citation test passes, but the source says something
 else. "D-016 fixes that at the first prompt" describes what D-056 (a session's room
 is fixed at first sight) decided. D-017's Context says "D-015 gave rooms a generated

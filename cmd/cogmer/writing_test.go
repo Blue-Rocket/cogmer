@@ -24,8 +24,7 @@ import (
 // docs/writing.md. It only shrinks. A listed document that passes fails the
 // test, so that it comes off the list in the same commit that fixed it.
 var writingNotYetRewritten = map[string]bool{
-	"docs/decisions.md": true,
-	"docs/open.md":      true,
+	"docs/open.md": true,
 }
 
 // writingNeverChecked holds documents the word check cannot apply to.
@@ -70,7 +69,7 @@ var (
 func writingDocuments(t *testing.T) []string {
 	t.Helper()
 	var docs []string
-	for _, pattern := range []string{"*.md", "docs/*.md", "docs/work/*.md", "plugin/*.md"} {
+	for _, pattern := range []string{"*.md", "docs/*.md", "docs/decisions/*.md", "docs/work/*.md", "plugin/*.md"} {
 		matches, err := filepath.Glob(filepath.Join("../..", pattern))
 		if err != nil {
 			t.Fatal(err)
@@ -96,6 +95,11 @@ func TestDocumentsFollowWritingGuide(t *testing.T) {
 	for _, doc := range docs {
 		present[doc] = true
 		if _, skip := writingNeverChecked[doc]; skip {
+			continue
+		}
+		// An entry written before the guide is exempt until it is rewritten, and
+		// TestLaterDecisionsFollowTemplate fails once it follows the template.
+		if id, ok := decisionID(doc); ok && decisionsNotRewritten[id] {
 			continue
 		}
 		src, err := os.ReadFile(filepath.Join("../..", doc))
@@ -171,8 +175,8 @@ func writingProblems(doc string, src []byte) []string {
 		case *ast.Heading:
 			separate()
 			allowedDashes = 0
-			// A decision heading, "## D-NNN — <title>", may carry one em-dash.
-			if doc == "docs/decisions.md" && n.Level == 2 && decisionTitle.MatchString(headingText(n, src)) {
+			// A decision heading, "# D-NNN — <title>", may carry one em-dash.
+			if decisionFile.MatchString(doc) && n.Level == 1 && decisionTitle.MatchString(headingText(n, src)) {
 				allowedDashes = 1
 			}
 		case *ast.Text:
@@ -302,9 +306,9 @@ func TestWritingProblemsCatchesEachRule(t *testing.T) {
 		{"em-dash in a code span", "x.md", "Write `a — b` there.\n", 0},
 		{"em-dash in a fenced block", "x.md", "```\n## D-001 — t\n```\n", 0},
 		{"em-dash in an indented block", "x.md", "Text.\n\n    a — b\n", 0},
-		{"decision heading", "docs/decisions.md", "## D-124 — A title\n", 0},
-		{"second dash in a decision heading", "docs/decisions.md", "## D-124 — A — title\n", 1},
-		{"decision heading outside the log", "x.md", "## D-124 — A title\n", 1},
+		{"decision heading", "docs/decisions/D-124-a-title.md", "# D-124 — A title\n", 0},
+		{"second dash in a decision heading", "docs/decisions/D-124-a-title.md", "# D-124 — A — title\n", 1},
+		{"decision heading outside the log", "x.md", "# D-124 — A title\n", 1},
 		{"dash in a table cell", "x.md", "| a | b |\n|---|---|\n| c — d | e |\n", 1},
 		{"banned word", "x.md", "It is load-bearing.\n", 1},
 		{"banned word, any case", "x.md", "Honestly, no.\n", 1},

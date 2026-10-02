@@ -22,7 +22,6 @@ var (
 	behaviorCitation = regexp.MustCompile(`\bB\d{2}\b`)
 	// A file as a commit holds it, the form evidence of a past run is cited in.
 	committedCitation = regexp.MustCompile(`\b[0-9a-f]{7,40}:[\w./-]+\.(?:md|go|sh|json|html)\b`)
-	decisionHeading   = regexp.MustCompile(`(?m)^## (D-\d{3}) — `)
 	specHeading       = regexp.MustCompile(`^#+ (\d+[a-z]?(?:\.\d+)*)\\?\.?(?:\s|$)`)
 	specNumberedPoint = regexp.MustCompile(`^(\d+)\. `)
 )
@@ -45,7 +44,7 @@ func citationSources(t *testing.T) []string {
 			files = append(files, rel)
 		}
 	}
-	for _, pattern := range []string{"*.md", "docs/*.md", "docs/work/*.md", "cmd/cogmer/*.go", "scripts/*"} {
+	for _, pattern := range []string{"*.md", "docs/*.md", "docs/decisions/*.md", "docs/work/*.md", "cmd/cogmer/*.go", "scripts/*"} {
 		matches, err := filepath.Glob(filepath.Join("../..", pattern))
 		if err != nil {
 			t.Fatal(err)
@@ -110,8 +109,10 @@ func TestCitationsNameThingsThatExist(t *testing.T) {
 		return string(data)
 	}
 	decisions := map[string]bool{}
-	for _, m := range decisionHeading.FindAllStringSubmatch(read("docs/decisions.md"), -1) {
-		decisions[m[1]] = true
+	for _, f := range decisionFiles(t) {
+		if id, ok := decisionID(f); ok {
+			decisions[id] = true
+		}
 	}
 	sections := specSections(read("Shared Claude Sessions.md"))
 	behaviors := map[string]bool{}
@@ -138,7 +139,7 @@ func citationProblems(src string, decisions, sections, behaviors map[string]bool
 	for i, line := range strings.Split(src, "\n") {
 		for _, d := range decisionCitation.FindAllString(line, -1) {
 			if !decisions[d] {
-				problems = append(problems, fmt.Sprintf("%d: cites %s, which has no entry in docs/decisions.md (W-09)", i+1, d))
+				problems = append(problems, fmt.Sprintf("%d: cites %s, which has no file in docs/decisions/ (W-09)", i+1, d))
 			}
 		}
 		for _, m := range sectionCitation.FindAllStringSubmatch(line, -1) {
