@@ -77,7 +77,7 @@ type Daemon struct {
 	storesMu sync.Mutex
 
 	// Verification sessions, one per peer, held only while a person has asked
-	// for one. Nothing here is created by an incoming request (D-052).
+	// for one. Nothing here is created by an incoming request (D-162).
 	verifying map[string]*verifySession
 	verifyMu  sync.Mutex
 
@@ -492,7 +492,7 @@ func FormatTeamContext(evs []Event, facts PeerFacts) string {
 		// said a thing.
 		//
 		// The marker is a fact rather than a constant: a peer verified over a
-		// recognising channel (D-052) is not marked. It should never appear at all
+		// recognising channel (D-163) is not marked. It should never appear at all
 		// now that verification gates synchronization (D-054); if it does, a filter
 		// has failed, and saying so where the model can read it is the point.
 		// Nothing of ours is concatenated onto their text any more. The verified

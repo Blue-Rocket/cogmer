@@ -1323,320 +1323,184 @@ resolves it. §12 (forming a room) has a name resolved only against a specific p
 
 ## D-051 — Stranger pairing is not a supported case
 
-**Date:** 2026-09-17 · **Status:** active (specification)
+**Date:** 2026-09-17 · **Status:** active
 
-**Context.** §12a said the host-approval path exists "because it is how two people who
-have never met will ordinarily pair." Questioned directly: why would two strangers
-sharing linked Claude sessions be ordinary? They would not, and §12 says the opposite
-two sections earlier — "where the people involved already know one another, **which is
-the ordinary case**, since colleagues pair repeatedly." The specification asserted both.
+**Decision.** Pairing with someone unknown is not a design target. No affordance
+presents it as intended, and no claim is made that verification protects it.
 
-**The distinction that was collapsed.** There are two first contacts, and §12a merged
-them under one word. **Socially strangers**: no relationship, no established reason for
-trust. **Known people whose machines have not met**: you work with Alice daily and
-there is simply no key on file. The second is genuinely the ordinary first contact and
-needs the mechanism §12a describes; it needs none of the trust the word "stranger"
-implies. Calling it "two people who have never met" made a colleague-ergonomics feature
-read as a stranger-trust feature.
+**Support.**
+- Verification needs a channel on which the other party can be recognised, and people
+  who have never met have none. §25 (security).
+- A match between strangers shows that two parties hold the same key and says nothing
+  about whose, so the ceremony would give the appearance of assurance, and people act on
+  the appearance. §25.
+- A room carries a working session, and admission sends a member's turns to another
+  person's provider under that person's account. §28 (configuration).
+- People who know one another and whose machines have not met are the ordinary first
+  contact, since colleagues pair repeatedly, and they are not strangers in this sense.
+  §12 (forming a room).
 
-**Decision.** Exclude stranger pairing as a design target, on the specification's own
-terms rather than on taste.
+**Rejected.**
+- *Designing the host-approval path as the way two strangers pair.* The ceremony takes
+  nothing from verification when the two have never met, and the situations that want it,
+  such as mentoring, an interview or a contractor's first day, almost always have a call
+  available, so it buys convenience and not capability.
 
-§25 requires verification over a channel where the other party can be **recognised**,
-and already records that people who have never met have no such channel. A stranger
-pairing would run the ceremony and take nothing from it: the words match, and a match
-between strangers establishes that two parties hold the same key while saying nothing
-about whose. Every other pairing gets a real assurance from that step. This one gets
-its appearance — worse than omitting it, because the appearance is what people act on.
-
-Secondarily, the exposure is asymmetric with the benefit. A room carries a working
-session, and admission sends a member's turns to another person's provider under
-that person's account (§28). The situations wanting stranger pairing — mentoring, an
-interview, a contractor's first day — are ones where a call is almost always available,
-so what is bought is convenience rather than capability.
-
-**What is not decided.** The mechanism does not forbid it: a host who approves a
-request from someone unknown has paired with a stranger, and that is their judgement.
-What is excluded is designing for it — no affordance presents it as intended, and no
-claim is made that verification protects it.
-
-Also not decided: whether the host-approval path is built at all. Its value is
-removing the manual identifier paste between colleagues, and that is a separate
-question answered separately. Noted because the two were previously argued as one, and
-conflating them is how a mechanism gets justified by a case nobody wants.
-
-**Recorded as open in §12a**: whether a request may arrive unsolicited. Any peer that
-can reach the address and name the room could otherwise cause something to appear on
-the host's screen, and names are guessable by design (D-134). Guessing grants nothing,
-which is what makes names safe; producing an interruption is a different matter, and a
-prompt people learn to dismiss quickly is a poor place for a decision that matters.
-The alternative — requests accepted only while the host has said they are expecting
-someone — is not a token and does not reopen D-026: arriving in the window admits
-nobody, it only earns the right to ask.
+**Limits.** The mechanism does not forbid it. A host who approves a request from someone
+unknown has paired with a stranger, and that is the host's judgement.
 
 **Revisit when** there is a concrete use for pairing with someone unknown that a call
-cannot serve, or if a verification channel becomes available that does not depend on
-recognising the other party. Both would change the argument rather than merely the
-appetite.
+cannot serve, or a verification channel exists that does not depend on recognising the
+other party.
 
 ---
 
-## D-052 — The SAS is its own act, not part of joining or approving
+## D-052 — Verifying a peer is its own act, run by both users at once
 
-**Date:** 2026-09-17 · **Status:** active (implemented)
+**Date:** 2026-09-17 · **Status:** active
 
-**Context.** D-048, as `249ddd0:docs/decisions.md` held it, accepted ZRTP's short
-authentication string in principle and put it "at join, where both daemons are connected." Asked for the two-word approach
-directly, and asked whether that was the same thing as the host-approval path
-(§12a). It is not, and conflating them would have made a verification feature wait
-on an admission feature nobody has decided to build.
+**Decision.** Verification is separate from joining a room and from host approval. Both
+users run it at the same time on a call. Each daemon runs the exchange with the other,
+both show the same two words, and each user says whether the other read out the same
+ones.
 
-**The two are orthogonal.** The approval path is about **how a key arrives** —
-pasted after `whoami`, or presented in a request a host approves. The SAS is about
-**whether the key that arrived is the right one**, whichever way it came. Building
-the second requires nothing of the first.
+**Support.**
+- Verification confirms a key that is on file, whichever way the key arrived, so it
+  needs nothing from the path by which a key is approved. `cmd/cogmer/verify.go`,
+  `handleVerify`, and `cmd/cogmer/sas_test.go`, `TestAnUnknownPeerCannotVerify`.
+- It is interactive and blocks on another person. `cmd/cogmer/main.go`, `runPair`.
+- Each daemon tries every address this machine knows for the peer and keeps the one that
+  answers signed by the identity asked for, and a reply from a different peer is a wrong
+  peer and not a wrong address. `cmd/cogmer/verify.go`, `RunVerification`, and
+  `cmd/cogmer/verify_test.go`, `TestVerifyDialsOnlyTheNamedPeer`.
 
-**Decision.** `cogmer verify <peer>`, run by **both** people at the same time,
-on a call. Each CLI asks its own daemon to open a session; each daemon runs
-commit-commit-reveal-reveal with the other; both print the same two words; each
-person answers whether the other said the same ones.
+**Rejected.**
+- *Running the exchange as a step of joining a room, where both daemons are connected.*
+  Joining is a room operation and verifying a key is not, and the exchange is interactive
+  and blocks on another person.
 
-**Both sides run it, and that is what keeps §12a's open question closed.** A daemon
-answers a verification step only when its own user has asked for one — otherwise
-409, and nothing is displayed to anyone. So this adds no inbound surface, no prompt
-that can be trained away, and no path by which a stranger causes anything to appear
-on a host's screen. The question of unsolicited requests stays open in §12a and is
-not reached here.
+**Limits.** The surface that shows the words is D-088 (the pairing ceremony lives in the
+view). What may start an exchange is D-162, what records a verification is D-163, and
+which words are shown is D-164.
 
-**The exchange is symmetric** — true of a single round, and **not** of the session
-around it, which D-059 had to correct after a two-machine run: the side that
-finished first tore its session down and stranded the other. Each side sends its
-commitment and receives the other's as the reply, so there is no initiator to elect
-within a round. The
-address is discovered by trying each peer address this machine knows and keeping the
-one that answers **signed by the identity asked for** — a reply from a different
-peer is a wrong peer, not a wrong address, and is refused.
-
-**Only a person may record a verification.** The exchange proves both sides hold the
-keys they named; it cannot establish that the voice on the call is the colleague
-rather than somebody in their place. `MarkVerified` is reached only from the
-confirmation, never from the protocol. A mismatch records **nothing** — there is no
-failed-verification state, because storing one invites an interface that offers to
-retry, and retrying is precisely what must not be offered.
-
-**The marker now means something.** `known_peers.verified_at` is NULL until two
-people compare words, `FormatTeamContext` takes a predicate, and a verified peer
-loses the `unverified` tag inside injected text. Before this the tag was true of
-every peer forever, which is a marker a reader learns to stop seeing — the failure
-mode §25 cares about, since the model is the reader that reasons about attribution.
-
-**Wordlists.** The PGP biometric word list, 256 words each for even and odd
-positions, alternating. Alternation makes a transposition detectable: said in the
-wrong order the pair is not a valid rendering of anything. Deliberately **not** the
-peer-name or room-name vocabularies — a SAS sits on screen beside a derived peer
-name, and one mnemonic mistakable for the other is how somebody compares the wrong
-thing. A test asserts the lists are disjoint and exactly 256 unique words each,
-since the security argument assumes one byte per word.
-
-**Tests, and the two that matter.** `TestAnInterceptorProducesDifferentWords` is the
-property itself: a relayed exchange derives each side's words from a different pair
-of identities, and the strings disagree. `TestRevealBeforeCommitIsRefused` and
-`TestARevealMustOpenItsCommitment` guard the ordering, which **is** the security —
-both confirmed to answer 200 instead of 400 when the check is removed, so a
-commitment step that degraded to decoration would be caught. Also covered:
-symmetry, per-exchange freshness, list disjointness, refusal of unsigned messages,
-refusal of unknown peers, refusal of unsolicited sessions, and a real two-daemon
-exchange over HTTP reaching identical words.
-
-**Not done.** The words are 16 bits, so a blind guess succeeds once in 65,536 and
-the protection against repetition is that **failure is conspicuous** rather than that
-retries are blocked. Nothing rate-limits attempts. That is the right place to look
-first if this is ever attacked, and it is recorded rather than fixed because the
-conspicuousness argument only holds while a mismatch stops a person — which is a
-claim about the interface, not the protocol.
-
-**Revisit when** verification is wanted between peers that cannot be connected at
-the same moment. The short form is unavailable there and D-047's full-length
-rendering is the only option, so both may need to exist.
+**Revisit when** a user has to verify a peer without that peer's own user acting at the
+same moment.
 
 ---
 
-## D-053 — `pair` is machine scope and `invite` is room scope; the commands now say so
+## D-053 — `pair` is the machine-scope act, and `invite` is the room-scope act
 
-**Date:** 2026-09-18 · **Status:** active (implemented), **except its gating
-position, reversed by D-054 the same day** — verification now gates synchronization
-and injection rather than merely warning.
+**Date:** 2026-09-18 · **Status:** active
 
-**Context.** Asked why the commands are typed at a terminal rather than as slash
-commands in a session. The honest answer was that nothing is packaged yet (D-041),
-not that it had been decided. Examining which commands *could* move produced the
-real finding: `verify` cannot — it needs stdin, it blocks on another person, and its
-two words must reach a person's eyes without passing through a model that reads room
-content from unverified peers (D-040). Observed in reply that if verification must
-live outside the session, the vocabulary should separate peer onboarding from room
-operations rather than leave them interleaved.
+**Decision.** `cogmer pair <identifier>[@address] [name]` records the peer, records a
+bootstrap address and runs the two-word comparison, in one command that both users run
+at once on a call. `invite` is scoped to a room, so a pairing is made before any room
+exists.
 
-That is the right cut, and it was already the data model: §12 has kept **known peers**
-(per machine, durable) and **a room's guests** (per room) as two lists since D-025
-(the guest list, specified).
-The commands did not reflect it. `allow` said only that something had been permitted
-and never which of the two, and sat in a flat list beside `invite`, which is a
-different act at a different scope.
+**Support.**
+- A machine's known peers and a room's guests are two lists at two scopes. D-025 (a
+  machine knows peers, and a room admits guests).
+- An address recorded at pairing belongs to the known peer, which exists before any
+  room, and synchronization targets include it, so a verification can precede the room it
+  protects. `cmd/cogmer/sync.go`, `syncTargets`.
+- An address in a pairing need be correct only once. D-018 (identity and reachability are
+  separate).
 
-**Decision.** `cogmer pair <identifier>[@address] [name]` is the durable act:
-record the peer, record a bootstrap address, and run the two-word comparison, in one
-command that both people run at once on a call. `invite` remains room-scoped and
-unchanged. `allow` survives as the low-level "record without verifying" for scripts
-and tests, and now says **UNVERIFIED** rather than printing a fingerprint and advice
-about a ceremony it does not perform.
+**Rejected.**
+- *One flat vocabulary in which recording a peer sits beside inviting to a room.* The two
+  acts differ in scope, and a command that does not say which sends a user to the wrong
+  one.
 
-**Why the naming matters more than it looks.** The split decides where each act can
-live. Pairing is interactive and ends in something a person must read exactly, so it
-belongs at a terminal. Inviting is one non-interactive act with informational output,
-so it can be a slash command inside a session. A vocabulary that ran the two together
-would force both into the more restrictive home — which is what "commands are typed
-at a terminal" had quietly become.
+**Limits.** The surface that shows the words is D-088 (the pairing ceremony lives in the
+view). Recording a peer without verifying it is D-165.
 
-§12 is retitled from "Session Pairing" to "Forming a Room", because under this
-vocabulary *pairing* means peer onboarding and the old title named the wrong act.
-Section numbers are unchanged, so every reference still resolves.
-
-**The ordering gap this closes.** `verify` previously found a peer only through
-addresses learned from room membership, so verification could not precede the room it
-was meant to protect. `known_peers.endpoint` holds a machine-scope address recorded at
-pairing, `syncTargets` includes them, and the sequence is now pair → create → invite →
-join rather than create → invite → join → verify. §4 already permits this: an endpoint
-is a bootstrap hint that need only be correct once.
-
-**Gating — see D-054.** The warnings this entry added to `invite` and `join` remain,
-and now announce a gate rather than a caution.
-
-**Revisit when** discovery lands. A peer found on a local network has an address
-nobody typed, which changes what a pairing string is for and may reduce it to the
-identifier alone.
+**Revisit when** a peer can be found without a typed address, since a pairing string
+might then reduce to the identifier alone.
 
 ---
 
 ## D-054 — Verification gates synchronization and injection, not just a marker
 
-**Date:** 2026-09-18 · **Status:** active (implemented)
+**Date:** 2026-09-18 · **Status:** active
 
-**Context.** Asked whether we plan to admit unverified guests. We did — by omission
-rather than by decision. `IsVerified` was consulted in exactly three places: the
-marker inside injected text and two command-line warnings. Nothing in `auth.go`,
-`sync.go` or `Invite` looked at it, so an unverified guest synchronised normally and
-its turns entered a teammate's model context carrying a tag and nothing else.
+**Decision.** An unverified peer's events are not served, not stored and not injected,
+and they are held and not discarded. Serving refuses a sync request from an unverified
+guest, accepting refuses an event whose origin peer is unverified, and the prompt hook
+filters again before injecting.
 
-Answered directly: there should be no exchange of transcript and no injection of
-context without verification.
+**Support.**
+- Admission decides whether a key may enter, and verification decides whether the key is
+  the person's. Every other check passes for a key substituted in transit, because a
+  substituted key is a real key held by whoever substituted it.
+  `249ddd0:docs/decisions.md`, the entry D-047 held there.
+- The serving gate runs after the guest check, so a caller that reaches it is a recorded
+  guest and learns nothing it did not put there. `cmd/cogmer/auth.go`, `verifyRequest`.
+- The accepting gate judges the origin and not the sender, so a verified relay cannot
+  launder an unverified author. §13 (transitive synchronization),
+  `cmd/cogmer/sync.go`.
+- The injecting gate runs again because an event stored while its peer was verified
+  outlives a later `forget`, and a context window has no delete. `cmd/cogmer/daemon.go`,
+  `onlyVerified`.
+- Refusing to store leaves an event on offer and does not advance the pull watermark, so
+  verification brings the whole backlog on the next poll. `cmd/cogmer/sync.go`.
+- The refusal names the peer and the command, so a quiet room is not mistaken for a room
+  where nobody is talking. `cmd/cogmer/auth.go`, `verifyRequest`.
+- A request correct in every other respect, from a real guest with a real signature, is
+  refused until the peer is verified, and an unverified peer's events are not injected.
+  `cmd/cogmer/auth_test.go`, `TestAnUnverifiedGuestIsRefused` and
+  `TestUnverifiedEventsAreNotInjected`.
 
-**Why the previous position did not hold.** It rested on D-051 — whom to admit is
-the host's judgement — but that is an answer to a different question. Admission
-decides whether a key may enter. Verification decides whether the key is the
-person's. Every check in the system passes for a key substituted in transit, because
-a substituted key is a real key held by whoever substituted it, and D-047, as
-`249ddd0:docs/decisions.md` held it, demonstrated exactly that end to end with **zero refusals**. A marker is the right
-thing to show once content is in front of a reader; it is not a control, and the one
-manual step the whole chain rests on will be skipped if skipping it costs nothing.
+**Rejected.**
+- *A marker on an unverified peer's turns, with the turns let through.* A marker is
+  right to show once content is in front of a reader, but it is not a control, and the
+  manual step the whole chain rests on is skipped if skipping it costs nothing.
 
-**Decision.** Three gates, because there are three ways in:
+**Limits.** Inviting an unverified peer is permitted and has no effect until the peer is
+verified. D-051 (stranger pairing is not a supported case) leaves the choice of whom to
+admit with the host.
 
-1. **Serving.** `verifyRequest` refuses a sync request from an unverified peer,
-   after the guest check. Not a disclosure — a caller reaching that line is already a
-   recorded guest, so it learns nothing it did not put there.
-2. **Accepting.** An event whose **origin** peer is unverified is not stored. At the
-   origin rather than the sender, so a verified relay cannot launder an unverified
-   author (§13).
-3. **Injecting.** `onlyVerified` filters again at the prompt hook. Belt and braces:
-   an event stored while its peer was verified outlives a later `forget`, and
-   injection is the step that cannot be undone, because a context window has no
-   delete.
-
-**Held, not discarded.** Sync is a pull against a watermark, so refusing to store
-leaves events on offer and does not advance the mark. When the two people verify,
-the next poll brings the whole backlog. That is what makes the gate safe to apply
-early: nothing is lost by waiting, and nothing has to be re-sent.
-
-**Silence had to be explained.** A room quiet because of a gate is indistinguishable
-from a room where nobody is talking, so the refusal names the peer and the command,
-the poll logs what is being held back, and `invite` now says that inviting an
-unverified peer does nothing until they are verified. A gate nobody can see reads as
-a bug and gets debugged as one.
-
-**Inviting an unverified peer remains permitted** and remains inert. D-051 is not
-overridden: the host still decides whom to admit. The second gate asks a different
-question of a different party, and the two compose rather than compete.
-
-**Tests.** `TestAnUnverifiedGuestIsRefused` builds a request correct in every other
-respect — real key, real signature, real guest of a real room — requires refusal,
-requires the message to say what to do, and then requires that verifying is what
-opens it. `TestUnverifiedEventsAreNotInjected` covers the third gate. Both confirmed
-to fail with their checks disabled. The existing `authDaemon` fixture now verifies
-its guest, which is itself evidence the gate bites: every authentication test failed
-until it did.
-
-**Revisit when** a case appears where two people genuinely cannot verify but must
-collaborate. §25's "case with no answer" is the candidate, and the right response is
-probably still refusal — but it should be decided against a real situation rather
-than in advance.
+**Revisit when** two users who cannot verify must collaborate. §25 (security) names that
+case, and a real situation should decide it.
 
 ---
 
-## D-055 — There is exactly one way to verify a peer
+## D-055 — A peer is verified in one way, the two-word comparison
 
-**Date:** 2026-09-18 · **Status:** active (implemented)
+**Date:** 2026-09-18 · **Status:** active
 
-**Context.** §25 retained the whole-key comparison as a fallback for where no live
-exchange is possible. Asked why. There is no good reason, and three against.
+**Decision.** The live two-word comparison is the only way to verify a peer, with no
+whole-key comparison beside it. `Fingerprint` renders an identifier for a person to
+read, and marks nobody verified.
 
-**Its only advantage buys nothing.** What distinguishes the static comparison is
-working without a live connection between the daemons. But verification now gates
-synchronization (D-054), so an unverified peer cannot collaborate; verification
-therefore matters only when collaboration is about to happen; and collaboration
-already requires both daemons running and mutually reachable — exactly what the live
-exchange needs. There is no state in which a peer needs verifying and cannot be
-verified by the two-word comparison.
-
-**It is a downgrade path.** A gate is only as strong as the weakest ceremony that
-satisfies it, and a second, harder ceremony beside an easier one is not a choice
-people make on the merits — it is what gets reached for when the other is
-inconvenient. D-047, as `249ddd0:docs/decisions.md` held it, measured the cost: shown forty-three characters to check over a
-telephone, a reader takes the first group, the last group, and skims the middle.
-
-**It did not exist.** `Fingerprint` had no callers outside its own test, and nothing
-marked a peer verified from a fingerprint comparison — `verified_at` is reachable
-only from the two-word confirmation. So the specification described an affordance the
-implementation did not offer, which is the prose form of the false-affordance problem
-this project already decided is worse than nothing.
-
-**Decision.** One ceremony. A peer is verified or it is not, and there is one way to
-become so. §25 says so, and says why the omission is deliberate rather than an
-oversight somebody should helpfully repair.
-
-**What is kept.** Rendering an identifier for a person to *read* remains useful, and
-is not a ceremony: when a key has changed and somebody is looking at two of them,
-grouped output is kinder than an unbroken run of base64. `Fingerprint` is now
-documented as display-only, used in the mismatch alarm, and its test asserts
-losslessness rather than fitness for comparison.
-
-Also kept: the reasoning about why a short string is sound where a static one is
-not. It is no longer a comparison between two available methods, but it is what makes
-the single remaining method defensible, and removing it would leave the two-word
-comparison looking like a shortcut.
-
-**Consequence.** D-047 is closed without being implemented. "How should the
-fingerprint be rendered for comparison" has no answer once comparing a fingerprint
-verifies nothing.
+**Support.**
+- Verification gates synchronization, so it matters only when collaboration is about to
+  happen, and collaboration needs both daemons running and reachable, which is what the
+  live exchange needs. D-054 (verification gates synchronization and injection).
+- A gate is only as strong as the weakest ceremony that satisfies it, and a reader shown
+  forty-three characters of base64 compares the first group and the last and skims the
+  middle. `249ddd0:docs/decisions.md`, the entry D-047 held there.
+- `verified_at` is set only by the user's confirmation of the two words.
+  `cmd/cogmer/verify.go`, `handleVerifyConfirm`.
+- `Fingerprint` serves the mismatch alarm, where two keys sit side by side, and its test
+  requires that it carry the whole identifier. `cmd/cogmer/keys_test.go`,
+  `TestFingerprintIsLosslessAndDisplayOnly`.
+- A short string is sound where a static one is not, which is what makes the single
+  method defensible. D-048 (verification is a live commit-then-reveal exchange that
+  derives two words).
+- The specification says there is one ceremony. §25 (security).
 
 **Rejected.**
 - *Rendering the fingerprint as words to compare, beside the two words.* Two ceremonies
   leave the weaker one to be performed, and a reader shown forty-three characters of
   base64 compares the first group and the last and skims the middle.
   `249ddd0:docs/decisions.md`, the entry D-047 held there.
+- *Keeping the whole-key comparison as a fallback where no live exchange is possible.*
+  No state exists in which a peer needs verifying and cannot be verified by the two
+  words, and a fallback is the path people reach for when the other is inconvenient.
 
-**Revisit when** a case appears where two people must verify and their daemons
-cannot reach each other. The honest response is probably still that they cannot
-collaborate either — but it should be decided against a real situation.
+**Limits.** Looking at a fingerprint records nothing.
+
+**Revisit when** two users who must verify cannot have their daemons reach each other.
 
 ---
 
@@ -1680,7 +1544,7 @@ databases that predate this.
 
 **What the sweep says about the method.** This is the second finding of the same
 shape in two days — after `Fingerprint`, which also had no callers and also
-represented a decision recorded but never wired up (D-055). Both were invisible to
+represented a decision recorded but never wired up (D-055, as `d37c77c:docs/decisions.md` held it). Both were invisible to
 every test, because a test exercises what is called. A symbol with no callers is
 worth treating as a question rather than as tidiness: it usually means something was
 decided, written down, and then satisfied some other way.
@@ -1702,7 +1566,7 @@ flag nobody reads, and the flag is what failed here.
 **Date:** 2026-09-18 · **Status:** decided; commands not yet built
 
 **Context.** §29 had already split commands between a session and a terminal
-(D-053). What it had not answered is how the in-session ones would be implemented,
+(D-053, as `d37c77c:docs/decisions.md` held it). What it had not answered is how the in-session ones would be implemented,
 and the assumption underneath was that they would need a second implementation.
 
 Proposed instead: every slash command simply calls the corresponding CLI command.
@@ -1845,7 +1709,7 @@ their own exchange. The one that completed tore its session down in a `defer`, s
 the other's commitment arrived to nothing and waited out the timeout. It reads as
 symmetric and is not: it fails whenever two people type a few seconds apart.
 
-D-052 described the exchange as symmetric — "each side sends its commitment and
+D-052, as `d37c77c:docs/decisions.md` held it, described the exchange as symmetric — "each side sends its commitment and
 receives the other's as the reply, so there is no initiator to elect and no race to
 resolve." That was true of a single round and false of the session around it.
 
@@ -2996,8 +2860,8 @@ from them.
 
 **The reasons that survive.**
 
-1. **It cannot pass through a model.** `pair`, `verify`. Already decided (D-052,
-   §29): interactive, blocking on another person, and the compared words must reach
+1. **It cannot pass through a model.** `pair`, `verify`. Already decided (D-053, as
+   `d37c77c:docs/decisions.md` held it, and §29): interactive, blocking on another person, and the compared words must reach
    a person's eyes unaltered.
 2. **It must work when the plugin path is broken.** `doctor`, `behaviors`,
    `version`, reading `install.log`. A diagnostic that only works when things work
@@ -6399,3 +6263,115 @@ was meant.
 - *Taking the first match.* It chooses on the user's behalf without telling them.
 
 **Revisit when** a user has to refer to a room somewhere that cannot ask which was meant.
+
+---
+
+## D-162 — A daemon takes part in a verification only while its own user has asked for one
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Decision.** A daemon answers a peer's verification step only when it holds a session its
+own user opened, and otherwise answers 409 and displays nothing to anyone. The caller
+must also be a peer this machine knows.
+
+**Support.**
+- Only the user's own request creates a session, so no inbound request creates anything,
+  no prompt exists that a user can learn to dismiss, and no stranger can cause anything
+  to appear on a host's screen. `cmd/cogmer/verify.go`, `handleVerify`, and
+  `cmd/cogmer/sas_test.go`, `TestVerificationCannotBeStartedByAPeer`.
+- Verification confirms a key that is on file, and there is no key to confirm for a
+  stranger. `cmd/cogmer/membership.go`, `Knows`, and `cmd/cogmer/sas_test.go`,
+  `TestAnUnknownPeerCannotVerify`.
+
+**Rejected.**
+- *An inbound verification request that prompts the host.* A prompt people learn to
+  dismiss is a poor place for a decision that matters, and it lets any peer that can
+  reach the address put something on the host's screen.
+
+**Limits.** Which side drives the exchange, and the answer for a peer not yet recorded,
+are D-059 (only one side drives a verification).
+
+**Revisit when** a verification has to begin from the other side before its user has
+asked.
+
+---
+
+## D-163 — Only a person's confirmation records a verification, and a mismatch records nothing
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Decision.** `MarkVerified` is reached only from a user's confirmation that the other
+user read out the same words, never from the protocol. A mismatch records nothing, and no
+failed-verification state exists.
+
+**Support.**
+- The exchange proves that both sides hold the keys they named, and it cannot show that
+  the voice on the call is the colleague and not somebody in their place. §25 (security),
+  `cmd/cogmer/membership.go`, `MarkVerified`.
+- A stored failure would invite an interface that offers to retry, and a mismatch must
+  refuse and must not present itself as a transient error worth repeating.
+  `cmd/cogmer/sas.go`.
+- `known_peers.verified_at` is empty until two users compare words, and the unverified
+  marker in injected text follows it. `cmd/cogmer/sas_test.go`,
+  `TestTheUnverifiedMarkerTracksVerification`.
+
+**Rejected.**
+- *Recording a failed verification.* It invites a retry, which is the one thing a
+  mismatch must not offer.
+
+**Revisit when** a way exists to confirm that the voice on the call is the colleague that
+does not rest on the user's own judgement.
+
+---
+
+## D-164 — The two words come from the PGP biometric word list, alternating by position
+
+**Date:** 2026-09-17 · **Status:** active
+
+**Decision.** The first word comes from one list of 256 words and the second from
+another, both from the PGP biometric word list, and neither list is the peer-name or the
+room-name vocabulary.
+
+**Support.**
+- The list is phonetically distinct over a bad telephone line, which is what it exists
+  for. `cmd/cogmer/sas.go`.
+- Alternation makes a transposition detectable, since said in the wrong order the pair is
+  not a valid rendering of anything. `cmd/cogmer/sas_test.go`,
+  `TestTheTwoWordsComeFromDifferentLists`.
+- Each word carries one byte, so each list must hold 256 distinct words, which the
+  security argument assumes. `cmd/cogmer/sas_test.go`, `TestWordlistsAreWholeBytes`.
+- A SAS sits on screen beside a derived peer name, and one mnemonic that could be
+  mistaken for the other is how a person compares the wrong thing. `cmd/cogmer/sas.go`.
+
+**Rejected.**
+- *Words from the peer-name or room-name vocabularies.* A person could compare the name
+  beside the words in place of the words.
+
+**Limits.** Nothing checks that the two lists share no word with the peer-name or
+room-name vocabularies.
+
+**Revisit when** users report mishearing a word of the list over a call.
+
+---
+
+## D-165 — `allow` records a peer without verifying it, for scripts and tests
+
+**Date:** 2026-09-18 · **Status:** active
+
+**Decision.** `cogmer allow <identifier> [name]` records a known peer without running a
+verification, and prints that the peer is UNVERIFIED and how to finish.
+
+**Support.**
+- A peer is verified only when two users compare words, which `allow` does not do.
+  `cmd/cogmer/main.go`, `runAllow`.
+- Scripts and tests cannot take part in a ceremony that needs a second person on a call.
+  `cmd/cogmer/ui_test.go`, which records a peer with no label as a script would.
+
+**Rejected.**
+- *Removing `allow` once `pair` exists.* A script or test would then have no way to
+  record a peer without a second person.
+- *Printing a fingerprint with advice about a ceremony `allow` does not perform.* The
+  output would suggest a comparison that D-055 (a peer is verified in one way) does not
+  accept.
+
+**Revisit when** a script or test can run a verification without a second person.

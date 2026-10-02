@@ -552,13 +552,12 @@ been recounted.
 
 Five entries lack a **Decision.** field: D-068, D-083, D-086, D-088 and D-089.
 
-**Seven citations in `docs/decisions.md` credit an entry with something it does not
+**Six citations in `docs/decisions.md` credit an entry with something it does not
 hold.** Each resolves, so the citation test passes, but the source says something
 else. "D-016 fixes that at the first prompt" describes what D-056 (a session's room
 is fixed at first sight) decided. D-017's Context says "D-015 gave rooms a generated
 id plus a human-chosen label", though D-015 holds no label. "The invitation format
-from D-017" names a format D-017 does not hold. "Already decided (D-052, §29):
-interactive, blocking on another person…" quotes words D-053 holds. "D-099 prefers
+from D-017" names a format D-017 does not hold. "D-099 prefers
 the label because a word pair means nothing to a person weeks later" gives a reason
 D-094 holds. "`common.sh` and D-107 both attribute to §3.1" is untrue of D-107,
 which cites no § section. D-110 calls the thinking-block exclusion "§3.5's", but

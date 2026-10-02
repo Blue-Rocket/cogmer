@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS known_peers (
   peer_id     TEXT PRIMARY KEY,
   name        TEXT NOT NULL,
   added_at    TEXT NOT NULL,
-  -- When two people compared a SAS and said it matched (D-048/D-052). NULL until
+  -- When two people compared a SAS and said it matched (D-048/D-163). NULL until
   -- they have. Without this the "unverified" marker §25 requires inside injected
   -- text is true of every peer forever, and a marker that can never change is one
   -- a reader learns to stop seeing.

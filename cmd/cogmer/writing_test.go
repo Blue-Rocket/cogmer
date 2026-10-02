@@ -38,8 +38,7 @@ var writingNeverChecked = map[string]string{
 // passes the template check fails the test, so that it comes off the list in the
 // commit that rewrote it.
 var decisionsNotRewritten = map[string]bool{
-	"D-051": true, "D-052": true, "D-053": true, "D-054": true,
-	"D-055": true, "D-056": true, "D-057": true, "D-058": true, "D-059": true, "D-060": true,
+	"D-056": true, "D-057": true, "D-058": true, "D-059": true, "D-060": true,
 	"D-061": true, "D-062": true, "D-063": true, "D-064": true, "D-065": true, "D-066": true,
 	"D-067": true, "D-068": true, "D-069": true, "D-070": true, "D-071": true, "D-072": true,
 	"D-073": true, "D-074": true, "D-075": true, "D-077": true, "D-078": true, "D-079": true,

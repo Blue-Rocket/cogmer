@@ -203,7 +203,7 @@ func TestTheViewCarriesTheNameYouChose(t *testing.T) {
 	if err := d.members.MarkVerified(named); err != nil {
 		t.Fatal(err)
 	}
-	// Recorded with no label of its own, as a script would (D-053).
+	// Recorded with no label of its own, as a script would (D-165).
 	if err := d.members.Allow(unnamed, ""); err != nil {
 		t.Fatal(err)
 	}

@@ -733,7 +733,7 @@ func runPeers() {
 		}
 		if len(known) == 0 {
 			// The first thing a new user sees, so it has to point at the ordinary
-			// path. It used to name `allow`, which D-053 reserves for scripts and
+			// path. It used to name `allow`, which D-165 reserves for scripts and
 			// tests: it records a peer WITHOUT verifying, which lands somebody in
 			// exactly the state D-054 refuses to sync, with no hint why. It also
 			// printed a bare key rather than the pairing string, so the colleague
