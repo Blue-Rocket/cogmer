@@ -407,6 +407,21 @@ The fix is a v3 event signed once and checked in, as a constant or a file under
 message at each version `speaks` accepts. Each new scheme or wire version adds its
 own frozen record when it ships.
 
+**The tests for D-164 (the two words come from the PGP biometric word list, alternating
+by position) check less than the decision states.** `TestWordlistsAreWholeBytes` and
+`TestTheTwoWordsComeFromDifferentLists` in `cmd/cogmer/sas_test.go` require that each
+list holds 256 distinct words and that the two lists share none (read from the code on
+2026-10-01). Nothing requires that `sasEven` and `sasOdd` are the PGP biometric word
+list, so an edit that replaced words with others, or one that merged duplicates away
+and refilled the list, passes every test. Nothing requires that no word is also in
+`peerAdjectives`, `peerAnimals`, `roomSky` or `roomLand`, which the decision names and
+its **Limits.** records as unchecked. A user comparing two words beside a derived peer
+name could then compare the wrong one.
+
+The fix is a test that the two lists equal a copy of the PGP list kept under
+`cmd/cogmer/testdata/`, and a test that no word of either list appears in the four
+name vocabularies. D-164's **Limits.** is deleted when the second test exists.
+
 **What leaves the machine is recorded only for 0.6.0.**
 `84a0751:docs/what-leaves-findings.md` read every outbound path on 2026-09-21, at 0.6.0.
 Two have changed since: releases come from GitHub (`plugin/release-url.txt`), and peers
