@@ -15,10 +15,13 @@ tailcat's default relay map lists. `plugin/README.md` tells a user what the rela
 - The library's documentation offers free, rate-limited relays to anyone, and names
   `https://tailcat.dev/derpmap.json` as the default map, so using them with no account and no
   configuration is the use the library describes. tailcat v0.6.0, `README.md`.
-- The relay carries WireGuard packets between the two machines and cannot read them. It sees
-  both machines' keys and network addresses, when they connect and how much passes. With the
-  pre-shared key disabled (D-104), an operator who sees both keys can open a tunnel to the
-  daemon, and what stops it there is the pinned TLS key, the signed request, the guest list and
+- The relay carries WireGuard packets between the two machines and cannot read them. The
+  daemon holds one connection to its relay for as long as it runs, so the relay sees this
+  machine's network address and key whenever the daemon is up, and which machines connect, when
+  and how much passes. An idle daemon held that connection for 32 seconds with no peer.
+  `55c73eb`.
+- With the pre-shared key disabled (D-104), an operator who sees both keys can open a tunnel to
+  the daemon, and what stops it there is the pinned TLS key, the signed request, the guest list and
   verification, which a tunnel connection meets as a TCP one does. D-157 (the overlay
   listener admits any dialer), D-044 (sync requests are signed), D-045 (rooms are records with a
   guest list), D-054 (verification gates synchronization and injection).
