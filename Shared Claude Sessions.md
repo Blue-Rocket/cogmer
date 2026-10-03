@@ -1293,6 +1293,9 @@ I traced the timeout to the OkHttp connection pool...
 
 A response is published whole, never summarized.
 
+A response never includes Claude's internal reasoning, which is not part of a shared
+conversation.
+
 ## Neither available source is complete
 
 A completed turn is reassembled from two sources, because each lacks a different part
@@ -1331,9 +1334,8 @@ most recent record that carries a human prompt's marker. They are never matched 
 identifier, because assistant records carry no prompt identifier, and the chain of
 parent pointers between records has gaps.
 
-Neither a turn's internal reasoning nor the records of a subagent are published: the
-reasoning is not part of a shared conversation, and a subagent's records belong to a
-nested session, not to the room.
+A subagent's records are not published, because they belong to a nested session and
+not to the room.
 
 ## These are observed behaviors
 

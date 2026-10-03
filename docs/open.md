@@ -28,20 +28,6 @@ downloaded. Shipping binaries inside the plugin removes the download entirely bu
 commits about 150MB per release into the history everybody clones, and is ruled
 out.
 
-## Safe for somebody else's conversation
-
-Nothing outside a room can read it, alter a colleague's words, or make a record a colleague holds unreadable, and what leaves the machine is known.
-
-**The specification does not say that Claude's thinking blocks are never published.**
-`cmd/cogmer/transcript.go` drops them and `cmd/cogmer/transcript_test.go` requires that, and
-the specification does not mention them (read on 2026-10-01). Section 15 (capturing Claude
-responses) says a response is published whole and never summarized, which reads as including
-everything Claude produced. A reader of the specification could conclude the opposite of what
-the code does, about content a user would not expect to leave their machine.
-
-The fix is a sentence in section 15 stating that a response never includes its thinking blocks,
-and a reason for it, which the code comment gives only as "deliberately never published".
-
 ## Running the daemon
 
 The daemon a machine runs is the right one, and says so when something is in its way.
