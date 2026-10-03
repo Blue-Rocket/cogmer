@@ -44,7 +44,7 @@ and `tasklist` and ended outright. The daemon handles SIGTERM by closing its lis
   would break sessions that were working.
 
 **Limits.** Windows ends a daemon outright with no chance to close its listeners and stores, which is
-survivable for the reason above. Only Windows 11 on ARM64 in English was run.
+survivable for the reason above. Only Windows 11 on ARM64 in English was run. `d4594cf`.
 
 **Revisit when** Windows prints a listening socket in a form `parseNetstatListeners` does not read, or a Windows
 edition lacks `netstat` or `tasklist`. A daemon of another version is stopped through this path, by D-158 (a
