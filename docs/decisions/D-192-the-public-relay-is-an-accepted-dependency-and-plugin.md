@@ -19,7 +19,7 @@ tailcat's default relay map lists. `plugin/README.md` tells a user what the rela
   daemon holds one connection to its relay for as long as it runs, so the relay sees this
   machine's network address and key whenever the daemon is up, and which machines connect, when
   and how much passes. An idle daemon held that connection for 32 seconds with no peer.
-  `55c73eb`.
+  `55c73eb`, `cmd/cogmer/tailcat.go`, `StartTailcat`.
 - With the pre-shared key disabled (D-104), an operator who sees both keys can open a tunnel to
   the daemon, and what stops it there is the pinned TLS key, the signed request, the guest list and
   verification, which a tunnel connection meets as a TCP one does. D-157 (the overlay
