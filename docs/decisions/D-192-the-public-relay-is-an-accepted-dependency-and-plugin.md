@@ -3,9 +3,8 @@
 **Date:** 2026-10-02 · **Status:** active · **Areas:** transport, trust
 
 **Decision.** The overlay is on by default and introduces two peers through the free relays that
-tailcat's default relay map lists. `plugin/README.md` tells a user what the relay sees, that the
-daemon contacts `tailcat.dev` for the relay list, and that `COGMER_TAILCAT=off` turns the overlay
-off.
+tailcat's default relay map lists. `plugin/README.md` tells a user what the relay sees and that
+`COGMER_TAILCAT=off` turns the overlay off.
 
 **Support.**
 - D-115 (a centralized component must trace to a disclosed tradeoff that benefits the person)

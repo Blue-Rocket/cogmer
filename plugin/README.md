@@ -71,13 +71,10 @@ it can say so when a command does not work.
   their Claude sessions, and so their model provider under their account. Their turns reach your
   provider, under yours.
 - A relay introduces two machines on different networks. cogmer uses the free relays that
-  Tailscale runs for its tailcat library. The first time the daemon starts it fetches the relay
-  list from `tailcat.dev`. The conversation is encrypted between the two machines and the relay
-  cannot read it. The relay sees both machines' keys and network addresses, when they connect and
-  how much passes between them. `COGMER_TAILCAT=off` stops the daemon using the relay, and
+  Tailscale runs for its tailcat library. The conversation is encrypted between the two machines
+  and the relay cannot read it. The relay sees both machines' keys and network addresses, when
+  they connect and how much passes between them. `COGMER_TAILCAT=off` stops the daemon using the relay, and
   colleagues then reach you only at the address in `COGMER_PEER_ENDPOINT`.
-- The binary is downloaded from GitHub. GitHub sees your network address and which release
-  you fetched.
 
 ## Updating
 
