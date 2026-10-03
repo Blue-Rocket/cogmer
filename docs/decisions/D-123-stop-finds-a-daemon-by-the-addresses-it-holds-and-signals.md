@@ -22,6 +22,11 @@ listeners and stores. The blocked-address message names `stop` by its full path,
   a port's process and signal it live in `stop_unix.go`, with `stop_windows.go` reporting that finding a
   port's process is not supported there. D-146 (code that handles peer traffic cannot start a process),
   `cmd/cogmer/stop_unix.go`.
+- The report of a blocked address finds its holder the same way, so a cogmer daemon left running
+  from another state directory is called one and `stop` is named, where an address alone cannot
+  say what holds it, and a holder that cannot be found is reported as unknown and never as a
+  program that is not cogmer. `cmd/cogmer/main.go`, `describeBlock`, and
+  `cmd/cogmer/stop_test.go`, `TestADaemonBlockedByAnotherCogmerSaysSoAndNamesStop`.
 
 **Rejected.**
 - *An HTTP shutdown route.* It reaches the daemon at this installation's hooks address, which may be a

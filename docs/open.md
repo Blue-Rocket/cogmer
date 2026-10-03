@@ -32,22 +32,8 @@ out.
 
 The daemon a machine runs is the right one, and says so when something is in its way.
 
-**A port held by another cogmer daemon is reported as held by something else.**
-When the peer-sync port is taken, `runDaemon` calls `reportDaemonBlocked` without
-asking what holds it, and the message says "held by something that is not a cogmer
-daemon" regardless. On 09-22 it was a cogmer daemon, one left running from a test
-with a different `COGMER_HOME`, and the message sends the reader looking for a
-different program. Only the hooks port is ever probed, through
-`daemonAlreadyServing`, which reads `/healthz` over plain HTTP. The peer mux serves
-`/healthz` too, but over TLS, and nothing asks it.
-
-**A blocked address does not say that `stop` clears it.** When a daemon cannot bind,
-`reportDaemonBlocked` prints an `lsof` line, where D-123 (finding a daemon by the
-addresses it holds) has it name `stop` by its full path, from `invocation()`. Read
-from the code on 10-01.
-
-Three things about `stop` are undecided. The first is whether `stop` then starts this
-installation's daemon. Clearing the way is almost always why somebody runs it, but a
+**Three things about `stop` are undecided.** The first is whether `stop` starts this
+installation's daemon afterwards. Clearing the way is almost always why somebody runs it, but a
 person may also want it simply stopped. The second is whether it gets a slash
 command. The person is in a session, not at a terminal, and the binary is not on
 PATH, so from a terminal they have to type `~/.cogmer/bin/cogmer stop`. The third is

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -174,4 +175,51 @@ func freeAddr(t *testing.T) string {
 	}
 	defer l.Close()
 	return l.Addr().String()
+}
+
+// The 09-22 case: a cogmer daemon left running from another state directory holds
+// the peer-sync port, and a second daemon says so and names `stop`. Real builds,
+// real processes, the overlay off.
+func TestADaemonBlockedByAnotherCogmerSaysSoAndNamesStop(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds the binary")
+	}
+	if _, err := exec.LookPath("lsof"); err != nil {
+		t.Skip("no lsof on this machine")
+	}
+	dir := t.TempDir()
+	bin := buildVersion(t, dir, "0.0.1")
+	if resolved, err := filepath.EvalSymlinks(bin); err == nil {
+		bin = resolved
+	}
+	peer := freeAddr(t)
+	env := func(home, hooks string) []string {
+		return append(os.Environ(), "COGMER_HOME="+filepath.Join(dir, home),
+			"COGMER_ADDR="+hooks, "COGMER_PEER_ADDR="+peer,
+			"COGMER_TAILCAT=off", "COGMER_PREFLIGHT=off", "COGMER_PEERS=")
+	}
+
+	hooks1 := freeAddr(t)
+	first := exec.Command(bin, "daemon")
+	first.Env = env("home1", hooks1)
+	if err := first.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = first.Process.Kill(); _ = first.Wait() }()
+	waitForVersion(t, hooks1, "0.0.1")
+
+	second := exec.Command(bin, "daemon")
+	second.Env = env("home2", freeAddr(t))
+	out, err := second.CombinedOutput()
+	if err != nil {
+		t.Fatalf("the blocked daemon should report and exit cleanly: %v\n%s", err, out)
+	}
+	for _, want := range []string{"held by another cogmer daemon", "pid " + strconv.Itoa(first.Process.Pid), bin + " stop"} {
+		if !strings.Contains(string(out), want) && !strings.Contains(strings.ReplaceAll(string(out), "~", os.Getenv("HOME")), want) {
+			t.Errorf("the report lacks %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(string(out), "not a cogmer daemon") {
+		t.Errorf("the report says a cogmer daemon is not one:\n%s", out)
+	}
 }

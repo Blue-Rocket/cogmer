@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -1663,13 +1664,69 @@ func runStop() {
 	}
 }
 
+// holder is a process listening on an address that this daemon needs.
+type holder struct {
+	PID  int
+	Name string
+}
+
+// whoHolds names the processes listening on an address, other than this one. A
+// process of another user may not be visible, so an empty answer is not proof that
+// nothing holds the address.
+func whoHolds(address string) ([]holder, error) {
+	pids, err := listeningPIDs(portOf(address))
+	if err != nil {
+		return nil, err
+	}
+	var out []holder
+	for _, pid := range pids {
+		if pid != os.Getpid() {
+			out = append(out, holder{PID: pid, Name: processName(pid)})
+		}
+	}
+	return out, nil
+}
+
+// describeBlock says what holds an address and what to do about it. The holder is
+// found by asking the operating system, as `stop` does (D-123), because the
+// address alone cannot say whether the thing in the way is a cogmer daemon left
+// running from another state directory or an unrelated program, and the two need
+// different responses.
+func describeBlock(what, address string, cause error, holders []holder, findErr error, stop string) (detail string, advice []string) {
+	move := "Or move this daemon: COGMER_ADDR=127.0.0.1:<port> (hooks and view), COGMER_PEER_ADDR (peer sync)"
+	for _, h := range holders {
+		if h.Name == "cogmer" {
+			return fmt.Sprintf("%s cannot be served: %s is held by another cogmer daemon, pid %d (%v)", what, address, h.PID, cause),
+				[]string{"Stop it:  " + stop + " stop", move}
+		}
+	}
+	if len(holders) > 0 {
+		h := holders[0]
+		return fmt.Sprintf("%s cannot be served: %s is held by %s, pid %d, which is not a cogmer daemon (%v)",
+				what, address, firstNonEmpty(h.Name, "a process with no name"), h.PID, cause),
+			[]string{"`" + stop + " stop` leaves a process that is not a cogmer daemon alone. End it yourself, or move this daemon:", move}
+	}
+	find := "lsof -nP -iTCP:" + portOf(address) + " -sTCP:LISTEN"
+	if runtime.GOOS == "windows" {
+		find = "netstat -ano | findstr :" + portOf(address)
+	}
+	why := "this machine could not say what holds it"
+	if findErr != nil {
+		why = fmt.Sprintf("this machine could not say what holds it: %v", findErr)
+	}
+	return fmt.Sprintf("%s cannot be served: %s is in use, and %s (%v)", what, address, why, cause),
+		[]string{"Find what holds it:  " + find, move}
+}
+
 func reportDaemonBlocked(what, address string, cause error) {
-	detail := fmt.Sprintf("%s cannot be served: %s is held by something that is not a cogmer daemon (%v)", what, address, cause)
+	holders, findErr := whoHolds(address)
+	detail, advice := describeBlock(what, address, cause, holders, findErr, invocation())
 	recordDaemonState("blocked", detail)
 	log.Printf("%s", detail)
 	log.Printf("  Nothing is captured or shared until that address is free.")
-	log.Printf("  Find what holds it:  lsof -nP -iTCP:%s -sTCP:LISTEN", portOf(address))
-	log.Printf("  Or move this daemon: COGMER_ADDR=127.0.0.1:<port> (hooks and view), COGMER_PEER_ADDR (peer sync)")
+	for _, line := range advice {
+		log.Printf("  %s", line)
+	}
 }
 
 // recordDaemonState mirrors the install-state format -- state, when, detail -- so
