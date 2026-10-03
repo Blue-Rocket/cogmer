@@ -35,10 +35,14 @@ tailcat's default relay map lists. `plugin/README.md` tells a user what the rela
 - *The overlay off until the user asks for it.* The first pair is remote, so the default product
   would fail at its first step.
 
-**Limits.** The documentation promises no availability and says the relays are rate-limited. Two
-peers on one network also meet through the relay, because a pairing string carries one endpoint.
-D-104 gives up the only quantum-resistant element, so a recording of relayed traffic is not
-protected against a later quantum computer.
+**Limits.** A first start fetches the relay list from `tailcat.dev` and sends one UDP packet to
+each of four relay nodes to pick the nearest, so each learns the machine's public address once.
+Later starts contact only the pinned relay. `cmd/cogmer/tailcat.go`, `loadTailcatRegion`.
+
+The documentation promises no availability and says the relays are rate-limited. Two peers on one
+network also meet through the relay, because a pairing string carries one endpoint. D-104 gives up
+the only quantum-resistant element, so a recording of relayed traffic is not protected against a
+later quantum computer.
 
 **Revisit when** the relay list moves from `tailcat.dev`, the free service ends or adds terms, or
 the pairing string carries a direct endpoint beside the overlay one.
