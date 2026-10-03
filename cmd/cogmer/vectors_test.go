@@ -31,8 +31,8 @@ type frozenVectors struct {
 		RoomID, RoomName, Endpoint, Timestamp, Nonce, Signature string
 	} `json:"offer"`
 	VerifyStep struct{ Step, Payload, Signature string } `json:"verifyStep"`
-	SAS        struct{ NonceA, NonceB, Words string }     `json:"sas"`
-	Commitment string                                     `json:"commitment"`
+	SAS        struct{ NonceA, NonceB, Words string }    `json:"sas"`
+	Commitment string                                    `json:"commitment"`
 	// SyncResponses holds a whole sync response for each wire version this build
 	// reads, as text, because decoding it is the thing under test.
 	SyncResponses map[string]string `json:"syncResponses"`

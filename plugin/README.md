@@ -72,9 +72,11 @@ it can say so when a command does not work.
   provider, under yours.
 - A relay introduces two machines on different networks. cogmer uses the free relays that
   Tailscale runs for its tailcat library. The conversation is encrypted between the two machines
-  and the relay cannot read it. The relay sees both machines' keys and network addresses, when
-  they connect and how much passes between them. `COGMER_TAILCAT=off` stops the daemon using the relay, and
-  colleagues then reach you only at the address in `COGMER_PEER_ENDPOINT`.
+  and the relay cannot read it. The daemon holds a connection to the relay for as long as it
+  runs, so the relay sees this machine's network address and key whenever the daemon is up,
+  and which machines connect to it, when, and how much passes between them. `COGMER_TAILCAT=off`
+  stops the daemon using the relay, and colleagues then reach you only at the address in
+  `COGMER_PEER_ENDPOINT`.
 
 ## Updating
 

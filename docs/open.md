@@ -32,17 +32,6 @@ out.
 
 Nothing outside a room can read it, alter a colleague's words, or make a record a colleague holds unreadable, and what leaves the machine is known.
 
-**What leaves the machine is recorded only for 0.6.0.**
-`84a0751:docs/what-leaves-findings.md` read every outbound path on 2026-09-21, at 0.6.0.
-Two have changed since: releases come from GitHub (`plugin/release-url.txt`), and peers
-reach each other through Tailscale's DERP relays, choosing a region in
-`loadTailcatRegion` in `cmd/cogmer/tailcat.go`, which fetches the relay map from
-`tailcat.dev` (read on 2026-10-02). D-115 (a centralized
-component must trace to a disclosed tradeoff) rests on that record. Reading every
-outbound path again at the current version would say what leaves now. Three of the properties that do not leave are kept only
-by the absence of code, and each could be a test instead, such as one that the embedded
-view holds no absolute URL.
-
 **The specification does not say that Claude's thinking blocks are never published.**
 `cmd/cogmer/transcript.go` drops them and `cmd/cogmer/transcript_test.go` requires that, and
 the specification does not mention them (read on 2026-10-01). Section 15 (capturing Claude
