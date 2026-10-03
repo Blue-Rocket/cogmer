@@ -3,15 +3,48 @@
 package main
 
 import (
-	"errors"
+	"fmt"
+	"os"
+	"os/exec"
+	"strconv"
 	"time"
 )
 
-// Windows has no lsof, so nothing here can find the process holding a port. A
-// daemon of another version is then left serving, and a stop reports why.
+// What stopping a daemon needs from Windows (D-123): the same three things as on a
+// Unix, found with netstat and tasklist, which every Windows has. There is no
+// SIGTERM, so a daemon is ended outright, which is survivable because a write is
+// durable before it is published (§23).
 
-var errStopUnsupported = errors.New("finding the process on a port is not supported on Windows")
+func listeningPIDs(port string) ([]int, error) {
+	out, err := exec.Command("netstat", "-ano", "-p", "tcp").Output()
+	if err != nil {
+		return nil, fmt.Errorf("netstat: %w", err)
+	}
+	return parseNetstatListeners(string(out), port), nil
+}
 
-func listeningPIDs(string) ([]int, error) { return nil, errStopUnsupported }
-func processName(int) string              { return "" }
-func terminate(int, time.Duration) error  { return errStopUnsupported }
+func processName(pid int) string {
+	out, err := exec.Command("tasklist", "/FI", "PID eq "+strconv.Itoa(pid), "/FO", "CSV", "/NH").Output()
+	if err != nil {
+		return ""
+	}
+	return parseTasklistName(string(out))
+}
+
+func terminate(pid int, grace time.Duration) error {
+	p, err := os.FindProcess(pid)
+	if err != nil {
+		return err
+	}
+	if err := p.Kill(); err != nil {
+		return err
+	}
+	deadline := time.Now().Add(grace)
+	for time.Now().Before(deadline) {
+		if processName(pid) == "" {
+			return nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return fmt.Errorf("process %d was still running %s after it was ended", pid, grace)
+}

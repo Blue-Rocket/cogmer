@@ -37,6 +37,7 @@ every room, and `self-` commands act on you.
 | `/cogmer:peer-pair [their pairing string] [what you call them]` | pair with a colleague by comparing two words in your browser |
 | `/cogmer:self-status` | who you are, what you send colleagues, whether they can reach you, and which versions are running |
 | `/cogmer:self-name [what people should call you]` | show or set the name other people see for you |
+| `/cogmer:self-stop` | stop the daemon on this machine; nothing is captured or shared until a new session starts one |
 
 ## Pairing happens in your browser, not through the model
 

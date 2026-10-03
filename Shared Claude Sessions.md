@@ -2140,12 +2140,16 @@ The daemon outlives the session that started it, because a room may have members
 several sessions, and starting it repeatedly is worse than leaving it running. So the
 user whose machine it runs on can find it and stop it.
 
-Stopping the daemon is a terminal command, because it is the daemon's own lifecycle. It
-stops whichever cogmer daemon holds the addresses this installation uses, not only the
-one this installation started, because a daemon left running from another state
-directory or an earlier version blocks this one just as an unrelated program would.
-It signals only a process it has identified as a cogmer daemon. Anything else holding
-an address is named, with its process, and left alone.
+Stopping the daemon is a command, `/cogmer:self-stop` in a session or `stop` run from
+the binary in a terminal. It stops whichever cogmer daemon holds the addresses this
+installation uses, not only the one this installation started, because a daemon left
+running from another state directory or an earlier version blocks this one just as an
+unrelated program would. It signals only a process it has identified as a cogmer
+daemon. Anything else holding an address is named, with its process, and left alone.
+
+Stopping the daemon does not start it again, because a user who stops it may want it
+stopped. Nothing is captured or shared until a daemon runs, a new session starts one,
+and the command says so.
 
 After an update, the first session runs the new version. A daemon of a different
 version holding this installation's addresses is stopped and replaced in the

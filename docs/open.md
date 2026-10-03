@@ -28,20 +28,6 @@ downloaded. Shipping binaries inside the plugin removes the download entirely bu
 commits about 150MB per release into the history everybody clones, and is ruled
 out.
 
-## Running the daemon
-
-The daemon a machine runs is the right one, and says so when something is in its way.
-
-**Three things about `stop` are undecided.** The first is whether `stop` starts this
-installation's daemon afterwards. Clearing the way is almost always why somebody runs it, but a
-person may also want it simply stopped. The second is whether it gets a slash
-command. The person is in a session, not at a terminal, and the binary is not on
-PATH, so from a terminal they have to type `~/.cogmer/bin/cogmer stop`. The third is
-Windows, which has no `lsof`, so neither `stop` nor the replacement of a daemon of
-another version (D-158) can find the process holding a port there. `netstat -ano`
-gives the pid there, or `stop` can report the port and fall back to moving this
-daemon aside.
-
 ## Checks and comments that say what is true
 
 A decision, a comment or a test says what the code does, and a change that breaks it is caught.

@@ -37,8 +37,8 @@ daemon that reports `dev` never gives way, and a binary that is `dev` never take
   version also outlives a binary installed by any other route, and the hook is what
   runs at every session.
 
-**Limits.** Windows finds no process on a port, so a daemon of another version
-keeps serving there until it is ended by hand. A maintainer's daemon built from
+**Limits.** Windows ends a daemon of another version through the lookup `stop` uses, D-123 (finding a daemon by the
+addresses it holds), and only `stop` was run there. A maintainer's daemon built from
 source reports `dev` and is left alone, as is an installed daemon while a `dev`
 binary is the one the hook finds.
 

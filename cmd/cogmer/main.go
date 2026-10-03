@@ -1633,7 +1633,7 @@ func stopDaemonsAt(addresses []string) ([]stopOutcome, error) {
 			o := stopOutcome{PID: pid, Name: processName(pid)}
 			// Identified by its executable's name: a build renamed by hand is then
 			// not stopped, which is the safe way for this check to be wrong.
-			if o.Name == "cogmer" {
+			if isCogmerImage(o.Name) {
 				o.Err = terminate(pid, 5*time.Second)
 				o.Stopped = o.Err == nil
 			}
@@ -1661,6 +1661,15 @@ func runStop() {
 	}
 	if len(outcomes) == 0 {
 		fmt.Printf("nothing is listening on %s or %s\n", addr(), peerAddr())
+	}
+	for _, o := range outcomes {
+		if o.Stopped {
+			// Said here because the command that runs this is typed in a session,
+			// and nothing restarts a daemon until a session starts (D-150).
+			fmt.Println("No daemon is running now, so nothing is captured or shared until one starts.")
+			fmt.Println("A new Claude Code session starts one. This command does not.")
+			break
+		}
 	}
 }
 
@@ -1695,7 +1704,7 @@ func whoHolds(address string) ([]holder, error) {
 func describeBlock(what, address string, cause error, holders []holder, findErr error, stop string) (detail string, advice []string) {
 	move := "Or move this daemon: COGMER_ADDR=127.0.0.1:<port> (hooks and view), COGMER_PEER_ADDR (peer sync)"
 	for _, h := range holders {
-		if h.Name == "cogmer" {
+		if isCogmerImage(h.Name) {
 			return fmt.Sprintf("%s cannot be served: %s is held by another cogmer daemon, pid %d (%v)", what, address, h.PID, cause),
 				[]string{"Stop it:  " + stop + " stop", move}
 		}
@@ -1704,7 +1713,7 @@ func describeBlock(what, address string, cause error, holders []holder, findErr 
 		h := holders[0]
 		return fmt.Sprintf("%s cannot be served: %s is held by %s, pid %d, which is not a cogmer daemon (%v)",
 				what, address, firstNonEmpty(h.Name, "a process with no name"), h.PID, cause),
-			[]string{"`" + stop + " stop` leaves a process that is not a cogmer daemon alone. End it yourself, or move this daemon:", move}
+			[]string{"`" + stop + " stop` leaves a process that is not a cogmer daemon alone, so end it yourself.", move}
 	}
 	find := "lsof -nP -iTCP:" + portOf(address) + " -sTCP:LISTEN"
 	if runtime.GOOS == "windows" {
