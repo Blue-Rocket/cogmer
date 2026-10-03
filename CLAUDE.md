@@ -24,6 +24,11 @@ and how to run it.
 - **Cite nothing you have not confirmed exists.** `TestCitationsNameThingsThatExist`
   fails for a citation that resolves to nothing, but not for one that resolves to an
   entry holding something else, so check what the entry says.
+- **Never commit or push past a failing test.** A pipeline such as
+  `go test ./... | tail && git commit` reports the status of its last command, so a
+  failing test does not stop the commit, and the test result has to gate the command
+  itself. `.git/hooks/pre-push` runs the suite and refuses the push, on this clone
+  only, since `.git/hooks` is not versioned.
 - **Corrections are clean replacements.** Leave no superseded text, and do not narrate
   what the old text said.
 - **Give every `§`, `D-NNN` and `B-NN` a few words**, such as "D-054 (verification
