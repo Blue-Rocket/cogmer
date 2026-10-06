@@ -136,9 +136,9 @@ Rooms — per room, repeated as often as you like:
 
   cogmer rooms           List rooms
   cogmer create          Create a room
-  cogmer join <room>     Make a room current, so new sessions join it
-  cogmer leave           Leave the current room
-  cogmer guests          List who may enter the current room
+  cogmer join <room>     Put this session in a room, from its invitation or its name
+  cogmer leave           Take this session out of its room
+  cogmer guests          List who may enter this session's room
   cogmer invite <peer>   Admit a known peer   (inside the room's session)
   cogmer revoke <peer>   Withdraw admission   (inside the room's session)
   cogmer doctor [--deep] Verify relied-on Claude Code behaviors
@@ -232,11 +232,6 @@ func sessionRoom(m *Membership) Room {
 	return r
 }
 
-// openLocal opens the room a person is working in, which since D-046 is a room in
-// `membership.db` rather than a name in `config.json`. It read the old config for
-// longer than that was true, so `log` reported an empty room called "default"
-// while a live room held seven events -- and an empty room reads as a quiet one,
-// which is why the staleness went unnoticed until the partition run of 2026-09-18.
 // sessionID is the Claude Code session a command was invoked from, empty at a
 // terminal. Claude Code exports it into every tool call's environment and it is
 // the same id the hooks report (B21), so a slash command that shells out needs to
@@ -269,7 +264,7 @@ func watchLine(room string) string {
 
 // runWhere prints where to watch, naming the room this session is in if it is in
 // one. Like whoami, it must answer in no room at all, so it does not use
-// currentRoom, which exits.
+// sessionRoom, which exits.
 func runWhere() {
 	m, err := OpenMembership()
 	if err != nil {
@@ -279,9 +274,9 @@ func runWhere() {
 	defer m.Close()
 
 	// Inside a session, the only room that means anything is the one that session
-	// is in. Falling back to the current room here would tell a session with no
-	// room to go and watch somebody else's — which is the conflation D-064 exists
-	// to prevent: that pointer says what the COMMAND LINE acts on.
+	// is in. Falling back to some other room here would tell a session with no
+	// room to go and watch somebody else's, which is the conflation D-064 exists
+	// to prevent (D-080).
 	if sid := sessionID(); sid != "" {
 		if r, ok := m.RoomForSession(sid); ok {
 			fmt.Println(watchLine(r.RoomName))
@@ -326,6 +321,11 @@ func bindInvokingSession(m *Membership, r Room) {
 	fmt.Printf("this session is now in %s.\n", r.RoomName)
 }
 
+// openLocal opens the room a person is working in, which since D-046 is a room in
+// `membership.db` rather than a name in `config.json`. It read the old config for
+// longer than that was true, so `log` reported an empty room called "default"
+// while a live room held seven events -- and an empty room reads as a quiet one,
+// which is why the staleness went unnoticed until the partition run of 2026-09-18.
 func openLocal() (*Store, *Identity, Room) {
 	id, err := LoadIdentity()
 	if err != nil {
@@ -501,7 +501,7 @@ func runDaemon() {
 				r.RoomName, len(g), members.SessionsInRoom(r.RoomID))
 		}
 	} else {
-		log.Printf("  current room  none — `cogmer create` or `cogmer join <room>`")
+		log.Printf("  rooms         none yet — /cogmer:room-create in a session makes one")
 	}
 	log.Printf("  hooks and UI  http://%s  (loopback)", addr())
 	log.Printf("  peer sync     https://%s  (TLS, pinned to known peers)", peerAddr())
@@ -964,10 +964,8 @@ func runJoin(args []string) {
 // three times, and that follows from where membership lives rather than being a
 // quirk.
 //
-// It deliberately leaves the current-room pointer alone. Clearing it used to be
-// the whole of leaving, and it blanked the browser view — the accumulated
-// transcript vanished at the moment a person stopped adding to it, which is the
-// opposite of what leaving should mean (D-071).
+// It leaves the room's history alone, so the browser view keeps the accumulated
+// transcript at the moment a person stops adding to it (D-071).
 func runLeave() {
 	sid := sessionID()
 	if sid == "" {

@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 !`"${CLAUDE_PLUGIN_ROOT}/cli.sh" rooms`
 
-## Guests of the current room
+## Guests of this session's room
 
 !`"${CLAUDE_PLUGIN_ROOT}/cli.sh" guests`
 

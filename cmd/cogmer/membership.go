@@ -683,12 +683,10 @@ func (m *Membership) RoomForSession(sessionID string) (Room, bool) {
 
 // LeaveSession stops a session participating, without foreclosing its return.
 //
-// Three things it deliberately does not do (D-071): it does not foreclose
-// rejoining the same room, because §12a forbids MOVING to another room and
-// returning to the one you were in is not a move; it does not touch the room's
-// events; and it does not change which room command-line commands or the browser
-// view act on, so the transcript as it accumulated stays exactly as readable as it
-// was a moment earlier.
+// Two things it does not do (D-071): it does not foreclose rejoining the same room,
+// because §12a forbids MOVING to another room and returning to the one you were in
+// is not a move; and it does not touch the room's events, so the transcript as it
+// accumulated stays as readable as it was a moment earlier.
 func (m *Membership) LeaveSession(sessionID string) (Room, error) {
 	room, ok := m.RoomForSession(sessionID)
 	if !ok {

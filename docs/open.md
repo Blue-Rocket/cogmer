@@ -32,24 +32,6 @@ out.
 
 A decision, a comment or a test says what the code does, and a change that breaks it is caught.
 
-**Five behavior checks have no test that makes them fail.** D-130 (every behavior
-check has a test that makes it fail) requires one for each, and no test names B03,
-B05, B07, B11 or B20 (read on 2026-09-29). Nothing checks the requirement, so a check
-for any of the five could pass whatever Claude Code did. A test for each, and a test
-that every entry in the registry is named by one, would close it.
-
-**Nothing tests that a lost room is reported when it is opened.** D-169 (a lost room
-state is reported when the room is opened) has `reportLostState` in
-`cmd/cogmer/daemon.go` compare the highest sequence the store holds for this peer with
-the highest recorded as issued, and no test in `cmd/cogmer` calls it or looks for its
-"ROOM STATE LOST" line (read from the code on 2026-10-01). A change that stopped the
-comparison, or that skipped the call on open, would leave a user with a quiet room and
-no notice, and every test would pass.
-
-The fix is a test that issues events in a room, deletes the room's database, opens the
-room again, and requires the report, together with a test that a room holding what was
-issued reports nothing.
-
 **The tests for D-164 (the two words come from the PGP biometric word list, alternating
 by position) check less than the decision states.** `TestWordlistsAreWholeBytes` and
 `TestTheTwoWordsComeFromDifferentLists` in `cmd/cogmer/sas_test.go` require that each
@@ -65,6 +47,24 @@ The fix is a test that the two lists equal a copy of the PGP list kept under
 `cmd/cogmer/testdata/`, and a test that no word of either list appears in the four
 name vocabularies. D-164's **Limits.** is deleted when the second test exists.
 
+**Nothing tests that a lost room is reported when it is opened.** D-169 (a lost room
+state is reported when the room is opened) has `reportLostState` in
+`cmd/cogmer/daemon.go` compare the highest sequence the store holds for this peer with
+the highest recorded as issued, and no test in `cmd/cogmer` calls it or looks for its
+"ROOM STATE LOST" line (read from the code on 2026-10-01). A change that stopped the
+comparison, or that skipped the call on open, would leave a user with a quiet room and
+no notice, and every test would pass.
+
+The fix is a test that issues events in a room, deletes the room's database, opens the
+room again, and requires the report, together with a test that a room holding what was
+issued reports nothing.
+
+**Five behavior checks have no test that makes them fail.** D-130 (every behavior
+check has a test that makes it fail) requires one for each, and no test names B03,
+B05, B07, B11 or B20 (read on 2026-09-29). Nothing checks the requirement, so a check
+for any of the five could pass whatever Claude Code did. A test for each, and a test
+that every entry in the registry is named by one, would close it.
+
 **The boundary around injected turns is removed from their text, when it could be
 chosen to be absent from it.** `FormatTeamContext` in `cmd/cogmer/daemon.go` generates
 a random value for the boundary, then deletes any copy of that value from each
@@ -77,19 +77,6 @@ and need no removal. `TestTeammateContentCannotEscapeTheBlock` in
 (the injected block is fenced with an unforgeable value) records the removal, so the
 change rewrites that part of it under W-38 (a partial change rewrites the earlier
 entry).
-
-**`cogmer`'s usage text describes a current room, which D-080 removed.** `usage` in
-`cmd/cogmer/main.go` says `join` makes "a room current, so new sessions join it", and
-`leave` leaves "the current room". A room is the session's own (D-064), so a user
-reading the help is told how something works that does not exist (read on
-2026-09-25).
-
-**Two comments describe the current-room pointer D-080 removed.** `main.go:878` and
-`membership.go:686-688` still explain a machine-wide current room. D-080 (there is no
-current room, and a room-scoped command gets its room from its session) deleted
-`SetCurrentRoom` and `CurrentRoom`, so a maintainer reading either comment is told
-about a mechanism that does not exist. Found on 09-23, reading every decision for
-the split list.
 
 **The view leaves the derived name off a user's own turns, and no decision records
 why.** Commit `33ce996` made the choice. D-021 (peer names are derived from the
