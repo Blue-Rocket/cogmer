@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -522,6 +523,67 @@ func TestANameFromAnotherMachineIsReduced(t *testing.T) {
 		peer, addr, _ := parsePairing(s)
 		if peer != "ed25519:abc" || addr != "h:1" {
 			t.Errorf("name %q corrupted the string: %q", in, s)
+		}
+	}
+}
+
+// The words are the PGP biometric word list, which exists because its words are
+// hard to confuse over a bad telephone line. A word typed in by hand, or swapped
+// for one that looks better, was never vetted for that, and two near-homophones in
+// one list is the confusion the list is built to avoid. So both lists are held
+// against a copy of the published one (D-164). To change a word, change D-164 and
+// the copy first.
+func TestTheWordListsAreThePGPList(t *testing.T) {
+	raw, err := os.ReadFile("testdata/pgp-word-list.tsv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var even, odd []string
+	for _, line := range strings.Split(string(raw), "\n") {
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		f := strings.Split(line, "\t")
+		if len(f) != 3 {
+			t.Fatalf("a line of the reference list has %d fields: %q", len(f), line)
+		}
+		even, odd = append(even, f[1]), append(odd, f[2])
+	}
+	if len(even) != 256 || len(odd) != 256 {
+		t.Fatalf("the reference list holds %d and %d words, want 256 each", len(even), len(odd))
+	}
+	for i := 0; i < 256; i++ {
+		if sasEven[i] != even[i] {
+			t.Errorf("sasEven[0x%02X] is %q and the PGP list has %q (D-164)", i, sasEven[i], even[i])
+		}
+		if sasOdd[i] != odd[i] {
+			t.Errorf("sasOdd[0x%02X] is %q and the PGP list has %q (D-164)", i, sasOdd[i], odd[i])
+		}
+	}
+}
+
+// A pairing string, a peer name and the words are all on screen together, and a
+// word that is also part of a derived name is one a person can read from the wrong
+// place. Each vocabulary can be edited without knowing the others, so only a test
+// sees the overlap (D-164).
+func TestNoPairingWordIsAlsoAWordOfANameVocabulary(t *testing.T) {
+	names := map[string]string{}
+	for vocab, words := range map[string][]string{
+		"peerAdjectives": peerAdjectives, "peerAnimals": peerAnimals,
+		"roomSky": roomSky, "roomLand": roomLand,
+	} {
+		if len(words) == 0 {
+			t.Fatalf("%s is empty, so the check reads nothing", vocab)
+		}
+		for _, w := range words {
+			names[strings.ToLower(w)] = vocab
+		}
+	}
+	for list, words := range map[string][256]string{"sasEven": sasEven, "sasOdd": sasOdd} {
+		for i, w := range words {
+			if vocab, clash := names[strings.ToLower(w)]; clash {
+				t.Errorf("%s[0x%02X] is %q, which is also in %s, so a person could compare a name for the words", list, i, w, vocab)
+			}
 		}
 	}
 }

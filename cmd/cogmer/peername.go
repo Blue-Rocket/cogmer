@@ -21,7 +21,7 @@ import (
 // combinations are generated, so nobody approves them individually.
 
 var peerAdjectives = []string{
-	"amber", "ancient", "autumn", "boreal", "brave", "bright", "brisk", "calm",
+	"amber", "amiable", "autumn", "boreal", "brave", "bright", "brisk", "calm",
 	"candid", "cedar", "cheerful", "civil", "clever", "coastal", "copper", "cosmic",
 	"crisp", "curious", "dawn", "deft", "diligent", "distant", "dusky", "eager",
 	"early", "eastern", "easy", "elder", "fabled", "fearless", "fleet", "fond",
@@ -43,10 +43,10 @@ var peerAnimals = []string{
 	"kite", "lapwing", "lark", "lemming", "linnet", "lynx", "mallard", "marten",
 	"merlin", "mink", "moorhen", "nightjar", "nuthatch", "osprey", "otter", "ouzel",
 	"owlet", "oystercatcher", "petrel", "pika", "pintail", "pipit", "plover", "pochard",
-	"ptarmigan", "puffin", "quail", "raven", "redshank", "redstart", "reindeer", "roebuck",
+	"ptarmigan", "puffin", "quail", "raven", "redshank", "redstart", "razorbill", "roebuck",
 	"sanderling", "sandpiper", "shearwater", "shelduck", "shrew", "siskin", "skylark", "smew",
 	"sparrow", "stoat", "stonechat", "swift", "teal", "tern", "thrush", "treecreeper",
-	"turnstone", "vole", "wagtail", "warbler", "wheatear", "whimbrel", "wigeon", "woodlark",
+	"turnstone", "vole", "wagtail", "warbler", "wheatear", "whimbrel", "wigeon", "woodcock",
 	"wren", "yellowhammer",
 }
 

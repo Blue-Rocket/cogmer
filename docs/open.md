@@ -32,21 +32,6 @@ out.
 
 A decision, a comment or a test says what the code does, and a change that breaks it is caught.
 
-**The tests for D-164 (the two words come from the PGP biometric word list, alternating
-by position) check less than the decision states.** `TestWordlistsAreWholeBytes` and
-`TestTheTwoWordsComeFromDifferentLists` in `cmd/cogmer/sas_test.go` require that each
-list holds 256 distinct words and that the two lists share none (read from the code on
-2026-10-01). Nothing requires that `sasEven` and `sasOdd` are the PGP biometric word
-list, so an edit that replaced words with others, or one that merged duplicates away
-and refilled the list, passes every test. Nothing requires that no word is also in
-`peerAdjectives`, `peerAnimals`, `roomSky` or `roomLand`, which the decision names and
-its **Limits.** records as unchecked. A user comparing two words beside a derived peer
-name could then compare the wrong one.
-
-The fix is a test that the two lists equal a copy of the PGP list kept under
-`cmd/cogmer/testdata/`, and a test that no word of either list appears in the four
-name vocabularies. D-164's **Limits.** is deleted when the second test exists.
-
 **Nothing tests that a lost room is reported when it is opened.** D-169 (a lost room
 state is reported when the room is opened) has `reportLostState` in
 `cmd/cogmer/daemon.go` compare the highest sequence the store holds for this peer with
