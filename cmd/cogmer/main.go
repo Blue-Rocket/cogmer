@@ -55,7 +55,7 @@ func main() {
 	case "version":
 		fmt.Println(version)
 	case "stop":
-		runStop()
+		runStop(os.Args[2:])
 	case "where":
 		runWhere()
 	case "whoami":
@@ -1739,8 +1739,10 @@ func stopDaemonsAt(addresses []string) ([]stopOutcome, error) {
 	return out, nil
 }
 
-// runStop is `cogmer stop`.
-func runStop() {
+// runStop is `cogmer stop`. With --for-restart it does not say that nothing runs
+// afterwards, because the command that passes it starts a daemon next (D-195).
+func runStop(args []string) {
+	_, forRestart := takeFlag(args, "--for-restart")
 	outcomes, err := stopDaemonsAt([]string{addr(), peerAddr()})
 	for _, o := range outcomes {
 		switch {
@@ -1759,7 +1761,7 @@ func runStop() {
 		fmt.Printf("nothing is listening on %s or %s\n", addr(), peerAddr())
 	}
 	for _, o := range outcomes {
-		if o.Stopped {
+		if o.Stopped && !forRestart {
 			// Said here because the command that runs this is typed in a session,
 			// and nothing restarts a daemon until a session starts (D-150).
 			fmt.Println("No daemon is running now, so nothing is captured or shared until one starts.")

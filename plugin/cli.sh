@@ -25,7 +25,45 @@ set -u
 # the binary and the running daemon agree.
 export CLAUDE_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")" && pwd)}"
 
+# restart_daemon stops whichever cogmer daemon holds this installation's addresses
+# and starts one with the function the session-start hook uses, so the start is
+# detached and logged the same way on every platform (D-195). It waits a few
+# seconds for the daemon to answer, because "started" and "answering" are different
+# facts and a person asking for a restart wants the second. COGMER_RESTART_WAIT is
+# that wait in seconds, and exists so a test need not sit through it.
+restart_daemon() {
+  local bin="$1" addr="${COGMER_ADDR:-127.0.0.1:4782}" waited=0 limit="${COGMER_RESTART_WAIT:-5}"
+  local state_file="${COGMER_HOME:-$HOME/.cogmer}/daemon-state" state when detail
+  "$bin" stop --for-restart 2>&1
+  start_daemon_if_needed
+  while [ "$waited" -lt "$limit" ]; do
+    if curl -s -m 1 "http://${addr}/healthz" > /dev/null 2>&1; then
+      echo "The daemon was restarted and is answering on ${addr}, version $("$bin" version 2>/dev/null)."
+      echo
+      echo "Nothing that was captured is lost, because it is written to disk before it is"
+      echo "shared. Connecting to colleagues again can take a few seconds more."
+      return 0
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  echo "The daemon was started and is not answering on ${addr} yet."
+  if [ -r "$state_file" ]; then
+    IFS=$'\t' read -r state when detail < "$state_file"
+    if [ "$state" = blocked ] && [ -n "$detail" ]; then
+      echo
+      echo "It recorded why: $detail"
+    fi
+  fi
+  echo
+  echo "~/.cogmer/daemon.log says what happened."
+}
+
 if bin="$(cogmer_binary)"; then
+  if [ "${1:-}" = restart ]; then
+    restart_daemon "$bin"
+    exit 0
+  fi
   "$bin" "$@" 2>&1
   exit 0
 fi

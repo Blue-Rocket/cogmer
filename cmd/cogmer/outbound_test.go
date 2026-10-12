@@ -176,6 +176,7 @@ var scriptFetches = map[string]struct {
 	count int
 	goes  string
 }{
+	"plugin/cli.sh":                          {1, "the daemon's health address on loopback, to see whether a restart answers"},
 	"plugin/hooks-handlers/common.sh":        {1, "the daemon's health address on loopback"},
 	"plugin/hooks-handlers/session-start.sh": {1, "the daemon's health address on loopback"},
 	"plugin/hooks-handlers/install.sh":       {2, "the release host, for the binary, and Go's module download when building from source (D-121)"},

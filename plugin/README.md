@@ -38,6 +38,7 @@ every room, and `self-` commands act on you.
 | `/cogmer:self-status` | who you are, what you send colleagues, whether they can reach you, and which versions are running |
 | `/cogmer:self-name [what people should call you]` | show or set the name other people see for you |
 | `/cogmer:self-stop` | stop the daemon on this machine; nothing is captured or shared until a new session starts one |
+| `/cogmer:self-restart` | stop the daemon and start it again, without a new session |
 
 ## Pairing happens in your browser, not through the model
 

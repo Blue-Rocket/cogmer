@@ -2155,6 +2155,9 @@ Stopping the daemon does not start it again, because a user who stops it may wan
 stopped. Nothing is captured or shared until a daemon runs, a new session starts one,
 and the command says so.
 
+A user can restart the daemon without a new session. The restart stops the daemon and
+starts it again, and says whether it is answering, and when it is not, why.
+
 After an update, the first session runs the new version. A daemon of a different
 version holding this installation's addresses is stopped and replaced in the
 background, so the session is not delayed, and a fix reaches the user without their

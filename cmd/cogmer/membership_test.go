@@ -798,6 +798,17 @@ func TestEverySlashCommandNamesARealSubcommand(t *testing.T) {
 		known[m[1]] = true
 	}
 
+	// A few subcommands are the script's own, such as `restart`, which stops a daemon and
+	// starts one with a shell function and so is not a case of main.go. They are found
+	// where the script tests for them, so a command naming one the script lacks fails.
+	script, err := os.ReadFile("../../plugin/cli.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range regexp.MustCompile(`"\$\{1:-\}" = ([a-z]+)`).FindAllStringSubmatch(string(script), -1) {
+		known[m[1]] = true
+	}
+
 	sub := regexp.MustCompile(`cli\.sh" ([a-z]+)`)
 	for _, f := range files {
 		body, err := os.ReadFile(f)

@@ -182,3 +182,111 @@ func TestACommandAfterAStalledInstallClearsTheLockAndStartsAgain(t *testing.T) {
 		t.Error("the download was not started again")
 	}
 }
+
+// A restart stops the daemon and starts one, and says whether it is answering. The
+// first test uses a stand-in that records how it was called, so the order and the
+// flags are checked without a daemon. The second runs real builds.
+
+func TestARestartStopsThenStartsAndSaysWhenNothingAnswers(t *testing.T) {
+	root, home := cliHarness(t)
+	if err := os.MkdirAll(filepath.Join(home, "bin"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	log := filepath.Join(home, "calls")
+	bin := "#!/usr/bin/env bash\necho \"$@\" >> \"" + log + "\"\n"
+	if err := os.WriteFile(filepath.Join(home, "bin", "cogmer"), []byte(bin), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// What the daemon would have recorded when it could not bind.
+	state := "blocked\t1\tpeer sync cannot be served: 127.0.0.1:4783 is held by nginx, pid 7, which is not a cogmer daemon\n"
+	if err := os.WriteFile(filepath.Join(home, "daemon-state"), []byte(state), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command("bash", filepath.Join(root, "cli.sh"), "restart")
+	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + home, "COGMER_HOME=" + home, "CLAUDE_PLUGIN_ROOT=" + root,
+		"COGMER_ADDR=127.0.0.1:1", "COGMER_RESTART_WAIT=1"}
+	raw, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("restart exited non-zero, so Claude Code abandons the command and nothing is explained: %v", err)
+	}
+	out := flat(string(raw))
+
+	var calls []string
+	for i := 0; i < 100; i++ {
+		b, _ := os.ReadFile(log)
+		calls = strings.Fields(strings.ReplaceAll(string(b), "\n", " ; "))
+		if strings.Contains(string(b), "daemon") {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	joined := strings.Join(calls, " ")
+	if !strings.HasPrefix(joined, "stop --for-restart") {
+		t.Errorf("the daemon was not stopped first, with the flag that keeps stop from saying nothing runs: %q", joined)
+	}
+	if !strings.Contains(joined, "daemon") {
+		t.Errorf("no daemon was started after the stop: %q", joined)
+	}
+	for _, want := range []string{"was started and is not answering", "It recorded why", "held by nginx", "daemon.log"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q: %q", want, out)
+		}
+	}
+}
+
+func TestARestartReplacesARunningDaemonWithOneThatAnswers(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds the binary")
+	}
+	if _, err := exec.LookPath("lsof"); err != nil {
+		t.Skip("no lsof on this machine")
+	}
+	if _, err := exec.LookPath("curl"); err != nil {
+		t.Skip("no curl on this machine")
+	}
+	dir := t.TempDir()
+	bin := buildVersion(t, dir, "0.0.1")
+	hooks, peer := freeAddr(t), freeAddr(t)
+	env := append(os.Environ(), "COGMER_HOME="+filepath.Join(dir, "home"), "COGMER_ADDR="+hooks,
+		"COGMER_PEER_ADDR="+peer, "COGMER_TAILCAT=off", "COGMER_PREFLIGHT=off", "COGMER_PEERS=",
+		"COGMER_BIN="+bin, "CLAUDE_PLUGIN_ROOT="+filepath.Join("..", "..", "plugin"))
+
+	first := exec.Command(bin, "daemon")
+	first.Env = env
+	if err := first.Start(); err != nil {
+		t.Fatal(err)
+	}
+	exited := make(chan error, 1)
+	go func() { exited <- first.Wait() }()
+	defer func() { _ = first.Process.Kill() }()
+	waitForVersion(t, hooks, "0.0.1")
+	// Whatever the restart leaves running is stopped afterwards.
+	t.Cleanup(func() {
+		stop := exec.Command(bin, "stop")
+		stop.Env = env
+		_ = stop.Run()
+	})
+
+	cmd := exec.Command("bash", filepath.Join("..", "..", "plugin", "cli.sh"), "restart")
+	cmd.Env = env
+	raw, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("restart: %v\n%s", err, raw)
+	}
+	out := string(raw)
+	select {
+	case <-exited:
+	case <-time.After(10 * time.Second):
+		t.Fatal("the old daemon was still running after the restart")
+	}
+	if !strings.Contains(flat(out), "was restarted and is answering") {
+		t.Errorf("the restart does not say the daemon answers:\n%s", out)
+	}
+	if strings.Contains(flat(out), "A new Claude Code session starts one") {
+		t.Errorf("the restart says no daemon runs, which stop says and a restart contradicts:\n%s", out)
+	}
+	if _, ok := daemonVersionAt(hooks); !ok {
+		t.Error("no daemon answers on the hooks address after the restart")
+	}
+}

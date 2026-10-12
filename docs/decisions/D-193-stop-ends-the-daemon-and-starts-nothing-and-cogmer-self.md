@@ -19,12 +19,11 @@ starts one. `/cogmer:self-stop` runs it.
 - The command changes this machine's installation and no room, so it takes the `self-` prefix, and
   like every command it is unreachable by the model. D-096 (a command prefix names its target, and
   `/self-status` is where you are), D-119 (no slash command is reachable by the model).
+- Starting again is a command of its own, so stopping is one thing. D-195 (a restart stops the daemon and
+  starts it with the hook's own function).
 
 **Rejected.**
 - *`stop` starting the daemon afterwards.* Somebody who wants it stopped would have to stop it
   twice.
 - *No command, only the terminal form.* Typing the installed binary's path is the cost this
   decision removes.
-
-**Revisit when** a session can start a daemon without being a new one, since stopping and starting
-are then one idea that somebody may want as a restart.
