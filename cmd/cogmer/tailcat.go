@@ -278,6 +278,16 @@ type SelfCheck struct {
 	Reached bool   `json:"reached"`
 	TookMs  int64  `json:"tookMs,omitempty"`
 	Error   string `json:"error,omitempty"`
+	// FailingFor is how long the daemon has been failing this check, empty while it
+	// passes. The daemon fills it in, since only it remembers earlier answers.
+	FailingFor string `json:"failingFor,omitempty"`
+}
+
+// newRelayProbe returns what the server reports as its relay right now, which is
+// empty when it is not attached. It opens no connection, so it is cheap enough to
+// ask every minute.
+func newRelayProbe(srv *tailcat.Server) func() string {
+	return func() string { return srv.Status().Self.Relay }
 }
 
 // newSelfCheck returns the check for a running server. It dials the server's own

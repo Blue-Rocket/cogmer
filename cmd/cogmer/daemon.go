@@ -90,9 +90,14 @@ type Daemon struct {
 	// the daemon runs no overlay. It lives in tailcat.go, which is the only place
 	// that knows what the overlay is (D-068).
 	selfCheck func(context.Context) SelfCheck
+	relayNow  func() string
 	selfMu    sync.Mutex
 	selfLast  SelfCheck
 	selfAt    time.Time
+
+	// What the watcher has confirmed about reachability through the relay, in memory
+	// like the peer states. failSince is zero while the daemon is reachable.
+	watch selfWatch
 
 	// The certificate this daemon presents to peers, derived from the identity
 	// key and cached because that key never changes (D-101).

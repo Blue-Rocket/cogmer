@@ -342,6 +342,11 @@ right form does not show that. Before a daemon offers an overlay address it chec
 making a connection to it through its relay as a colleague would, and when none gets
 through it says so, and whether the daemon is attached to its relay at all.
 
+A daemon keeps checking while it runs, and says when it has stopped being reachable and
+when it is reachable again. A user is told when they ask about a room or about
+themselves, and for how long, because a machine nobody can reach hands its turns to
+nobody and its user would not otherwise know.
+
 ## What kind of address it is
 
 Addresses differ in what they name, and that decides how long each stays true and

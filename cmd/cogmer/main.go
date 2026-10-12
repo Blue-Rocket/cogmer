@@ -471,6 +471,7 @@ func runDaemon() {
 		} else {
 			tcListener, advertised = l, endpoint
 			d.selfCheck = newSelfCheck(srv, endpoint)
+			d.relayNow = newRelayProbe(srv)
 			defer l.Close()
 			defer srv.Close()
 		}
@@ -534,8 +535,11 @@ func runDaemon() {
 	var stopping atomic.Bool
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM, os.Interrupt)
+	stopWatch := make(chan struct{})
+	go d.RunSelfWatch(stopWatch)
 	go func() {
 		s := <-signals
+		close(stopWatch)
 		stopping.Store(true)
 		log.Printf("stopping on %v", s)
 		local.Close()
@@ -997,35 +1001,36 @@ func runGuests() {
 		if err != nil {
 			log.Fatalf("guests: %v", err)
 		}
-		reach, up := fetchPeers()
+		reach, self, up := fetchPeers()
 		var rows []guestRow
 		for _, p := range g {
 			rows = append(rows, guestRow{Name: firstNonEmpty(m.Label(p), PeerName(p)), ID: p, Self: p == id.PeerID})
 		}
-		renderGuests(os.Stdout, r.RoomName, rows, reach, up)
+		renderGuests(os.Stdout, r.RoomName, rows, reach, self, up)
 	})
 }
 
 // fetchPeers asks the running daemon whom it can reach. The answer lives in the
 // daemon, which is the process that tries, so a command that is a separate process
 // has to ask it. The second result is false when no daemon answered.
-func fetchPeers() ([]uiPeer, bool) {
+func fetchPeers() ([]uiPeer, *uiSelf, bool) {
 	c := &http.Client{Timeout: 2 * time.Second}
 	resp, err := c.Get("http://" + addr() + "/peers")
 	if err != nil {
-		return nil, false
+		return nil, nil, false
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, false
+		return nil, nil, false
 	}
 	var body struct {
 		Peers []uiPeer `json:"peers"`
+		Self  *uiSelf  `json:"self"`
 	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&body); err != nil {
-		return nil, false
+		return nil, nil, false
 	}
-	return body.Peers, true
+	return body.Peers, body.Self, true
 }
 
 type guestRow struct {
@@ -1037,8 +1042,14 @@ type guestRow struct {
 // renderGuests lists who may enter a room and, for each colleague, whether this
 // machine can reach them. A colleague this machine cannot reach looks the same as a
 // quiet room, so it is said in words beside their name and not left to a log.
-func renderGuests(w io.Writer, room string, rows []guestRow, reach []uiPeer, daemonUp bool) {
+func renderGuests(w io.Writer, room string, rows []guestRow, reach []uiPeer, self *uiSelf, daemonUp bool) {
 	fmt.Fprintf(w, "%s\n", room)
+	if self != nil && self.Failing {
+		// Said before the colleagues, because it is the cause of the others: a machine
+		// nobody can reach does not hand its turns to anybody, since peers pull.
+		fmt.Fprintf(w, "  THIS MACHINE CANNOT BE REACHED through its relay%s, so colleagues do not receive\n", selfFailingFor(self))
+		fmt.Fprintf(w, "  your turns. /cogmer:self-restart restarts the daemon.\n")
+	}
 	byID := map[string]*uiPeer{}
 	for i := range reach {
 		if reach[i].PeerID != "" {
@@ -1067,6 +1078,17 @@ func renderGuests(w io.Writer, room string, rows []guestRow, reach []uiPeer, dae
 		fmt.Fprintln(w, "do not arrive here, and the room looks quiet. They can run /cogmer:self-status to see")
 		fmt.Fprintln(w, "whether this machine can be reached from theirs, and whether their daemon is running.")
 	}
+}
+
+// selfFailingFor says for how long this daemon has been unreachable, in a few words.
+func selfFailingFor(s *uiSelf) string {
+	switch {
+	case s.Detached != "":
+		return " (not attached to a relay for " + s.Detached + ")"
+	case s.FailingFor != "":
+		return " (for " + s.FailingFor + ", " + shortReason(s.Error) + ")"
+	}
+	return ""
 }
 
 // reachLine says in a few words whether this machine can reach one colleague.
@@ -1970,6 +1992,15 @@ func fetchSelfCheck() (SelfCheck, bool) {
 // yes. An overlay address is not reachable because it has the right shape. It is
 // reachable when the daemon is attached to its relay and a connection made from
 // outside gets through, and only the running daemon can try (D-196).
+// failingSentence says how long the daemon has been failing the check, when it has
+// been for long enough to have a number.
+func failingSentence(sc SelfCheck) string {
+	if sc.FailingFor == "" {
+		return ""
+	}
+	return "\n      It has failed this check for " + sc.FailingFor + "."
+}
+
 func checkReachable(endpoint string) (ok bool, why, note string) {
 	e, err := ParseEndpoint(endpoint)
 	if err != nil {
@@ -1993,7 +2024,7 @@ func checkReachable(endpoint string) (ok bool, why, note string) {
 		case !sc.Reached:
 			return false, fmt.Sprintf("the daemon is attached to the relay (%s) but a test connection from outside\n"+
 				"      did not get through (%s), so colleagues cannot reach you at that address.\n"+
-				"      /cogmer:self-restart restarts the daemon.", sc.Relay, shortReason(sc.Error)), ""
+				"      /cogmer:self-restart restarts the daemon.%s", sc.Relay, shortReason(sc.Error), failingSentence(sc)), ""
 		}
 		return true, "", fmt.Sprintf("Checked just now: a connection from outside reached this machine through the relay at %s, in %dms.", sc.Relay, sc.TookMs)
 	}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"math/rand"
 	"net/http"
 	"strings"
 	"sync"
@@ -384,15 +385,18 @@ func (d *Daemon) handleSelf(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
 		defer cancel()
 		d.selfLast, d.selfAt = d.selfCheck(ctx), time.Now()
+		d.noteSelfResult(d.selfLast)
 	}
-	writeJSON(w, d.selfLast)
+	out := d.selfLast
+	out.FailingFor = d.failingFor()
+	writeJSON(w, out)
 }
 
 // handlePeers answers with the state of every peer this daemon tries, for the
 // commands that tell a person whom they can reach. A read like the view's, so it
 // needs no header, and the daemon sends no CORS headers (D-087).
 func (d *Daemon) handlePeers(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, map[string]any{"peers": d.peerStatus()})
+	writeJSON(w, map[string]any{"peers": d.peerStatus(), "self": d.selfStatus()})
 }
 
 func (d *Daemon) peerStateLocked(addr string) *peerState {
@@ -453,3 +457,186 @@ func (d *Daemon) markPeerUnreachable(addr string, err error) {
 }
 
 var _ = sync.Mutex{}
+
+// Reachability of this daemon through its own relay.
+//
+// A daemon whose overlay stopped being reachable looked the same as a healthy one
+// for as long as nobody tried to reach it, which in one case was sixteen minutes
+// and could have been weeks. So the daemon asks itself on a timer, says so when the
+// answer changes, and keeps the answer where the commands can show it (D-197). It
+// only reports. Restarting the overlay is a person's call, with /cogmer:self-restart.
+
+// selfWatch is what the watcher knows, and how often it asks. The intervals are
+// fields so a test need not wait for the real ones.
+type selfWatch struct {
+	mu         sync.Mutex
+	failSince  time.Time
+	failErr    string
+	reported   time.Time
+	lastRelay  string
+	detached   time.Time // when the cheap check first found no relay
+	every      time.Duration
+	cheapEvery time.Duration
+	confirm    time.Duration
+}
+
+const (
+	selfWatchEvery   = 12 * time.Minute
+	selfWatchCheap   = time.Minute
+	selfWatchConfirm = 30 * time.Second
+)
+
+// RunSelfWatch asks, for as long as the daemon runs, whether it can be reached. A
+// cheap read of the attached relay runs every minute, and a connection through the
+// relay every twelve, with a random offset so machines do not ask in step. A failure
+// is asked again half a minute later before it counts, since a laptop that has just
+// woken fails once and is fine.
+func (d *Daemon) RunSelfWatch(stop <-chan struct{}) {
+	if d.selfCheck == nil {
+		return
+	}
+	w := &d.watch
+	w.mu.Lock()
+	if w.every == 0 {
+		w.every, w.cheapEvery, w.confirm = selfWatchEvery, selfWatchCheap, selfWatchConfirm
+	}
+	every, cheap, confirm := w.every, w.cheapEvery, w.confirm
+	w.mu.Unlock()
+
+	// Soon after start, but not at once: the server needs a few seconds to attach.
+	next := time.Now().Add(jitter(every / 12))
+	tick := time.NewTicker(cheap)
+	defer tick.Stop()
+	for {
+		select {
+		case <-stop:
+			return
+		case <-tick.C:
+		}
+		d.watchRelay()
+		if time.Now().Before(next) {
+			continue
+		}
+		next = time.Now().Add(every + jitter(every/5))
+		d.watchDial(stop, confirm)
+	}
+}
+
+// jitter is a random duration up to max.
+func jitter(max time.Duration) time.Duration {
+	if max <= 0 {
+		return 0
+	}
+	return time.Duration(rand.Int63n(int64(max)))
+}
+
+// watchRelay reads the attached relay and says when there has been none for
+// several checks running, which is a state a person cannot see from anywhere.
+func (d *Daemon) watchRelay() {
+	if d.relayNow == nil {
+		return
+	}
+	relay := d.relayNow()
+	w := &d.watch
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if relay != "" {
+		if !w.detached.IsZero() {
+			log.Printf("relay: attached to the relay again (%s) after %s", relay, roughDuration(time.Since(w.detached)))
+		}
+		w.detached, w.lastRelay = time.Time{}, relay
+		return
+	}
+	if w.detached.IsZero() {
+		w.detached = time.Now()
+		return
+	}
+	// Said once the absence has lasted three checks, and then at the slow repeat.
+	if time.Since(w.detached) >= 3*w.cheapEvery && time.Since(w.reported) >= downRepeat {
+		w.reported = time.Now()
+		log.Printf("relay: this daemon has not been attached to a relay for %s, so colleagues cannot reach it. /cogmer:self-restart restarts it.", roughDuration(time.Since(w.detached)))
+	}
+}
+
+// watchDial runs the full check, and again after a pause when it fails, and records
+// the outcome.
+func (d *Daemon) watchDial(stop <-chan struct{}, confirm time.Duration) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	sc := d.selfCheck(ctx)
+	cancel()
+	if !sc.Reached {
+		select {
+		case <-stop:
+			return
+		case <-time.After(confirm):
+		}
+		ctx, cancel = context.WithTimeout(context.Background(), 15*time.Second)
+		sc = d.selfCheck(ctx)
+		cancel()
+	}
+	d.noteSelfResult(sc)
+}
+
+// noteSelfResult records an answer, from the watcher or from a command, and says
+// so on the transitions: when the daemon stops being reachable, then at a slow
+// repeat, and when it is reachable again.
+func (d *Daemon) noteSelfResult(sc SelfCheck) {
+	w := &d.watch
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if sc.Reached {
+		if !w.failSince.IsZero() {
+			log.Printf("relay: reachable again after %s", roughDuration(time.Since(w.failSince)))
+		}
+		w.failSince, w.failErr, w.reported = time.Time{}, "", time.Time{}
+		return
+	}
+	first := w.failSince.IsZero()
+	if first {
+		w.failSince = time.Now()
+	}
+	w.failErr = sc.Error
+	if first || time.Since(w.reported) >= downRepeat {
+		w.reported = time.Now()
+		log.Printf("relay: this daemon cannot be reached through its relay (%s), so colleagues cannot reach it. It has failed this check for %s. /cogmer:self-restart restarts it.",
+			shortReason(sc.Error), roughDuration(time.Since(w.failSince)))
+	}
+}
+
+// failingFor is how long the daemon has been failing the reachability check, empty
+// while it passes.
+func (d *Daemon) failingFor() string {
+	d.watch.mu.Lock()
+	defer d.watch.mu.Unlock()
+	if d.watch.failSince.IsZero() {
+		return ""
+	}
+	return roughDuration(time.Since(d.watch.failSince))
+}
+
+// uiSelf is what the commands show about this daemon's own reachability. It is
+// absent when there is no overlay, since there is then nothing to be unreachable.
+type uiSelf struct {
+	Failing    bool   `json:"failing"`
+	FailingFor string `json:"failingFor,omitempty"`
+	Error      string `json:"error,omitempty"`
+	Detached   string `json:"detached,omitempty"`
+}
+
+// selfStatus is the watcher's last word, read without opening a connection.
+func (d *Daemon) selfStatus() *uiSelf {
+	if d.selfCheck == nil {
+		return nil
+	}
+	w := &d.watch
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	s := &uiSelf{}
+	if !w.failSince.IsZero() {
+		s.Failing, s.FailingFor, s.Error = true, roughDuration(time.Since(w.failSince)), w.failErr
+	}
+	if !w.detached.IsZero() && time.Since(w.detached) >= 3*w.cheapEvery {
+		s.Failing, s.Detached = true, roughDuration(time.Since(w.detached))
+	}
+	return s
+}

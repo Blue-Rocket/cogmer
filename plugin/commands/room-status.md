@@ -21,6 +21,11 @@ disable-model-invocation: true
 Summarize in a few lines: which room this session is in, and who may enter it.
 Mark anyone unverified as unverified — their turns are not being exchanged.
 
+If the output says THIS MACHINE CANNOT BE REACHED, say that before anything else, and
+how long: colleagues pull each other's turns, so a machine nobody can reach hands its
+turns to nobody, and the user may believe they are shared when they are not. Offer
+`/cogmer:self-restart`.
+
 If the output says a colleague is NOT REACHABLE, say that first, before anything else
 about the room. A room whose colleague cannot be reached looks quiet and is not, and
 nobody would otherwise know. Say for how long, and that none of their turns reach this

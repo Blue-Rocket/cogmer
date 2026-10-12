@@ -55,7 +55,7 @@ func TestTheGuestListSaysWhoCannotBeReachedAndWhatThatMeans(t *testing.T) {
 		{PeerID: rows[2].ID, Online: true},
 	}
 	var out bytes.Buffer
-	renderGuests(&out, "moonlit-oasis", rows, reach, true)
+	renderGuests(&out, "moonlit-oasis", rows, reach, nil, true)
 	text := out.String()
 	for _, want := range []string{"moonlit-oasis", "vivid-gannet", "NOT REACHABLE", "tried for 12m", "the room looks quiet", "/cogmer:self-status", "dusky-heron", "reachable"} {
 		if !strings.Contains(text, want) {
@@ -71,8 +71,8 @@ func TestTheGuestListSaysWhoCannotBeReachedAndWhatThatMeans(t *testing.T) {
 
 	// Everyone answering: nothing to explain.
 	out.Reset()
-	renderGuests(&out, "moonlit-oasis", rows[:1], nil, true)
-	renderGuests(&out, "r", []guestRow{rows[2]}, []uiPeer{{PeerID: rows[2].ID, Online: true}}, true)
+	renderGuests(&out, "moonlit-oasis", rows[:1], nil, nil, true)
+	renderGuests(&out, "r", []guestRow{rows[2]}, []uiPeer{{PeerID: rows[2].ID, Online: true}}, nil, true)
 	if strings.Contains(out.String(), "looks quiet") {
 		t.Errorf("the explanation appears when nobody is unreachable:\n%s", out.String())
 	}

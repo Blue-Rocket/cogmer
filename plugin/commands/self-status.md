@@ -30,6 +30,9 @@ relay, and one that is attached but could not be reached by a test connection fr
 outside. If it names `/cogmer:self-restart`, offer it. Do not guess a cause the output
 does not give.
 
+If the output says the daemon has failed the check for some time, give that time: it
+tells the user how long colleagues have been unable to reach them.
+
 If the output says "Checked just now", the address was tried from outside and it
 worked. Say so in a few words, since that is what a person wants to know before
 sending the string.
