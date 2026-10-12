@@ -32,18 +32,6 @@ out.
 
 A decision, a comment or a test says what the code does, and a change that breaks it is caught.
 
-**Nothing tests that a lost room is reported when it is opened.** D-169 (a lost room
-state is reported when the room is opened) has `reportLostState` in
-`cmd/cogmer/daemon.go` compare the highest sequence the store holds for this peer with
-the highest recorded as issued, and no test in `cmd/cogmer` calls it or looks for its
-"ROOM STATE LOST" line (read from the code on 2026-10-01). A change that stopped the
-comparison, or that skipped the call on open, would leave a user with a quiet room and
-no notice, and every test would pass.
-
-The fix is a test that issues events in a room, deletes the room's database, opens the
-room again, and requires the report, together with a test that a room holding what was
-issued reports nothing.
-
 **Five behavior checks have no test that makes them fail.** D-130 (every behavior
 check has a test that makes it fail) requires one for each, and no test names B03,
 B05, B07, B11 or B20 (read on 2026-09-29). Nothing checks the requirement, so a check

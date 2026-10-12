@@ -14,6 +14,10 @@ colleagues' turns may be injected a second time.
   later as a room that has gone quiet. `cmd/cogmer/daemon.go`, `reportLostState`.
 - The specification requires the check on every open and the report in terms a user can
   act on. §8 (event identity and ordering).
+- A daemon restarted over a room whose database was deleted reports it, and one restarted over a
+  room that holds what was sent reports nothing. Breaking the call, the comparison in either
+  direction, each failed one of the two. `cmd/cogmer/lostroom_test.go`,
+  `TestALostRoomIsReportedWhenItIsOpened` and `TestARoomHoldingWhatWasIssuedReportsNothing`.
 
 **Rejected.**
 - *Recovering silently.* A recovery nobody is told about looks the same as nothing having
