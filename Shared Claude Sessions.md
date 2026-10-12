@@ -966,6 +966,10 @@ Both lists can be inspected and changed:
 /cogmer:room-revoke <peer>           withdraw admission
 ```
 
+A room's status says, for each colleague, whether this machine can reach them, and for
+one it cannot, for how long it has been trying. A colleague who cannot be reached looks
+the same as a quiet room, and without being told, nobody knows to look.
+
 A peer can be recorded without being verified, for scripts and tests, and such a peer
 cannot collaborate until the comparison happens.
 
@@ -1486,7 +1490,7 @@ The view:
 - shows when each turn was written;
 - renders Markdown and code;
 - shows whether it is connected;
-- shows when peers are offline;
+- shows which colleagues are offline, by name, and for how long;
 - recovers missed events by itself.
 
 ---

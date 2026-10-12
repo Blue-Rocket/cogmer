@@ -996,15 +996,113 @@ func runGuests() {
 		if err != nil {
 			log.Fatalf("guests: %v", err)
 		}
-		fmt.Printf("%s\n", r.RoomName)
+		reach, up := fetchPeers()
+		var rows []guestRow
 		for _, p := range g {
-			mine := ""
-			if p == id.PeerID {
-				mine = "  (you)"
-			}
-			fmt.Printf("  %-22s %s%s\n", PeerName(p), p[:32]+"…", mine)
+			rows = append(rows, guestRow{Name: firstNonEmpty(m.Label(p), PeerName(p)), ID: p, Self: p == id.PeerID})
 		}
+		renderGuests(os.Stdout, r.RoomName, rows, reach, up)
 	})
+}
+
+// fetchPeers asks the running daemon whom it can reach. The answer lives in the
+// daemon, which is the process that tries, so a command that is a separate process
+// has to ask it. The second result is false when no daemon answered.
+func fetchPeers() ([]uiPeer, bool) {
+	c := &http.Client{Timeout: 2 * time.Second}
+	resp, err := c.Get("http://" + addr() + "/peers")
+	if err != nil {
+		return nil, false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, false
+	}
+	var body struct {
+		Peers []uiPeer `json:"peers"`
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&body); err != nil {
+		return nil, false
+	}
+	return body.Peers, true
+}
+
+type guestRow struct {
+	Name string
+	ID   string
+	Self bool
+}
+
+// renderGuests lists who may enter a room and, for each colleague, whether this
+// machine can reach them. A colleague this machine cannot reach looks the same as a
+// quiet room, so it is said in words beside their name and not left to a log.
+func renderGuests(w io.Writer, room string, rows []guestRow, reach []uiPeer, daemonUp bool) {
+	fmt.Fprintf(w, "%s\n", room)
+	byID := map[string]*uiPeer{}
+	for i := range reach {
+		if reach[i].PeerID != "" {
+			byID[reach[i].PeerID] = &reach[i]
+		}
+	}
+	unreachable := false
+	for _, g := range rows {
+		mine := ""
+		if g.Self {
+			mine = "  (you)"
+		}
+		fmt.Fprintf(w, "  %-22s %s%s\n", g.Name, g.ID[:32]+"…", mine)
+		if g.Self {
+			continue
+		}
+		line := reachLine(byID[g.ID], daemonUp)
+		fmt.Fprintf(w, "    %s\n", line)
+		if strings.HasPrefix(line, "NOT REACHABLE") {
+			unreachable = true
+		}
+	}
+	if unreachable {
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "Nothing passes between you and a colleague this machine cannot reach, so their turns")
+		fmt.Fprintln(w, "do not arrive here, and the room looks quiet. They can run /cogmer:self-status to see")
+		fmt.Fprintln(w, "whether this machine can be reached from theirs, and whether their daemon is running.")
+	}
+}
+
+// reachLine says in a few words whether this machine can reach one colleague.
+func reachLine(p *uiPeer, daemonUp bool) string {
+	switch {
+	case !daemonUp:
+		return "can this machine reach them: unknown, because the daemon is not running"
+	case p == nil:
+		return "no address is recorded for them, so nothing here tries to reach them"
+	case p.Online:
+		return "reachable"
+	case p.Trying != "" && p.Since == "never reached":
+		return fmt.Sprintf("NOT REACHABLE: this daemon has tried for %s and never reached them (%s)", p.Trying, shortReason(p.Error))
+	case p.Trying != "":
+		return fmt.Sprintf("NOT REACHABLE for %s, last reached %s (%s)", p.Trying, p.Since, shortReason(p.Error))
+	case p.Since == "never reached":
+		return "not reached yet: this daemon has not finished a first attempt"
+	default:
+		return "last reached " + p.Since
+	}
+}
+
+// shortReason trims an error to the part a person can use: a timeout says the
+// colleague did not answer, and the rest is a path through the code.
+func shortReason(e string) string {
+	switch {
+	case e == "":
+		return "no reason recorded"
+	case strings.Contains(e, "deadline exceeded"):
+		return "no answer"
+	case strings.Contains(e, "refused"):
+		return "refused"
+	}
+	if len(e) > 80 {
+		return e[:80] + "…"
+	}
+	return e
 }
 
 func runInvite(args []string) {

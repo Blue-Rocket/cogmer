@@ -126,6 +126,7 @@ func (d *Daemon) LocalRoutes() *http.ServeMux {
 	mux.HandleFunc("/hook/prompt", guardLocal(d.handlePrompt))
 	mux.HandleFunc("/hook/stop", guardLocal(d.handleStop))
 	mux.HandleFunc("/events", d.handleEvents)
+	mux.HandleFunc("/peers", d.handlePeers)
 	mux.HandleFunc("/", d.handleUI)
 	mux.HandleFunc("/stream", d.handleStream)
 	mux.HandleFunc("/pair/new", guardLocal(d.handlePairNew))

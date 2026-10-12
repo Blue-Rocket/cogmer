@@ -45,9 +45,17 @@ type uiEvent struct {
 }
 
 type uiPeer struct {
+	// Name is the person when the address belongs to a known peer, and the address
+	// otherwise, because a colleague is a name and an address is not.
 	Name   string `json:"name"`
+	PeerID string `json:"peerId,omitempty"`
 	Online bool   `json:"online"`
 	Since  string `json:"since"`
+	// Trying is how long this daemon has failed to reach the address since it last
+	// could, or since it started trying, and Error is the last reason. Empty while
+	// the peer answers.
+	Trying string `json:"trying,omitempty"`
+	Error  string `json:"error,omitempty"`
 }
 
 type uiState struct {
@@ -298,21 +306,54 @@ func (d *Daemon) peerStatus() []uiPeer {
 	targets := d.syncTargets()
 	d.peerMu.Lock()
 	defer d.peerMu.Unlock()
+	owners := d.members.EndpointOwners()
 	var out []uiPeer
 	for _, addr := range targets {
 		p := uiPeer{Name: shortEndpoint(addr), Since: "never reached"}
-		if st, ok := d.peerSeen[addr]; ok && !st.lastSeen.IsZero() {
-			if age := time.Since(st.lastSeen); age < 15*time.Second {
-				p.Online = true
-			} else if age < time.Minute {
-				p.Since = "just now"
-			} else {
-				p.Since = fmt.Sprintf("%dm ago", int(age.Minutes()))
+		if id, ok := owners[addr]; ok {
+			p.PeerID = id
+			p.Name = firstNonEmpty(d.members.Label(id), PeerName(id))
+		}
+		if st, ok := d.peerSeen[addr]; ok {
+			if !st.lastSeen.IsZero() {
+				if age := time.Since(st.lastSeen); age < 15*time.Second {
+					p.Online = true
+				} else if age < time.Minute {
+					p.Since = "just now"
+				} else {
+					p.Since = fmt.Sprintf("%dm ago", int(age.Minutes()))
+				}
+			}
+			// A peer that answered in the last 15 seconds is still online, so one
+			// failed poll does not read as an outage.
+			if !p.Online && !st.downSince.IsZero() {
+				p.Trying = roughDuration(time.Since(st.downSince))
+				p.Error = st.lastErr
 			}
 		}
 		out = append(out, p)
 	}
 	return out
+}
+
+// roughDuration says how long in the units a person reads: seconds under a minute,
+// then minutes, then hours.
+func roughDuration(d time.Duration) string {
+	switch {
+	case d < time.Minute:
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	case d < time.Hour:
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	default:
+		return fmt.Sprintf("%dh%dm", int(d.Hours()), int(d.Minutes())%60)
+	}
+}
+
+// handlePeers answers with the state of every peer this daemon tries, for the
+// commands that tell a person whom they can reach. A read like the view's, so it
+// needs no header, and the daemon sends no CORS headers (D-087).
+func (d *Daemon) handlePeers(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, map[string]any{"peers": d.peerStatus()})
 }
 
 func (d *Daemon) peerStateLocked(addr string) *peerState {

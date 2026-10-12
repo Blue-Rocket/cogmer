@@ -278,6 +278,24 @@ func (m *Membership) PeerEndpoints() []string {
 	return out
 }
 
+// EndpointOwners maps each recorded address to the peer it was recorded for, so that
+// a state kept per address can be reported per person.
+func (m *Membership) EndpointOwners() map[string]string {
+	rows, err := m.db.Query(`SELECT endpoint, peer_id FROM known_peers WHERE endpoint IS NOT NULL AND endpoint <> ''`)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	out := map[string]string{}
+	for rows.Next() {
+		var e, p string
+		if rows.Scan(&e, &p) == nil {
+			out[e] = p
+		}
+	}
+	return out
+}
+
 // NameFree reports whether a label may be attached to this peer.
 //
 // A name must mean one key. Without that, recording a substituted key under a

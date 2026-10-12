@@ -127,7 +127,7 @@ const ROOM = decodeURIComponent(location.pathname.replace(/^\/room\//, ''));
     const el=document.getElementById('peers');
     if(!list||!list.length){el.textContent='';return;}
     el.innerHTML=list.map(p=>'<span><span class="dot '+(p.online?'live':'down')+'"></span>'
-      +esc(p.name)+(p.online?'':' · '+esc(p.since))+'</span>').join(' ');
+      +esc(p.name)+(p.online?'':' · '+(p.trying?'unreachable for '+esc(p.trying):esc(p.since)))+'</span>').join(' ');
   }
 
   let es;
