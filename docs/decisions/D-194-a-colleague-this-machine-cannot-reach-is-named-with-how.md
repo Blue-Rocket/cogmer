@@ -5,7 +5,8 @@
 **Decision.** The daemon names each peer it tries by the person, a label this user gave or else the
 derived name, and records how long it has failed to reach them and the last reason. `/cogmer:room-status`
 says, for each colleague, whether this machine can reach them, and for one it cannot, for how long, and
-what that means for the room. The view says "unreachable for" and the time.
+what that means for the room, and when they last made a request of this machine. The view says
+"unreachable for" and the time.
 
 **Support.**
 - A colleague this machine cannot reach looks the same as a quiet room, and the only trace was a line in
@@ -19,6 +20,10 @@ what that means for the room. The view says "unreachable for" and the time.
 - A command is a separate process and the daemon is the one that tries, so the command asks the daemon,
   over a read route that needs no header, as the view's reads do. D-087 (the local API requires a header
   that a web page cannot send), `cmd/cogmer/main.go`, `fetchPeers`.
+- A colleague who reached this machine a minute ago has a daemon that is running, so the fault is in
+  reaching it, which is a different search from a daemon that was never started. The daemon records each
+  authenticated request by the peer that made it, and an unsigned one that names a peer counts for nothing.
+  `cmd/cogmer/sync.go`, `cmd/cogmer/selfcheck_test.go`, `TestOnlyAnAuthenticatedRequestCountsAsHearingFromAColleague`.
 - The words a person is told, and that a reachable colleague is never called unreachable, are held by
   tests. `cmd/cogmer/reach_test.go`, `TestReachLineSaysWhetherAColleagueCanBeReached` and
   `TestTheGuestListSaysWhoCannotBeReachedAndWhatThatMeans`.

@@ -337,6 +337,11 @@ reach, and is often not the name the transport knows the machine by.
 A daemon that cannot determine a reachable address says so, rather than offering an
 invitation that cannot be used.
 
+An address is reachable when a connection from outside gets through it, and having the
+right form does not show that. Before a daemon offers an overlay address it checks, by
+making a connection to it through its relay as a colleague would, and when none gets
+through it says so, and whether the daemon is attached to its relay at all.
+
 ## What kind of address it is
 
 Addresses differ in what they name, and that decides how long each stays true and

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Injection limits (§21). Exceeding them yields a catch-up marker rather than
@@ -84,9 +86,21 @@ type Daemon struct {
 	// Pairings awaiting their ceremony, one per opened page (D-180).
 	pairs pairRegistry
 
+	// selfCheck asks whether this daemon can be reached through its relay. Nil when
+	// the daemon runs no overlay. It lives in tailcat.go, which is the only place
+	// that knows what the overlay is (D-068).
+	selfCheck func(context.Context) SelfCheck
+	selfMu    sync.Mutex
+	selfLast  SelfCheck
+	selfAt    time.Time
+
 	// The certificate this daemon presents to peers, derived from the identity
 	// key and cached because that key never changes (D-101).
 	tls peerTLS
+
+	// When each peer last made an authenticated request of this daemon, by peer.
+	// Held with the peer states below, and in memory like them.
+	heard map[string]time.Time
 
 	subs     map[chan struct{}]bool
 	subsMu   sync.Mutex
@@ -127,6 +141,7 @@ func (d *Daemon) LocalRoutes() *http.ServeMux {
 	mux.HandleFunc("/hook/stop", guardLocal(d.handleStop))
 	mux.HandleFunc("/events", d.handleEvents)
 	mux.HandleFunc("/peers", d.handlePeers)
+	mux.HandleFunc("/self", d.handleSelf)
 	mux.HandleFunc("/", d.handleUI)
 	mux.HandleFunc("/stream", d.handleStream)
 	mux.HandleFunc("/pair/new", guardLocal(d.handlePairNew))

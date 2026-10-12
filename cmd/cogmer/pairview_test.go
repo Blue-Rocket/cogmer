@@ -121,6 +121,7 @@ func TestPairingReachabilityWarnsOnlyWhenItShould(t *testing.T) {
 
 	// The ordinary case. A false warning here is the regression being guarded
 	// against: it trains somebody to ignore the true one.
+	overlayAnswers(t, healthyOverlay, true)
 	if ok, why := pairingReachable("tc://tcpSOMELONGNEGOTIATEDVALUE"); !ok {
 		t.Fatalf("a negotiated tailcat endpoint warned: %q", why)
 	}
@@ -205,6 +206,7 @@ func TestNoPairingStringIsPrintedWhenNobodyCanReachIt(t *testing.T) {
 	}
 
 	var reachable strings.Builder
+	overlayAnswers(t, healthyOverlay, true)
 	writePairingInvitation(&reachable, id, "tc://SOMENEGOTIATEDVALUE")
 	if !strings.Contains(reachable.String(), id.PeerID+"@tc://SOMENEGOTIATEDVALUE") {
 		t.Errorf("a reachable string was not printed: %q", reachable.String())
@@ -217,6 +219,7 @@ func TestTheGuessedNameNoticeIsSaidOnce(t *testing.T) {
 	t.Setenv("COGMER_HOME", t.TempDir())
 	id := testIdentity(t)
 	id.NameChosen = false
+	overlayAnswers(t, healthyOverlay, true)
 	var out strings.Builder
 	writePairingInvitation(&out, id, "tc://SOMENEGOTIATEDVALUE")
 	if n := strings.Count(out.String(), "not a name anybody picked"); n != 1 {

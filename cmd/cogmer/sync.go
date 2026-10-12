@@ -85,6 +85,7 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 	if req.Endpoint != "" {
 		_ = d.members.SetPeerEndpoint(req.PeerID, req.Endpoint)
 	}
+	d.markPeerHeardFrom(req.PeerID)
 
 	store, err := d.storeFor(room.RoomID)
 	if err != nil {

@@ -25,8 +25,14 @@ username is often exactly right.
 If the output says there is no string to send yet, that is the important part and it
 outranks everything else: a colleague given a string with no address in it cannot
 complete a pairing, so none was printed. Relay the reason it gives, which distinguishes
-a daemon that has not published an address yet, one that could not start, and one that
-could not find a route out.
+a daemon that is not running, one that could not start, one that is not attached to its
+relay, and one that is attached but could not be reached by a test connection from
+outside. If it names `/cogmer:self-restart`, offer it. Do not guess a cause the output
+does not give.
+
+If the output says "Checked just now", the address was tried from outside and it
+worked. Say so in a few words, since that is what a person wants to know before
+sending the string.
 
 The output ends with the versions of the plugin, the binary and the running daemon.
 Give them in one line. If the output says they disagree, say which, and relay what it

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -56,6 +57,10 @@ type uiPeer struct {
 	// the peer answers.
 	Trying string `json:"trying,omitempty"`
 	Error  string `json:"error,omitempty"`
+	// HeardFrom is how long ago this peer last made an authenticated request of this
+	// daemon, empty if it has not since the daemon started. A peer this machine cannot
+	// reach, and that reached it a minute ago, has a daemon that is running.
+	HeardFrom string `json:"heardFrom,omitempty"`
 }
 
 type uiState struct {
@@ -313,6 +318,9 @@ func (d *Daemon) peerStatus() []uiPeer {
 		if id, ok := owners[addr]; ok {
 			p.PeerID = id
 			p.Name = firstNonEmpty(d.members.Label(id), PeerName(id))
+			if at, ok := d.heard[id]; ok {
+				p.HeardFrom = roughDuration(time.Since(at))
+			}
 		}
 		if st, ok := d.peerSeen[addr]; ok {
 			if !st.lastSeen.IsZero() {
@@ -347,6 +355,37 @@ func roughDuration(d time.Duration) string {
 	default:
 		return fmt.Sprintf("%dh%dm", int(d.Hours()), int(d.Minutes())%60)
 	}
+}
+
+// markPeerHeardFrom records that a peer has just made a request that proved it holds
+// its key. Only an authenticated request counts, since an unauthenticated one names
+// nobody.
+func (d *Daemon) markPeerHeardFrom(peerID string) {
+	d.peerMu.Lock()
+	defer d.peerMu.Unlock()
+	if d.heard == nil {
+		d.heard = map[string]time.Time{}
+	}
+	d.heard[peerID] = time.Now()
+}
+
+// handleSelf answers whether this daemon can be reached through its relay, for the
+// commands that tell a person whether the address they hand out works. A check opens
+// a connection through the relay, so a pass is kept for 20 seconds. A failure is not
+// kept, because the next ask is usually after something was fixed.
+func (d *Daemon) handleSelf(w http.ResponseWriter, r *http.Request) {
+	if d.selfCheck == nil {
+		writeJSON(w, SelfCheck{})
+		return
+	}
+	d.selfMu.Lock()
+	defer d.selfMu.Unlock()
+	if !d.selfLast.Reached || time.Since(d.selfAt) > 20*time.Second {
+		ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+		defer cancel()
+		d.selfLast, d.selfAt = d.selfCheck(ctx), time.Now()
+	}
+	writeJSON(w, d.selfLast)
 }
 
 // handlePeers answers with the state of every peer this daemon tries, for the

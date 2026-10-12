@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"tailscale.com/tailcfg"
+	"time"
 
 	"github.com/tailscale/tailcat"
 	"tailscale.com/types/key"
@@ -261,4 +262,61 @@ func loadTailcatRegion() (*tailcfg.DERPRegion, error) {
 		_ = os.WriteFile(path, buf, 0o600)
 	}
 	return r, nil
+}
+
+// SelfCheck says whether this daemon can be reached through its relay. The pairing
+// string carries an overlay address whatever state the server is in, so without
+// asking, a daemon that never attached to its relay would hand out an address that
+// leads nowhere and report it as reachable (D-196).
+type SelfCheck struct {
+	// Overlay is false when this daemon runs no overlay server.
+	Overlay bool `json:"overlay"`
+	// Relay is the region the server is attached to, empty until it is.
+	Relay string `json:"relay,omitempty"`
+	// Reached is whether a connection made from outside, through the relay, got to
+	// this server's port.
+	Reached bool   `json:"reached"`
+	TookMs  int64  `json:"tookMs,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
+
+// newSelfCheck returns the check for a running server. It dials the server's own
+// published address with a client of its own, which is what a colleague does, so a
+// pass means a colleague can get this far. The dial opens a TCP connection and
+// closes it, and sends nothing.
+func newSelfCheck(srv *tailcat.Server, endpoint string) func(context.Context) SelfCheck {
+	return func(ctx context.Context) SelfCheck {
+		sc := SelfCheck{Overlay: true}
+		// The attachment takes a few seconds after the server starts, and the check
+		// waits for it as long as it is allowed to, since a daemon that was just
+		// started has not failed to attach.
+		for {
+			if sc.Relay = srv.Status().Self.Relay; sc.Relay != "" {
+				break
+			}
+			select {
+			case <-ctx.Done():
+				sc.Error = "not attached to a relay"
+				return sc
+			case <-time.After(100 * time.Millisecond):
+			}
+		}
+		e, err := ParseEndpoint(endpoint)
+		if err != nil {
+			sc.Error = err.Error()
+			return sc
+		}
+		start := time.Now()
+		c := tailcat.NewClient(tailcat.Addr(e.Value))
+		defer c.Close()
+		conn, err := c.DialTCPPort(ctx, tailcatPort)
+		sc.TookMs = time.Since(start).Milliseconds()
+		if err != nil {
+			sc.Error = err.Error()
+			return sc
+		}
+		_ = conn.Close()
+		sc.Reached = true
+		return sc
+	}
 }

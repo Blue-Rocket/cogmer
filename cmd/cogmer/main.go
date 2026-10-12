@@ -470,6 +470,7 @@ func runDaemon() {
 			log.Printf("  tailcat unavailable (%v) — reachable only at %s", err, peerAddr())
 		} else {
 			tcListener, advertised = l, endpoint
+			d.selfCheck = newSelfCheck(srv, endpoint)
 			defer l.Close()
 			defer srv.Close()
 		}
@@ -1078,14 +1079,24 @@ func reachLine(p *uiPeer, daemonUp bool) string {
 	case p.Online:
 		return "reachable"
 	case p.Trying != "" && p.Since == "never reached":
-		return fmt.Sprintf("NOT REACHABLE: this daemon has tried for %s and never reached them (%s)", p.Trying, shortReason(p.Error))
+		return fmt.Sprintf("NOT REACHABLE: this daemon has tried for %s and never reached them (%s). %s", p.Trying, shortReason(p.Error), heardClause(p))
 	case p.Trying != "":
-		return fmt.Sprintf("NOT REACHABLE for %s, last reached %s (%s)", p.Trying, p.Since, shortReason(p.Error))
+		return fmt.Sprintf("NOT REACHABLE for %s, last reached %s (%s). %s", p.Trying, p.Since, shortReason(p.Error), heardClause(p))
 	case p.Since == "never reached":
 		return "not reached yet: this daemon has not finished a first attempt"
 	default:
 		return "last reached " + p.Since
 	}
+}
+
+// heardClause says when the colleague last made a request of this machine. One who
+// reached this machine a minute ago has a daemon that is running, so the fault is in
+// reaching it, which is a different search from a daemon that was never started.
+func heardClause(p *uiPeer) string {
+	if p.HeardFrom == "" {
+		return "They have not reached this machine since its daemon started."
+	}
+	return "They last reached this machine " + p.HeardFrom + " ago."
 }
 
 // shortReason trims an error to the part a person can use: a timeout says the
@@ -1903,12 +1914,16 @@ func writePairingInvitation(w io.Writer, id *Identity, endpoint string) {
 		// other people.
 		fmt.Fprintf(w, "\n%s\n", nameLine(id))
 	}
-	if ok, why := pairingReachable(endpoint); !ok {
+	ok, why, note := checkReachable(endpoint)
+	if !ok {
 		fmt.Fprintf(w, "\nThere is no string to send yet: %s\n", why)
 		return
 	}
 	fmt.Fprintf(w, "\nSend your colleague this — any channel will do, it is not a secret:\n\n  %s\n",
 		pairingString(id.PeerID, endpoint, chosenName(id)))
+	if note != "" {
+		fmt.Fprintf(w, "\n%s\n", note)
+	}
 	fmt.Fprintf(w, "\nWhen they send you theirs, run:\n\n  /cogmer:peer-pair <their string> <what you call them>\n")
 	fmt.Fprintf(w, "\nThe name is yours and is used everywhere you see them. Their key already\n")
 	fmt.Fprintf(w, "gives them a name, but it is a word pair computed from the key and it will\n")
@@ -1927,38 +1942,84 @@ func writePairingInvitation(w io.Writer, id *Identity, endpoint string) {
 // string ever printed, including all the ones that worked. A warning that is always
 // on is not a warning; it is noise that trains somebody to ignore the real case.
 func pairingReachable(endpoint string) (bool, string) {
+	ok, why, _ := checkReachable(endpoint)
+	return ok, why
+}
+
+// queryDaemonSelf asks the running daemon whether it can be reached through its
+// relay. A variable so that a test can answer for the daemon.
+var queryDaemonSelf = fetchSelfCheck
+
+// fetchSelfCheck asks the daemon over its own address. The second result is false
+// when no daemon answered. The wait covers a check that has to time out.
+func fetchSelfCheck() (SelfCheck, bool) {
+	c := &http.Client{Timeout: 12 * time.Second}
+	resp, err := c.Get("http://" + addr() + "/self")
+	if err != nil {
+		return SelfCheck{}, false
+	}
+	defer resp.Body.Close()
+	var sc SelfCheck
+	if resp.StatusCode != http.StatusOK || json.NewDecoder(io.LimitReader(resp.Body, 1<<16)).Decode(&sc) != nil {
+		return SelfCheck{}, false
+	}
+	return sc, true
+}
+
+// checkReachable is pairingReachable with the sentence to print when the answer is
+// yes. An overlay address is not reachable because it has the right shape. It is
+// reachable when the daemon is attached to its relay and a connection made from
+// outside gets through, and only the running daemon can try (D-196).
+func checkReachable(endpoint string) (ok bool, why, note string) {
 	e, err := ParseEndpoint(endpoint)
 	if err != nil {
-		return false, "that address cannot be read, so nobody can reach you at it."
+		return false, "that address cannot be read, so nobody can reach you at it.", ""
 	}
 	if e.Scheme == schemeTailcat {
-		// Negotiated through DERP and routable by construction. This is the
-		// ordinary case and must not warn.
-		return true, ""
+		sc, up := queryDaemonSelf()
+		switch {
+		case !up:
+			if detail, blocked := daemonBlockedReason(); blocked {
+				return false, "the daemon could not start, so nobody can reach you.\n      " + detail, ""
+			}
+			return false, "the daemon is not running, so nobody can reach you at that address.\n" +
+				"      A new Claude Code session starts one, and so does /cogmer:self-restart.", ""
+		case !sc.Overlay:
+			return false, "this daemon is not running the relay connection, so the address in your string\n" +
+				"      leads nowhere. /cogmer:self-restart starts the daemon again.", ""
+		case sc.Relay == "":
+			return false, "the daemon is running but is not attached to a relay, so colleagues cannot reach you.\n" +
+				"      /cogmer:self-restart restarts it, and ~/.cogmer/daemon.log says why if that does not help.", ""
+		case !sc.Reached:
+			return false, fmt.Sprintf("the daemon is attached to the relay (%s) but a test connection from outside\n"+
+				"      did not get through (%s), so colleagues cannot reach you at that address.\n"+
+				"      /cogmer:self-restart restarts the daemon.", sc.Relay, shortReason(sc.Error)), ""
+		}
+		return true, "", fmt.Sprintf("Checked just now: a connection from outside reached this machine through the relay at %s, in %dms.", sc.Relay, sc.TookMs)
 	}
 	// A bare TCP endpoint has to be a host and a port. ParseEndpoint accepts
 	// anything without a scheme as TCP, and isLoopback answers "false" for what it
 	// cannot parse -- so without this, a malformed address reads as "not loopback"
 	// and therefore as fine.
 	if _, _, err := net.SplitHostPort(e.Value); err != nil {
-		return false, "that address is not a host and port, so nobody can reach you at it."
+		return false, "that address is not a host and port, so nobody can reach you at it.", ""
 	}
 	if isLoopback(e.Value) {
 		// A daemon that could not bind wrote why, and that is the cause, so it is said
 		// before the guess that no session has started.
 		if detail, blocked := daemonBlockedReason(); blocked {
-			return false, "the daemon could not start, so no address was published.\n      " + detail
+			return false, "the daemon could not start, so no address was published.\n      " + detail, ""
 		}
 		if !endpointRecorded() {
 			return false, "no daemon has published an address yet, so that one is a guess.\n" +
 				"      The daemon records a real one when it starts, which happens when a\n" +
-				"      Claude Code session starts. Start one and run this again."
+				"      Claude Code session starts. Start one and run this again.", ""
 		}
 		return false, "that address is loopback, so nobody else can reach it. No route out\n" +
 			"      was negotiated; set COGMER_PEER_ADDR to an address they can reach\n" +
-			"      and restart the daemon."
+			"      and restart the daemon.", ""
 	}
-	return true, ""
+	return true, "", ""
 }
 
 // daemonBlockedReason is what the daemon wrote when it could not bind its address,
