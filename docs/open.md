@@ -162,6 +162,24 @@ two of three peers, and checking that each one's events arrive attributed to the
 origin, would answer it. Pairs are the case that exists, so this waits until somebody
 wants a third member.
 
+**One peer that is offline delays sync with every other, and rooms are asked of peers who
+are not in them.** `RunSync` in `cmd/cogmer/sync.go` asks each address one after another,
+and `syncTargets` returns every address this machine has recorded, so a peer paired once
+and never finished costs a dial that times out in about ten seconds on every round. In
+`~/.cogmer/daemon.log` on 2026-10-12 the first failure for such a peer and the first for
+the colleague a room was shared with are ten seconds apart. Each request to a peer also
+names a room it is not a guest of, in a signed request, so that peer learns the room's
+identifier. With one colleague the cost is about ten seconds in the view, and it grows
+with the number of peers ever paired who are offline: six pairings with four offline
+would lag the view by about forty seconds a round and could leave a colleague's last turn
+out of what a prompt injects.
+
+The fix has two parts. For each room, ask only that room's guests, which `RoomPeers`
+already maps to addresses, and ask the addresses in parallel so an unreachable one waits
+alone. Before changing which peers are asked, read whether relaying a third member's
+events (§13) relies on asking a peer that is not a guest of the room, since nothing has
+run that path.
+
 ## Rooms and sessions
 
 What a room, and the sessions in it, do as people create, leave, return and join from more than one session.
