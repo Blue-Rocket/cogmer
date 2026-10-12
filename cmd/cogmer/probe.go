@@ -141,6 +141,12 @@ func checkFailOpen() error {
 	if err != nil {
 		return err
 	}
+	return checkFailOpenWith(self)
+}
+
+// checkFailOpenWith runs the hook of one binary against a dead daemon. A test
+// passes a stand-in, because running the test binary itself would run the suite.
+func checkFailOpenWith(self string) error {
 	cmd := exec.Command(self, "hook", "prompt")
 	cmd.Stdin = strings.NewReader(`{"session_id":"preflight","prompt":"x","cwd":"/tmp"}`)
 	// Port 1 is reliably closed; this simulates a dead daemon.

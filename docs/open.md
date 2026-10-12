@@ -32,12 +32,6 @@ out.
 
 A decision, a comment or a test says what the code does, and a change that breaks it is caught.
 
-**Five behavior checks have no test that makes them fail.** D-130 (every behavior
-check has a test that makes it fail) requires one for each, and no test names B03,
-B05, B07, B11 or B20 (read on 2026-09-29). Nothing checks the requirement, so a check
-for any of the five could pass whatever Claude Code did. A test for each, and a test
-that every entry in the registry is named by one, would close it.
-
 **The boundary around injected turns is removed from their text, when it could be
 chosen to be absent from it.** `FormatTeamContext` in `cmd/cogmer/daemon.go` generates
 a random value for the boundary, then deletes any copy of that value from each
