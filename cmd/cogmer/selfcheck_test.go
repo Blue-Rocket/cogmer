@@ -162,12 +162,12 @@ func TestAColleagueWhoReachedUsIsSaidToHaveDone(t *testing.T) {
 		t.Fatalf("a request three minutes ago reads as %+v", p)
 	}
 
-	line := reachLine(&uiPeer{Since: "never reached", Trying: "12m", Error: "deadline exceeded", HeardFrom: "3m"}, true)
+	line := reachLine(&uiPeer{Since: reachUnknown, Trying: "12m", Error: "deadline exceeded", HeardFrom: "3m"}, true)
 	if !strings.Contains(line, "last reached this machine 3m ago") {
 		t.Errorf("the line does not say they reached this machine: %q", line)
 	}
-	line = reachLine(&uiPeer{Since: "never reached", Trying: "12m", Error: "deadline exceeded"}, true)
-	if !strings.Contains(line, "not reached this machine since its daemon started") {
+	line = reachLine(&uiPeer{Since: reachUnknown, Trying: "12m", Error: "deadline exceeded"}, true)
+	if !strings.Contains(line, "not contacted this machine") {
 		t.Errorf("the line does not say they have not: %q", line)
 	}
 }

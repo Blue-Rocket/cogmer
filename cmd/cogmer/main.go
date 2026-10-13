@@ -1252,12 +1252,12 @@ func reachLine(p *uiPeer, daemonUp bool) string {
 		return "no address is recorded for them, so nothing here tries to reach them"
 	case p.Online:
 		return "reachable"
-	case p.Trying != "" && p.Since == "never reached":
-		return fmt.Sprintf("NOT REACHABLE: this daemon has tried for %s and never reached them (%s). %s", p.Trying, shortReason(p.Error), heardClause(p))
+	case p.Trying != "" && p.Since == reachUnknown:
+		return fmt.Sprintf("NOT REACHABLE: this machine has tried for %s and not got through (%s). %s", p.Trying, shortReason(p.Error), heardClause(p))
 	case p.Trying != "":
 		return fmt.Sprintf("NOT REACHABLE for %s, last reached %s (%s). %s", p.Trying, p.Since, shortReason(p.Error), heardClause(p))
-	case p.Since == "never reached":
-		return "not reached yet: this daemon has not finished a first attempt"
+	case p.Since == reachUnknown:
+		return "checking whether they can be reached"
 	default:
 		return "last reached " + p.Since
 	}
@@ -1268,7 +1268,7 @@ func reachLine(p *uiPeer, daemonUp bool) string {
 // reaching it, which is a different search from a daemon that was never started.
 func heardClause(p *uiPeer) string {
 	if p.HeardFrom == "" {
-		return "They have not reached this machine since its daemon started."
+		return "They have not contacted this machine in that time either."
 	}
 	return "They last reached this machine " + p.HeardFrom + " ago."
 }

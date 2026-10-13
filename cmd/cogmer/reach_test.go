@@ -23,11 +23,11 @@ func TestReachLineSaysWhetherAColleagueCanBeReached(t *testing.T) {
 		want []string
 	}{
 		{"answering", &uiPeer{Online: true}, true, []string{"reachable"}},
-		{"never reached, still trying", &uiPeer{Since: "never reached", Trying: "12m", Error: `Post "https://peer/sync": tailcat: context deadline exceeded`}, true,
-			[]string{"NOT REACHABLE", "tried for 12m", "never reached them", "no answer"}},
+		{"no record of reaching them, still trying", &uiPeer{Since: reachUnknown, Trying: "12m", Error: `Post "https://peer/sync": tailcat: context deadline exceeded`}, true,
+			[]string{"NOT REACHABLE", "tried for 12m", "not got through", "no answer"}},
 		{"was reached, now gone", &uiPeer{Since: "9m ago", Trying: "9m", Error: "connection refused"}, true,
 			[]string{"NOT REACHABLE for 9m", "last reached 9m ago", "refused"}},
-		{"first attempt not finished", &uiPeer{Since: "never reached"}, true, []string{"not reached yet"}},
+		{"first attempt not finished", &uiPeer{Since: reachUnknown}, true, []string{"checking whether they can be reached"}},
 		{"no address", nil, true, []string{"no address is recorded"}},
 		{"no daemon", nil, false, []string{"unknown", "daemon is not running"}},
 	}
@@ -51,7 +51,7 @@ func TestTheGuestListSaysWhoCannotBeReachedAndWhatThatMeans(t *testing.T) {
 		{Name: "dusky-heron", ID: "ed25519:" + strings.Repeat("c", 43)},
 	}
 	reach := []uiPeer{
-		{PeerID: rows[1].ID, Since: "never reached", Trying: "12m", Error: "tailcat: context deadline exceeded"},
+		{PeerID: rows[1].ID, Since: reachUnknown, Trying: "12m", Error: "tailcat: context deadline exceeded"},
 		{PeerID: rows[2].ID, Online: true},
 	}
 	var out bytes.Buffer
@@ -136,6 +136,26 @@ func TestAColleagueIsNamedAndTimedWhileUnreachable(t *testing.T) {
 	for _, p := range d.peerStatus() {
 		if p.PeerID == peer.PeerID && (!p.Online || p.Trying != "" || p.Error != "") {
 			t.Errorf("a colleague who answered is still described as unreachable: %+v", p)
+		}
+	}
+}
+
+// A user has no use for how long the daemon has been running, and the daemon's record of
+// reaching a colleague is empty after a restart even in a room with a long history with
+// them, so no line may tell a user a colleague was "never" or "not yet" reached, or
+// mention the daemon's start.
+func TestNoReachLineTalksOfTheDaemonsLifecycleOrCallsAColleagueNeverReached(t *testing.T) {
+	for _, p := range []*uiPeer{
+		{Since: reachUnknown},
+		{Since: reachUnknown, Trying: "12m", Error: "deadline exceeded"},
+		{Since: reachUnknown, Trying: "12m", Error: "deadline exceeded", HeardFrom: "3m"},
+		{Since: "9m ago", Trying: "9m", Error: "refused"},
+	} {
+		line := strings.ToLower(reachLine(p, true))
+		for _, bad := range []string{"never", "not yet", "started", "restart", "daemon"} {
+			if strings.Contains(line, bad) {
+				t.Errorf("%+v reads %q, which says %q", *p, line, bad)
+			}
 		}
 	}
 }

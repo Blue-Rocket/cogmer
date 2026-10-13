@@ -429,6 +429,13 @@ type peerState struct {
 // the peer is still gone rather than only that it once went.
 const downRepeat = 10 * time.Minute
 
+// reachUnknown is what a peer's "since" says when this daemon has no record of having
+// reached it. The record lives in memory and is empty after a restart, so the absence
+// says only that the answer is not known yet, which is not the same as the colleague
+// never having been reached: the room may hold a long exchange with them. A reader is
+// told that it is being checked, and nothing about how the daemon came to know less.
+const reachUnknown = "checking"
+
 // peerStatus reports reachability for the UI. A peer that has never answered is
 // shown as offline rather than omitted: a teammate who cannot be reached is a
 // fact worth seeing, not an absence.
@@ -443,7 +450,7 @@ func (d *Daemon) peerStatus() []uiPeer {
 	owners := d.members.EndpointOwners()
 	var out []uiPeer
 	for _, addr := range targets {
-		p := uiPeer{Name: shortEndpoint(addr), Since: "never reached"}
+		p := uiPeer{Name: shortEndpoint(addr), Since: reachUnknown}
 		if id, ok := owners[addr]; ok {
 			p.PeerID = id
 			p.Name = firstNonEmpty(d.members.Label(id), PeerName(id))
