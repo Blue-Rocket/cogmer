@@ -11,7 +11,7 @@ import (
 func TestDecisionLogReferencesRealBehaviors(t *testing.T) {
 	data := readDecisionLog(t)
 	known := map[string]bool{}
-	for _, b := range Behaviors {
+	for _, b := range AllBehaviors() {
 		known[b.ID] = true
 	}
 	found := regexp.MustCompile(`\bB\d{2}\b`).FindAllString(data, -1)

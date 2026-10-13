@@ -27,19 +27,21 @@ func TestTheManifestVersionIsTheReleasedVersion(t *testing.T) {
 		t.Fatal("plugin/VERSION is empty; nothing then names the binary to install")
 	}
 
-	data, err := os.ReadFile("../../plugin/.claude-plugin/plugin.json")
-	if err != nil {
-		t.Skipf("plugin manifest not readable: %v", err)
-	}
-	var m struct {
-		Version string `json:"version"`
-	}
-	if err := json.Unmarshal(data, &m); err != nil {
-		t.Fatalf("parse plugin manifest: %v", err)
-	}
-	if m.Version != want {
-		t.Errorf("plugin manifest says version %q, plugin/VERSION says %q; an installed "+
-			"plugin is pinned to the manifest's string, so the release does not reach "+
-			"anybody until they agree — rerun scripts/release.sh %s", m.Version, want, want)
+	for _, manifest := range []string{"../../plugin/.claude-plugin/plugin.json", "../../plugin/.codex-plugin/plugin.json"} {
+		data, err := os.ReadFile(manifest)
+		if err != nil {
+			t.Skipf("plugin manifest not readable: %v", err)
+		}
+		var m struct {
+			Version string `json:"version"`
+		}
+		if err := json.Unmarshal(data, &m); err != nil {
+			t.Fatalf("parse plugin manifest: %v", err)
+		}
+		if m.Version != want {
+			t.Errorf("plugin manifest says version %q, plugin/VERSION says %q; an installed "+
+				"plugin is pinned to the manifest's string, so the release does not reach "+
+				"anybody until they agree — rerun scripts/release.sh %s", m.Version, want, want)
+		}
 	}
 }

@@ -608,7 +608,7 @@ func proseText(n ast.Node, src []byte) string {
 
 // A behavior's Reliance starts with what breaks, for somebody debugging at 2am.
 func TestBehaviorRelianceStartsWithWhatBreaks(t *testing.T) {
-	for _, b := range Behaviors {
+	for _, b := range AllBehaviors() {
 		if !strings.HasPrefix(b.Reliance, "If this changes") {
 			t.Errorf("%s's Reliance must start \"If this changes\": %q (W-71)", b.ID, firstWords(b.Reliance))
 		}

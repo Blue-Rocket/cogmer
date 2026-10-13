@@ -139,7 +139,7 @@ func TestEveryBehaviorHasATestThatMakesItsCheckFail(t *testing.T) {
 		all.WriteString("\n")
 	}
 	text := all.String()
-	for _, b := range Behaviors {
+	for _, b := range AllBehaviors() {
 		named := regexp.MustCompile(`(mustDetect\(t, |behavior\(t, )"` + b.ID + `"|func Test` + b.ID)
 		if !named.MatchString(text) {
 			t.Errorf("%s (%s) has no test that makes its check fail (D-130); add one that feeds it the change it is meant to catch", b.ID, b.Title)

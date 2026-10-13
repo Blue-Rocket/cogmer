@@ -116,7 +116,7 @@ func TestCitationsNameThingsThatExist(t *testing.T) {
 	}
 	sections := specSections(read("Shared Claude Sessions.md"))
 	behaviors := map[string]bool{}
-	for _, b := range Behaviors {
+	for _, b := range AllBehaviors() {
 		behaviors[b.ID] = true
 	}
 	if len(decisions) == 0 || len(sections) == 0 || len(behaviors) == 0 {

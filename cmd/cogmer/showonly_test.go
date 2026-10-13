@@ -231,7 +231,7 @@ func TestTheCommandsCreateAndJoinShowOnlyAndRefuseToChangeIt(t *testing.T) {
 	}
 
 	out, code := run("s-quiet", "create", "--show-only")
-	if code != 0 || !strings.Contains(flat(out), "show-only on this machine") || !strings.Contains(flat(out), "none of it is given to your Claude") {
+	if code != 0 || !strings.Contains(flat(out), "show-only on this machine") || !strings.Contains(flat(out), "none of it is given to your agent") {
 		t.Fatalf("creating show-only: exit %d\n%s", code, out)
 	}
 	quietName := strings.TrimSpace(strings.Fields(field(out, "created"))[0])

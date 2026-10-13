@@ -89,14 +89,35 @@ func main() {
 	case "revoke":
 		runRevoke(os.Args[2:])
 	case "doctor":
-		deep := len(os.Args) > 2 && os.Args[2] == "--deep"
-		runDoctor(deep)
+		deep, codex := false, false
+		for _, arg := range os.Args[2:] {
+			switch arg {
+			case "--deep":
+				deep = true
+			case "--codex":
+				codex = true
+			default:
+				log.Fatalf("unknown doctor option %q", arg)
+			}
+		}
+		if codex {
+			if deep {
+				log.Fatal("Codex compaction checks are not available; run doctor --codex for session checks")
+			}
+			runCodexDoctor()
+		} else {
+			runDoctor(deep)
+		}
+	case "codex-probe-hook":
+		if len(os.Args) == 4 {
+			runCodexProbeHook(os.Args[2], os.Args[3])
+		}
 	case "behaviors":
 		if len(os.Args) > 2 && os.Args[2] == "--markdown" {
 			fmt.Print(MarkdownReport())
 			return
 		}
-		for _, b := range Behaviors {
+		for _, b := range AllBehaviors() {
 			fmt.Printf("  %s  [%s]  %s\n", b.ID, b.Tier, b.Title)
 		}
 	case "probe-hook":
@@ -111,7 +132,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprint(os.Stderr, `cogmer -- one Claude Code conversation, shared between peers
+	fmt.Fprint(os.Stderr, `cogmer -- a conversation shared between Claude Code and Codex sessions
 
   cogmer daemon          Run the local daemon on `+defaultAddr+`
   cogmer stop            Stop the cogmer daemon on this installation's addresses
@@ -142,6 +163,7 @@ Rooms — per room, repeated as often as you like:
   cogmer invite <peer>   Admit a known peer   (inside the room's session)
   cogmer revoke <peer>   Withdraw admission   (inside the room's session)
   cogmer doctor [--deep] Verify relied-on Claude Code behaviors
+  cogmer doctor --codex  Verify Codex capture, injection and session identity
   cogmer behaviors       List those behaviors (--markdown to render docs)
 
 Environment:
@@ -208,11 +230,11 @@ func roomToChange(m *Membership) Room {
 	sid := sessionID()
 	if sid == "" {
 		log.Fatal("this changes who can read a room, and only a session that is in one can do it.\n" +
-			"Run the matching slash command inside the Claude Code session that is in the room.")
+			"Run the matching slash command inside the agent session that is in the room.")
 	}
 	r, ok := m.RoomForSession(sid)
 	if !ok {
-		log.Fatal("this session is not in a room. /cogmer:room-create makes one, /cogmer:room-join enters one")
+		log.Fatal(commandText("this session is not in a room. /cogmer:room-create makes one, /cogmer:room-join enters one"))
 	}
 	return r
 }
@@ -222,22 +244,36 @@ func roomToChange(m *Membership) Room {
 func sessionRoom(m *Membership) Room {
 	sid := sessionID()
 	if sid == "" {
-		log.Fatal("no session, so no room. Run the matching slash command inside a Claude Code\n" +
-			"session, or set CLAUDE_CODE_SESSION_ID to emulate one.")
+		log.Fatal("no session, so no room. Run the matching command inside an agent\n" +
+			"session, or set its session environment variable to emulate one.")
 	}
 	r, ok := m.RoomForSession(sid)
 	if !ok {
-		log.Fatal("this session is not in a room. /cogmer:room-create makes one, /cogmer:room-join enters one")
+		log.Fatal(commandText("this session is not in a room. /cogmer:room-create makes one, /cogmer:room-join enters one"))
 	}
 	return r
 }
 
-// sessionID is the Claude Code session a command was invoked from, empty at a
+// sessionID is the agent session a command was invoked from, empty at a
 // terminal. Claude Code exports it into every tool call's environment and it is
 // the same id the hooks report (B21), so a slash command that shells out needs to
 // pass nothing -- which is what lets `create` and `join` put THIS session in a room
 // rather than leaving a machine-level setting for some later session to adopt.
-func sessionID() string { return os.Getenv("CLAUDE_CODE_SESSION_ID") }
+func sessionID() string {
+	if os.Getenv("COGMER_HOST") == "codex" {
+		if sid := os.Getenv("CODEX_THREAD_ID"); sid != "" {
+			return codexSessionID(sid)
+		}
+		return ""
+	}
+	if sid := os.Getenv("CLAUDE_CODE_SESSION_ID"); sid != "" {
+		return sid
+	}
+	if sid := os.Getenv("CODEX_THREAD_ID"); sid != "" {
+		return codexSessionID(sid)
+	}
+	return ""
+}
 
 // bindInvokingSession puts the calling session in a room, and says what happened.
 // Run at a terminal there is no session to bind, which is not a failure: the room
@@ -282,7 +318,7 @@ func runWhere() {
 			fmt.Println(watchLine(r.RoomName))
 			return
 		}
-		fmt.Printf("this session is not in a room. /cogmer:room-create or /cogmer:room-join puts it in one.\n")
+		fmt.Printf("%s", commandText("this session is not in a room. /cogmer:room-create or /cogmer:room-join puts it in one.\n"))
 		fmt.Printf("%s\n", watchLine(""))
 		return
 	}
@@ -294,7 +330,7 @@ func runWhere() {
 func bindInvokingSession(m *Membership, r Room) {
 	sid := sessionID()
 	if sid == "" {
-		fmt.Printf("no Claude Code session to put in %s — run /cogmer:room-create or /cogmer:room-join\n", r.RoomName)
+		fmt.Printf(commandText("no agent session to put in %s — run /cogmer:room-create or /cogmer:room-join\n"), r.RoomName)
 		fmt.Println("inside a session to put that session in a room. `cogmer` commands")
 		fmt.Printf("typed here will act on %s.\n", r.RoomName)
 		return
@@ -312,13 +348,16 @@ func bindInvokingSession(m *Membership, r Room) {
 			fmt.Println("which may be shaped by everything it has read. That would be invisible to")
 			fmt.Println("both rooms' members and impossible to take back, because a context window")
 			fmt.Println("cannot be un-read. Refusing now is the only moment that prevents it.")
-			fmt.Printf("\nTo work in %s, start a second Claude Code session and join from there.\n", bound.Wanted.RoomName)
+			fmt.Printf("\nTo work in %s, start a second agent session and join from there.\n", bound.Wanted.RoomName)
 			fmt.Printf("This session can still rejoin %s.\n", bound.Was.RoomName)
 			os.Exit(1)
 		}
 		log.Fatalf("%v", err)
 	}
 	fmt.Printf("this session is now in %s.\n", r.RoomName)
+	if strings.HasPrefix(sid, "codex:") {
+		EnsureCodexVerified()
+	}
 }
 
 // openLocal opens the room a person is working in, which since D-046 is a room in
@@ -503,7 +542,7 @@ func runDaemon() {
 				r.RoomName, len(g), members.SessionsInRoom(r.RoomID))
 		}
 	} else {
-		log.Printf("  rooms         none yet — /cogmer:room-create in a session makes one")
+		log.Printf("%s", commandText("  rooms         none yet — /cogmer:room-create in a session makes one"))
 	}
 	log.Printf("  hooks and UI  http://%s  (loopback)", addr())
 	log.Printf("  peer sync     https://%s  (TLS, pinned to known peers)", peerAddr())
@@ -560,7 +599,7 @@ func runDaemon() {
 
 // runHook implements both hook entry points.
 //
-// Invariant from §3.1: Claude Code must keep working when the daemon is down.
+// Invariant from §3.1: the host must keep working when the daemon is down.
 // Every failure path here exits 0 with empty stdout, so a dead daemon degrades
 // to "no collaboration" rather than a broken session.
 func runHook(kind string) {
@@ -575,12 +614,15 @@ func runHook(kind string) {
 
 	var endpoint string
 	switch kind {
-	case "prompt":
+	case "prompt", "codex-prompt":
 		endpoint = "/hook/prompt"
-	case "stop":
+	case "stop", "codex-stop":
 		endpoint = "/hook/stop"
 	default:
 		os.Exit(0)
+	}
+	if strings.HasPrefix(kind, "codex-") {
+		payload["host"] = "codex"
 	}
 
 	body, _ := json.Marshal(payload)
@@ -601,7 +643,13 @@ func runHook(kind string) {
 	// stdout of a UserPromptSubmit hook is appended to the pending turn's
 	// context -- verified against Claude Code 2.1.273.
 	if out.Context != "" {
-		fmt.Println(out.Context)
+		if kind == "codex-prompt" {
+			_ = json.NewEncoder(os.Stdout).Encode(map[string]any{"hookSpecificOutput": map[string]string{
+				"hookEventName": "UserPromptSubmit", "additionalContext": out.Context,
+			}})
+		} else {
+			fmt.Println(out.Context)
+		}
 	}
 	os.Exit(0)
 }
@@ -645,7 +693,7 @@ func runLog() {
 	for _, e := range evs {
 		speaker := e.UserDisplayName
 		if e.EventType == EventAssistantMessage {
-			speaker = "Claude — " + e.UserDisplayName
+			speaker = "Assistant — " + e.UserDisplayName
 		}
 		ts := e.Timestamp
 		if t, err := time.Parse(time.RFC3339Nano, e.Timestamp); err == nil {
@@ -705,7 +753,7 @@ func resolvePeer(m *Membership, arg string) (string, error) {
 	case 1:
 		return matches[0], nil
 	case 0:
-		return "", fmt.Errorf("no peer known as %q; pass its identifier, or run /cogmer:peer-list", arg)
+		return "", fmt.Errorf(commandText("no peer known as %q; pass its identifier, or run /cogmer:peer-list"), arg)
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "%q names %d different keys, so it names nobody. Say which:", arg, len(matches))
@@ -749,9 +797,9 @@ func runPeers() {
 			fmt.Println("No peers yet. Pairing is how somebody becomes one, and it takes the")
 			fmt.Println("string your colleague sends you plus a name for them:")
 			fmt.Println()
-			fmt.Println("  /cogmer:peer-pair <their string> <what you call them>")
+			fmt.Println(commandText("  /cogmer:peer-pair <their string> <what you call them>"))
 			fmt.Println()
-			fmt.Println("Your own string, to send them, is in /cogmer:self-status.")
+			fmt.Println(commandText("Your own string, to send them, is in /cogmer:self-status."))
 			return
 		}
 		var unfinished []string
@@ -769,7 +817,7 @@ func runPeers() {
 		for _, who := range unfinished {
 			fmt.Printf("\nThere is still work to do with %s — nothing passes between you until\n", who)
 			fmt.Printf("you finish pairing. Two words, on a call, both at once:\n\n")
-			fmt.Printf("  /cogmer:peer-pair %s\n", who)
+			fmt.Printf(commandText("  /cogmer:peer-pair %s\n"), who)
 		}
 	})
 }
@@ -790,7 +838,7 @@ func runAllow(args []string) {
 		fmt.Printf("recorded %s as %s — UNVERIFIED.\n", PeerName(args[0]), firstNonEmpty(name, PeerName(args[0])))
 		fmt.Println("nothing yet says this key is theirs rather than someone who intercepted it.")
 		fmt.Printf("finish with:  %s verify %s\n", invocation(), firstNonEmpty(name, PeerName(args[0])))
-		fmt.Println("(/cogmer:peer-pair does both at once, in a browser, and is the ordinary way.)")
+		fmt.Println(commandText("(/cogmer:peer-pair does both at once, in a browser, and is the ordinary way.)"))
 	})
 }
 
@@ -823,7 +871,7 @@ func runRooms() {
 		}
 		if len(rooms) == 0 {
 			if len(m.Offers()) == 0 {
-				fmt.Println("no rooms. /cogmer:room-create in a Claude Code session makes one.")
+				fmt.Println(commandText("no rooms. /cogmer:room-create in an agent session makes one."))
 				return
 			}
 		}
@@ -847,7 +895,7 @@ func runRooms() {
 		if offers := m.Offers(); len(offers) > 0 {
 			fmt.Println("\nwaiting for you to accept:")
 			for _, o := range offers {
-				fmt.Printf("  %-24s from %-20s  /cogmer:room-join %s\n",
+				fmt.Printf(commandText("  %-24s from %-20s  /cogmer:room-join %s\n"),
 					o.RoomName, firstNonEmpty(m.Label(o.Host), PeerName(o.Host)), o.RoomName)
 			}
 		}
@@ -880,7 +928,7 @@ func runCreateRoom(args []string) {
 // the room, and it cannot stop a colleague's machine doing so.
 func showOnlyNote(r Room) string {
 	return "\nThis room is show-only on this machine. Its conversation appears in the room view, and none of it\n" +
-		"is given to your Claude. Your own turns are still shared with the room's other members, and their\n" +
+		"is given to your agent. Your own turns are still shared with the room's other members, and their\n" +
 		"sessions receive them unless they chose show-only too. This is fixed for this room.\n"
 }
 
@@ -999,7 +1047,7 @@ func runJoin(args []string) {
 			fmt.Printf("admitted %s, who invited you.\n", PeerName(host))
 			if !m.IsVerified(host) {
 				fmt.Printf("their key is UNVERIFIED, so nothing will sync yet. On a call with\n")
-				fmt.Printf("them, both run /cogmer:peer-pair — it opens the two-word check in a browser.\n")
+				fmt.Printf("%s", commandText("them, both run /cogmer:peer-pair — it opens the two-word check in a browser.\n"))
 			}
 		}
 		if peers := m.RoomPeers(r.RoomID, id.PeerID); len(peers) > 0 {
@@ -1020,7 +1068,7 @@ func runJoin(args []string) {
 func runLeave() {
 	sid := sessionID()
 	if sid == "" {
-		fmt.Println("no Claude Code session to take out of a room — run /cogmer:room-leave inside")
+		fmt.Println(commandText("no agent session to take out of a room — run /cogmer:room-leave inside"))
 		fmt.Println("the session you want to remove. Membership is held by a session, so")
 		fmt.Println("there is nothing at a terminal to leave.")
 		return
@@ -1033,7 +1081,7 @@ func runLeave() {
 		}
 		fmt.Printf("this session has left %s. It stops capturing and stops receiving.\n", room.RoomName)
 		fmt.Println("Nothing is hidden or undone: the room's history is unchanged, still readable")
-		fmt.Printf("with /cogmer:room-log, and still shown at http://%s.\n", addr())
+		fmt.Printf(commandText("with /cogmer:room-log, and still shown at http://%s.\n"), addr())
 		fmt.Println("What you already published stays in the room; leaving does not un-say it.")
 		fmt.Printf("\nThis session may rejoin %s. It may not join a different one — what it has\n", room.RoomName)
 		fmt.Println("been told cannot be withdrawn from its context.")
@@ -1094,7 +1142,7 @@ func renderGuests(w io.Writer, room string, rows []guestRow, reach []uiPeer, sel
 		// Said before the colleagues, because it is the cause of the others: a machine
 		// nobody can reach does not hand its turns to anybody, since peers pull.
 		fmt.Fprintf(w, "  THIS MACHINE CANNOT BE REACHED through its relay%s, so colleagues do not receive\n", selfFailingFor(self))
-		fmt.Fprintf(w, "  your turns. /cogmer:self-restart restarts the daemon.\n")
+		fmt.Fprintf(w, "%s", commandText("  your turns. /cogmer:self-restart restarts the daemon.\n"))
 	}
 	byID := map[string]*uiPeer{}
 	for i := range reach {
@@ -1121,7 +1169,7 @@ func renderGuests(w io.Writer, room string, rows []guestRow, reach []uiPeer, sel
 	if unreachable {
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Nothing passes between you and a colleague this machine cannot reach, so their turns")
-		fmt.Fprintln(w, "do not arrive here, and the room looks quiet. They can run /cogmer:self-status to see")
+		fmt.Fprintln(w, commandText("do not arrive here, and the room looks quiet. They can run /cogmer:self-status to see"))
 		fmt.Fprintln(w, "whether this machine can be reached from theirs, and whether their daemon is running.")
 	}
 }
@@ -1209,14 +1257,14 @@ func runInvite(args []string) {
 			who := firstNonEmpty(m.Label(pid), PeerName(pid))
 			fmt.Printf("\nThey have not been told yet — you and %s have not finished pairing,\n", who)
 			fmt.Printf("and until you do nothing would pass between you in either direction.\n\n")
-			fmt.Printf("  /cogmer:peer-pair %s\n\n", who)
+			fmt.Printf(commandText("  /cogmer:peer-pair %s\n\n"), who)
 			fmt.Printf("Two words, on a call, both at once. The invitation goes when you finish.\n")
 			return
 		}
 
 		var res sendOfferResponse
 		if err := postLocal("/offer/send", sendOfferRequest{Peer: pid, RoomID: r.RoomID}, &res); err == nil && res.Delivered {
-			fmt.Printf("Told them. They accept with:  /cogmer:room-join %s\n", r.RoomName)
+			fmt.Printf(commandText("Told them. They accept with:  /cogmer:room-join %s\n"), r.RoomName)
 			return
 		} else if err == nil && res.Error != "" {
 			fmt.Printf("\nCould not reach them (%s), so send this instead:\n", res.Error)
@@ -1225,7 +1273,7 @@ func runInvite(args []string) {
 		}
 		// The fallback carries the same four facts by hand. The address in it is
 		// the HOST's, so it is unaffected by whatever made the guest unreachable.
-		fmt.Printf("  /cogmer:room-join %s\n", invitation(r, AdvertisedEndpoint(), self.PeerID))
+		fmt.Printf(commandText("  /cogmer:room-join %s\n"), invitation(r, AdvertisedEndpoint(), self.PeerID))
 	})
 }
 
@@ -1525,9 +1573,9 @@ func runPair(args []string) {
 		fmt.Println("Pairing takes two things: the string your colleague sends you, and a")
 		fmt.Println("name for them.")
 		fmt.Println()
-		fmt.Println("  /cogmer:peer-pair <their string> <what you call them>")
+		fmt.Println(commandText("  /cogmer:peer-pair <their string> <what you call them>"))
 		fmt.Println()
-		fmt.Println("Your own string — the one you send THEM — is in /cogmer:self-status.")
+		fmt.Println(commandText("Your own string — the one you send THEM — is in /cogmer:self-status."))
 		return
 	}
 	peerID, endpoint, theirName := parsePairing(args[0])
@@ -1592,11 +1640,11 @@ func runPair(args []string) {
 		// somebody to invent a name for a person whose name they can see.
 		name = theirName
 		fmt.Printf("Calling them %s, which is the name they gave.\n", name)
-		fmt.Printf("Add a name of your own if you would rather:  /cogmer:peer-pair <their string> <name>\n\n")
+		fmt.Printf("%s", commandText("Add a name of your own if you would rather:  /cogmer:peer-pair <their string> <name>\n\n"))
 	default:
 		fmt.Printf("This needs a name for them as well — what you will call %s in your own\n",
 			PeerName(peerID))
-		fmt.Printf("room and peer list:\n\n  /cogmer:peer-pair %s <name>\n\n", args[0])
+		fmt.Printf(commandText("room and peer list:\n\n  /cogmer:peer-pair %s <name>\n\n"), args[0])
 		fmt.Println("The derived name above is computed from their key. It identifies them")
 		fmt.Println("exactly, and it will mean nothing to you in three weeks.")
 		fmt.Println("They did not include a name of their own in what they sent you.")
@@ -1644,7 +1692,7 @@ func beginCeremony(peerID, name, mine, label, endpoint string, preferTerminal bo
 	// one. Say the one true thing instead.
 	if !daemonAlreadyServing(addr()) {
 		log.Fatalf("the cogmer daemon is not running, and pairing needs it.\n"+
-			"  It starts with a Claude Code session. If one is open, %s doctor says what is wrong.",
+			"  It starts with an agent session. If one is open, %s doctor says what is wrong.",
 			invocation())
 	}
 	// One pairing record for both surfaces. What a match, a mismatch and an
@@ -1844,7 +1892,7 @@ func runStop(args []string) {
 			// Said here because the command that runs this is typed in a session,
 			// and nothing restarts a daemon until a session starts (D-150).
 			fmt.Println("No daemon is running now, so nothing is captured or shared until one starts.")
-			fmt.Println("A new Claude Code session starts one. This command does not.")
+			fmt.Println("A new agent session starts one. This command does not.")
 			break
 		}
 	}
@@ -1992,7 +2040,7 @@ func writePairingInvitation(w io.Writer, id *Identity, endpoint string) {
 	if note != "" {
 		fmt.Fprintf(w, "\n%s\n", note)
 	}
-	fmt.Fprintf(w, "\nWhen they send you theirs, run:\n\n  /cogmer:peer-pair <their string> <what you call them>\n")
+	fmt.Fprintf(w, "%s", commandText("\nWhen they send you theirs, run:\n\n  /cogmer:peer-pair <their string> <what you call them>\n"))
 	fmt.Fprintf(w, "\nThe name is yours and is used everywhere you see them. Their key already\n")
 	fmt.Fprintf(w, "gives them a name, but it is a word pair computed from the key and it will\n")
 	fmt.Fprintf(w, "mean nothing to you in three weeks.\n")
@@ -2060,17 +2108,17 @@ func checkReachable(endpoint string) (ok bool, why, note string) {
 				return false, "the daemon could not start, so nobody can reach you.\n      " + detail, ""
 			}
 			return false, "the daemon is not running, so nobody can reach you at that address.\n" +
-				"      A new Claude Code session starts one, and so does /cogmer:self-restart.", ""
+				commandText("      A new agent session starts one, and so does /cogmer:self-restart."), ""
 		case !sc.Overlay:
 			return false, "this daemon is not running the relay connection, so the address in your string\n" +
-				"      leads nowhere. /cogmer:self-restart starts the daemon again.", ""
+				commandText("      leads nowhere. /cogmer:self-restart starts the daemon again."), ""
 		case sc.Relay == "":
 			return false, "the daemon is running but is not attached to a relay, so colleagues cannot reach you.\n" +
-				"      /cogmer:self-restart restarts it, and ~/.cogmer/daemon.log says why if that does not help.", ""
+				commandText("      /cogmer:self-restart restarts it, and ~/.cogmer/daemon.log says why if that does not help."), ""
 		case !sc.Reached:
 			return false, fmt.Sprintf("the daemon is attached to the relay (%s) but a test connection from outside\n"+
 				"      did not get through (%s), so colleagues cannot reach you at that address.\n"+
-				"      /cogmer:self-restart restarts the daemon.%s", sc.Relay, shortReason(sc.Error), failingSentence(sc)), ""
+				commandText("      /cogmer:self-restart restarts the daemon.%s"), sc.Relay, shortReason(sc.Error), failingSentence(sc)), ""
 		}
 		return true, "", fmt.Sprintf("Checked just now: a connection from outside reached this machine through the relay at %s, in %dms.", sc.Relay, sc.TookMs)
 	}
@@ -2090,7 +2138,7 @@ func checkReachable(endpoint string) (ok bool, why, note string) {
 		if !endpointRecorded() {
 			return false, "no daemon has published an address yet, so that one is a guess.\n" +
 				"      The daemon records a real one when it starts, which happens when a\n" +
-				"      Claude Code session starts. Start one and run this again.", ""
+				"      agent session starts. Start one and run this again.", ""
 		}
 		return false, "that address is loopback, so nobody else can reach it. No route out\n" +
 			"      was negotiated; set COGMER_PEER_ADDR to an address they can reach\n" +
@@ -2131,7 +2179,7 @@ func nameLine(id *Identity) string {
 		return fmt.Sprintf("Other people see you as %s.", id.UserDisplayName)
 	}
 	return fmt.Sprintf("Other people see you as %s — that is this computer's username,\n"+
-		"not a name anybody picked. /cogmer:self-name changes it.", id.UserDisplayName)
+		commandText("not a name anybody picked. /cogmer:self-name changes it."), id.UserDisplayName)
 }
 
 // runName shows or sets what other people call you.
@@ -2186,5 +2234,5 @@ func reportAlreadyPaired(who, since string) {
 	fmt.Printf("\nNothing to do. Pairing holds for every room you ever share.\n")
 	fmt.Printf("\nIf you have reason to think their key changed — they said two words that\n")
 	fmt.Printf("did not match yours, or you were told to check — compare again with:\n\n")
-	fmt.Printf("  /cogmer:peer-pair %s --again\n", who)
+	fmt.Printf(commandText("  /cogmer:peer-pair %s --again\n"), who)
 }

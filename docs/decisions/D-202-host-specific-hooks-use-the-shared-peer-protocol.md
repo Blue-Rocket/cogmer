@@ -1,0 +1,16 @@
+# D-202 — Host-specific hooks use the shared peer protocol
+
+**Date:** 2026-10-12 · **Status:** active · **Areas:** hosts, capture, sync
+
+**Decision.** Host-specific hook configuration selects capture and delivery evidence on the loopback API. Replicated events carry an opaque origin session and no host discriminator. Codex session identifiers have a namespace that distinguishes them from Claude Code sessions on the same machine.
+
+**Support.**
+- Capture and delivery depend on different transcript records for each host. `cmd/cogmer/transcript.go`, `cmd/cogmer/codex.go`.
+- Sessions on one machine can exchange turns through a room without another peer. `cmd/cogmer/codex_test.go`, `TestMixedHostRoomCapturesAndDeliversBothDirections`.
+- Origin session identity and signatures belong to the shared event format. `cmd/cogmer/store.go`, `cmd/cogmer/protocol.go`.
+
+**Rejected.**
+- *Preparing for a second host through naming alone.* The second host has its own implemented capture and evidence paths. `cmd/cogmer/codex.go`, `ReassembleCodexTurn`, `CodexInjectedBlocks`.
+- *A host discriminator on every replicated event.* The receiver needs the origin session and the text, and does not interpret the sender's transcript. `cmd/cogmer/daemon.go`, `FormatTeamContext`.
+
+**Limits.** Codex delivery has no trust fallback. Missing evidence leaves turns pending, independently of Claude Code behavior results.

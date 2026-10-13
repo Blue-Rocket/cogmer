@@ -26,7 +26,7 @@ type Event struct {
 	UserDisplayName string `json:"userDisplayName"`
 	MachineID       string `json:"machineId"`
 	// OriginSessionID names the agent session a turn came from. It is opaque:
-	// that it is presently a Claude Code session id is a fact about the adapter
+	// its host-specific format is a fact about the adapter
 	// that captured it, not about this record.
 	OriginSessionID string          `json:"originSessionId"`
 	EventType       string          `json:"eventType"`
@@ -423,7 +423,7 @@ func (s *Store) ListRoom(room string) ([]Event, error) {
 	return scanEvents(rows)
 }
 
-// UndeliveredFor returns room events this Claude session has not been confirmed
+// UndeliveredFor returns room events this agent session has not been confirmed
 // to have received, excluding events the session itself produced -- those are
 // already in its own context window (§19).
 func (s *Store) UndeliveredFor(room, sessionID string) ([]Event, error) {

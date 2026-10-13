@@ -89,7 +89,7 @@ W-01. Say "user" for someone using cogmer, "colleague" for another user in the s
 room, and "maintainer" for someone changing cogmer. Say "person" only where what
 matters is a human as distinct from the model or a program: "a person sees only
 what the model says". Never say "developer", since a user may not write code. Where
-"user" could be read as the role of a message in a Claude Code conversation, as in
+"user" could be read as the role of a message in an agent conversation, as in
 a user turn, say which is meant.
 
 ## Rules

@@ -2,15 +2,14 @@
 
 cogmer is public so that it can be tested. It is not ready for general use.
 
-cogmer puts people working separately, on their own machines and their own Claude
-Code subscriptions, in one conversation. Your turns and theirs replicate directly between
+cogmer puts people working separately, on their own machines and their own Claude Code or Codex subscriptions, in one conversation. Your turns and theirs replicate directly between
 your machines. No server holds the conversation, and no account exists anywhere.
 
 Your session keeps working when your colleague's is offline. Their turns reach your
 session at your next prompt, never before it, so nothing they do makes your session
 take a turn.
 
-## Install
+## Install in Claude Code
 
 Run these two commands inside a Claude Code session, one at a time. Pasted together,
 they arrive as a single command, and the first one fails.
@@ -35,6 +34,29 @@ Each binary is authorized by a SHA-256 hash pinned in the plugin. A download who
 hash does not match is deleted without being run. If there is no verified download
 and the machine has Go installed, the binary is built from source instead.
 
+## Install in Codex
+
+Codex CLI and the desktop app use the same plugin. Add the repository marketplace:
+
+```sh
+codex plugin marketplace add Blue-Rocket/cogmer
+codex plugin add cogmer@blue-rocket
+```
+
+In the desktop app, the Blue Rocket marketplace also appears in the plugin browser.
+Review and trust the plugin's hooks before starting a new session. The CLI's `/hooks`
+command shows hooks waiting for review. Installing a plugin does not trust its hooks.
+
+Use the cogmer skill in your session, such as `$cogmer self-status` or
+`$cogmer room-create`. In the desktop app, select the cogmer skill from the skill
+picker and give it the same command. Room names and pairing strings work across
+Claude Code and Codex, and both hosts can share the same daemon on one machine.
+
+When testing an unpublished build, run `go build -o bin/cogmer ./cmd/cogmer`, set
+`COGMER_BIN` to that binary's absolute path before launching Codex, and add this
+checkout with `codex plugin marketplace add .`. The release download is available
+only after that version has been published.
+
 ## Pair, once, on a call
 
 Send your colleague your pairing string, which this command prints:
@@ -56,7 +78,7 @@ Then, both at the same time, each run this with the other's string:
 A page opens in each of your browsers showing two words, and you read them to each
 other on the call. That comparison is what shows the key each of you received is the
 other's, and not one substituted on the way, so the words never pass through the
-model: two words Claude told you would prove nothing. §25 (security) explains why two words are enough, and why a mismatch
+model: two words the model told you would prove nothing. §25 (security) explains why two words are enough, and why a mismatch
 must never be retried. On a machine with no browser, such as over SSH or in a
 container, the comparison happens in the terminal instead.
 
@@ -77,6 +99,9 @@ The other accepts it by name:
 ```
 /cogmer:room-join misty-canyon
 ```
+
+In Codex, use `$cogmer room-create`, `$cogmer room-invite David`, and
+`$cogmer room-join misty-canyon` for the same steps.
 
 Then work as you normally would. A session that has been in one room can never join
 a second, so start a new session to join a different room.
@@ -119,34 +144,34 @@ when a room is formed. `COGMER_MAX_EVENTS`, `COGMER_MAX_EVENT_CHARS` and
 window management).
 
 The code is Go, with a SQLite library written in Go, so every target builds from one
-machine with `CGO_ENABLED=0` and needs nothing else at run time. Claude Code ships as
-a native binary, so a colleague may have no Node installed.
+machine with `CGO_ENABLED=0` and needs nothing else at run time. A colleague may have no Node installed, so cogmer requires no JavaScript runtime.
 
 ### Where to read
 
 | | |
 |---|---|
-| [`Shared Claude Sessions.md`](Shared%20Claude%20Sessions.md) | the specification: the system as a user experiences it |
+| [Specification](Shared%20Claude%20Sessions.md) | the specification: the system as a user experiences it |
 | [`docs/decisions/`](docs/decisions/) | the detail beneath the specification, and why; read it before proposing a simplification, because some awkward-looking choices are there for a reason |
 | [`docs/writing.md`](docs/writing.md) | how every document here is written |
 | [`docs/open.md`](docs/open.md) | actions not yet taken, and decisions not yet made |
-| [`docs/relied-on-behaviors.md`](docs/relied-on-behaviors.md) | what Claude Code does that cogmer depends on, generated from the registry |
+| [`docs/relied-on-behaviors.md`](docs/relied-on-behaviors.md) | what the supported hosts do that cogmer depends on, generated from the registry |
 
 ### Behavior checks
 
-cogmer depends on Claude Code behaviors that are not documented: how a hook reports a
-turn, what the transcript contains, what compaction keeps, and whether a daemon
-running in the background can still open a window in front of a person. None of them
-is promised, and several fail silently: the room keeps accepting events while it
+cogmer checks the host behaviors it depends on: how hooks identify a turn, what the
+transcript contains, and whether injected context reaches the model. Claude Code
+checks also cover compaction and whether a background daemon can open a window.
+Host behavior can change, and several failures are silent: the room keeps accepting events while it
 records the wrong thing.
 
 ```sh
 bin/cogmer doctor          # two Claude turns, about 13s
-bin/cogmer doctor --deep   # also drives a real compaction, about 40s
+bin/cogmer doctor --deep   # also drives a real Claude compaction, about 40s
+bin/cogmer doctor --codex  # one Codex turn: capture, injection and session identity
 ```
 
-The session checks run by themselves the first time a room is formed under a Claude
-Code version this machine has not checked, and the result is kept for that version,
+The session checks run by themselves the first time a room is formed under a host
+version this machine has not checked, and the result is kept for that version,
 so forming another room costs nothing. A failed check never blocks the room. It names
 the behavior that changed, and each behavior's `Reliance` says what breaks as a
 result.

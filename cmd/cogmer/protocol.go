@@ -11,8 +11,8 @@ import "encoding/json"
 // Sharing one struct means the next convenient column silently becomes protocol.
 //
 // Nothing here mentions the agent that produced an event. A session identifier is
-// an opaque string naming where a turn came from; that it is currently a Claude
-// Code session is a fact about the adapter, not about the protocol.
+// an opaque string naming where a turn came from; its host-specific format is a
+// fact about the adapter, not about the protocol.
 const wireVersion = 2
 
 // minWireVersion is the oldest a peer may speak and still be read.

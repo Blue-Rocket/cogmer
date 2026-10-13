@@ -1,7 +1,7 @@
 {
   "name": "cogmer",
-  "version": "0.8.0",
-  "description": "Work in a shared Claude Code conversation with a colleague. Your turns and theirs replicate directly between your machines, peer to peer, with no server holding the conversation.",
+  "version": "0.9.0",
+  "description": "Share a conversation between Claude Code and Codex sessions. Turns replicate directly between your machines, peer to peer, with no server holding the conversation.",
   "author": {
     "name": "David Foote"
   }

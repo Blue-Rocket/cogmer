@@ -15,7 +15,7 @@ Tell the user the room's name, and that sessions they start from here join it wh
 this one is already in it.
 
 If the output says the room is show-only, say what that means in a few words: its
-conversation appears in the room view and none of it is given to their Claude, that
+conversation appears in the room view and none of it is given to their agent, that
 cannot be changed for this room, and their colleagues' sessions still receive the
 user's turns unless the colleagues joined show-only too. Do not offer to change it.
 

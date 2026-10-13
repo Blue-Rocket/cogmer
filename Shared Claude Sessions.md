@@ -1,21 +1,21 @@
-# Peer-to-Peer Shared Real-Time Collaboration for Claude Code
+# Peer-to-Peer Shared Real-Time Collaboration for Claude Code and Codex
 
-cogmer is a peer-to-peer daemon that replicates one Claude Code conversation between
-people working separately, with no central collaboration server and no account
-anywhere. Claude Code talks only to a daemon on the same machine. Section 3.1 governs
+cogmer is a peer-to-peer daemon that replicates a conversation between Claude Code
+and Codex sessions for users working separately, with no central collaboration server or account
+anywhere. Each session talks only to a daemon on the same machine. Section 3.1 governs
 everything else: a user's session is never worse for having cogmer installed.
 
 ## 1\. Objective
 
-cogmer lets several people, each using their own Claude Code subscription and their
-own Claude Code session, work in one shared conversation without a central
+cogmer lets several people, each using their own agent subscription and their
+own agent session, work in one shared conversation without a central
 conversation server. In a room:
 
-- each user sees the prompts their colleagues send to Claude, and Claude's responses;
+- each user sees the prompts their colleagues send to their agent, and the agent's responses;
 - those turns appear in near real time;
 - each user keeps working in their own session, on their own subscription, and
-  inference is ordinary Claude Code usage;
-- each user's Claude receives the recent turns of their colleagues;
+  inference is ordinary usage of their chosen agent;
+- each user's agent receives the recent turns of their colleagues;
 - the room's history is replicated between the machines in it, and no cloud service
   holds an authoritative copy.
 
@@ -25,7 +25,7 @@ conversation server. In a room:
 
 Each user's machine runs:
 
-1. Claude Code
+1. Claude Code or Codex
 2. the collaboration hooks
 3. a `cogmer` daemon
 4. a local event store
@@ -38,7 +38,7 @@ The daemons talk directly to one another.
 
  David                 Alice                 Carlos
    │                      │                     │
-Claude                  Claude                 Claude
+Claude Code             Codex                 Claude Code
    │                      │                     │
 hooks                   hooks                  hooks
    │                      │                     │
@@ -58,7 +58,7 @@ canonical copy.
 
 ## 3.1 First, do no harm
 
-A user's Claude Code session belongs to them, and cogmer is a guest in it. cogmer
+A user's agent session belongs to them, and cogmer is a guest in it. cogmer
 never makes that session worse, and every other requirement in this document is
 subordinate to this one, because collaboration is never worth degrading the session
 that hosts it.
@@ -66,7 +66,7 @@ that hosts it.
 This is a duty rather than a list. The cases below are its known cases, not its
 extent, so a harm they do not name is still forbidden.
 
-Claude Code keeps working normally when the daemon is not running or dies during a
+The host keeps working normally when the daemon is not running or dies during a
 session, when a hook cannot reach the daemon or fails for any other reason, when
 every other peer disappears, when the network is unavailable, and when
 synchronization fails.
@@ -88,12 +88,12 @@ A remote event never makes an interactive session take a turn (section 3.7).
 cogmer draws nothing inside the session. A view of the room is a separate program,
 so a busy room never costs a user the pane they are working in.
 
-Claude Code communicates only with the daemon on its own machine, so nothing remote
-sits on a path where Claude Code could notice it failing. Each user's daemon owns
+The collaboration hooks communicate only with the daemon on their own machine, so nothing remote
+sits on a path where the host could notice it failing. Each user's daemon owns
 that user's collaboration.
 
 ```
-Claude Code
+Agent session
      │
      │ localhost
      ▼
@@ -109,7 +109,7 @@ cogmer daemon
 
 ## 3.2 Replicated rooms
 
-A room is a replicated event stream shared by a set of linked Claude Code sessions.
+A room is a replicated event stream shared by a set of linked agent sessions.
 
 A room has two identifiers, and they are not interchangeable: an identifier such as
 0f7a4e6c-2b91-4d0a-9c3e-7f1d8a5b2c44, and a name such as misty-canyon.
@@ -159,17 +159,17 @@ another to be online in order to keep working.
 ## 3.4 Preserve actual conversation
 
 cogmer never replaces a conversation with a summary. A room keeps each user's actual
-prompts, Claude's actual responses, who said each, in what order, and in which
+prompts, the assistant's actual responses, who said each, in what order, and in which
 session, because part of what a colleague gains is seeing how another user
-approached a problem and how Claude responded.
+approached a problem and how the assistant responded.
 
 ---
 
-## 3.5 Independent Claude sessions
+## 3.5 Independent agent sessions
 
-Each user keeps their own Claude Code process, subscription, working directory,
+Each user keeps their own agent process, subscription, working directory,
 context window and session. Synchronization happens around those sessions, and
-nothing inside a Claude Code session is shared between machines.
+nothing inside an agent session is shared between machines.
 
 ---
 
@@ -178,7 +178,7 @@ nothing inside a Claude Code session is shared between machines.
 A room lasts as long as the sessions that joined it. There is no standing room that
 people drift into and out of over weeks.
 
-Membership is held by a Claude Code session, identified by its session ID. One peer
+Membership is held by an agent session, identified by its session ID. One peer
 creates a room at the moment they invite someone into it, others join through that
 invitation, and the room closes when its members have left it.
 
@@ -186,7 +186,7 @@ A session that becomes inactive has not left. Sessions can be resumed, so a proc
 that exits makes a member absent rather than gone, and a resumed session returns to
 its room because its session ID survives resumption.
 
-A session belongs to one room at most, and never joins a second. A user who starts a new Claude Code
+A session belongs to one room at most, and never joins a second. A user who starts a new agent
 session creates a new room or is invited to one, and does not resume an old room.
 
 Joining a room is always a deliberate act by every participant, and nothing about a
@@ -213,12 +213,12 @@ what injecting it is for. It is never the reason the model runs.
 
 Remote events are stored, displayed and queued. They enter an interactive session's
 context at its next turn the user starts, and never before. A peer may place
-something in front of a user's Claude, and only that user can cause it to be read.
+something in front of a user's assistant, and only that user can cause it to be read.
 
 A remote event never prompts, resumes or otherwise drives an interactive session,
 never makes it consume queued context ahead of a turn the user starts, and any
 scheduled or triggered work that affects it originates on the user's own machine.
-The host offers ways to start Claude, so a daemon could drive a session, and this
+The host offers ways to start an agent session, so a daemon could drive a session, and this
 rule forbids it.
 
 An interactive session is a working state, not just a process. A turn that arrives
@@ -229,15 +229,16 @@ what their own session has seen and when.
 Section 3.1 requires a user's session to survive every peer disappearing, and this
 section is its converse: a user's session is undisturbed by every peer arriving.
 
-Any Claude run a peer event causes outside the interactive session neither borrows
+Any agent run a peer event causes outside the interactive session neither borrows
 that session's context nor interrupts it.
 
 ---
 
 ## 3.8 The host is launched and used unchanged
 
-The host is the application a session runs in. Claude Code is the host this
-specification describes. The rule in this section is stated for hosts in general,
+The host is the application a session runs in. This specification describes
+Claude Code and Codex CLI and desktop sessions. The rule in this section is stated
+for hosts in general,
 because a system that can only be installed into one product has chosen that
 product permanently.
 
@@ -246,7 +247,8 @@ way. cogmer is installed into the host and never around it.
 
 A user installs only artifacts of a type the host documents and demonstrates as an
 extension mechanism: in Claude Code, hooks, skills, MCP servers and the plugin that
-carries them. The rule is about the type, not about what the artifact does, so a hook
+carries them. Codex uses its plugin, hooks and skills. The rule is about the type,
+not about what the artifact does, so a hook
 that replicates a conversation to a peer is a hook. Nothing replaces the command,
 wraps the process, interposes a terminal or patches the application, and a runtime
 that loads a shim on the host's behalf is loading it for cogmer, not for the host.
@@ -475,8 +477,8 @@ the expected identity is proof of that.
 
 # 5\. Local Daemon
 
-The daemon is one lightweight process, `cogmer`. It serves an interface for the Claude
-Code hooks and the local view on the machine's loopback address, such as
+The daemon is one lightweight process, `cogmer`. It serves an interface for the collaboration
+hooks and the local view on the machine's loopback address, such as
 `127.0.0.1:4782`, and a separate interface for synchronizing with peers.
 
 ```
@@ -487,7 +489,7 @@ Code hooks and the local view on the machine's loopback address, such as
    Hook API          Local UI API       Peer API
  localhost only      localhost           P2P
         │                │                 │
-   Claude Code        Browser          teammates
+   Agent session      Browser          colleagues
 ```
 
 The session-start hook starts the daemon, not the user, and the daemon outlives any
@@ -516,7 +518,7 @@ one.
 
 Every peer has a stable identity: a key pair, whose public key is the peer's
 identifier; a name derived from that key; the name its user goes by; an identifier
-for the user; and a label for the machine. Every Claude Code session also has its own
+for the user; and a label for the machine. Every agent session also has its own
 identifier.
 
 ## Peer names
@@ -625,17 +627,17 @@ The machine label is for attribution and display. It is never an address, and no
 routes by it, because where a peer can be reached is a property of the transport and
 changes independently of who the peer is.
 
-A Claude response is always attributable to the user and the session it came from,
+An assistant response is always attributable to the user and the session it came from,
 and is shown as
 
 ```
-Claude — David
+Assistant — David
 ```
 
 rather than as
 
 ```
-Claude
+Assistant
 ```
 
 ---
@@ -644,7 +646,7 @@ Claude
 
 Events are immutable once created, and a room's store only appends.
 
-A room records two kinds of event: a user's prompt, and Claude's response to it.
+A room records two kinds of event: a user's prompt, and the assistant's response to it.
 
 Each event carries its own identifier, the peer that created it and that peer's
 sequence number, the room, the time it was created, the user who wrote it and the
@@ -875,7 +877,7 @@ scoped to a room.
 Pairing is interactive, waits on another user, and ends with two words that must
 reach the user's eyes unaltered, so it happens in the view the daemon serves and never
 by way of the model (section 29). Inviting is a single act whose output only informs,
-so it is a command inside a Claude Code session like any other.
+so it is a command inside an agent session like any other.
 
 A pairing string carries an address as well as the identifier, so that verification
 can happen before any room exists. The address need only be correct once
@@ -1142,7 +1144,7 @@ only the first member that can be reached, and it may leave while the room conti
 
 # 12a\. Room Membership
 
-A Claude Code session is a member of one room at most, and never joins a second. Every captured
+An agent session is a member of one room at most, and never joins a second. Every captured
 event belongs to one room and no other, and a session in two rooms would give no basis for
 choosing which, while a session receiving turns from two unrelated conversations could
 not keep them apart, and neither could the user reading the result.
@@ -1163,7 +1165,7 @@ hours of work, disclosed by an act that looks like saying hello.
 Throughout this specification, "from its beginning" means the beginning of the room,
 never the beginning of a session that belongs to it.
 
-Before a room exists, a session is an ordinary Claude Code session: nothing is
+Before a room exists, a session is an ordinary agent session: nothing is
 captured, injected or shared. Collaboration is something a user starts, not a state
 they are in.
 
@@ -1172,8 +1174,8 @@ turns are never contributed to a room by default.
 
 ## Leaving
 
-A session may leave a room. Leaving is always explicit, and is never inferred from a
-Claude Code session becoming inactive.
+A session may leave a room. Leaving is always explicit, and is never inferred from an
+agent session becoming inactive.
 
 A session that leaves stops publishing to the room and stops receiving injected
 context from it. The events it published stay in the room, because published events
@@ -1194,7 +1196,7 @@ A closed room is never rejoined, by a former member or by anyone else.
 
 A session enters a room only by creating it or by joining it, and a session that has
 been in one room never joins a second. It may leave its room and rejoin it. A user who
-wants to work in a second room starts a second Claude Code session.
+wants to work in a second room starts a second agent session.
 
 Injected context cannot be withdrawn. Once a colleague's conversation has entered a
 session's context window, anything the session produces afterwards may be shaped by
@@ -1207,7 +1209,7 @@ from its own user.
 
 ## Presence is not membership
 
-A Claude Code session does not end in any lasting sense. Its process exits, and the
+An agent session does not end in any lasting sense. Its process exits, and the
 session can be resumed later under the same session ID, so membership and presence are
 separate.
 
@@ -1217,7 +1219,7 @@ when the session explicitly leaves or the room closes.
 Presence is transient. It says whether a member can be reached now, and it lapses
 whenever a process exits, a machine sleeps or a network drops.
 
-A member whose Claude Code process exits is absent, and has not left. Its membership
+A member whose host process exits is absent, and has not left. Its membership
 stands, its delivery state is kept, and events published while it was absent are still
 owed to it.
 
@@ -1279,7 +1281,7 @@ admission (section 12).
 
 # 14\. Capturing User Prompts
 
-The hook Claude Code runs when a prompt is submitted sends the prompt to the daemon on
+The hook the agent runs when a prompt is submitted sends the prompt to the daemon on
 the same machine. When David submits
 
 ```
@@ -1290,30 +1292,39 @@ the daemon at once gives the event its identifier, advances David's sequence, st
 the event, and shows it in the local view. The event reaches peers when they next
 synchronize.
 
-Claude never waits for synchronization with peers before answering a prompt.
+The agent session never waits for synchronization with peers before answering a prompt.
 
 ---
 
-# 15\. Capturing Claude Responses
+# 15\. Capturing Assistant Responses
 
-The daemon captures each completed turn of Claude's, and records it as a response
-attributed to David and to David's Claude session. The view shows it as:
+The daemon captures each completed assistant turn, and records it as a response
+attributed to David and to David's agent session. The view shows it as:
 
 ```
-Claude — David
+Assistant — David
 
 I traced the timeout to the OkHttp connection pool...
 ```
 
 A response is published whole, never summarized.
 
-A response never includes Claude's internal reasoning, which is not part of a shared
+A response never includes the assistant's internal reasoning, which is not part of a shared
 conversation.
 
-## Neither available source is complete
+## Codex responses
 
-A completed turn is reassembled from two sources, because each lacks a different part
-of it.
+A completed Codex response includes its commentary and final answer, in the order
+written. Tool calls are counted without publishing their arguments or results.
+Reasoning is excluded. Capture reads the response records for the completed turn,
+so environment context and records from another turn cannot become a response.
+The final text reported by the completion hook fills any gap in the transcript
+without duplicating text that was written to disk before the hook ran.
+
+## Claude Code response sources
+
+A completed Claude Code turn is reassembled from two sources, because each lacks a
+different part of it.
 
 The hook that runs when a turn completes reports only the turn's final text block.
 Anything said before a tool was called is missing, and narrating before acting is the
@@ -1343,7 +1354,7 @@ value, nothing is appended.
 
 ## Segmenting a turn
 
-A turn's assistant records are found by position: every assistant record after the
+In Claude Code, a turn's assistant records are found by position: every assistant record after the
 most recent record that carries a human prompt's marker. They are never matched by
 identifier, because assistant records carry no prompt identifier, and the chain of
 parent pointers between records has gaps.
@@ -1399,14 +1410,14 @@ because a user watching a conversation notices a delay that a machine does not. 
 runs over loopback and needs no transport, and a view that reconnects receives what
 it missed.
 
-## Daemon to a Claude session
+## Daemon to an agent session
 
-There is no path from the daemon into a Claude session, and there is never one.
+There is no path from the daemon into an agent session, and there is never one.
 Nothing can place context into a session already underway, which is a property of
 the host. That a peer event never makes such a session take a turn is a rule of
 cogmer (section 3.7).
 
-Context reaches a Claude Code session when a prompt is submitted, and at no other
+Context reaches an agent session when a prompt is submitted, and at no other
 moment. A session part-way through a turn cannot be told anything, so a turn that
 runs for minutes does not learn of a colleague's message until it ends and the next
 prompt begins.
@@ -1422,7 +1433,7 @@ separately.
 
 ## The room belongs outside the session
 
-A user's session is their conversation with their own Claude. The room is a record of
+A user's session is their conversation with their own assistant. The room is a record of
 what colleagues are doing, consulted rather than taken part in, and it is kept apart
 from the session.
 
@@ -1436,16 +1447,13 @@ a colleague's turns in its context, arriving at a turn boundary. The user wants 
 available to glance at, without their own thread stopping to carry them. So the model
 is served by injection, and the user by a view.
 
-## What is achievable inside a session
-
-A hook's output reaches the model and never the user. Its standard output becomes
-context, and neither its standard error nor a direct write to the terminal appears
-anywhere: Claude Code owns its display. So a user has no ambient view of the room from
-inside their session, and no arrangement of hooks produces one.
+cogmer uses hooks to supply context to the model. The host owns the session display,
+so cogmer does not use hook output as an ambient view of the room. Users see incoming
+turns in the separate room view without interrupting their own session.
 
 ## Asking
 
-A user can ask their own Claude what the room has been discussing, and it answers
+A user can ask their own assistant what the room has been discussing, and it answers
 from the context already injected, naming who said what and which of them are
 unverified. It tells a user only what they thought to ask about, and never that
 something has arrived. For a pair working on one problem, asking what the team has
@@ -1453,7 +1461,7 @@ found answers most of what a view would.
 
 ## Watching
 
-Seeing a colleague's turn arrive without asking takes a view outside the Claude Code
+Seeing a colleague's turn arrive without asking takes a view outside the agent
 session, and that view is a page in the browser, for reading an exchange properly,
 with code and formatting. It reads only from the daemon on the user's own machine.
 cogmer works without it: a user who never opens it still has injection and asking.
@@ -1476,7 +1484,7 @@ Why is SessionLambda returning a
 timeout here?
 
 
-Claude — David                11:43
+Assistant — David                11:43
 
 I traced the timeout to the OkHttp
 connection pool...
@@ -1488,7 +1496,7 @@ That assumption may be wrong.
 Check the retry path.
 
 
-Claude — Alice                11:45
+Assistant — Alice                11:45
 
 You're right. The retry path shows...
 ```
@@ -1496,7 +1504,7 @@ You're right. The retry path shows...
 The view:
 
 - updates live;
-- shows who wrote each turn, and whose Claude wrote each response;
+- shows who wrote each turn, and whose assistant wrote each response;
 - shows when each turn was written;
 - renders Markdown and code;
 - shows whether it is connected;
@@ -1505,10 +1513,10 @@ The view:
 
 ---
 
-# 18\. Cross-Session Claude Context
+# 18\. Cross-Session Context
 
-Each user's Claude receives the conversation that happened through their colleagues'
-sessions, because seeing it in a view is not enough for their Claude to follow it.
+Each user's assistant receives the conversation that happened through their colleagues'
+sessions, because seeing it in a view is not enough for their assistant to follow it.
 
 Suppose David's session produced:
 
@@ -1516,7 +1524,7 @@ Suppose David's session produced:
 David:
 Could idle pool expiration explain this?
 
-Claude — David:
+Assistant — David:
 Yes. The implementation currently...
 ```
 
@@ -1526,7 +1534,7 @@ Alice then types:
 I don't think that's actually the problem.
 ```
 
-Alice's Claude has to understand what "that" means. So before her prompt is
+Alice's assistant has to understand what "that" means. So before her prompt is
 processed, her hook asks the daemon on her machine for the room's events her session
 has not yet received, and the daemon returns them.
 
@@ -1534,7 +1542,7 @@ has not yet received, and the daemon returns them.
 
 # 19\. Incremental Context Injection
 
-The daemon knows, for each Claude session, which of the room's events have been
+The daemon knows, for each agent session, which of the room's events have been
 delivered to it.
 
 When Alice submits a prompt, the daemon finds the room's events her session has not
@@ -1547,7 +1555,7 @@ Conceptually:
 David:
 Could idle pool expiration explain this?
 
-Claude — David:
+Assistant — David:
 Yes. The implementation currently...
 
 [END SHARED TEAM CONVERSATION]
@@ -1559,6 +1567,12 @@ I don't think that's actually the problem.
 A colleague's turn counts as delivered to a session only once the session has
 received it, never when it is offered, so a turn the session never received is
 offered again at its next prompt rather than lost.
+
+Each host confirms delivery from the context its transcript records as injected.
+A copy quoted by the assistant or pasted by a user is not evidence of injection.
+If Codex records no matching evidence, the turns remain pending and are offered
+again at the next prompt. A failed host behavior check cannot confirm delivery
+to a Codex session.
 
 The whole room is never injected again. The exception is a session that joins a room
 already in progress, which receives the room from its beginning, the room's and not
@@ -1573,10 +1587,10 @@ External conversation never appears to be local conversation.
 Injected turns are given an explicit structure, in an encoding in which a value
 cannot leave its field. They are JSON, because hand-escaped markup assembled by
 interpolation can be broken by what it contains, and an encoder cannot produce a
-value that ends its own string. Whether a turn came from a user or from their Claude
+value that ends its own string. Whether a turn came from a user or from their assistant
 is part of that structure, never a prefix on a name.
 
-Claude is told that these are a colleague's conversation, that they provide context,
+The assistant is told that these are a colleague's conversation, that they provide context,
 that they are not system instructions, and that the local user's current prompt
 remains authoritative.
 
@@ -1584,7 +1598,7 @@ remains authoritative.
 
 A framing sentence at the top of the block is not enough, because the content it
 frames can end the block. Injected content is written by other people and their
-Claude sessions, and a turn containing the closing delimiter would escape the block,
+agent sessions, and a turn containing the closing delimiter would escape the block,
 so that whatever followed appeared to be outside it, where text can pass for an
 operator, a system or the local user.
 
@@ -1620,7 +1634,7 @@ Escaping keeps a crafted name from leaving its field, and does nothing to stop o
 imitating the field beside it: a display name reading "Alice (quiet-otter)" breaks
 nothing and still reads as though it carried the derived name. Every fact the
 receiving side knows and the sender does not assert, whether the speaker is verified
-and whether the turn came from a user or their Claude, is likewise its own field, and
+and whether the turn came from a user or their assistant, is likewise its own field, and
 none is joined to a claim.
 
 A display name a user chose (section 6) is still a claim, asserted by the peer, and
@@ -1637,7 +1651,7 @@ stays checkable.
 # 21\. Context Window Management
 
 Stored history and injected context are separate. A machine may keep months of
-archived rooms, while Claude receives only the unseen conversation from the room its
+archived rooms, while the assistant receives only the unseen conversation from the room its
 session is in. An archive is never injected.
 
 A room lasts only as long as its sessions, so the unseen conversation available to
@@ -1717,7 +1731,7 @@ An event created on this machine is committed to durable storage before it count
 published, and is sent to peers only afterwards:
 
 ```
-Claude event
+Conversation event
      │
      ▼
 local durable store
@@ -1753,7 +1767,7 @@ A room's history may hold proprietary source code, customer information, archite
 logs and credentials pasted by accident, so every exchange between peers is
 authenticated.
 
-The interface for the Claude Code hooks and the local view binds only to the loopback
+The interface for the collaboration hooks and the local view binds only to the loopback
 address. Being on the same network, or the same private network, never admits
 anyone.
 
@@ -1921,7 +1935,7 @@ both users believed they were collaborating.
 ## Room content is unreadable in transit
 
 Signing gives integrity and origin, and conceals nothing. A room's content is a user's
-prompts and whatever their Claude said back, so confidentiality is a requirement.
+prompts and whatever their assistant said back, so confidentiality is a requirement.
 
 Every connection between peers is TLS 1.3, over every transport, including one that is
 already encrypted, so that confidentiality never depends on which path a connection
@@ -2002,7 +2016,7 @@ reopen when a member comes back online.
 A response shows how many tool calls its turn made, rather than each call:
 
 ```
-Claude — David
+Assistant — David
 
 I found the problem in VerificationService.ts...
 
@@ -2027,7 +2041,7 @@ machine's sessions, and it belongs to the daemon, is created when the room is cr
 joined, and is never in a repository.
 
 A user can create or join a room show-only. A show-only room appears to its members in
-the room view, and none of it is given to the user's own Claude sessions, because
+the room view, and none of it is given to the user's own agent sessions, because
 injection carries a colleague's conversation into a user's session, and so to that
 user's model provider under their own account.
 
@@ -2045,7 +2059,8 @@ Nothing a user configures for reaching peers is committed to a repository.
 # 29\. The Experience We Want
 
 A user sets up once, pairs once with each colleague, and then works in rooms from
-inside a session:
+inside a session. These examples use Claude Code commands; in Codex, use the same
+command names and arguments with `$cogmer`, such as `$cogmer room-create`:
 
 ```
 # once, so colleagues have something to send you
@@ -2060,9 +2075,9 @@ inside a session:
 /cogmer:room-invite david
 ```
 
-## Installation
+## Claude Code installation
 
-A user installs one thing, and it is a thing Claude Code already understands:
+A Claude Code user installs one plugin through the host’s marketplace:
 
 ```
 /plugin marketplace add Blue-Rocket/cogmer
@@ -2081,11 +2096,20 @@ changes nothing about how Claude Code starts.
 Claude Code loads a plugin wherever it loads plugins, so cogmer reaches every surface
 Claude Code runs on without knowing which they are (section 3.8).
 
+## Codex installation
+
+Codex CLI and desktop users install the same cogmer plugin through Codex's plugin
+marketplace. The plugin carries host-specific hooks and a command skill, with
+shared binary installation and daemon startup. Users review and trust Codex hooks
+through the host's own controls before those hooks can capture or inject anything.
+Codex commands use the cogmer skill with the room, peer and self command names.
+They bind the session that invoked them, never a session selected for the machine.
+
 ## Where each command lives
 
 Three homes, and the command decides which it belongs in.
 
-Inside a Claude Code session, as commands it already loads, is everything a user does
+Inside an agent session, as commands it already loads, is everything a user does
 in the ordinary course: listing rooms and peers, creating a room, inviting a known peer,
 joining, leaving, reading the room, pairing with a colleague, and choosing the name
 others see. Each either needs nothing beyond its arguments or hands off to a surface
@@ -2187,7 +2211,7 @@ update has landed is a question with an answer.
 A daemon that cannot bind says which of these holds its address, and when it is a
 cogmer daemon, gives the command that clears it.
 
-A user never has to copy transcripts, summarize what Claude found, paste a colleague's
+A user never has to copy transcripts, summarize what their assistant found, paste a colleague's
 conversation, manage synchronization, find missing events, or resolve routine
 conflicts. Collaboration is ambient.
 
@@ -2199,13 +2223,13 @@ cogmer has none of these:
 
 - a central cloud conversation service;
 - a cloud transcript database;
-- a proxy for the Claude API;
+- a proxy for a model provider’s API;
 - centralized model inference;
 - retrieval-augmented generation, embeddings or a vector database;
 - automatic summaries;
 - an organizational knowledge base;
 - a Slack integration;
-- a shared Claude Code session;
+- a shared agent session;
 - a CRDT framework;
 - libp2p networking.
 

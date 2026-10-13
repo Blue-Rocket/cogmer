@@ -16,7 +16,7 @@ import (
 // lacks, and receives them.
 //
 // Polling is the decided default (D-031). Peer
-// propagation is half a second; arrival into a teammate's Claude waits for their
+// propagation is half a second; arrival into a colleague's session waits for their
 // next prompt, which is minutes during a long turn. Push would improve the fast
 // half of a path whose slow half is the turn. Pull also makes reconnection free —
 // an absent peer recovers by asking, so nobody tracks what it missed.

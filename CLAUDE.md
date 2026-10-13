@@ -1,7 +1,8 @@
 # cogmer
 
-A peer-to-peer daemon that replicates one Claude Code conversation between people
-working separately, each on their own subscription, with no central server.
+A peer-to-peer daemon that replicates a conversation between Claude Code and Codex
+sessions for people working separately, each on their own subscription, with no
+central server.
 
 This file holds how we work, what this project has chosen, what it must not break,
 and how to run it.
@@ -102,7 +103,7 @@ every target cross-compiles with `CGO_ENABLED=0`.
   formed under a Claude Code version this machine has not checked, and
   `COGMER_PREFLIGHT=off` turns that off for CI.
 - **`docs/relied-on-behaviors.md` is generated** by `cogmer behaviors --markdown`.
-  Edit `behaviors.go`, never the document.
+  Edit `behaviors.go` or `codex_probe.go`, never the document.
 
 **This repository has a codegraph index, and reaching for grep instead is the default
 failure.** grep is the reflex for every lookup, and wins by inertia unless the split

@@ -3,7 +3,7 @@
 **Date:** 2026-09-18 · **Status:** active · **Areas:** commands, rooms
 
 **Decision.** A session-scoped command reads its session from `CLAUDE_CODE_SESSION_ID` in
-its own environment, and a slash command passes no session id. Run at a terminal, where
+its own environment, or from `CODEX_THREAD_ID` for Codex, and a command passes no session id. Run at a terminal, where
 the variable is absent, a session-scoped command has no session to act on and refuses,
 and no machine-level setting stands in for it.
 
@@ -13,6 +13,8 @@ and no machine-level setting stands in for it.
   call's environment).
 - A command with no session says so and names the slash command to run inside a session.
   `cmd/cogmer/main.go`, `sessionRoom`.
+
+- Codex exports the thread identifier into a shell tool environment, matching its hook session. B28 (CODEX_THREAD_ID equals the hook session identifier).
 
 **Rejected.**
 - *Passing the session id as an argument.* Binding a room to the session that asked for it

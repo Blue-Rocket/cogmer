@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS rooms (
   state           TEXT NOT NULL,
   issued_sequence INTEGER NOT NULL DEFAULT 0,
   created_at      TEXT NOT NULL,
-  -- Whether this machine gives the room's conversation to its own Claude sessions.
+  -- Whether this machine gives the room's conversation to its own agent sessions.
   -- Chosen when the room is created or joined here and fixed from then on (D-200).
   show_only       INTEGER NOT NULL DEFAULT 0
 );
@@ -113,7 +113,7 @@ type Room struct {
 	State     string `json:"state"`
 	CreatedAt string `json:"createdAt"`
 	// ShowOnly is true when none of the room's conversation is given to this machine's
-	// Claude sessions. It is the choice of the person on this machine, made when the
+	// agent sessions. It is the choice of the person on this machine, made when the
 	// room was created or joined here, and it is named for the unusual case so that a
 	// Room built without it injects, as every room did before the setting existed.
 	ShowOnly bool `json:"showOnly,omitempty"`
@@ -642,9 +642,9 @@ type ShowOnlyFixedError struct {
 
 func (e *ShowOnlyFixedError) Error() string {
 	if e.Room.ShowOnly {
-		return fmt.Sprintf("%s was joined show-only on this machine, and that cannot change. Nothing in it is given to your Claude, and it stays that way for this room.", e.Room.RoomName)
+		return fmt.Sprintf("%s was joined show-only on this machine, and that cannot change. Nothing in it is given to your agent, and it stays that way for this room.", e.Room.RoomName)
 	}
-	return fmt.Sprintf("%s was joined on this machine without --show-only, and that cannot change. Its conversation is given to your Claude, and it stays that way for this room.", e.Room.RoomName)
+	return fmt.Sprintf("%s was joined on this machine without --show-only, and that cannot change. Its conversation is given to your agent, and it stays that way for this room.", e.Room.RoomName)
 }
 
 // CheckShowOnly refuses a request for a setting other than the one a room already
@@ -747,7 +747,7 @@ func (m *Membership) RoomByID(roomID string) (Room, bool) {
 // and publishing without anyone doing anything. Nothing derives a room from a
 // directory (D-015), so nothing else would have caught it either.
 //
-// A session in no room is an ordinary Claude Code session: nothing captured,
+// A session in no room is an ordinary agent session: nothing captured,
 // nothing injected, nothing shared (§12a).
 func (m *Membership) RoomForSession(sessionID string) (Room, bool) {
 	var roomID string

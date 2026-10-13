@@ -8,7 +8,7 @@ import (
 
 func behavior(t *testing.T, id string) Behavior {
 	t.Helper()
-	for _, b := range Behaviors {
+	for _, b := range AllBehaviors() {
 		if b.ID == id {
 			return b
 		}
@@ -123,7 +123,7 @@ func TestMissingHookIsReported(t *testing.T) {
 // into a list of assertions nobody can act on.
 func TestRegistryIsDocumented(t *testing.T) {
 	seen := map[string]bool{}
-	for _, b := range Behaviors {
+	for _, b := range AllBehaviors() {
 		if seen[b.ID] {
 			t.Errorf("duplicate behavior id %s", b.ID)
 		}

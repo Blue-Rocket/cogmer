@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "SessionStart": [{
+      "hooks": [{
+        "type": "command",
+        "command": "bash \"${PLUGIN_ROOT}/hooks-handlers/session-start.sh\"",
+        "timeout": 10,
+        "additionalContextLimit": 0
+      }]
+    }],
+    "UserPromptSubmit": [{
+      "hooks": [{
+        "type": "command",
+        "command": "bash \"${PLUGIN_ROOT}/hooks-handlers/run.sh\" hook codex-prompt",
+        "timeout": 5,
+        "additionalContextLimit": 0
+      }]
+    }],
+    "Stop": [{
+      "hooks": [{
+        "type": "command",
+        "command": "bash \"${PLUGIN_ROOT}/hooks-handlers/run.sh\" hook codex-stop",
+        "timeout": 5
+      }]
+    }]
+  }
+}
