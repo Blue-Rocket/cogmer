@@ -218,24 +218,6 @@ deleted on the strength of a reading from earlier in the session, and being
 untracked there is no copy. `/cogmer:peer-pair` repeated on a completed pairing was
 worked in D-107 and D-108, which may or may not be what it said.
 
-## Compaction
-
-A colleague's turns survive a compaction.
-
-**B19 checks a colleague's turn that was the conversation's subject, never one that was
-incidental.** The probe in `cmd/cogmer/probe.go` injects "The codeword for this check is
-…" and asks for the codeword after compacting. Test B in
-`84a0751:docs/phase0a-findings.md` showed that a turn the conversation never discussed
-survived too, which is the case a real room produces, and only a person re-running it by
-hand checks it again. A `--deep` probe that runs unrelated turns between injecting and
-compacting would check it, at the cost of more turns in a check that takes about 40s.
-
-**Whether automatic compaction can start during a turn is unknown.** Automatic
-compaction never fired in the compaction probe of 2026-09-16, even at 378,916 tokens
-against a 100k threshold, so `84a0751:docs/phase0a-findings.md` shows only that none
-started during that turn. Nobody has checked what turn reassembly does with a compaction
-marker and summary record in the middle of the turn it reassembles.
-
 ## Tidying the commands
 
 The plugin's commands sit in the layout Claude Code prefers, and each has a reason to exist.
