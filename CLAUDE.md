@@ -98,10 +98,17 @@ every target cross-compiles with `CGO_ENABLED=0`.
 - **Test with `go test ./...`.** To drive a real session, run `claude -p …
   --settings <file>` with a throwaway `COGMER_HOME` per run, and `< /dev/null`, or it
   waits on stdin.
-- **`cogmer doctor` checks the behaviors we rely on**, in about 13s and two Claude
-  turns. `--deep` adds a compaction, in about 40s. It runs by itself when a room is
-  formed under a Claude Code version this machine has not checked, and
-  `COGMER_PREFLIGHT=off` turns that off for CI.
+- **Outside a host, the binary is for tests, not for users.** A user runs commands
+  through the plugin, whose entry point declares the host. A test supplies one with
+  `COGMER_HOST=claude` or `COGMER_HOST=codex`, or with only one of
+  `CLAUDE_CODE_SESSION_ID` and `CODEX_THREAD_ID`, since a process holding both with
+  nothing declared is refused. `COGMER_CODEX_BIN` names a Codex executable other than
+  the one on `PATH`.
+- **`cogmer doctor` checks the behaviors we rely on** in each installed host, in
+  about 13s and two Claude turns for Claude Code and one turn for Codex, and
+  `--host` picks one. `--deep` adds a Claude Code compaction, in about 40s. It runs
+  by itself when a room is formed under a Claude Code version this machine has not
+  checked, and `COGMER_PREFLIGHT=off` turns that off for CI.
 - **`docs/relied-on-behaviors.md` is generated** by `cogmer behaviors --markdown`.
   Edit `behaviors.go` or `codex_probe.go`, never the document.
 

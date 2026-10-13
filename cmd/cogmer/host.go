@@ -80,7 +80,7 @@ type AmbiguousHostError struct{ Hosts []string }
 
 func (e *AmbiguousHostError) Error() string {
 	return fmt.Sprintf("cannot tell which host this command was run from: the environment holds the session of %s and nothing says which is meant. "+
-		"Run it through the plugin's command, or set COGMER_HOST to the host's name.", strings.Join(e.Hosts, " and "))
+		"Run it through the plugin's command.", strings.Join(e.Hosts, " and "))
 }
 
 // hostFromEnv decides which host a command is running in. An entry point that cogmer

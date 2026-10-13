@@ -381,3 +381,21 @@ func TestCreateAndJoinRefuseBeforeWritingWhenTheHostCannotBeTold(t *testing.T) {
 		}
 	}
 }
+
+// Outside a host the binary is for tests. A user is told to run the command through the
+// plugin, and is not told how to declare a host by hand.
+func TestTheRefusalOfAnAmbiguousHostDoesNotSendAUserToTheEnvironment(t *testing.T) {
+	_, err := hostFromEnv(env("CLAUDE_CODE_SESSION_ID", "c", "CODEX_THREAD_ID", "x"))
+	if err == nil {
+		t.Fatal("an ambiguous environment was not refused")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "plugin") {
+		t.Errorf("the refusal does not say to use the plugin's command: %q", msg)
+	}
+	for _, leak := range []string{"COGMER_HOST", "environment variable", "emulate"} {
+		if strings.Contains(msg, leak) {
+			t.Errorf("the refusal tells a user about %q: %q", leak, msg)
+		}
+	}
+}

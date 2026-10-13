@@ -8,7 +8,8 @@ hook client puts the host in the payload, and the daemon resolves it against the
 request, so a hook that declares none is Claude Code's. A command with no declaration takes the host whose
 session variable is set, refuses when two are set, and has no host at a terminal. What differs between hosts
 is behind one `Host` value, and the daemon holds none, so one daemon serves the sessions of every host at once.
-`doctor` checks the host it is given, the host in use, or each installed host.
+`doctor` checks the host it is given, the host in use, or each installed host. Running the binary outside a
+host is for tests, so what a user reads does not describe how to declare one.
 
 **Support.**
 - Each host loads only the hook file and the wrapper cogmer wrote for it, so a declaration made there cannot
@@ -34,6 +35,10 @@ is behind one `Host` value, and the daemon holds none, so one daemon serves the 
   told, and a terminal, which has none, goes on as it did. `cmd/cogmer/main.go`,
   `refuseWhenTheHostIsUnclear`, `cmd/cogmer/host_test.go`,
   `TestCreateAndJoinRefuseBeforeWritingWhenTheHostCannotBeTold`.
+- A user runs commands through the plugin, whose entry point declares the host, so the refusal for an
+  ambiguous environment says only to run the command through the plugin, and the way a test supplies a host
+  is written for maintainers. `cmd/cogmer/host.go`, `AmbiguousHostError`, `CLAUDE.md`,
+  `cmd/cogmer/host_test.go`, `TestTheRefusalOfAnAmbiguousHostDoesNotSendAUserToTheEnvironment`.
 - A third host adds an entry to the list of hosts and no option or comparison. `cmd/cogmer/host.go`, `hosts`,
   `doctorTargets`.
 - Breaking the declaration, the refusal of an ambiguous environment, the default host of a hook, the refusal before `create` and `join` write, either host's

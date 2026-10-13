@@ -246,6 +246,17 @@ and would need to follow.
 does the same job, and `verify` has no slash command, so it may be a subcommand
 nobody has a route to.
 
+**Seven messages tell a user to type the binary at a terminal, which is for tests only.**
+`verifyRequest` in `cmd/cogmer/auth.go` ("both of you run `cogmer verify`"), `explainNameTaken` and
+`resolvePeer` in `cmd/cogmer/main.go` (`forget`), `runAllow` ("finish with" `verify`), `runVerify` (its
+usage line), `beginCeremony` (`doctor` says what is wrong) and `reportDaemonBlocked` (`stop`) each print
+the installed binary's path as something to type (read on 2026-10-12). Most have a slash command, which
+is what a user is meant to run: `/cogmer:peer-pair` covers `verify`, `/cogmer:peer-forget` covers `forget`
+and `/cogmer:self-stop` covers `stop`. `doctor` has none. The terminal pairing ceremony is the exception,
+a fallback for a machine that cannot open a browser (`plugin/README.md`). The fix is to name the command
+in each message, to give `doctor` a command or drop the instruction, and to keep the terminal form where
+it is a stated fallback. The item above asks whether `verify` should exist at all, which comes first.
+
 ## Beyond one conversation
 
 What cogmer might do beyond sharing one conversation, once a room works for a pair.

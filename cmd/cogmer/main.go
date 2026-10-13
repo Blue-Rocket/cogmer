@@ -229,7 +229,7 @@ func sessionRoom(m *Membership) Room {
 	sid := sessionID()
 	if sid == "" {
 		log.Fatal("no session, so no room. Run the matching command inside an agent\n" +
-			"session, or set its session environment variable to emulate one." + noSessionNote())
+			"session." + noSessionNote())
 	}
 	r, ok := m.RoomForSession(sid)
 	if !ok {
