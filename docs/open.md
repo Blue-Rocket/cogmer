@@ -262,7 +262,10 @@ wildcard in the server name did not call the host, so the name has to be written
 file. A setup step on the user's machine that writes the Desktop entry and the plugin together,
 and a check on the host that no call from Cowork has arrived lately, would make a changed name
 visible. A `SessionStart` call reached the host in one of seven sessions, and in none of three
-new sessions started with the host program already running, so a bridge cannot depend on it.
+new sessions started with the host program already running. The hooks reference says
+`mcp_tool` hooks on `SessionStart` at launch are skipped because no MCP client exists yet,
+so a bridge cannot depend on one and needs nothing at launch, since the first prompt's
+call has reached the host in every session.
 
 The commands. Each `/cogmer:` command runs a shell command, and in the sandbox there is no
 daemon, so each would need a form that calls the server. A reply with no transcript also

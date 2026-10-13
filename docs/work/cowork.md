@@ -110,7 +110,10 @@ starts with `SessionStart`. Then stop."
 `UserPromptSubmit` and `Stop` calls of sessions `127a86a2` (16:33:44), `907de45c` (16:34:01)
 and `7ed422fc` (16:34:19), and no `SessionStart` call for any of them. Counting the earlier
 sessions, a `SessionStart` call reached the host once in seven sessions that had one configured.
-The cause was not found. The call may run before Cowork attaches the host bridge to the session.
+The hooks reference says why: `SessionStart` at launch, including on resume, fires before the
+session's MCP servers are available to hooks, so Claude Code skips its `mcp_tool` hooks without
+calling the tool, and its `mcp_tool` hooks run when `SessionStart` fires again after `/clear` or a
+compaction. The call at 14:21:02 does not fit that and has no explanation.
 
 Other observations from the Desktop logs on 2026-10-13: Desktop connects a configured server
 for Cowork and Code sessions through what `mcp-server-<name>.log` calls a shared pool, and
@@ -122,7 +125,9 @@ name, so which computer receives a call for a user with two was not tested.
 
 ## Read, not observed
 
-Anthropic's documentation says plugin hooks run in Cowork sessions, that a hook may have the
+Anthropic's documentation says `mcp_tool` hooks on `SessionStart` at launch are skipped because
+no MCP client exists yet, and recommends a command hook for anything needed at launch
+(code.claude.com/docs/en/hooks, read on 2026-10-13). It says plugin hooks run in Cowork sessions, that a hook may have the
 type `mcp_tool` with the fields `server`, `tool` and `input`, and that its text output is read
 as a command hook's stdout is (code.claude.com/docs/en/hooks and
 claude.com/docs/cowork/3p/extensions). The 0.0.4 run shows the plain-text half of that
