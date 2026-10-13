@@ -115,6 +115,21 @@ session's MCP servers are available to hooks, so Claude Code skips its `mcp_tool
 calling the tool, and its `mcp_tool` hooks run when `SessionStart` fires again after `/clear` or a
 compaction. The call at 14:21:02 does not fit that and has no explanation.
 
+**Run:** probe 0.0.9, which at each `Stop` reads the session's transcript in the VM and prints
+the field names of the first record containing each of the host's two replies and of the
+command hook's line. One new session of three prompts.
+
+**Result:** the host's JSON reply is recorded as an attachment of type
+`hook_additional_context` (with `content`, `hookName`, `hookEvent` and `toolUseID`), one for each
+prompt (1, 2 and 3 records at the three stops). The host's plain reply is recorded as an
+attachment of type `hook_success` with `command` set to `remote-devices/cogmer-host-probe__ping`,
+`content`, `stdout`, `stderr` and `durationMs`, and no `hook_additional_context` record. The
+command hook's line is recorded as `hook_success` with `exitCode` and the command's text. The
+JSON reply is the one that reached the model, so the transcript separates context that was added
+from a call that only succeeded. The count of records containing the plain marker rose by 2 for
+each prompt, where one was expected, and that was not explained. The host cannot read the
+transcript, and no field the host receives carries what it holds.
+
 Other observations from the Desktop logs on 2026-10-13: Desktop connects a configured server
 for Cowork and Code sessions through what `mcp-server-<name>.log` calls a shared pool, and
 `main.log` shows a `[remote-tools-device]` component that holds a keep-awake claim on the

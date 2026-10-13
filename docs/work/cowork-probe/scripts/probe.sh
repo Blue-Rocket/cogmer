@@ -41,6 +41,38 @@ tmpmark="/tmp/.cogmer-probe-marker"; [ -f "$tmpmark" ] && tmpold="yes (from $(ca
 {
 echo "=== $now  event=$event  run#$n  boot=$boot"
 echo "hook input: $fields"
+if [ "$event" = "Stop" ] && [ -n "$tpath" ] && [ -f "$tpath" ] && command -v python3 >/dev/null 2>&1; then
+  # Does the transcript record what the host program returned, in each shape? Structure
+  # only: the field names of each record, and the values of a few metadata fields.
+  echo "transcript records for the host replies:"
+  python3 - "$tpath" <<'PY' 2>&1 | cut -c1-300
+import json, sys
+KEEP = {"type", "hookName", "hookEvent", "hook_event", "toolName", "command", "name", "subtype", "level"}
+def shape(o, depth=0):
+    if isinstance(o, dict):
+        out = []
+        for k, v in o.items():
+            if isinstance(v, (dict, list)) and depth < 3:
+                out.append("%s{%s}" % (k, shape(v, depth + 1)))
+            elif k in KEEP:
+                out.append("%s=%s" % (k, str(v)[:40]))
+            else:
+                out.append(k)
+        return ",".join(out)
+    if isinstance(o, list):
+        return "[%d]" % len(o) + (shape(o[0], depth + 1) if o and isinstance(o[0], (dict, list)) else "")
+    return ""
+for marker in ("cogmer-host-probe json", "cogmer-host-probe plain", "[cogmer-probe] UserPromptSubmit"):
+    n, first = 0, None
+    for line in open(sys.argv[1], errors="replace"):
+        if marker in line:
+            n += 1
+            if first is None:
+                try: first = shape(json.loads(line))
+                except Exception as e: first = "unparsable: " + type(e).__name__
+    print("  %-34s lines=%d  first: %s" % (marker, n, first))
+PY
+fi
 if [ "$event" != "SessionStart" ] && [ -n "$tpath" ] && [ -f "$tpath" ]; then
   echo "transcript now $(wc -c < "$tpath") bytes; hook_success lines: $(grep -c hook_success "$tpath" 2>/dev/null); our UserPromptSubmit text recorded: $(grep -c 'cogmer-probe. UserPromptSubmit fired' "$tpath" 2>/dev/null)"
 fi

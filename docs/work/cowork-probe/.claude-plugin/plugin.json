@@ -1,6 +1,6 @@
 {
   "name": "cogmer-probe",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "A throwaway probe: records what a Cowork session's hooks can see. Touches no cogmer room and sends nothing anywhere but a few reachability checks.",
   "author": { "name": "David Foote" }
 }

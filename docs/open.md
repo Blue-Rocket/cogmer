@@ -236,7 +236,12 @@ in a probe, `docs/work/cowork.md` has each run, and the probe's source is
 How a turn is known to have been delivered. The daemon reads the session's transcript for
 that, and the transcript is in the sandbox, so with no evidence a turn would stay pending
 under D-202 (host-specific hooks use the shared peer protocol) and be offered at every prompt.
-A rule built on the hook call itself as evidence is weaker, and needs a decision.
+The transcript records context that reached the model as an attachment of type
+`hook_additional_context` and a call that only succeeded as `hook_success`, so evidence exists in
+the sandbox and no field the host receives carries it. A rule that counts a turn delivered when the
+call returned the JSON form is weaker, needs a decision, and would be guarded by a check that the
+harness still adds the JSON form to the model's context, which the same harness could be asked to
+show on the user's machine without Cowork.
 
 Whether the hook fails open. With the server absent or crashing, the hook returned nothing
 and no error or delay was seen, and a recovered server worked in the same session. With the
