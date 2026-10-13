@@ -328,3 +328,56 @@ func TestCliDeclaresTheHostUnlessAWrapperAlreadyDid(t *testing.T) {
 		t.Errorf("a wrapper's declaration was overwritten: %q", got)
 	}
 }
+
+// A command that is about to write binds the session that ran it, and with no way to
+// name that session it would leave a room with nobody in it. So when the host cannot
+// be told it refuses before it writes anything, and says so.
+func TestCreateAndJoinRefuseBeforeWritingWhenTheHostCannotBeTold(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds the binary")
+	}
+	dir := t.TempDir()
+	bin := buildVersion(t, dir, "host-unclear-test")
+	home := filepath.Join(dir, "home")
+	run := func(extra []string, args ...string) (string, int) {
+		cmd := exec.Command(bin, args...)
+		cmd.Env = append([]string{"PATH=/usr/bin:/bin", "HOME=" + dir, "COGMER_HOME=" + home,
+			"COGMER_TAILCAT=off", "COGMER_PREFLIGHT=off", "COGMER_ADDR=127.0.0.1:1"}, extra...)
+		out, err := cmd.CombinedOutput()
+		code := 0
+		if ee, ok := err.(*exec.ExitError); ok {
+			code = ee.ExitCode()
+		}
+		return string(out), code
+	}
+	both := []string{"CLAUDE_CODE_SESSION_ID=a", "CODEX_THREAD_ID=b"}
+	unknown := []string{"COGMER_HOST=emacs"}
+	invitation := "misty-canyon/00000000-0000-4000-8000-000000000000@127.0.0.1:9#" + testIdentity(t).PeerID
+
+	for name, extra := range map[string][]string{"both hosts' variables": both, "a host nobody supports": unknown} {
+		for _, args := range [][]string{{"create"}, {"create", "--show-only"}, {"join", invitation}} {
+			out, code := run(extra, args...)
+			if code == 0 || !strings.Contains(out, "Nothing was created or recorded") {
+				t.Errorf("%s: %v was not refused: exit %d\n%s", name, args, code, out)
+			}
+		}
+		if out, _ := run(nil, "rooms"); !strings.Contains(out, "no rooms") {
+			t.Errorf("%s: a refused command left a room behind:\n%s", name, out)
+		}
+		if out, _ := run(nil, "peers"); !strings.Contains(out, "No peers yet") {
+			t.Errorf("%s: a refused join recorded a peer:\n%s", name, out)
+		}
+	}
+
+	// The same commands go through when the host is clear: declared, one variable, or a
+	// terminal with neither.
+	for name, extra := range map[string][]string{
+		"declared":      {"COGMER_HOST=claude", "CLAUDE_CODE_SESSION_ID=a", "CODEX_THREAD_ID=b"},
+		"one variable":  {"CLAUDE_CODE_SESSION_ID=a2"},
+		"at a terminal": nil,
+	} {
+		if out, code := run(extra, "create"); code != 0 || !strings.Contains(out, "created") {
+			t.Errorf("%s: create was refused: exit %d\n%s", name, code, out)
+		}
+	}
+}

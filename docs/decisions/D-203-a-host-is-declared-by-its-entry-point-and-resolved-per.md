@@ -29,9 +29,14 @@ is behind one `Host` value, and the daemon holds none, so one daemon serves the 
 - A turn with no transcript evidence is counted as delivered only for Claude Code on a version where B20 is
   recorded as failing, and never for Codex. D-202 (host-specific hooks use the shared peer protocol),
   `cmd/cogmer/host_test.go`, `TestDeliveryWithoutEvidenceIsTrustedOnlyWhereThatHostsCheckFailed`.
+- `create` and `join` write a room and bind the session that ran them, and with no way to name that session
+  they would leave a room with nobody in it, so they refuse before writing anything when the host cannot be
+  told, and a terminal, which has none, goes on as it did. `cmd/cogmer/main.go`,
+  `refuseWhenTheHostIsUnclear`, `cmd/cogmer/host_test.go`,
+  `TestCreateAndJoinRefuseBeforeWritingWhenTheHostCannotBeTold`.
 - A third host adds an entry to the list of hosts and no option or comparison. `cmd/cogmer/host.go`, `hosts`,
   `doctorTargets`.
-- Breaking the declaration, the refusal of an ambiguous environment, the default host of a hook, either host's
+- Breaking the declaration, the refusal of an ambiguous environment, the default host of a hook, the refusal before `create` and `join` write, either host's
   delivery rule, the refresh of a version, the choice of hosts for `doctor`, the form of Codex's hook output and
   the default in `cli.sh` each failed a test. `cmd/cogmer/host_test.go`.
 

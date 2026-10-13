@@ -951,6 +951,7 @@ func runCreateRoom(args []string) {
 	if len(rest) > 0 {
 		log.Fatalf("create takes no argument but --show-only, and was given %q", strings.Join(rest, " "))
 	}
+	refuseWhenTheHostIsUnclear()
 	withMembership(func(m *Membership, id *Identity) {
 		r, err := m.CreateRoom(id.PeerID, showOnly)
 		if err != nil {
@@ -965,6 +966,18 @@ func runCreateRoom(args []string) {
 		fmt.Println("\ninvite someone you have paired with:")
 		fmt.Println("  cogmer invite <name>")
 	})
+}
+
+// refuseWhenTheHostIsUnclear stops a command that is about to write a room, a peer
+// or an admission when the host it runs in cannot be told. Such a command binds the
+// session that ran it, and with no way to name that session the room would be left
+// with nobody in it. A terminal has no host and no error, and goes on as it always
+// has (D-203).
+func refuseWhenTheHostIsUnclear() {
+	if _, err := currentHost(); err != nil {
+		fmt.Printf("%v\nNothing was created or recorded.\n", err)
+		os.Exit(1)
+	}
 }
 
 // showOnlyNote says what a show-only room means on this machine, and what it does
@@ -1002,6 +1015,7 @@ func runJoin(args []string) {
 	if len(args) == 0 {
 		log.Fatal("usage: cogmer join <invitation> [--show-only]   (or a room you already know)")
 	}
+	refuseWhenTheHostIsUnclear()
 	withMembership(func(m *Membership, id *Identity) {
 		name, roomID, endpoint, host, full := parseInvitation(args[0])
 		// A name on its own may be an offer already delivered over the channel
