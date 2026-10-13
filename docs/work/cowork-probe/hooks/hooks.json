@@ -1,0 +1,86 @@
+{
+  "description": "Records which hook events fire and what the sandbox can see.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/probe.sh\" SessionStart",
+            "timeout": 45
+          },
+          {
+            "type": "mcp_tool",
+            "server": "remote-devices",
+            "tool": "cogmer-host-probe__ping",
+            "input": {
+              "event": "SessionStart",
+              "session": "${session_id}",
+              "transcript": "${transcript_path}"
+            },
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/probe.sh\" UserPromptSubmit",
+            "timeout": 15
+          },
+          {
+            "type": "mcp_tool",
+            "server": "remote-devices",
+            "tool": "cogmer-host-probe__ping",
+            "input": {
+              "event": "UserPromptSubmit",
+              "session": "${session_id}",
+              "prompt": "${prompt}",
+              "prompt_id": "${prompt_id}",
+              "transcript": "${transcript_path}",
+              "format": "plain"
+            },
+            "timeout": 15
+          },
+          {
+            "type": "mcp_tool",
+            "server": "remote-devices",
+            "tool": "cogmer-host-probe__ping",
+            "input": {
+              "event": "UserPromptSubmit",
+              "format": "json"
+            },
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/probe.sh\" Stop",
+            "timeout": 15
+          },
+          {
+            "type": "mcp_tool",
+            "server": "remote-devices",
+            "tool": "cogmer-host-probe__ping",
+            "input": {
+              "event": "Stop",
+              "session": "${session_id}",
+              "last_assistant_message": "${last_assistant_message}",
+              "transcript": "${transcript_path}",
+              "stop_hook_active": "${stop_hook_active}"
+            },
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

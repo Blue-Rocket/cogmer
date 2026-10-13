@@ -218,6 +218,43 @@ deleted on the strength of a reading from earlier in the session, and being
 untracked there is no copy. `/cogmer:peer-pair` repeated on a completed pairing was
 worked in D-107 and D-108, which may or may not be what it said.
 
+## Claude Cowork as a host
+
+A user in Claude Cowork shares a conversation with a colleague as users of Claude Code and
+Codex do.
+
+**Whether Claude Cowork becomes a supported host.** A Cowork session runs in a sandbox whose
+network reaches no relay, so the daemon has to stay on the user's machine, and a Cowork
+session can reach it. On 2026-10-13 a plugin hook of type `mcp_tool` called a program on the
+user's machine through the tool `cogmer-host-probe__ping` on a server named `remote-devices`,
+passed it the session identifier, the prompt and the last assistant message, and the program's
+reply reached the model as context when the reply was the JSON form with `additionalContext`
+and not when it was a plain line. That is the capture and the injection a host needs. Observed
+in a probe, `docs/work/cowork.md` has each run, and the probe's source is
+`docs/work/cowork-probe/`. What stands between that and a host:
+
+How a turn is known to have been delivered. The daemon reads the session's transcript for
+that, and the transcript is in the sandbox, so with no evidence a turn would stay pending
+under D-202 (host-specific hooks use the shared peer protocol) and be offered at every prompt.
+A rule built on the hook call itself as evidence is weaker, and needs a decision.
+
+Whether the hook fails open. A run with the server stopped was set up and has not been
+observed. If a session is delayed or shows an error with no server, Cowork cannot be supported
+whatever else works, since a session must never be worse for having cogmer installed.
+
+How a user installs it. The server runs on the user's machine and so cannot ship inside the
+plugin, which loads in the sandbox. A user adds an entry to `claude_desktop_config.json` by
+hand. Whether a Desktop extension would be passed into a session is untested, and issue 26259
+reports that it may not be.
+
+Whether the tool name is stable. It was the same across one restart of Claude Desktop, and
+nothing found documents it. Hook files name the target, so a name that changes breaks capture
+and injection with no sign.
+
+The commands. Each `/cogmer:` command runs a shell command, and in the sandbox there is no
+daemon, so each would need a form that calls the server. A reply with no transcript also
+carries no count of tool operations, which the view shows.
+
 ## Tidying the commands
 
 The plugin's commands sit in the layout Claude Code prefers, and each has a reason to exist.
