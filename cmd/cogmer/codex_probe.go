@@ -198,12 +198,13 @@ func recordCodexVerification(results []Result) verification {
 	return v
 }
 
-func runCodexDoctor() {
+// runCodexDoctor checks Codex and says whether every check passed.
+func runCodexDoctor() bool {
 	fmt.Printf("cogmer doctor: %s\nDriving one isolated Codex turn.\n", CodexVersion())
 	results, err := RunCodexChecks()
 	if err != nil {
 		logCodexProbeFailure(err)
-		os.Exit(1)
+		return false
 	}
 	v := recordCodexVerification(results)
 	for _, r := range results {
@@ -213,9 +214,7 @@ func runCodexDoctor() {
 			fmt.Printf("  FAIL  %s  %v\n        %s\n", r.B.ID, r.Err, r.B.Reliance)
 		}
 	}
-	if len(v.Failures) > 0 {
-		os.Exit(1)
-	}
+	return len(v.Failures) == 0
 }
 
 func logCodexProbeFailure(err error) {
@@ -251,9 +250,9 @@ func EnsureCodexVerified() {
 	key := "codex:" + CodexVersion()
 	if v, ok := loadVerifications()[key]; ok && !codexProbeDue(v, time.Now()) {
 		if why, couldNotRun := v.Failures[codexProbeCouldNotRun]; couldNotRun && len(v.Failures) == 1 {
-			fmt.Fprintf(os.Stderr, "cogmer: the Codex behavior check could not run (%s); it is tried again after an hour, or run cogmer doctor --codex\n", why)
+			fmt.Fprintf(os.Stderr, "cogmer: the Codex behavior check could not run (%s); it is tried again after an hour, or run cogmer doctor --host codex\n", why)
 		} else if len(v.Failures) > 0 {
-			fmt.Fprintln(os.Stderr, "cogmer: Codex behavior checks failed; run cogmer doctor --codex for detail")
+			fmt.Fprintln(os.Stderr, "cogmer: Codex behavior checks failed; run cogmer doctor --host codex for detail")
 		}
 		return
 	}

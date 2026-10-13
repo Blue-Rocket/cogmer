@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-12 · **Status:** active · **Areas:** hosts, capture, sync
 
-**Decision.** Host-specific hook configuration selects capture and delivery evidence on the loopback API. Replicated events carry an opaque origin session and no host discriminator. Codex session identifiers have a namespace that distinguishes them from Claude Code sessions on the same machine.
+**Decision.** Host-specific hook configuration declares the host, and the daemon resolves it for each request to select capture and delivery evidence on the loopback API (D-203). Replicated events carry an opaque origin session and no host field. A Codex session's identifier begins with `codex:`, which distinguishes it from a Claude Code session on the same machine, and which a peer can read and no peer relies on.
 
 **Support.**
 - Capture and delivery depend on different transcript records for each host. `cmd/cogmer/transcript.go`, `cmd/cogmer/codex.go`.

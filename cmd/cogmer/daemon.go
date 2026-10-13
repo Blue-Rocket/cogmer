@@ -61,9 +61,11 @@ func envInt(name string, def int) int {
 }
 
 type Daemon struct {
-	id            *Identity
-	members       *Membership
-	claudeVersion string
+	id      *Identity
+	members *Membership
+	// The version each host reports, remembered for a few minutes. The daemon serves
+	// the sessions of every host at once and holds no host of its own (D-203).
+	versions hostVersions
 
 	// One store per room, opened on first use. The daemon is the machine's local
 	// service, not a room: §5 has it serving several concurrently, and a session
@@ -246,7 +248,12 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err := normalizeHookSession(req.Host, &req.SessionID, &req.PromptID, req.TurnID); err != nil {
+	host, ok := hostByName(req.Host)
+	if !ok {
+		http.Error(w, fmt.Sprintf("unsupported hook host %q", req.Host), http.StatusBadRequest)
+		return
+	}
+	if err := host.NormalizeHook(&req.SessionID, &req.PromptID, req.TurnID); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -323,7 +330,12 @@ func (d *Daemon) handleStop(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err := normalizeHookSession(req.Host, &req.SessionID, &req.PromptID, req.TurnID); err != nil {
+	host, ok := hostByName(req.Host)
+	if !ok {
+		http.Error(w, fmt.Sprintf("unsupported hook host %q", req.Host), http.StatusBadRequest)
+		return
+	}
+	if err := host.NormalizeHook(&req.SessionID, &req.PromptID, req.TurnID); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -332,13 +344,7 @@ func (d *Daemon) handleStop(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]any{"stored": false})
 		return
 	}
-	var turn *AssistantTurn
-	var err error
-	if req.Host == "codex" {
-		turn, err = ReassembleCodexTurn(req.TranscriptPath, req.LastAssistantMessage, req.TurnID)
-	} else {
-		turn, err = ReassembleLastTurn(req.TranscriptPath, req.LastAssistantMessage)
-	}
+	turn, err := host.ReassembleTurn(req.TranscriptPath, req.LastAssistantMessage, req.TurnID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -348,7 +354,7 @@ func (d *Daemon) handleStop(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, serr.Error(), http.StatusInternalServerError)
 		return
 	}
-	d.confirmDelivery(store, req)
+	d.confirmDelivery(store, req, host)
 	if strings.TrimSpace(turn.Text) == "" {
 		writeJSON(w, map[string]any{"stored": false})
 		return
@@ -368,14 +374,8 @@ func (d *Daemon) handleStop(w http.ResponseWriter, r *http.Request) {
 
 // confirmDelivery derives §19 delivery state from what the transcript shows
 // the model actually received, rather than from the fact that a hook was called.
-func (d *Daemon) confirmDelivery(store *Store, req stopReq) {
-	var blocks []string
-	var err error
-	if req.Host == "codex" {
-		blocks, err = CodexInjectedBlocks(req.TranscriptPath)
-	} else {
-		blocks, err = InjectedBlocks(req.TranscriptPath)
-	}
+func (d *Daemon) confirmDelivery(store *Store, req stopReq, host Host) {
+	blocks, err := host.InjectedBlocks(req.TranscriptPath)
 	if err != nil {
 		log.Printf("delivery: transcript unreadable (%v); nothing confirmed", err)
 		return
@@ -392,7 +392,8 @@ func (d *Daemon) confirmDelivery(store *Store, req stopReq) {
 		// So only trust the turn when a check has actually FAILED. Otherwise
 		// leave the events pending: they will be re-offered next prompt, which
 		// is noisy and self-announcing rather than silent and lossy.
-		if req.Host == "codex" || !BehaviorKnownBroken(d.claudeVersion, "B20") {
+		version := d.hostVersion(host)
+		if !host.MayTrustWithoutEvidence(version) {
 			if n, _ := store.PendingCount(req.SessionID); n > 0 {
 				log.Printf("delivery: no injection evidence in session %.8s (%d pending); re-offering. If this repeats, run `cogmer doctor` (B20)",
 					req.SessionID, n)
@@ -405,7 +406,7 @@ func (d *Daemon) confirmDelivery(store *Store, req stopReq) {
 			return
 		}
 		if n > 0 {
-			log.Printf("delivery: B20 is known broken on %s; committed %d event(s) on trust", d.claudeVersion, n)
+			log.Printf("delivery: B20 is known broken on %s %s; committed %d event(s) on trust", host.Name(), version, n)
 		}
 		return
 	}

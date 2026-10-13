@@ -27,7 +27,7 @@ on your behalf. Review the hooks when Codex says they need trust; until trusted,
 no prompts or responses are captured and no colleague's turns reach the model.
 
 The first room command on a Codex version runs one isolated behavior-check turn.
-Run `cogmer doctor --codex` to repeat it. This checks the local Codex runtime, not
+Run `cogmer doctor --host codex` to repeat it. This checks the local Codex runtime, not
 another machine's installation. Set `COGMER_CODEX_BIN` to an absolute executable
 path to check a different runtime, such as the desktop app's bundled Codex binary.
 Codex compaction checks are not available.

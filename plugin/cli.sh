@@ -25,6 +25,12 @@ set -u
 # the binary and the running daemon agree.
 export CLAUDE_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")" && pwd)}"
 
+# Which host this command was run from. Claude Code's commands call this script
+# directly, and Codex's go through codex-cli.sh, which sets it first, so the host is
+# declared by the entry point and not guessed from whatever the environment holds
+# (D-203).
+export COGMER_HOST="${COGMER_HOST:-claude}"
+
 # restart_daemon stops whichever cogmer daemon holds this installation's addresses
 # and starts one with the function the session-start hook uses, so the start is
 # detached and logged the same way on every platform (D-195). It waits a few

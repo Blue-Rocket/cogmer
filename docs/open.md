@@ -28,6 +28,20 @@ downloaded. Shipping binaries inside the plugin removes the download entirely bu
 commits about 150MB per release into the history everybody clones, and is ruled
 out.
 
+## Checks and comments that say what is true
+
+A decision, a comment or a test says what the code does, and a change that breaks it is caught.
+
+**The Claude Code preflight that README.md and CLAUDE.md describe does not run.** `EnsureVerified` in
+`cmd/cogmer/doctor.go` runs two Claude turns the first time a room is formed under a Claude Code version
+this machine has not checked, and README.md says that happens by itself. Nothing calls it: its last caller
+was in `cmd/claude-team/main.go`, and `2fa6984` (the multi-room refactor) removed it (read with `git log -S`
+on 2026-10-12). `claudeHost.Preflight` in `cmd/cogmer/host.go` is empty for that reason, and Codex's
+preflight is called when a room is formed. Either call it when a room is formed, which adds about thirteen
+seconds and two Claude turns, or change README.md and CLAUDE.md to say that the checks run only when
+somebody runs `cogmer doctor`. Calling it needs the retry window Codex has, since it returns without
+recording when its probe cannot run.
+
 ## Somebody else uses it
 
 A colleague who did not write cogmer installs it, pairs, joins a room and works in it.

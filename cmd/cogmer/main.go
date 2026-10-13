@@ -47,7 +47,7 @@ func main() {
 			usage()
 			os.Exit(2)
 		}
-		runHook(os.Args[2])
+		runHookCommand(os.Args[2:])
 	case "seed":
 		runSeed()
 	case "log":
@@ -89,25 +89,7 @@ func main() {
 	case "revoke":
 		runRevoke(os.Args[2:])
 	case "doctor":
-		deep, codex := false, false
-		for _, arg := range os.Args[2:] {
-			switch arg {
-			case "--deep":
-				deep = true
-			case "--codex":
-				codex = true
-			default:
-				log.Fatalf("unknown doctor option %q", arg)
-			}
-		}
-		if codex {
-			if deep {
-				log.Fatal("Codex compaction checks are not available; run doctor --codex for session checks")
-			}
-			runCodexDoctor()
-		} else {
-			runDoctor(deep)
-		}
+		runDoctorCommand(os.Args[2:])
 	case "codex-probe-hook":
 		if len(os.Args) == 4 {
 			runCodexProbeHook(os.Args[2], os.Args[3])
@@ -162,8 +144,10 @@ Rooms — per room, repeated as often as you like:
   cogmer guests          List who may enter this session's room
   cogmer invite <peer>   Admit a known peer   (inside the room's session)
   cogmer revoke <peer>   Withdraw admission   (inside the room's session)
-  cogmer doctor [--deep] Verify relied-on Claude Code behaviors
-  cogmer doctor --codex  Verify Codex capture, injection and session identity
+  cogmer doctor [--deep] [--host NAME]
+                         Verify the behaviors relied on in the host this session runs in,
+                         or in each installed host (claude, codex); --deep adds a compaction
+                         for Claude Code
   cogmer behaviors       List those behaviors (--markdown to render docs)
 
 Environment:
@@ -230,7 +214,7 @@ func roomToChange(m *Membership) Room {
 	sid := sessionID()
 	if sid == "" {
 		log.Fatal("this changes who can read a room, and only a session that is in one can do it.\n" +
-			"Run the matching slash command inside the agent session that is in the room.")
+			"Run the matching slash command inside the agent session that is in the room." + noSessionNote())
 	}
 	r, ok := m.RoomForSession(sid)
 	if !ok {
@@ -245,7 +229,7 @@ func sessionRoom(m *Membership) Room {
 	sid := sessionID()
 	if sid == "" {
 		log.Fatal("no session, so no room. Run the matching command inside an agent\n" +
-			"session, or set its session environment variable to emulate one.")
+			"session, or set its session environment variable to emulate one." + noSessionNote())
 	}
 	r, ok := m.RoomForSession(sid)
 	if !ok {
@@ -259,21 +243,6 @@ func sessionRoom(m *Membership) Room {
 // the same id the hooks report (B21), so a slash command that shells out needs to
 // pass nothing -- which is what lets `create` and `join` put THIS session in a room
 // rather than leaving a machine-level setting for some later session to adopt.
-func sessionID() string {
-	if os.Getenv("COGMER_HOST") == "codex" {
-		if sid := os.Getenv("CODEX_THREAD_ID"); sid != "" {
-			return codexSessionID(sid)
-		}
-		return ""
-	}
-	if sid := os.Getenv("CLAUDE_CODE_SESSION_ID"); sid != "" {
-		return sid
-	}
-	if sid := os.Getenv("CODEX_THREAD_ID"); sid != "" {
-		return codexSessionID(sid)
-	}
-	return ""
-}
 
 // bindInvokingSession puts the calling session in a room, and says what happened.
 // Run at a terminal there is no session to bind, which is not a failure: the room
@@ -333,6 +302,9 @@ func bindInvokingSession(m *Membership, r Room) {
 		fmt.Printf(commandText("no agent session to put in %s — run /cogmer:room-create or /cogmer:room-join\n"), r.RoomName)
 		fmt.Println("inside a session to put that session in a room. `cogmer` commands")
 		fmt.Printf("typed here will act on %s.\n", r.RoomName)
+		if note := noSessionNote(); note != "" {
+			fmt.Println(strings.TrimPrefix(note, "\n"))
+		}
 		return
 	}
 	if err := m.BindSession(sid, r.RoomID); err != nil {
@@ -355,8 +327,8 @@ func bindInvokingSession(m *Membership, r Room) {
 		log.Fatalf("%v", err)
 	}
 	fmt.Printf("this session is now in %s.\n", r.RoomName)
-	if strings.HasPrefix(sid, "codex:") {
-		EnsureCodexVerified()
+	if h, err := currentHost(); err == nil && h != nil {
+		h.Preflight(r.RoomName)
 	}
 }
 
@@ -457,7 +429,7 @@ func runDaemon() {
 		log.Fatalf("membership: %v", err)
 	}
 
-	d := &Daemon{id: id, members: members, claudeVersion: ClaudeVersion()}
+	d := &Daemon{id: id, members: members}
 	defer d.closeStores()
 
 	if !isLoopback(addr()) {
@@ -597,12 +569,42 @@ func runDaemon() {
 	}
 }
 
-// runHook implements both hook entry points.
+// runHookCommand reads `hook [--host NAME] prompt|stop`. A hook line written for a
+// host says which host it is for, and one that does not is Claude Code's.
+func runHookCommand(args []string) {
+	args, hostName := takeValue(args, "--host")
+	if len(args) != 1 {
+		os.Exit(0) // a hook never disturbs the host, whatever it is given
+	}
+	host, ok := hostByName(hostName)
+	if !ok {
+		fmt.Fprintf(os.Stderr, "cogmer: a hook was declared for host %q, which cogmer does not support; continuing without collaboration\n", hostName)
+		os.Exit(0)
+	}
+	runHook(args[0], host)
+}
+
+// takeValue removes `flag value` from args and returns the value.
+func takeValue(args []string, flag string) ([]string, string) {
+	out := args[:0:0]
+	value := ""
+	for i := 0; i < len(args); i++ {
+		if args[i] == flag && i+1 < len(args) {
+			value = args[i+1]
+			i++
+			continue
+		}
+		out = append(out, args[i])
+	}
+	return out, value
+}
+
+// runHook implements both hook entry points for one host.
 //
 // Invariant from §3.1: the host must keep working when the daemon is down.
 // Every failure path here exits 0 with empty stdout, so a dead daemon degrades
 // to "no collaboration" rather than a broken session.
-func runHook(kind string) {
+func runHook(kind string, host Host) {
 	raw, err := io.ReadAll(os.Stdin)
 	if err != nil || len(bytes.TrimSpace(raw)) == 0 {
 		os.Exit(0)
@@ -614,16 +616,14 @@ func runHook(kind string) {
 
 	var endpoint string
 	switch kind {
-	case "prompt", "codex-prompt":
+	case "prompt":
 		endpoint = "/hook/prompt"
-	case "stop", "codex-stop":
+	case "stop":
 		endpoint = "/hook/stop"
 	default:
 		os.Exit(0)
 	}
-	if strings.HasPrefix(kind, "codex-") {
-		payload["host"] = "codex"
-	}
+	payload["host"] = host.Name()
 
 	body, _ := json.Marshal(payload)
 	client := &http.Client{Timeout: 3 * time.Second}
@@ -640,18 +640,62 @@ func runHook(kind string) {
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		os.Exit(0)
 	}
-	// stdout of a UserPromptSubmit hook is appended to the pending turn's
-	// context -- verified against Claude Code 2.1.273.
+	// What a prompt hook writes to stdout is appended to the pending turn's
+	// context, in the form the host reads (verified against Claude Code 2.1.273 and
+	// Codex 0.159.3).
 	if out.Context != "" {
-		if kind == "codex-prompt" {
-			_ = json.NewEncoder(os.Stdout).Encode(map[string]any{"hookSpecificOutput": map[string]string{
-				"hookEventName": "UserPromptSubmit", "additionalContext": out.Context,
-			}})
-		} else {
-			fmt.Println(out.Context)
-		}
+		_, _ = os.Stdout.Write(host.PromptHookOutput(out.Context))
 	}
 	os.Exit(0)
+}
+
+// runDoctorCommand reads `doctor [--deep] [--host NAME]` and checks each host it
+// names, or the host this session runs in, or at a terminal every host installed.
+func runDoctorCommand(args []string) {
+	deep, explicit := false, ""
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--deep":
+			deep = true
+		case "--host":
+			if i+1 >= len(args) {
+				log.Fatal("--host needs the name of a host")
+			}
+			i++
+			explicit = args[i]
+		default:
+			log.Fatalf("unknown doctor option %q", args[i])
+		}
+	}
+	current, err := currentHost()
+	if err != nil {
+		log.Fatalf("doctor: %v", err)
+	}
+	targets, err := doctorTargets(explicit, current, func(h Host) bool { return h.Installed() })
+	if err != nil {
+		log.Fatalf("doctor: %v", err)
+	}
+	allPassed := true
+	for i, h := range targets {
+		if i > 0 {
+			fmt.Println()
+		}
+		ok, err := h.Doctor(deep)
+		if errors.Is(err, errDeepUnsupported) {
+			if len(targets) == 1 {
+				log.Fatalf("doctor: %v; run it without --deep", err)
+			}
+			fmt.Printf("%s: %v, so its session checks run without --deep.\n\n", h.Name(), err)
+			ok, err = h.Doctor(false)
+		}
+		if err != nil {
+			log.Fatalf("doctor: %v", err)
+		}
+		allPassed = allPassed && ok
+	}
+	if !allPassed {
+		os.Exit(1)
+	}
 }
 
 // runSeed inserts a simulated teammate exchange so cross-session

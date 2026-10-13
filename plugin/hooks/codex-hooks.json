@@ -11,7 +11,7 @@
     "UserPromptSubmit": [{
       "hooks": [{
         "type": "command",
-        "command": "bash \"${PLUGIN_ROOT}/hooks-handlers/run.sh\" hook codex-prompt",
+        "command": "bash \"${PLUGIN_ROOT}/hooks-handlers/run.sh\" hook --host codex prompt",
         "timeout": 5,
         "additionalContextLimit": 0
       }]
@@ -19,7 +19,7 @@
     "Stop": [{
       "hooks": [{
         "type": "command",
-        "command": "bash \"${PLUGIN_ROOT}/hooks-handlers/run.sh\" hook codex-stop",
+        "command": "bash \"${PLUGIN_ROOT}/hooks-handlers/run.sh\" hook --host codex stop",
         "timeout": 5
       }]
     }]

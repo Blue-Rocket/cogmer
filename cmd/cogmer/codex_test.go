@@ -96,7 +96,8 @@ func TestCodexDeliveryRequiresHookMetadataAndTheCompleteBlock(t *testing.T) {
 func TestCodexSessionIdentityDoesNotCollideWithClaude(t *testing.T) {
 	t.Setenv("CLAUDE_CODE_SESSION_ID", "same")
 	t.Setenv("CODEX_THREAD_ID", "same")
-	t.Setenv("COGMER_HOST", "")
+
+	t.Setenv("COGMER_HOST", "claude")
 	if sessionID() != "same" {
 		t.Fatal("Claude session changed identity")
 	}
@@ -104,6 +105,13 @@ func TestCodexSessionIdentityDoesNotCollideWithClaude(t *testing.T) {
 	if sessionID() != "codex:same" {
 		t.Fatal("Codex session has no host namespace")
 	}
+	// Both hosts' variables and nothing that declares the host: not guessed at.
+	t.Setenv("COGMER_HOST", "")
+	if got := sessionID(); got != "" {
+		t.Fatalf("an environment holding two hosts' sessions was resolved to %q", got)
+	}
+
+	t.Setenv("COGMER_HOST", "codex")
 	t.Setenv("CODEX_THREAD_ID", "")
 	if sessionID() != "" {
 		t.Fatal("Codex command borrowed the ambient Claude session")
@@ -164,11 +172,12 @@ func TestMixedHostRoomCapturesAndDeliversBothDirections(t *testing.T) {
 }
 
 func TestCodexHookRejectsMissingTurnIdentity(t *testing.T) {
-	for _, host := range []string{"codex", "unsupported"} {
-		sid, pid := "session", ""
-		if normalizeHookSession(host, &sid, &pid, "") == nil {
-			t.Errorf("accepted %s without a turn", host)
-		}
+	sid, pid := "session", ""
+	if (codexHost{}).NormalizeHook(&sid, &pid, "") == nil {
+		t.Error("accepted a Codex hook without a turn")
+	}
+	if _, ok := hostByName("unsupported"); ok {
+		t.Error("accepted a host cogmer does not support")
 	}
 }
 
@@ -220,8 +229,10 @@ func TestCodexCannotUseAClaudeDeliveryFallback(t *testing.T) {
 	events, _ := s.UndeliveredFor("test", "codex:mine")
 	_ = s.RecordPending("turn", "codex:mine", events, "complete block")
 	saveVerification(verification{Version: "test-claude", Failures: map[string]string{"B20": "missing attachment"}})
-	d := &Daemon{claudeVersion: "test-claude"}
-	d.confirmDelivery(s, stopReq{Host: "codex", SessionID: "codex:mine", PromptID: "turn", TranscriptPath: write(t, codexTranscript)})
+	d := &Daemon{}
+	d.versions.lookup = func(Host) string { return "test-claude" }
+	t.Cleanup(d.background.Wait)
+	d.confirmDelivery(s, stopReq{Host: "codex", SessionID: "codex:mine", PromptID: "turn", TranscriptPath: write(t, codexTranscript)}, codexHost{})
 	left, _ := s.UndeliveredFor("test", "codex:mine")
 	if len(left) != 1 {
 		t.Fatal("Claude's broken attachment check confirmed a Codex injection without evidence")
@@ -243,7 +254,7 @@ func TestCodexHookOutputsValidContextAndFailsOpen(t *testing.T) {
 	defer server.Close()
 	run := func(addr, payload, kind string) []byte {
 		t.Helper()
-		cmd := exec.Command(bin, "hook", kind)
+		cmd := exec.Command(bin, "hook", "--host", "codex", kind)
 		cmd.Env = append(os.Environ(), "COGMER_ADDR="+addr)
 		cmd.Stdin = strings.NewReader(payload)
 		out, err := cmd.Output()
@@ -252,7 +263,7 @@ func TestCodexHookOutputsValidContextAndFailsOpen(t *testing.T) {
 		}
 		return out
 	}
-	out := run(strings.TrimPrefix(server.URL, "http://"), `{"session_id":"mine","turn_id":"turn","prompt":"go"}`, "codex-prompt")
+	out := run(strings.TrimPrefix(server.URL, "http://"), `{"session_id":"mine","turn_id":"turn","prompt":"go"}`, "prompt")
 	var decoded struct {
 		Output struct {
 			Event   string `json:"hookEventName"`
@@ -262,7 +273,7 @@ func TestCodexHookOutputsValidContextAndFailsOpen(t *testing.T) {
 	if json.Unmarshal(out, &decoded) != nil || decoded.Output.Event != "UserPromptSubmit" || !strings.Contains(decoded.Output.Context, "complete block") {
 		t.Fatalf("invalid Codex output: %s", out)
 	}
-	for _, kind := range []string{"codex-prompt", "codex-stop"} {
+	for _, kind := range []string{"prompt", "stop"} {
 		for _, payload := range []string{`{"session_id":"mine","turn_id":"turn"}`, "{partial", ""} {
 			if out := run("127.0.0.1:1", payload, kind); len(out) != 0 {
 				t.Fatalf("failed hook emitted %s", out)

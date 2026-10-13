@@ -165,9 +165,9 @@ Host behavior can change, and several failures are silent: the room keeps accept
 records the wrong thing.
 
 ```sh
-bin/cogmer doctor          # two Claude turns, about 13s
+bin/cogmer doctor          # each installed host: two Claude turns (about 13s), one Codex turn
+bin/cogmer doctor --host claude   # one host only; --host codex likewise
 bin/cogmer doctor --deep   # also drives a real Claude compaction, about 40s
-bin/cogmer doctor --codex  # one Codex turn: capture, injection and session identity
 ```
 
 The session checks run by themselves the first time a room is formed under a host

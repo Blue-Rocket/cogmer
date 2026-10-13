@@ -18,7 +18,11 @@ func ClaudeVersion() string {
 	if err != nil {
 		return "unknown"
 	}
-	return strings.TrimSpace(strings.Fields(string(out))[0])
+	fields := strings.Fields(string(out))
+	if len(fields) == 0 {
+		return "unknown"
+	}
+	return fields[0]
 }
 
 type verification struct {
@@ -98,7 +102,8 @@ func RunChecks(deep bool) ([]Result, error) {
 	return results, nil
 }
 
-func runDoctor(deep bool) {
+// runDoctor checks Claude Code and says whether every check passed.
+func runDoctor(deep bool) bool {
 	version := ClaudeVersion()
 	tier := "session"
 	if deep {
@@ -134,8 +139,9 @@ func runDoctor(deep bool) {
 	if len(failures) > 0 {
 		fmt.Println("\nA failure means Claude Code changed under an assumption this project depends on.")
 		fmt.Println("Read the failing behavior in docs/relied-on-behaviors.md before trusting the room.")
-		os.Exit(1)
+		return false
 	}
+	return true
 }
 
 // EnsureVerified runs the session-tier checks the first time a room is formed on

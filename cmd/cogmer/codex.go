@@ -8,34 +8,7 @@ import (
 	"strings"
 )
 
-// Codex's host discriminator exists only on the loopback hook API. The event
-// format still carries an opaque origin session; no peer needs a host adapter.
-func codexSessionID(id string) string { return "codex:" + id }
-
-func normalizeHookSession(host string, session, prompt *string, turn string) error {
-	switch host {
-	case "", "claude":
-		return nil
-	case "codex":
-		if *session == "" || turn == "" {
-			return fmt.Errorf("Codex hooks require session_id and turn_id")
-		}
-		*session = codexSessionID(*session)
-		*prompt = turn
-		return nil
-	default:
-		return fmt.Errorf("unsupported hook host %q", host)
-	}
-}
-
-func commandText(text string) string {
-	if os.Getenv("COGMER_HOST") == "codex" {
-		return strings.ReplaceAll(text, "/cogmer:", "$cogmer ")
-	}
-	return text
-}
-
-// These are observed rollout fields, not a stable Codex API. doctor --codex
+// These are observed rollout fields, not a stable Codex API. doctor --host codex
 // checks them against a real session. In particular, event_msg duplicates many
 // response_item records and must never be used as a second source of messages.
 type codexRecord struct {
@@ -99,7 +72,7 @@ func ReassembleCodexTurn(path, lastMessage, turnID string) (*AssistantTurn, erro
 		}
 	}
 	if start < 0 {
-		return nil, fmt.Errorf("Codex transcript has no task_started for turn %q; run doctor --codex", turnID)
+		return nil, fmt.Errorf("Codex transcript has no task_started for turn %q; run doctor --host codex", turnID)
 	}
 	turn := &AssistantTurn{}
 	var parts []string
