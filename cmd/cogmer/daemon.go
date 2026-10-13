@@ -155,13 +155,14 @@ func (d *Daemon) LocalRoutes() *http.ServeMux {
 	mux.HandleFunc("/self", d.handleSelf)
 	mux.HandleFunc("/", d.handleUI)
 	mux.HandleFunc("/stream", d.handleStream)
+	mux.HandleFunc("/export", d.handleExport)
 	mux.HandleFunc("/pair/new", guardLocal(d.handlePairNew))
 	mux.HandleFunc("/offer/send", guardLocal(d.handleSendOffer))
 	// The ceremony page itself is a GET somebody navigated to.
 	mux.HandleFunc("/pair/", d.handlePairPage)
 	mux.HandleFunc("/verify/start", guardLocal(d.handleVerifyStart))
 	mux.HandleFunc("/verify/confirm", guardLocal(d.handleVerifyConfirm))
-	// Deliberately NOT guarded: /healthz, /events, /stream and the page itself are
+	// Deliberately NOT guarded: /healthz, /events, /stream, /export and the page itself are
 	// reads. A cross-origin page cannot read their responses, because we send no
 	// CORS headers and the browser withholds an opaque response from the script.
 	// Guarding them would break the view, which fetches them as ordinary GETs.

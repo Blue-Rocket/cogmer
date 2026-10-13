@@ -44,6 +44,13 @@ type uiEvent struct {
 	ToolCalls int      `json:"toolCalls"`
 	Tools     []string `json:"tools"`
 	Mine      bool     `json:"mine"`
+	// At is the local date and time the turn was written, which Clock leaves out.
+	At string `json:"at"`
+	// NotInSession is true for a colleague's turn that no session on this machine
+	// has been confirmed to hold, so the page can say that a turn it shows is one
+	// the model has not been given. It is never set in a show-only room, which
+	// gives nothing to a session (D-200).
+	NotInSession bool `json:"notInSession,omitempty"`
 }
 
 type uiPeer struct {
@@ -62,6 +69,10 @@ type uiPeer struct {
 	// daemon, empty if it has not since the daemon started. A peer this machine cannot
 	// reach, and that reached it a minute ago, has a daemon that is running.
 	HeardFrom string `json:"heardFrom,omitempty"`
+	// LastTurn is when this peer last wrote a turn in this room, empty if it has
+	// not. An online peer whose turns stop arriving shows here, where the dot alone
+	// says it is reachable.
+	LastTurn string `json:"lastTurn,omitempty"`
 }
 
 type uiState struct {
@@ -122,16 +133,24 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 	}
 	d.mu.Lock()
 	evs, err := store.ListRoom(cur.RoomID)
+	var delivered map[string]bool
+	if err == nil && !cur.ShowOnly {
+		delivered, err = store.DeliveredEventIDs()
+	}
 	d.mu.Unlock()
 	if err != nil {
 		return uiState{}, err
 	}
+	now := time.Now()
+	lastTurn := map[string]string{}
 	st := uiState{Room: cur.RoomID, RoomName: cur.RoomName, SelfPeerID: d.id.PeerID, Peers: d.peerStatus()}
 	labels := d.members.Labels()
 	for _, e := range evs {
-		ts := e.Timestamp
+		ts, at := e.Timestamp, e.Timestamp
 		if t, err := time.Parse(time.RFC3339Nano, e.Timestamp); err == nil {
 			ts = t.Local().Format("15:04:05")
+			at = t.Local().Format("2006-01-02 15:04:05")
+			lastTurn[e.PeerID] = turnTime(t, now)
 		}
 		ue := uiEvent{
 			EventID: e.EventID, PeerID: e.PeerID, PeerName: PeerName(e.PeerID),
@@ -141,8 +160,9 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 			// §6 and D-139 require the identifier be shown for any peer whose identity
 			// is unverified. That is every remote peer today. It is not required
 			// for your own turns, where it identifies nothing you did not know.
-			Mine: e.PeerID == d.id.PeerID,
+			Mine: e.PeerID == d.id.PeerID, At: at,
 		}
+		ue.NotInSession = !ue.Mine && !cur.ShowOnly && !delivered[e.EventID]
 		if len(e.Metadata) > 0 {
 			var m struct {
 				ToolCalls int      `json:"toolCalls"`
@@ -155,7 +175,21 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 		}
 		st.Events = append(st.Events, ue)
 	}
+	for i := range st.Peers {
+		st.Peers[i].LastTurn = lastTurn[st.Peers[i].PeerID]
+	}
 	return st, nil
+}
+
+// turnTime is a turn's time for a reader: the clock for today, and the date with it
+// for any other day. It is absolute, since a relative age would be wrong by the time
+// the page next redrew.
+func turnTime(t, now time.Time) string {
+	t, now = t.Local(), now.Local()
+	if t.Year() == now.Year() && t.YearDay() == now.YearDay() {
+		return t.Format("15:04")
+	}
+	return t.Format("Jan 2 15:04")
 }
 
 // roomFromPath resolves /room/<name> to a room, and "/" to nothing.
@@ -278,6 +312,100 @@ func (d *Daemon) handleStream(w http.ResponseWriter, r *http.Request) {
 			flusher.Flush()
 		}
 	}
+}
+
+// handleExport serves the room as a Markdown file the reader keeps. It is a read of
+// what /stream already sends, so it is not guarded (D-087), and it is a download so
+// that nothing in it is rendered by the browser.
+func (d *Daemon) handleExport(w http.ResponseWriter, r *http.Request) {
+	room, ok := d.roomFromPath("/room/" + r.URL.Query().Get("room"))
+	if !ok {
+		http.Error(w, "no such room", http.StatusNotFound)
+		return
+	}
+	st, err := d.snapshot(room)
+	if err != nil {
+		http.Error(w, "could not read the room", http.StatusInternalServerError)
+		return
+	}
+	now := time.Now()
+	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s-%s.md"`,
+		exportFileStem(room.RoomName), now.Format("2006-01-02")))
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	_, _ = w.Write([]byte(exportMarkdown(st, now)))
+}
+
+// exportFileStem keeps a room name to characters a file name and a header can hold.
+func exportFileStem(name string) string {
+	var b strings.Builder
+	for _, c := range name {
+		switch {
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9', c == '-', c == '_', c == '.':
+			b.WriteRune(c)
+		default:
+			b.WriteByte('-')
+		}
+	}
+	if b.Len() == 0 {
+		return "room"
+	}
+	return b.String()
+}
+
+// exportMarkdown writes a room as a document. Each turn is a heading naming who wrote
+// it and when, so the file reads without the page. A turn from a peer that is not
+// verified says so, as the page does, and a tool operation is counted and named,
+// since a turn that only ran tools would otherwise be an empty heading.
+func exportMarkdown(st uiState, at time.Time) string {
+	var b strings.Builder
+	title := st.RoomName
+	if title == "" {
+		title = st.Room
+	}
+	fmt.Fprintf(&b, "# %s\n\nExported %s from cogmer. %d turns.\n", title, at.Local().Format("2006-01-02 15:04"), len(st.Events))
+	for _, e := range st.Events {
+		who := firstNonEmpty(e.Label, e.Display)
+		if e.EventType == "ASSISTANT_MESSAGE" {
+			who = "Assistant, " + who
+		}
+		fmt.Fprintf(&b, "\n## %s, %s", who, e.At)
+		if !e.Mine {
+			fmt.Fprintf(&b, " (%s", e.PeerName)
+			if !e.Verified {
+				b.WriteString(", unverified")
+			}
+			b.WriteString(")")
+		}
+		fmt.Fprintf(&b, "\n\n%s\n", strings.TrimRight(e.Content, "\n"))
+		if e.ToolCalls > 0 {
+			counted := map[string]int{}
+			var order []string
+			for _, n := range e.Tools {
+				if counted[n] == 0 {
+					order = append(order, n)
+				}
+				counted[n]++
+			}
+			var parts []string
+			for _, n := range order {
+				if counted[n] > 1 {
+					n = fmt.Sprintf("%s ×%d", n, counted[n])
+				}
+				parts = append(parts, n)
+			}
+			ops := "operation"
+			if e.ToolCalls > 1 {
+				ops = "operations"
+			}
+			fmt.Fprintf(&b, "\n*%d tool %s", e.ToolCalls, ops)
+			if len(parts) > 0 {
+				fmt.Fprintf(&b, ": %s", strings.Join(parts, ", "))
+			}
+			b.WriteString("*\n")
+		}
+	}
+	return b.String()
 }
 
 // Peer health.

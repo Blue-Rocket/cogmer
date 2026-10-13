@@ -44,6 +44,15 @@
   .tools summary{cursor:pointer;list-style:revert}
   .tools summary:hover{color:var(--fg)}
   .tools[open]{padding-bottom:2px}
+  .notyet{font-size:10px;color:var(--dim);border:1px dashed var(--dim);border-radius:3px;
+          padding:0 4px;letter-spacing:.03em}
+  .export{font-size:12px;color:var(--dim);text-decoration:none;border:1px solid var(--line);
+          border-radius:4px;padding:1px 8px}
+  .export:hover{color:var(--fg)}
+  #jump{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);font:inherit;font-size:13px;
+        background:var(--fg);color:var(--bg);border:0;border-radius:18px;padding:6px 16px;
+        cursor:pointer;box-shadow:0 2px 10px #0004}
+  #jump[hidden]{display:none}
   .empty{color:var(--dim);text-align:center;padding:60px 20px}
   .empty code{background:var(--code);padding:2px 6px;border-radius:3px;font-size:13px}
 </style>
@@ -52,14 +61,15 @@
   <div class="status">
     <span id="conn"><span class="dot" id="connDot"></span><span id="connText">connecting</span></span>
     <span id="peers"></span>
+    <a class="export" id="export" download>Export</a>
   </div>
 </header>
 <main id="feed"><div class="empty">Waiting for the room…</div></main>
+<button id="jump" hidden></button>
 <script>
 const ROOM = decodeURIComponent(location.pathname.replace(/^\/room\//, ''));
 (function(){
   const feed=document.getElementById('feed');
-  let lastKey='';
 
   // Everything below treats room content as hostile: escape first, then apply only
   // the small set of constructs we generate ourselves.
@@ -81,53 +91,107 @@ const ROOM = decodeURIComponent(location.pathname.replace(/^\/room\//, ''));
     .replace(/`([^`]+)`/g,'<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
 
+  // A turn is built once and never rebuilt, so a tool list the reader opened, or
+  // text they selected, survives the next arrival. Only the line naming who wrote
+  // it is rewritten, since a label or a delivery can change after the turn is drawn.
+  const turns=new Map();
+  let seen=null, unread=0;
+  const jump=document.getElementById('jump');
+  let roomTitle='cogmer';
+
+  const atBottom=()=>window.scrollY+window.innerHeight>=document.body.scrollHeight-80;
+  function showUnread(){
+    jump.hidden=unread===0;
+    jump.textContent=unread+' new turn'+(unread>1?'s':'')+' \u2193';
+    document.title=(unread?'('+unread+') ':'')+roomTitle;
+  }
+  function toBottom(){window.scrollTo(0,document.body.scrollHeight);}
+  jump.onclick=()=>{toBottom();};
+  function caughtUp(){ if(unread&&atBottom()&&!document.hidden){unread=0;showUnread();} }
+  window.addEventListener('scroll',caughtUp);
+  document.addEventListener('visibilitychange',caughtUp);
+
+  function whoHtml(e,state){
+    const mine=e.peerId===state.selfPeerId;
+    const assistant=e.eventType==='ASSISTANT_MESSAGE';
+    // The label this person chose leads, because it is the only name that is
+    // both memorable and bound to one key. The display name is the peer's own
+    // claim and is used only until you have named them (D-094).
+    const who=e.label||e.userDisplayName;
+    const name=assistant?('Assistant \u2014 '+who):who;
+    // The derived name and the unverified marker earn their place only on a
+    // peer that is not you; on your own turns they are noise.
+    const ident = mine ? ''
+      : '<span class="peer">'+esc(e.peerName)+'</span>'
+        +(e.verified?'':'<span class="unverified">unverified</span>');
+    // A turn shown here that no session has been given is the one difference between
+    // reading the room and the model having it.
+    const notyet=e.notInSession
+      ? '<span class="notyet" title="No session on this machine has been given this turn yet. It is offered at the next prompt.">not yet in your session</span>':'';
+    return '<span class="name '+(mine?'me':'them')+'">'+esc(name)+'</span>'
+      +ident+notyet+'<span class="time">'+esc(e.clock)+'</span>';
+  }
+  function bodyHtml(e){
+    // A real disclosure rather than a triangle that does nothing: the tool
+    // names are stored, so the summary expands to them.
+    let tools='';
+    if((e.toolCalls||0)>0){
+      const names=(e.tools&&e.tools.length)?e.tools:[];
+      const counted={}; names.forEach(n=>counted[n]=(counted[n]||0)+1);
+      const list=Object.keys(counted).map(n=>esc(n)+(counted[n]>1?' \u00d7'+counted[n]:'')).join(', ');
+      tools='<details class="tools"><summary>'+e.toolCalls+' tool operation'
+           +(e.toolCalls>1?'s':'')+'</summary>'+(list||'(names not recorded)')+'</details>';
+    }
+    return render(e.content)+tools;
+  }
+
   function draw(state){
-    document.getElementById('room').textContent=state.roomName||state.room;
-    const key=state.events.map(e=>e.eventId).join(',');
-    if(key===lastKey) return; lastKey=key;
+    roomTitle=state.roomName||state.room;
+    document.getElementById('room').textContent=roomTitle;
+    document.getElementById('export').href='/export?room='+encodeURIComponent(ROOM);
 
     if(!state.events.length){
+      turns.clear();
       feed.innerHTML='<div class="empty">No conversation yet. Start a Claude Code or Codex session with the hooks enabled.</div>';
       return;
     }
-    const pinned=window.scrollY+window.innerHeight>=document.body.scrollHeight-80;
-    feed.innerHTML=state.events.map(e=>{
-      const mine=e.peerId===state.selfPeerId;
-      const assistant=e.eventType==='ASSISTANT_MESSAGE';
-      // The label this person chose leads, because it is the only name that is
-      // both memorable and bound to one key. The display name is the peer's own
-      // claim and is used only until you have named them (D-094).
-      const who=e.label||e.userDisplayName;
-      const name=assistant?('Assistant — '+who):who;
-      // A real disclosure rather than a triangle that does nothing: the tool
-      // names are stored, so the summary expands to them.
-      let tools='';
-      if((e.toolCalls||0)>0){
-        const names=(e.tools&&e.tools.length)?e.tools:[];
-        const counted={}; names.forEach(n=>counted[n]=(counted[n]||0)+1);
-        const list=Object.keys(counted).map(n=>esc(n)+(counted[n]>1?' ×'+counted[n]:'')).join(', ');
-        tools='<details class="tools"><summary>'+e.toolCalls+' tool operation'
-             +(e.toolCalls>1?'s':'')+'</summary>'+(list||'(names not recorded)')+'</details>';
+    const empty=feed.querySelector('.empty'); if(empty) empty.remove();
+    const pinned=atBottom();
+
+    // Turns that arrived since the last drawing and are somebody else's. The first
+    // drawing is the history, not news.
+    const ids=new Set(state.events.map(e=>e.eventId));
+    let arrived=0;
+    if(seen) state.events.forEach(e=>{ if(!seen.has(e.eventId)&&e.peerId!==state.selfPeerId) arrived++; });
+    seen=ids;
+
+    for(const [id,t] of turns) if(!ids.has(id)){t.el.remove();turns.delete(id);}
+    state.events.forEach((e,i)=>{
+      let t=turns.get(e.eventId);
+      if(!t){
+        const el=document.createElement('div'); el.className='turn';
+        el.innerHTML='<div class="who"></div><div class="body">'+bodyHtml(e)+'</div>';
+        t={el,who:el.firstChild,html:''}; turns.set(e.eventId,t);
       }
-      // The derived name and the unverified marker earn their place only on a
-      // peer that is not you; on your own turns they are noise.
-      const ident = mine ? ''
-        : '<span class="peer">'+esc(e.peerName)+'</span>'
-          +(e.verified?'':'<span class="unverified">unverified</span>');
-      return '<div class="turn"><div class="who">'
-        +'<span class="name '+(mine?'me':'them')+'">'+esc(name)+'</span>'
-        +ident
-        +'<span class="time">'+esc(e.clock)+'</span></div>'
-        +'<div class="body">'+render(e.content)+tools+'</div></div>';
-    }).join('');
-    if(pinned) window.scrollTo(0,document.body.scrollHeight);
+      // Events are ordered by time and a late arrival can sort before one already
+      // shown, so each turn is put where it belongs.
+      const at=feed.children[i];
+      if(at!==t.el) feed.insertBefore(t.el,at||null);
+      const h=whoHtml(e,state);
+      if(h!==t.html){t.who.innerHTML=h;t.html=h;}
+    });
+
+    if(pinned&&!document.hidden) toBottom();
+    else if(arrived){unread+=arrived;}
+    showUnread();
   }
 
   function peers(list){
     const el=document.getElementById('peers');
     if(!list||!list.length){el.textContent='';return;}
     el.innerHTML=list.map(p=>'<span><span class="dot '+(p.online?'live':'down')+'"></span>'
-      +esc(p.name)+(p.online?'':' · '+(p.trying?'unreachable for '+esc(p.trying):esc(p.since)))+'</span>').join(' ');
+      +esc(p.name)+(p.online?'':' · '+(p.trying?'unreachable for '+esc(p.trying):esc(p.since)))
+      +(p.peerId?' · '+(p.lastTurn?'last turn '+esc(p.lastTurn):'no turns yet'):'')+'</span>').join(' ');
   }
 
   let es;

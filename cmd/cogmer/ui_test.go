@@ -17,7 +17,7 @@ func uiDaemon(t *testing.T) *Daemon {
 // would hand the room to anyone who can reach the sync port (§25, D-030).
 func TestUIIsNotServedToPeers(t *testing.T) {
 	d := uiDaemon(t)
-	for _, path := range []string{"/", "/stream", "/room/anything", "/events"} {
+	for _, path := range []string{"/", "/stream", "/export", "/room/anything", "/events"} {
 		rec := httptest.NewRecorder()
 		d.PeerRoutes().ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
 		if rec.Code != 404 {

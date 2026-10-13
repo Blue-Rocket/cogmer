@@ -437,6 +437,25 @@ func (s *Store) UndeliveredFor(room, sessionID string) ([]Event, error) {
 	return scanEvents(rows)
 }
 
+// DeliveredEventIDs is every event any session on this machine has been confirmed to
+// hold, for a view that says which turns the model has been given.
+func (s *Store) DeliveredEventIDs() (map[string]bool, error) {
+	rows, err := s.db.Query(`SELECT DISTINCT event_id FROM session_delivered`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]bool{}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out[id] = true
+	}
+	return out, rows.Err()
+}
+
 // HashBlock is the identity of an injected block: the sha256 of the exact text
 // handed to the hook's stdout, whitespace-trimmed because Claude Code trims it
 // before recording the attachment.

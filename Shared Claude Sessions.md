@@ -1509,6 +1509,16 @@ The view:
 - renders Markdown and code;
 - shows whether it is connected;
 - shows which colleagues are offline, by name, and for how long;
+- shows when each colleague last wrote a turn in the room, so a colleague who is reachable
+  and whose turns have stopped arriving can be told from one who is quiet;
+- marks a colleague's turn that no session on this machine has been given yet, except in a
+  show-only room, which gives none;
+- keeps the reader's place: a turn arriving does not close a list of tool operations the
+  reader opened or clear text the reader selected, and when the reader has scrolled away
+  from the newest turn, a button says how many colleagues' turns arrived and jumps to them,
+  and the browser tab's title carries the count;
+- exports the room as a Markdown file, with who wrote each turn, when, and whether that peer
+  is verified;
 - recovers missed events by itself.
 
 ---
