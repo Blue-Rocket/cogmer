@@ -32,11 +32,6 @@ out.
 
 A decision, a comment or a test says what the code does, and a change that breaks it is caught.
 
-**The view leaves the derived name off a user's own turns, and no decision records
-why.** Commit `33ce996` made the choice. D-021 (peer names are derived from the
-identity) is cited for it, but D-021 says only what the name is for; it says nothing
-about a user's own turns.
-
 **D-007 (record `COMPACTION` events as observability) is not built.** No code records
 a compaction, so if the summarizer stops keeping a colleague's turns, a room's
 history shows nothing at the moment it happened. §7 lists the event type among those
