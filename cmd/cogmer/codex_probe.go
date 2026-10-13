@@ -116,6 +116,26 @@ func runCodexProbeHook(name, dir string) {
 	}
 }
 
+// codexProbeArgs is how the probe starts Codex. It ignores the user's Codex
+// configuration, which is where installed plugins are enabled, so the real cogmer
+// plugin's hooks cannot fire inside the probe session: they would write to the
+// user's own state directory and start nothing useful. The hooks that run are the
+// three given here, on the command line. Authentication still comes from
+// CODEX_HOME. The session is not ephemeral, because the probe reads its transcript
+// afterwards.
+func codexProbeArgs(self, dir string) []string {
+	args := []string{"exec", "--ignore-user-config", "--dangerously-bypass-hook-trust", "--skip-git-repo-check", "-s", "workspace-write", "-C", dir, "--output-last-message", filepath.Join(dir, "final.txt")}
+	for _, event := range []string{"SessionStart", "UserPromptSubmit", "Stop"} {
+		command := quoteCmd(self, "codex-probe-hook", event, dir)
+		args = append(args, "-c", fmt.Sprintf("hooks.%s=[{hooks=[{type=\"command\",command=%s,timeout=10,additionalContextLimit=0}]}]", event, strconv.Quote(command)))
+	}
+	return append(args, "This is a cogmer behavior check. Say ALPHA in commentary, then use a shell tool to write the value of CODEX_THREAD_ID to tool-session.txt in the working directory. Reply OMEGA followed by the codeword from the team-conversation block. Do nothing else.")
+}
+
+// runCodexChecks is RunCodexChecks, as a variable so a test can stand in for a real
+// Codex turn.
+var runCodexChecks = RunCodexChecks
+
 func RunCodexChecks() ([]Result, error) {
 	self, err := os.Executable()
 	if err != nil {
@@ -132,12 +152,7 @@ func RunCodexChecks() ([]Result, error) {
 	if err := os.WriteFile(filepath.Join(dir, "inject.txt"), []byte(p.InjectedText), 0o600); err != nil {
 		return nil, err
 	}
-	args := []string{"exec", "--dangerously-bypass-hook-trust", "--skip-git-repo-check", "-s", "workspace-write", "-C", dir, "--output-last-message", filepath.Join(dir, "final.txt")}
-	for _, event := range []string{"SessionStart", "UserPromptSubmit", "Stop"} {
-		command := quoteCmd(self, "codex-probe-hook", event, dir)
-		args = append(args, "-c", fmt.Sprintf("hooks.%s=[{hooks=[{type=\"command\",command=%s,timeout=10,additionalContextLimit=0}]}]", event, strconv.Quote(command)))
-	}
-	args = append(args, "This is a cogmer behavior check. Say ALPHA in commentary, then use a shell tool to write the value of CODEX_THREAD_ID to tool-session.txt in the working directory. Reply OMEGA followed by the codeword from the team-conversation block. Do nothing else.")
+	args := codexProbeArgs(self, dir)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, codexExecutable(), args...)
@@ -207,21 +222,52 @@ func logCodexProbeFailure(err error) {
 	fmt.Fprintf(os.Stderr, "cogmer: Codex probe could not run: %v\n", err)
 }
 
+// codexProbeCouldNotRun is the failure recorded when the probe could not be run at
+// all, which says nothing about Codex.
+const codexProbeCouldNotRun = "probe"
+
+// codexProbeRetry is how long a probe that could not run is left alone. Without it,
+// every room command on such a machine ran the probe again, with a model turn and
+// a wait of up to two minutes each time.
+const codexProbeRetry = time.Hour
+
+// codexProbeDue reports whether a recorded attempt should be made again: only one
+// that could not run, and only after the retry window.
+func codexProbeDue(v verification, now time.Time) bool {
+	if len(v.Failures) != 1 {
+		return false
+	}
+	if _, couldNotRun := v.Failures[codexProbeCouldNotRun]; !couldNotRun {
+		return false
+	}
+	when, err := time.Parse(time.RFC3339, v.When)
+	return err != nil || now.Sub(when) >= codexProbeRetry
+}
+
 func EnsureCodexVerified() {
 	if strings.EqualFold(os.Getenv("COGMER_PREFLIGHT"), "off") {
 		return
 	}
 	key := "codex:" + CodexVersion()
-	if v, ok := loadVerifications()[key]; ok {
-		if len(v.Failures) > 0 {
+	if v, ok := loadVerifications()[key]; ok && !codexProbeDue(v, time.Now()) {
+		if why, couldNotRun := v.Failures[codexProbeCouldNotRun]; couldNotRun && len(v.Failures) == 1 {
+			fmt.Fprintf(os.Stderr, "cogmer: the Codex behavior check could not run (%s); it is tried again after an hour, or run cogmer doctor --codex\n", why)
+		} else if len(v.Failures) > 0 {
 			fmt.Fprintln(os.Stderr, "cogmer: Codex behavior checks failed; run cogmer doctor --codex for detail")
 		}
 		return
 	}
 	fmt.Fprintln(os.Stderr, "cogmer: checking this Codex version with one isolated turn")
-	results, err := RunCodexChecks()
+	results, err := runCodexChecks()
 	if err != nil {
 		logCodexProbeFailure(err)
+		// Recorded, so that the next room command does not run another turn.
+		why := strings.SplitN(err.Error(), "\n", 2)[0]
+		if len(why) > 200 {
+			why = why[:200] + "…"
+		}
+		saveVerification(verification{Version: key, When: time.Now().UTC().Format(time.RFC3339),
+			Failures: map[string]string{codexProbeCouldNotRun: why}})
 		return
 	}
 	v := recordCodexVerification(results)
