@@ -9,6 +9,17 @@ gains a line when a Cowork session runs, the session reached this machine."""
 import json, os, socket, sys, time
 
 LOG = os.path.expanduser("~/.cogmer-host-probe.log")
+MODE = os.path.expanduser("~/.cogmer-host-probe.mode")
+
+
+def mode():
+    """A failure to simulate, set by writing it to the mode file: "exit" makes the server
+    quit when it starts and when it is called, and "hang" makes it take a call and never
+    answer. An empty or missing file is normal behavior."""
+    try:
+        return open(MODE).read().strip()
+    except OSError:
+        return ""
 
 def log(msg):
     with open(LOG, "a") as f:
@@ -18,6 +29,9 @@ def send(obj):
     sys.stdout.write(json.dumps(obj) + "\n"); sys.stdout.flush()
 
 log("server started pid=%d" % os.getpid())
+if mode() == "exit":
+    log("mode exit: quitting at start")
+    sys.exit(1)
 for line in sys.stdin:
     line = line.strip()
     if not line:
@@ -39,6 +53,13 @@ for line in sys.stdin:
             "inputSchema": {"type": "object", "properties": {"event": {"type": "string"}}}}]}})
     elif method == "tools/call":
         args = ((m.get("params") or {}).get("arguments")) or {}
+        if mode() == "exit":
+            log("mode exit: quitting on a call")
+            os._exit(1)
+        if mode() == "hang":
+            log("mode hang: taking a call and not answering")
+            time.sleep(600)
+            continue
         shape = []
         for k, v in args.items():
             if k == "event":

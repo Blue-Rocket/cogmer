@@ -58,10 +58,36 @@ characters) and `stop_hook_active`. The model's context held the five JSON repli
 described as extra context a hook added with each prompt, and none of the plain replies. The
 tool name was the same after the restart.
 
-**Run:** the probe server's processes killed on the user's machine, then prompts sent in a new
-Cowork session.
+**Run:** the probe server's processes killed. Claude Desktop started a new copy 41 seconds
+later, and a later copy quit when it started, by a mode file the server reads, so that
+every restart failed. Prompts were then sent in a Cowork session.
 
-**Result:** not run yet.
+**Result:** the model's call of the tool failed at once with `Server cogmer-host-probe
+unavailable`, and the tool stayed in its list. The hook's call returned nothing and the model's
+context held no line from it, no error and no delay the user noticed. Desktop retried the
+server at 15:28:45 and 15:28:50, and `mcp-server-cogmer-host-probe.log` records each as
+"Couldn't start for Cowork and Code sessions. Error: Connection closed". With the mode file
+emptied, Desktop started a copy at 15:29:58, the moment the next hook called, and the hook and
+the model's ping both succeeded in the same session, with no reload.
+
+**Run:** the mode file set so that the server took a call and never answered, the running
+copy killed, and one prompt sent in the same session.
+
+**Result:** the server logged one call taken at 15:31:39 and nothing after it, since it
+handles one request at a time, and Desktop logged no timeout of its own between 15:31:39
+and the kill at about 15:34. The model reported that its own call to the tool got no answer
+for 60 seconds and then timed out, and that the hook's line was missing. The wait the hook
+alone adds was not isolated, because the prompt also asked the model to call the tool, so the
+60 seconds belongs to that call. The probe's hooks set a timeout of 15 seconds and whether
+Cowork honors it was not observed.
+
+Other observations from the Desktop logs on 2026-10-13: Desktop connects a configured server
+for Cowork and Code sessions through what `mcp-server-<name>.log` calls a shared pool, and
+`main.log` shows a `[remote-tools-device]` component that holds a keep-awake claim on the
+machine while remote tools are in use and released it after 1,224 seconds of quiet. The
+model's error text named the machine `pushover-local`, which is the computer's name in Cowork,
+and the host program saw its own hostname, `macbookpro.lan`. The tool name carries no computer
+name, so which computer receives a call for a user with two was not tested.
 
 ## Read, not observed
 
