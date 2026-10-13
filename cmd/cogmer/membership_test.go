@@ -16,7 +16,7 @@ func testDaemon(t *testing.T) (*Daemon, Room) {
 	t.Helper()
 	m := testMembership(t)
 	id := testIdentity(t)
-	room, err := m.CreateRoom(id.PeerID)
+	room, err := m.CreateRoom(id.PeerID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func TestGuestListDecidesAdmission(t *testing.T) {
 	m := testMembership(t)
 	host, guest, stranger := testIdentity(t), testIdentity(t), testIdentity(t)
 
-	room, err := m.CreateRoom(host.PeerID)
+	room, err := m.CreateRoom(host.PeerID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestGuestListDecidesAdmission(t *testing.T) {
 // possession of it, so recording it would be recording a hope.
 func TestOnlyKeysCanBeAdmitted(t *testing.T) {
 	m := testMembership(t)
-	room, _ := m.CreateRoom(testIdentity(t).PeerID)
+	room, _ := m.CreateRoom(testIdentity(t).PeerID, false)
 	for _, bad := range []string{"peer-852ffe6408339bcada91", "alice", "ed25519:notbase64!!"} {
 		if err := m.Invite(room.RoomID, bad); err == nil {
 			t.Errorf("admitted %q, which names no key", bad)
@@ -86,8 +86,8 @@ func TestOnlyKeysCanBeAdmitted(t *testing.T) {
 func TestRevokeAndForgetDiffer(t *testing.T) {
 	m := testMembership(t)
 	host, guest := testIdentity(t), testIdentity(t)
-	a, _ := m.CreateRoom(host.PeerID)
-	b, _ := m.CreateRoom(host.PeerID)
+	a, _ := m.CreateRoom(host.PeerID, false)
+	b, _ := m.CreateRoom(host.PeerID, false)
 	_ = m.Allow(guest.PeerID, "alice")
 	_ = m.Invite(a.RoomID, guest.PeerID)
 	_ = m.Invite(b.RoomID, guest.PeerID)
@@ -120,7 +120,7 @@ func TestRoomNamesAreGeneratedAndLocallyUnique(t *testing.T) {
 	self := testIdentity(t)
 	seen := map[string]bool{}
 	for i := 0; i < 40; i++ {
-		r, err := m.CreateRoom(self.PeerID)
+		r, err := m.CreateRoom(self.PeerID, false)
 		if err != nil {
 			t.Fatalf("could not create room %d: %v", i, err)
 		}
@@ -138,7 +138,7 @@ func TestRoomNamesAreGeneratedAndLocallyUnique(t *testing.T) {
 // its identity (§3.2).
 func TestRoomResolvesByEitherIdentifier(t *testing.T) {
 	m := testMembership(t)
-	r, _ := m.CreateRoom(testIdentity(t).PeerID)
+	r, _ := m.CreateRoom(testIdentity(t).PeerID, false)
 	for _, key := range []string{r.RoomName, r.RoomID} {
 		got, err := m.FindRoom(key)
 		if err != nil || got.RoomID != r.RoomID {
@@ -156,13 +156,13 @@ func TestRoomResolvesByEitherIdentifier(t *testing.T) {
 // accumulates every room ever recorded — so the clash was a question of when.
 func TestJoiningTwoRoomsWithOneNameSucceeds(t *testing.T) {
 	m := testMembership(t)
-	first, err := m.CreateRoom(testIdentity(t).PeerID)
+	first, err := m.CreateRoom(testIdentity(t).PeerID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// A different room, hosted elsewhere, that happens to carry the same name.
 	other := uuidV4()
-	if err := m.RecordRoom(other, first.RoomName); err != nil {
+	if err := m.RecordRoom(other, first.RoomName, false); err != nil {
 		t.Fatalf("recording a second room named %q failed: %v", first.RoomName, err)
 	}
 	for _, id := range []string{first.RoomID, other} {
@@ -176,9 +176,9 @@ func TestJoiningTwoRoomsWithOneNameSucceeds(t *testing.T) {
 // silently would act on a room the person did not name.
 func TestAnAmbiguousNameIsReportedNotGuessed(t *testing.T) {
 	m := testMembership(t)
-	first, _ := m.CreateRoom(testIdentity(t).PeerID)
+	first, _ := m.CreateRoom(testIdentity(t).PeerID, false)
 	other := uuidV4()
-	if err := m.RecordRoom(other, first.RoomName); err != nil {
+	if err := m.RecordRoom(other, first.RoomName, false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -244,7 +244,7 @@ func TestMigrationDropsTheNameConstraint(t *testing.T) {
 	if r, ok := m.RoomByID("room-a"); !ok || r.RoomName != "misty-canyon" {
 		t.Fatalf("the existing room did not survive: %+v", r)
 	}
-	if err := m.RecordRoom("room-b", "misty-canyon"); err != nil {
+	if err := m.RecordRoom("room-b", "misty-canyon", false); err != nil {
 		t.Errorf("the constraint is still enforced after migration: %v", err)
 	}
 }
@@ -262,7 +262,7 @@ func TestPairingOutlivesTheRoomsItEnables(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	room, err := m.CreateRoom(self.PeerID)
+	room, err := m.CreateRoom(self.PeerID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -328,7 +328,7 @@ func TestAPairedPeerIsReachableWithoutARoom(t *testing.T) {
 func TestASessionJoinsARoomOnlyWhenPutInOne(t *testing.T) {
 	m := testMembership(t)
 	self := testIdentity(t)
-	room, err := m.CreateRoom(self.PeerID)
+	room, err := m.CreateRoom(self.PeerID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -355,8 +355,8 @@ func TestASessionJoinsARoomOnlyWhenPutInOne(t *testing.T) {
 func TestABoundSessionCannotBeMoved(t *testing.T) {
 	m := testMembership(t)
 	self := testIdentity(t)
-	first, _ := m.CreateRoom(self.PeerID)
-	second, _ := m.CreateRoom(self.PeerID)
+	first, _ := m.CreateRoom(self.PeerID, false)
+	second, _ := m.CreateRoom(self.PeerID, false)
 
 	if err := m.BindSession("session-a", first.RoomID); err != nil {
 		t.Fatal(err)
@@ -429,7 +429,7 @@ func TestMigrationDropsTheInjectedColumn(t *testing.T) {
 func TestAForgottenRoomDoesNotCollectSessions(t *testing.T) {
 	m := testMembership(t)
 	self := testIdentity(t)
-	if _, err := m.CreateRoom(self.PeerID); err != nil {
+	if _, err := m.CreateRoom(self.PeerID, false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -448,7 +448,7 @@ func TestAForgottenRoomDoesNotCollectSessions(t *testing.T) {
 func TestLeavingDoesNotForecloseReturn(t *testing.T) {
 	m := testMembership(t)
 	self := testIdentity(t)
-	room, err := m.CreateRoom(self.PeerID)
+	room, err := m.CreateRoom(self.PeerID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -488,8 +488,8 @@ func TestLeavingDoesNotForecloseReturn(t *testing.T) {
 func TestLeavingIsNotALaunderedMove(t *testing.T) {
 	m := testMembership(t)
 	self := testIdentity(t)
-	first, _ := m.CreateRoom(self.PeerID)
-	second, _ := m.CreateRoom(self.PeerID)
+	first, _ := m.CreateRoom(self.PeerID, false)
+	second, _ := m.CreateRoom(self.PeerID, false)
 
 	if err := m.BindSession("s1", first.RoomID); err != nil {
 		t.Fatal(err)
@@ -516,7 +516,7 @@ func TestLeavingIsNotALaunderedMove(t *testing.T) {
 func TestLeavingLeavesTheRoomVisible(t *testing.T) {
 	m := testMembership(t)
 	self := testIdentity(t)
-	room, _ := m.CreateRoom(self.PeerID)
+	room, _ := m.CreateRoom(self.PeerID, false)
 	if err := m.BindSession("s1", room.RoomID); err != nil {
 		t.Fatal(err)
 	}
@@ -537,8 +537,8 @@ func TestLeavingLeavesTheRoomVisible(t *testing.T) {
 func TestARefusedJoinCanBeExplained(t *testing.T) {
 	m := testMembership(t)
 	self := testIdentity(t)
-	first, _ := m.CreateRoom(self.PeerID)
-	second, _ := m.CreateRoom(self.PeerID)
+	first, _ := m.CreateRoom(self.PeerID, false)
+	second, _ := m.CreateRoom(self.PeerID, false)
 
 	if err := m.BindSession("s1", first.RoomID); err != nil {
 		t.Fatal(err)
@@ -569,8 +569,8 @@ func TestARefusedJoinCanBeExplained(t *testing.T) {
 func TestForgettingDiscardsAdmissionToo(t *testing.T) {
 	m := testMembership(t)
 	self, peer := testIdentity(t), testIdentity(t)
-	a, _ := m.CreateRoom(self.PeerID)
-	b, _ := m.CreateRoom(self.PeerID)
+	a, _ := m.CreateRoom(self.PeerID, false)
+	b, _ := m.CreateRoom(self.PeerID, false)
 
 	if err := m.Allow(peer.PeerID, "colleague"); err != nil {
 		t.Fatal(err)
@@ -613,7 +613,7 @@ func TestForgettingDiscardsAdmissionToo(t *testing.T) {
 func TestForgettingIsNarrow(t *testing.T) {
 	m := testMembership(t)
 	self, one, two := testIdentity(t), testIdentity(t), testIdentity(t)
-	room, _ := m.CreateRoom(self.PeerID)
+	room, _ := m.CreateRoom(self.PeerID, false)
 	for _, p := range []*Identity{one, two} {
 		if err := m.Allow(p.PeerID, ""); err != nil {
 			t.Fatal(err)
@@ -707,8 +707,8 @@ func TestTheWatchLineDoesNotInventARoom(t *testing.T) {
 func TestARoomResolvesOnlyThroughTheSession(t *testing.T) {
 	m := testMembership(t)
 	self := testIdentity(t)
-	mine, _ := m.CreateRoom(self.PeerID)
-	if _, err := m.CreateRoom(self.PeerID); err != nil {
+	mine, _ := m.CreateRoom(self.PeerID, false)
+	if _, err := m.CreateRoom(self.PeerID, false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -760,7 +760,7 @@ func TestNoAmbientRoomOverride(t *testing.T) {
 func TestOnlyASessionInTheRoomCanChangeIt(t *testing.T) {
 	m := testMembership(t)
 	self := testIdentity(t)
-	room, err := m.CreateRoom(self.PeerID)
+	room, err := m.CreateRoom(self.PeerID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -865,7 +865,7 @@ func TestAnAddressBelongsToAPeer(t *testing.T) {
 func TestRoomPeersAreItsGuests(t *testing.T) {
 	m := testMembership(t)
 	self := testIdentity(t)
-	room, err := m.CreateRoom(self.PeerID)
+	room, err := m.CreateRoom(self.PeerID, false)
 	if err != nil {
 		t.Fatal(err)
 	}

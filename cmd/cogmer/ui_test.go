@@ -53,7 +53,7 @@ func TestEachRoomHasItsOwnURL(t *testing.T) {
 	}
 
 	// With two, it lists them and chooses nothing.
-	if _, err := d.members.CreateRoom(d.id.PeerID); err != nil {
+	if _, err := d.members.CreateRoom(d.id.PeerID, false); err != nil {
 		t.Fatal(err)
 	}
 	rec = httptest.NewRecorder()

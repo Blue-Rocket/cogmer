@@ -1,6 +1,6 @@
 ---
 description: Join a room you were invited to
-argument-hint: <invitation>
+argument-hint: <invitation> [--show-only]
 allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" join:*)
 disable-model-invocation: true
 ---
@@ -12,6 +12,15 @@ disable-model-invocation: true
 ## Your task
 
 Report what the output says, in one or two lines.
+
+If the output says the room is show-only, say what that means in a few words: its
+conversation appears in the room view and none of it is given to their Claude, that
+cannot be changed for this room, and their colleagues' sessions still receive the
+user's turns unless the colleagues joined show-only too.
+
+If the output says the room's setting cannot change, relay it whole: a room has the
+setting it was first joined with on this machine, and asking for the other one is
+refused. Do not offer a way round it.
 
 A room can be joined by name alone when its host's invitation already reached this
 machine. If the output instead lists rooms waiting to be accepted, relay the list

@@ -77,7 +77,7 @@ func main() {
 	case "rooms":
 		runRooms()
 	case "create":
-		runCreateRoom()
+		runCreateRoom(os.Args[2:])
 	case "join":
 		runJoin(os.Args[2:])
 	case "leave":
@@ -833,8 +833,12 @@ func runRooms() {
 			if hasCur && r.RoomID == cur.RoomID {
 				mark = "*"
 			}
-			fmt.Printf("%s %-24s %-8s %d guest(s)  %d session(s)\n",
-				mark, r.RoomName, r.State, len(g), m.SessionsInRoom(r.RoomID))
+			note := ""
+			if r.ShowOnly {
+				note = "  show-only"
+			}
+			fmt.Printf("%s %-24s %-8s %d guest(s)  %d session(s)%s\n",
+				mark, r.RoomName, r.State, len(g), m.SessionsInRoom(r.RoomID), note)
 		}
 		// Rooms somebody has admitted you to and told you about. Listed here
 		// rather than anywhere else because they are rooms, and kept apart from
@@ -850,18 +854,34 @@ func runRooms() {
 	})
 }
 
-func runCreateRoom() {
+func runCreateRoom(args []string) {
+	rest, showOnly := takeFlag(args, "--show-only")
+	if len(rest) > 0 {
+		log.Fatalf("create takes no argument but --show-only, and was given %q", strings.Join(rest, " "))
+	}
 	withMembership(func(m *Membership, id *Identity) {
-		r, err := m.CreateRoom(id.PeerID)
+		r, err := m.CreateRoom(id.PeerID, showOnly)
 		if err != nil {
 			log.Fatalf("create: %v", err)
 		}
 		fmt.Printf("created %s\n  %s\n", r.RoomName, r.RoomID)
+		if r.ShowOnly {
+			fmt.Print(showOnlyNote(r))
+		}
 		bindInvokingSession(m, r)
 		fmt.Printf("%s\n", watchLine(r.RoomName))
 		fmt.Println("\ninvite someone you have paired with:")
 		fmt.Println("  cogmer invite <name>")
 	})
+}
+
+// showOnlyNote says what a show-only room means on this machine, and what it does
+// not. The setting is this person's own: it stops this machine's sessions receiving
+// the room, and it cannot stop a colleague's machine doing so.
+func showOnlyNote(r Room) string {
+	return "\nThis room is show-only on this machine. Its conversation appears in the room view, and none of it\n" +
+		"is given to your Claude. Your own turns are still shared with the room's other members, and their\n" +
+		"sessions receive them unless they chose show-only too. This is fixed for this room.\n"
 }
 
 // invitation renders what a guest needs: which room, and somewhere to start
@@ -886,8 +906,9 @@ func parseInvitation(arg string) (name, id, endpoint, host string, full bool) {
 }
 
 func runJoin(args []string) {
+	args, showOnlyFlag := takeFlag(args, "--show-only")
 	if len(args) == 0 {
-		log.Fatal("usage: cogmer join <invitation>   (or a room you already know)")
+		log.Fatal("usage: cogmer join <invitation> [--show-only]   (or a room you already know)")
 	}
 	withMembership(func(m *Membership, id *Identity) {
 		name, roomID, endpoint, host, full := parseInvitation(args[0])
@@ -900,10 +921,24 @@ func runJoin(args []string) {
 				defer func() { _ = m.DropOffer(o.RoomID) }()
 			}
 		}
+		// The setting is the person's own and is fixed when a room is first recorded
+		// here (D-200). A room already recorded keeps its setting, and a request for
+		// the other one is refused before anything is written, so a refused join
+		// admits nobody and records no address.
+		showOnly := showOnlyFlag
+		if full {
+			if existing, ok := m.RoomByID(roomID); ok && !showOnlyFlag {
+				showOnly = existing.ShowOnly
+			}
+			if err := m.CheckShowOnly(roomID, showOnly); err != nil {
+				fmt.Printf("%v\n", err)
+				os.Exit(1)
+			}
+		}
 		if full {
 			// A room learned from an invitation: the guest did not create it, so
 			// its identity comes from the invitation rather than being invented.
-			if err := m.RecordRoom(roomID, name); err != nil {
+			if err := m.RecordRoom(roomID, name, showOnly); err != nil {
 				log.Fatalf("join: %v", err)
 			}
 			// Admit whoever offered the invitation. Synchronization is a pull in
@@ -942,11 +977,22 @@ func runJoin(args []string) {
 		if err != nil {
 			log.Fatal(err)
 		}
+		if !full {
+			// A room named on its own is one already recorded here, and the setting it
+			// was recorded with stands (D-200).
+			if err := m.CheckShowOnly(r.RoomID, showOnlyFlag || r.ShowOnly); err != nil {
+				fmt.Printf("%v\n", err)
+				os.Exit(1)
+			}
+		}
 		// The session is bound BEFORE anything claims success. A session already
 		// in another room cannot be moved (§12a), and printing "joined" and then
 		// refusing reads as a half-completed join rather than a refused one.
 		bindInvokingSession(m, r)
 		fmt.Printf("joined %s. %s\n", r.RoomName, watchLine(r.RoomName))
+		if r.ShowOnly {
+			fmt.Print(showOnlyNote(r))
+		}
 		if host != "" {
 			// The derived name, correctly: the host was recorded a moment ago with
 			// no label, because nobody has chosen one for them yet.

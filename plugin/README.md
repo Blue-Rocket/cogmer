@@ -23,8 +23,8 @@ every room, and `self-` commands act on you.
 
 | command | what it does |
 |---|---|
-| `/cogmer:room-create` | create a room and put this session in it |
-| `/cogmer:room-join <invitation>` | join a room you were invited to |
+| `/cogmer:room-create [--show-only]` | create a room and put this session in it; with `--show-only` none of it is given to your Claude, and that cannot change for the room |
+| `/cogmer:room-join <invitation> [--show-only]` | join a room you were invited to, optionally show-only |
 | `/cogmer:room-leave` | take this session out of its room; it may rejoin the same room later |
 | `/cogmer:room-invite <peer>` | admit a peer you have paired with to this room |
 | `/cogmer:room-revoke <peer>` | withdraw a peer's admission to this room |

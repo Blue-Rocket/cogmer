@@ -259,6 +259,22 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// A room joined show-only gives nothing to this machine's sessions (D-200). The
+	// prompt is still captured, since the room's members read it in the view, and
+	// nothing is read, offered or recorded as pending, so nothing could later be
+	// confirmed as delivered.
+	if room.ShowOnly {
+		if _, err := d.appendLocal(store, room, req.SessionID, EventUserPrompt, req.Prompt,
+			map[string]any{"cwd": req.CWD, "promptId": req.PromptID}); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		d.notify()
+		log.Printf("USER_PROMPT room=%s session=%.8s show-only, nothing offered", room.RoomName, req.SessionID)
+		writeJSON(w, map[string]any{"context": ""})
+		return
+	}
+
 	// Read the unseen set BEFORE appending, so the local user's own prompt is
 	// never echoed back into their own context.
 	pending, err := store.UndeliveredFor(room.RoomID, req.SessionID)

@@ -28,16 +28,6 @@ downloaded. Shipping binaries inside the plugin removes the download entirely bu
 commits about 150MB per release into the history everybody clones, and is ruled
 out.
 
-## Checks and comments that say what is true
-
-A decision, a comment or a test says what the code does, and a change that breaks it is caught.
-
-**Nothing lets a room show its conversation without injecting it.** Section 28 of the
-specification has a setting per room that keeps a room visible to its members while
-injecting none of it into their sessions, for a room whose conversation should not
-reach another user's model provider. No such setting exists in the code (read on
-2026-09-29), and no decision records it.
-
 ## Somebody else uses it
 
 A colleague who did not write cogmer installs it, pairs, joins a room and works in it.

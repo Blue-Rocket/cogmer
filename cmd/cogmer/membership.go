@@ -62,8 +62,17 @@ CREATE TABLE IF NOT EXISTS rooms (
   room_name       TEXT NOT NULL,
   state           TEXT NOT NULL,
   issued_sequence INTEGER NOT NULL DEFAULT 0,
-  created_at      TEXT NOT NULL
+  created_at      TEXT NOT NULL,
+  -- Whether this machine gives the room's conversation to its own Claude sessions.
+  -- Chosen when the room is created or joined here and fixed from then on (D-200).
+  show_only       INTEGER NOT NULL DEFAULT 0
 );
+CREATE TRIGGER IF NOT EXISTS rooms_show_only_is_fixed
+BEFORE UPDATE OF show_only ON rooms
+WHEN OLD.show_only <> NEW.show_only
+BEGIN
+  SELECT RAISE(ABORT, 'a room''s show-only setting is fixed when the room is created or joined');
+END;
 CREATE TABLE IF NOT EXISTS room_guests (
   room_id TEXT NOT NULL,
   peer_id TEXT NOT NULL,
@@ -103,6 +112,23 @@ type Room struct {
 	RoomName  string `json:"roomName"`
 	State     string `json:"state"`
 	CreatedAt string `json:"createdAt"`
+	// ShowOnly is true when none of the room's conversation is given to this machine's
+	// Claude sessions. It is the choice of the person on this machine, made when the
+	// room was created or joined here, and it is named for the unusual case so that a
+	// Room built without it injects, as every room did before the setting existed.
+	ShowOnly bool `json:"showOnly,omitempty"`
+}
+
+const roomCols = `room_id, room_name, state, created_at, show_only`
+
+type rowScanner interface{ Scan(...any) error }
+
+func scanRoom(r rowScanner) (Room, error) {
+	var room Room
+	var showOnly int
+	err := r.Scan(&room.RoomID, &room.RoomName, &room.State, &room.CreatedAt, &showOnly)
+	room.ShowOnly = showOnly != 0
+	return room, err
 }
 
 func OpenMembership() (*Membership, error) {
@@ -155,6 +181,7 @@ func migrateMembership(db *sql.DB) error {
 		{"known_peers", "endpoint", "TEXT"},
 		{"known_peers", "endpoint_at", "TEXT"},
 		{"session_rooms", "left_at", "TEXT"},
+		{"rooms", "show_only", "INTEGER NOT NULL DEFAULT 0"},
 	} {
 		if err := addColumnIfMissing(db, c.table, c.column, c.typ); err != nil {
 			return err
@@ -188,10 +215,11 @@ func migrateMembership(db *sql.DB) error {
 		  room_name       TEXT NOT NULL,
 		  state           TEXT NOT NULL,
 		  issued_sequence INTEGER NOT NULL DEFAULT 0,
-		  created_at      TEXT NOT NULL
+		  created_at      TEXT NOT NULL,
+		  show_only       INTEGER NOT NULL DEFAULT 0
 		)`,
-		`INSERT INTO rooms_new (room_id, room_name, state, issued_sequence, created_at)
-		   SELECT room_id, room_name, state, issued_sequence, created_at FROM rooms`,
+		`INSERT INTO rooms_new (room_id, room_name, state, issued_sequence, created_at, show_only)
+		   SELECT room_id, room_name, state, issued_sequence, created_at, show_only FROM rooms`,
 		`DROP TABLE rooms`,
 		`ALTER TABLE rooms_new RENAME TO rooms`,
 	} {
@@ -465,11 +493,11 @@ func (m *Membership) KnownPeers() ([]KnownPeer, error) {
 // Names need be unique only among the rooms this peer hosts, since a name is only
 // ever resolved against a specific peer (§12) -- so a collision is regenerated
 // locally rather than coordinated globally.
-func (m *Membership) CreateRoom(selfPeerID string) (Room, error) {
+func (m *Membership) CreateRoom(selfPeerID string, showOnly bool) (Room, error) {
 	for attempt := 0; attempt < 20; attempt++ {
 		r := Room{
 			RoomID: uuidV4(), RoomName: NewRoomName(), State: "joined",
-			CreatedAt: time.Now().UTC().Format(time.RFC3339),
+			CreatedAt: time.Now().UTC().Format(time.RFC3339), ShowOnly: showOnly,
 		}
 		// Asked rather than caught. A name this peer mints is one it is free to
 		// mint differently, so avoiding a local clash costs nothing -- unlike a
@@ -481,8 +509,8 @@ func (m *Membership) CreateRoom(selfPeerID string) (Room, error) {
 		if taken > 0 {
 			continue
 		}
-		if _, err := m.db.Exec(`INSERT INTO rooms (room_id, room_name, state, created_at) VALUES (?,?,?,?)`,
-			r.RoomID, r.RoomName, r.State, r.CreatedAt); err != nil {
+		if _, err := m.db.Exec(`INSERT INTO rooms (room_id, room_name, state, created_at, show_only) VALUES (?,?,?,?,?)`,
+			r.RoomID, r.RoomName, r.State, r.CreatedAt, boolInt(showOnly)); err != nil {
 			return Room{}, err
 		}
 		if err := m.Invite(r.RoomID, selfPeerID); err != nil {
@@ -494,15 +522,15 @@ func (m *Membership) CreateRoom(selfPeerID string) (Room, error) {
 }
 
 func (m *Membership) Rooms() ([]Room, error) {
-	rows, err := m.db.Query(`SELECT room_id, room_name, state, created_at FROM rooms ORDER BY created_at`)
+	rows, err := m.db.Query(`SELECT ` + roomCols + ` FROM rooms ORDER BY created_at`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	var out []Room
 	for rows.Next() {
-		var r Room
-		if err := rows.Scan(&r.RoomID, &r.RoomName, &r.State, &r.CreatedAt); err != nil {
+		r, err := scanRoom(rows)
+		if err != nil {
 			return nil, err
 		}
 		out = append(out, r)
@@ -520,7 +548,7 @@ var errNoSuchRoom = errors.New("no such room")
 // sends someone looking for a room they are already in; returning whichever row
 // came back first would pick on their behalf without saying so.
 func (m *Membership) FindRoom(nameOrID string) (Room, error) {
-	rows, err := m.db.Query(`SELECT room_id, room_name, state, created_at FROM rooms
+	rows, err := m.db.Query(`SELECT `+roomCols+` FROM rooms
 		WHERE room_id = ? OR room_name = ? ORDER BY created_at`, nameOrID, nameOrID)
 	if err != nil {
 		return Room{}, err
@@ -528,8 +556,8 @@ func (m *Membership) FindRoom(nameOrID string) (Room, error) {
 	defer rows.Close()
 	var found []Room
 	for rows.Next() {
-		var r Room
-		if err := rows.Scan(&r.RoomID, &r.RoomName, &r.State, &r.CreatedAt); err != nil {
+		r, err := scanRoom(rows)
+		if err != nil {
 			return Room{}, err
 		}
 		found = append(found, r)
@@ -587,12 +615,45 @@ func (m *Membership) Guests(roomID string) ([]string, error) {
 
 // RecordRoom stores a room learned from an invitation. The guest did not create it
 // and cannot invent its identity, so both come from the invitation.
-func (m *Membership) RecordRoom(roomID, roomName string) error {
+//
+// showOnly is the choice of the person on this machine, and it applies only when the
+// room is new here. A room already recorded keeps what it was recorded with (D-200),
+// so the conflict clause leaves it alone.
+func (m *Membership) RecordRoom(roomID, roomName string, showOnly bool) error {
 	_, err := m.db.Exec(`
-		INSERT INTO rooms (room_id, room_name, state, created_at) VALUES (?,?,'joined',?)
+		INSERT INTO rooms (room_id, room_name, state, created_at, show_only) VALUES (?,?,'joined',?,?)
 		ON CONFLICT(room_id) DO UPDATE SET state = 'joined'`,
-		roomID, roomName, time.Now().UTC().Format(time.RFC3339))
+		roomID, roomName, time.Now().UTC().Format(time.RFC3339), boolInt(showOnly))
 	return err
+}
+
+func boolInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+// ShowOnlyFixedError is a request to join a room with a setting other than the one
+// it was created or joined with here.
+type ShowOnlyFixedError struct {
+	Room Room
+}
+
+func (e *ShowOnlyFixedError) Error() string {
+	if e.Room.ShowOnly {
+		return fmt.Sprintf("%s was joined show-only on this machine, and that cannot change. Nothing in it is given to your Claude, and it stays that way for this room.", e.Room.RoomName)
+	}
+	return fmt.Sprintf("%s was joined on this machine without --show-only, and that cannot change. Its conversation is given to your Claude, and it stays that way for this room.", e.Room.RoomName)
+}
+
+// CheckShowOnly refuses a request for a setting other than the one a room already
+// has here. A room not yet recorded has no setting to change.
+func (m *Membership) CheckShowOnly(roomID string, want bool) error {
+	if r, ok := m.RoomByID(roomID); ok && r.ShowOnly != want {
+		return &ShowOnlyFixedError{Room: r}
+	}
+	return nil
 }
 
 // RoomPeers lists where a room's other members might be. Endpoints go stale, so
@@ -673,9 +734,7 @@ func (m *Membership) RoomByID(roomID string) (Room, bool) {
 	if roomID == "" {
 		return Room{}, false
 	}
-	var r Room
-	err := m.db.QueryRow(`SELECT room_id, room_name, state, created_at FROM rooms WHERE room_id = ?`, roomID).
-		Scan(&r.RoomID, &r.RoomName, &r.State, &r.CreatedAt)
+	r, err := scanRoom(m.db.QueryRow(`SELECT `+roomCols+` FROM rooms WHERE room_id = ?`, roomID))
 	return r, err == nil
 }
 
@@ -900,7 +959,7 @@ func (m *Membership) DropOffer(roomID string) error {
 // verification completes (D-106).
 func (m *Membership) RoomsAdmitting(peerID string) []Room {
 	rows, err := m.db.Query(`
-		SELECT r.room_id, r.room_name, r.state, r.created_at FROM room_guests g
+		SELECT r.room_id, r.room_name, r.state, r.created_at, r.show_only FROM room_guests g
 		JOIN rooms r ON r.room_id = g.room_id
 		WHERE g.peer_id = ?`, peerID)
 	if err != nil {
@@ -909,8 +968,7 @@ func (m *Membership) RoomsAdmitting(peerID string) []Room {
 	defer rows.Close()
 	var out []Room
 	for rows.Next() {
-		var r Room
-		if rows.Scan(&r.RoomID, &r.RoomName, &r.State, &r.CreatedAt) == nil {
+		if r, err := scanRoom(rows); err == nil {
 			out = append(out, r)
 		}
 	}

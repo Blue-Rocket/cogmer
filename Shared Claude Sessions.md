@@ -2022,14 +2022,21 @@ invitation.
 
 A user's identity is kept apart from the state of their rooms. Identity is the user's
 identifier, the name they go by, and their machine's label. A room's state is its
-identifier, its name, its guests, and whether it injects its conversation into its
-members' sessions, and it belongs to the daemon, is created when the room is created or
+identifier, its name, its guests, and whether its conversation is given to this
+machine's sessions, and it belongs to the daemon, is created when the room is created or
 joined, and is never in a repository.
 
-A room can be set to show its conversation to its members while injecting none of it
-into any member's Claude session, because injection carries a colleague's
-conversation into another user's session, and so to that user's model provider under
-their own account.
+A user can create or join a room show-only. A show-only room appears to its members in
+the room view, and none of it is given to the user's own Claude sessions, because
+injection carries a colleague's conversation into a user's session, and so to that
+user's model provider under their own account.
+
+The user chooses show-only when the room is created or joined on their machine, and it
+cannot be changed for that room afterwards.
+
+The choice is the user's own. It does not stop a colleague's sessions receiving the
+user's turns, which the user is told when they choose it, and the user's own turns are
+still shared with the room.
 
 Nothing a user configures for reaching peers is committed to a repository.
 

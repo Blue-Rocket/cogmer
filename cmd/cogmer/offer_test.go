@@ -33,7 +33,7 @@ func TestAnInvitationArrivesOverTheChannel(t *testing.T) {
 	guestAddr := servePeerTLS(t, guest)
 	introduceDaemons(t, host, guest, hostAddr, guestAddr)
 
-	room, err := host.members.CreateRoom(host.id.PeerID)
+	room, err := host.members.CreateRoom(host.id.PeerID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func TestAnOfferFromAnUnverifiedPeerIsRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	room, _ := host.members.CreateRoom(host.id.PeerID)
+	room, _ := host.members.CreateRoom(host.id.PeerID, false)
 	_ = host.members.Invite(room.RoomID, guest.id.PeerID)
 	if err := host.deliverOffer(guest.id.PeerID, room); err == nil {
 		t.Fatal("an offer from an unverified peer was accepted")
@@ -114,7 +114,7 @@ func TestVerifyingDeliversWhatWasWaiting(t *testing.T) {
 	// Two rooms admitted before the guest could be told about either.
 	var names []string
 	for i := 0; i < 2; i++ {
-		r, err := host.members.CreateRoom(host.id.PeerID)
+		r, err := host.members.CreateRoom(host.id.PeerID, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -150,7 +150,7 @@ func TestWithheldInvitationsAreCounted(t *testing.T) {
 	}
 
 	for i := 0; i < 2; i++ {
-		r, err := m.CreateRoom(self.PeerID)
+		r, err := m.CreateRoom(self.PeerID, false)
 		if err != nil {
 			t.Fatal(err)
 		}

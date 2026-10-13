@@ -37,7 +37,7 @@ func newOfflinePeer(t *testing.T, roomID, roomName string) *offlinePeer {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { m.Close() })
-	if err := m.RecordRoom(roomID, roomName); err != nil {
+	if err := m.RecordRoom(roomID, roomName, false); err != nil {
 		t.Fatal(err)
 	}
 	store, err := OpenStore(roomID)
@@ -314,7 +314,7 @@ func TestOneFailingRoomDoesNotStarveTheOthers(t *testing.T) {
 	b := newOfflinePeer(t, goodID, "sunny-basin")
 	introduce(t, a, b, goodID)
 
-	if err := a.d.members.RecordRoom(badID, "aaa-broken"); err != nil {
+	if err := a.d.members.RecordRoom(badID, "aaa-broken", false); err != nil {
 		t.Fatal(err)
 	}
 	// Forced to sort first, because that is the case that starves: rooms are
