@@ -144,19 +144,63 @@ func runDoctor(deep bool) bool {
 	return true
 }
 
-// EnsureVerified runs the session-tier checks the first time a room is formed on
-// an unverified Claude Code version.
+// probeCouldNotRun is the failure recorded when a host's behavior probe could not be
+// run at all, which says nothing about the host.
+const probeCouldNotRun = "probe"
+
+// probeRetry is how long a probe that could not run is left alone. Without it, every
+// room command on such a machine ran the probe again, with a model turn and a wait
+// each time.
+const probeRetry = time.Hour
+
+// probeDue reports whether a recorded attempt should be made again: only one that could
+// not run, and only after the retry window. A result about a host, passing or failing,
+// is never repeated by itself.
+func probeDue(v verification, now time.Time) bool {
+	if len(v.Failures) != 1 {
+		return false
+	}
+	if _, couldNotRun := v.Failures[probeCouldNotRun]; !couldNotRun {
+		return false
+	}
+	when, err := time.Parse(time.RFC3339, v.When)
+	return err != nil || now.Sub(when) >= probeRetry
+}
+
+// recordProbeNotRun records an attempt that could not run, with the first line of why.
+func recordProbeNotRun(key string, err error) {
+	why := strings.SplitN(err.Error(), "\n", 2)[0]
+	if len(why) > 200 {
+		why = why[:200] + "…"
+	}
+	saveVerification(verification{Version: key, When: time.Now().UTC().Format(time.RFC3339),
+		Failures: map[string]string{probeCouldNotRun: why}})
+}
+
+// runChecks is RunChecks, as a variable so a test can stand in for real Claude turns.
+var runChecks = RunChecks
+
+// EnsureVerified runs the session-tier checks the first time a room is formed on a
+// Claude Code version this machine has not checked (D-129).
 //
-// Keyed on version, not room: forming a tenth room on a version already verified
-// costs nothing. Set COGMER_PREFLIGHT=off to skip, which is what CI and
-// scripted use should do -- the check spends a real turn of the user's quota.
+// One Claude turn is a second or two and the session checks make two, so this adds
+// about thirteen seconds to forming a room, once per version. The cost is paid at
+// the moment a person has just asked for a room, which is when a failure would
+// otherwise go unseen.
+//
+// Set COGMER_PREFLIGHT=off to skip, which is what CI and the test suite do.
 func EnsureVerified(room string) {
 	if strings.EqualFold(os.Getenv("COGMER_PREFLIGHT"), "off") {
 		return
 	}
 	version := ClaudeVersion()
-	if v, ok := loadVerifications()[version]; ok {
-		if len(v.Failures) > 0 {
+	if version == "unknown" {
+		return // no Claude Code to check
+	}
+	if v, ok := loadVerifications()[version]; ok && !probeDue(v, time.Now()) {
+		if why, couldNotRun := v.Failures[probeCouldNotRun]; couldNotRun && len(v.Failures) == 1 {
+			fmt.Fprintf(os.Stderr, "cogmer: the Claude Code behavior check could not run on %s (%s); it is tried again after an hour, or run cogmer doctor --host claude\n", version, why)
+		} else if len(v.Failures) > 0 {
 			fmt.Fprintf(os.Stderr, "cogmer: WARNING — Claude Code %s previously failed %d behavior check(s): %s\n",
 				version, len(v.Failures), strings.Join(keysOfStr(v.Failures), ", "))
 			fmt.Fprintln(os.Stderr, "cogmer: run `cogmer doctor` for detail.")
@@ -165,9 +209,11 @@ func EnsureVerified(room string) {
 	}
 
 	fmt.Fprintf(os.Stderr, "cogmer: new room %q on unverified Claude Code %s — running behavior checks (two Claude turns)...\n", room, version)
-	results, err := RunChecks(false)
+	results, err := runChecks(false)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "cogmer: preflight could not run (%v); collaboration continues unverified\n", err)
+		// Recorded, so that the next room command does not run another two turns.
+		recordProbeNotRun(version, err)
 		return
 	}
 	failures := map[string]string{}
@@ -187,7 +233,7 @@ func EnsureVerified(room string) {
 			fmt.Fprintf(os.Stderr, "cogmer: FAILED %s (%s): %v\n", r.B.ID, r.B.Title, r.Err)
 		}
 	}
-	fmt.Fprintln(os.Stderr, "cogmer: the room still works, but the failed assumptions above no longer hold. Run `cogmer doctor`.")
+	fmt.Fprintln(os.Stderr, "cogmer: the room still works, but the failed assumptions above do not hold. Run `cogmer doctor`.")
 }
 
 func keysOfStr(m map[string]string) []string {

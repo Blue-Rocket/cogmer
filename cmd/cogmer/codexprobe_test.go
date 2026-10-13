@@ -49,7 +49,7 @@ func TestAProbeThatCouldNotRunIsNotRepeatedWithinTheRetryWindow(t *testing.T) {
 		t.Errorf("the probe ran %d times across three room commands, want once", *calls)
 	}
 	v := loadVerifications()["codex:codex-cli 9.9.9"]
-	if why := v.Failures[codexProbeCouldNotRun]; why != "codex exec: not signed in" {
+	if why := v.Failures[probeCouldNotRun]; why != "codex exec: not signed in" {
 		t.Errorf("the attempt that could not run is recorded as %+v, want its first line", v.Failures)
 	}
 }
@@ -58,7 +58,7 @@ func TestAProbeThatCouldNotRunIsTriedAgainAfterTheWindow(t *testing.T) {
 	codexProbeHome(t)
 	saveVerification(verification{Version: "codex:codex-cli 9.9.9",
 		When:     time.Now().Add(-2 * time.Hour).UTC().Format(time.RFC3339),
-		Failures: map[string]string{codexProbeCouldNotRun: "not signed in"}})
+		Failures: map[string]string{probeCouldNotRun: "not signed in"}})
 	calls := standInForTheProbe(t, []Result{{B: Behavior{ID: "B25"}}}, nil)
 
 	EnsureCodexVerified()
@@ -76,7 +76,7 @@ func TestAResultAboutCodexIsNeverRepeatedByItself(t *testing.T) {
 	for name, failures := range map[string]map[string]string{
 		"a pass":                  nil,
 		"a failed behavior":       {"B27": "no matching evidence"},
-		"a failure and a non-run": {"B27": "x", codexProbeCouldNotRun: "y"},
+		"a failure and a non-run": {"B27": "x", probeCouldNotRun: "y"},
 	} {
 		saveVerification(verification{Version: "codex:codex-cli 9.9.9", When: old, Failures: failures})
 		calls := standInForTheProbe(t, nil, errors.New("must not run"))

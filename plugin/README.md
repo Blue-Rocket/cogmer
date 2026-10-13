@@ -14,6 +14,13 @@ Claude Code or Codex starts, and it replaces or wraps nothing.
 | `UserPromptSubmit` | captures your prompt, and injects the colleagues' turns this session has not seen |
 | `Stop` | captures the completed response |
 
+## The first room under a new version
+
+The first time you form a room under a Claude Code version this machine has not checked, cogmer
+runs two isolated Claude turns, about 13 seconds, to check the behaviors it relies on. That happens
+once for each version, and `COGMER_PREFLIGHT=off` skips it. If the check cannot run, cogmer says so
+and tries again after an hour.
+
 ## Commands in Codex
 
 Invoke the cogmer skill with a command name and its arguments: `$cogmer self-status`,

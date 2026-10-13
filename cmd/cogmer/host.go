@@ -276,10 +276,9 @@ func (claudeHost) MayTrustWithoutEvidence(version string) bool {
 	return version != "" && BehaviorKnownBroken(version, "B20")
 }
 
-// Preflight is not run for Claude Code. The preflight in EnsureVerified was last
-// called before the multi-room refactor, and wiring it in again would add two Claude
-// turns to forming a room, which is a decision of its own.
-func (claudeHost) Preflight(room string) {}
+// Preflight runs the session-tier checks the first time a room is formed under a
+// Claude Code version this machine has not checked (D-129).
+func (claudeHost) Preflight(room string) { EnsureVerified(room) }
 
 func (claudeHost) Doctor(deep bool) (bool, error) { return runDoctor(deep), nil }
 

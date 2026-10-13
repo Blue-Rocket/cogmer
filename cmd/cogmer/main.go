@@ -775,7 +775,7 @@ func explainNameTaken(err error) {
 	fmt.Println("changed key is indistinguishable from somebody else's key sent in their name.")
 	fmt.Println("That is what an interception looks like after the fact, so check with them on")
 	fmt.Println("a call before recording it.")
-	fmt.Printf("\nIf they really do have a new key, `%s forget` the old one first.\n", invocation())
+	fmt.Print(commandText("\nIf they really do have a new key, /cogmer:peer-forget the old one first.\n"))
 	fmt.Printf("That discards its admissions too, so you will invite them again deliberately.\n\n")
 }
 
@@ -806,7 +806,7 @@ func resolvePeer(m *Membership, arg string) (string, error) {
 	}
 	b.WriteString("\n\nTwo keys under one name is what a substituted key looks like once it has been")
 	b.WriteString("\nrecorded. If you did not knowingly record both, ask the person which is theirs")
-	b.WriteString("\nover a channel you can recognize them on, and `" + invocation() + " forget` the other.")
+	b.WriteString(commandText("\nover a channel you can recognize them on, and /cogmer:peer-forget the other."))
 	return "", errors.New(b.String())
 }
 
@@ -1749,9 +1749,8 @@ func beginCeremony(peerID, name, mine, label, endpoint string, preferTerminal bo
 	// failure with a different message, which reads as two problems rather than
 	// one. Say the one true thing instead.
 	if !daemonAlreadyServing(addr()) {
-		log.Fatalf("the cogmer daemon is not running, and pairing needs it.\n"+
-			"  It starts with an agent session. If one is open, %s doctor says what is wrong.",
-			invocation())
+		log.Fatal(commandText("the cogmer daemon is not running, and pairing needs it.\n" +
+			"  It starts with an agent session, and /cogmer:self-restart starts it without one."))
 	}
 	// One pairing record for both surfaces. What a match, a mismatch and an
 	// abandonment each mean is then decided in one place rather than twice.

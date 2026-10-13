@@ -28,20 +28,6 @@ downloaded. Shipping binaries inside the plugin removes the download entirely bu
 commits about 150MB per release into the history everybody clones, and is ruled
 out.
 
-## Checks and comments that say what is true
-
-A decision, a comment or a test says what the code does, and a change that breaks it is caught.
-
-**The Claude Code preflight that README.md and CLAUDE.md describe does not run.** `EnsureVerified` in
-`cmd/cogmer/doctor.go` runs two Claude turns the first time a room is formed under a Claude Code version
-this machine has not checked, and README.md says that happens by itself. Nothing calls it: its last caller
-was in `cmd/claude-team/main.go`, and `2fa6984` (the multi-room refactor) removed it (read with `git log -S`
-on 2026-10-12). `claudeHost.Preflight` in `cmd/cogmer/host.go` is empty for that reason, and Codex's
-preflight is called when a room is formed. Either call it when a room is formed, which adds about thirteen
-seconds and two Claude turns, or change README.md and CLAUDE.md to say that the checks run only when
-somebody runs `cogmer doctor`. Calling it needs the retry window Codex has, since it returns without
-recording when its probe cannot run.
-
 ## Somebody else uses it
 
 A colleague who did not write cogmer installs it, pairs, joins a room and works in it.
@@ -245,17 +231,6 @@ and would need to follow.
 **Whether `verify` still earns its place.** `/cogmer:peer-pair <name> --again` now
 does the same job, and `verify` has no slash command, so it may be a subcommand
 nobody has a route to.
-
-**Seven messages tell a user to type the binary at a terminal, which is for tests only.**
-`verifyRequest` in `cmd/cogmer/auth.go` ("both of you run `cogmer verify`"), `explainNameTaken` and
-`resolvePeer` in `cmd/cogmer/main.go` (`forget`), `runAllow` ("finish with" `verify`), `runVerify` (its
-usage line), `beginCeremony` (`doctor` says what is wrong) and `reportDaemonBlocked` (`stop`) each print
-the installed binary's path as something to type (read on 2026-10-12). Most have a slash command, which
-is what a user is meant to run: `/cogmer:peer-pair` covers `verify`, `/cogmer:peer-forget` covers `forget`
-and `/cogmer:self-stop` covers `stop`. `doctor` has none. The terminal pairing ceremony is the exception,
-a fallback for a machine that cannot open a browser (`plugin/README.md`). The fix is to name the command
-in each message, to give `doctor` a command or drop the instruction, and to keep the terminal form where
-it is a stated fallback. The item above asks whether `verify` should exist at all, which comes first.
 
 ## Beyond one conversation
 

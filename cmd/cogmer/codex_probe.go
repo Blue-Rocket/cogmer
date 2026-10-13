@@ -221,35 +221,13 @@ func logCodexProbeFailure(err error) {
 	fmt.Fprintf(os.Stderr, "cogmer: Codex probe could not run: %v\n", err)
 }
 
-// codexProbeCouldNotRun is the failure recorded when the probe could not be run at
-// all, which says nothing about Codex.
-const codexProbeCouldNotRun = "probe"
-
-// codexProbeRetry is how long a probe that could not run is left alone. Without it,
-// every room command on such a machine ran the probe again, with a model turn and
-// a wait of up to two minutes each time.
-const codexProbeRetry = time.Hour
-
-// codexProbeDue reports whether a recorded attempt should be made again: only one
-// that could not run, and only after the retry window.
-func codexProbeDue(v verification, now time.Time) bool {
-	if len(v.Failures) != 1 {
-		return false
-	}
-	if _, couldNotRun := v.Failures[codexProbeCouldNotRun]; !couldNotRun {
-		return false
-	}
-	when, err := time.Parse(time.RFC3339, v.When)
-	return err != nil || now.Sub(when) >= codexProbeRetry
-}
-
 func EnsureCodexVerified() {
 	if strings.EqualFold(os.Getenv("COGMER_PREFLIGHT"), "off") {
 		return
 	}
 	key := "codex:" + CodexVersion()
-	if v, ok := loadVerifications()[key]; ok && !codexProbeDue(v, time.Now()) {
-		if why, couldNotRun := v.Failures[codexProbeCouldNotRun]; couldNotRun && len(v.Failures) == 1 {
+	if v, ok := loadVerifications()[key]; ok && !probeDue(v, time.Now()) {
+		if why, couldNotRun := v.Failures[probeCouldNotRun]; couldNotRun && len(v.Failures) == 1 {
 			fmt.Fprintf(os.Stderr, "cogmer: the Codex behavior check could not run (%s); it is tried again after an hour, or run cogmer doctor --host codex\n", why)
 		} else if len(v.Failures) > 0 {
 			fmt.Fprintln(os.Stderr, "cogmer: Codex behavior checks failed; run cogmer doctor --host codex for detail")
@@ -261,12 +239,7 @@ func EnsureCodexVerified() {
 	if err != nil {
 		logCodexProbeFailure(err)
 		// Recorded, so that the next room command does not run another turn.
-		why := strings.SplitN(err.Error(), "\n", 2)[0]
-		if len(why) > 200 {
-			why = why[:200] + "…"
-		}
-		saveVerification(verification{Version: key, When: time.Now().UTC().Format(time.RFC3339),
-			Failures: map[string]string{codexProbeCouldNotRun: why}})
+		recordProbeNotRun(key, err)
 		return
 	}
 	v := recordCodexVerification(results)

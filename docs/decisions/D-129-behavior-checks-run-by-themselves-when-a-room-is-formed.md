@@ -13,6 +13,15 @@ room is formed under a Claude Code version this machine has not checked.
   costs nothing after the first. D-008 (behavior checks are keyed on the Claude Code
   version).
 
+- A session that forms a room runs its own host's preflight, and an attempt that could not run is recorded and
+  left alone for an hour, so a machine where the checks cannot run does not run two Claude turns at every room.
+  `cmd/cogmer/host.go`, `claudeHost.Preflight`, `cmd/cogmer/doctor.go`, `EnsureVerified`,
+  `cmd/cogmer/claudepreflight_test.go`, `TestAClaudePreflightThatCouldNotRunIsNotRepeatedWithinTheRetryWindow`.
+- The probe session loads only the project's settings and its own, not the user's, where installed plugins
+  are enabled, so the real plugin's hooks cannot fire inside it and write to the user's state directory.
+  `cmd/cogmer/probe.go`, `claudeArgs`, `cmd/cogmer/claudepreflight_test.go`,
+  `TestEveryClaudeProbeRunLoadsOnlyTheProjectSettings`.
+
 **Rejected.**
 - *Running the checks only by hand.* The failures are silent, and nobody runs a check
   for a problem they cannot see.

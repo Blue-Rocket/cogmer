@@ -229,7 +229,7 @@ func RunProbe(deep bool) (*Probe, error) {
 	}
 
 	run := func(args ...string) (string, error) {
-		cmd := exec.Command(claude, args...)
+		cmd := exec.Command(claude, claudeArgs(args...)...)
 		cmd.Dir = dir
 		cmd.Stdin = strings.NewReader("")
 		// If the user has registered the real cogmer hooks globally, they
@@ -419,6 +419,15 @@ func assertGUISession(manager string) error {
 //
 // They run in a directory of their own and without the probe's settings, so the
 // probe's hooks do not record these prompts as if they were part of the probe turn.
+// claudeArgs is how every probe run starts Claude Code. It loads only the project's
+// settings and the probe's own, not the user's, which is where installed plugins are
+// enabled, so the real cogmer plugin's hooks cannot fire inside the probe session and
+// write to the user's own state directory. Authentication does not come from settings.
+// --bare would also skip the hooks, and would stop reading the user's login.
+func claudeArgs(args ...string) []string {
+	return append([]string{"--setting-sources", "project"}, args...)
+}
+
 func runCommandProbe(claude, dir string) (failing, control string) {
 	work := filepath.Join(dir, "commandprobe")
 	cmds := filepath.Join(work, ".claude", "commands")
@@ -433,7 +442,7 @@ func runCommandProbe(claude, dir string) (failing, control string) {
 	write("probe-fail", "1", "TURN-RAN-AFTER-FAILURE")
 	write("probe-ok", "0", "TURN-RAN")
 	run := func(command string) string {
-		cmd := exec.Command(claude, "-p", command)
+		cmd := exec.Command(claude, claudeArgs("-p", command)...)
 		cmd.Dir = work
 		cmd.Stdin = strings.NewReader("")
 		cmd.Env = append(os.Environ(), "COGMER_ADDR=127.0.0.1:1")

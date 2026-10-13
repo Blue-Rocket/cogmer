@@ -53,8 +53,6 @@ host is for tests, so what a user reads does not describe how to declare one.
   decided the host and had to agree, so a third host would have been five more edits, and one wrong edit
   misbehaves silently.
 
-**Limits.** Claude Code's preflight is not run, because nothing calls it. `cmd/cogmer/host.go`,
-`claudeHost.Preflight`. A host version is read by running the host's executable, so a machine without it
-reports unknown. Plain `doctor` at a terminal checks every installed host, and so spends a turn on each.
+**Limits.** A host version is read by running the host's executable, so a machine without it reports unknown. Plain `doctor` at a terminal checks every installed host, and so spends a turn on each.
 
 **Revisit when** a host cannot declare itself in its hook line or its wrapper.
