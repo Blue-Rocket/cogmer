@@ -32,11 +32,6 @@ out.
 
 A decision, a comment or a test says what the code does, and a change that breaks it is caught.
 
-**D-007 (record `COMPACTION` events as observability) is not built.** No code records
-a compaction, so if the summarizer stops keeping a colleague's turns, a room's
-history shows nothing at the moment it happened. §7 lists the event type among those
-to design for later. Either the event is built, or D-007 is withdrawn.
-
 **Nothing lets a room show its conversation without injecting it.** Section 28 of the
 specification has a setting per room that keeps a room visible to its members while
 injecting none of it into their sessions, for a room whose conversation should not
@@ -235,7 +230,7 @@ worked in D-107 and D-108, which may or may not be what it said.
 
 ## Compaction
 
-A colleague's turns survive a compaction, and a room shows when one happened.
+A colleague's turns survive a compaction.
 
 **B19 checks a colleague's turn that was the conversation's subject, never one that was
 incidental.** The probe in `cmd/cogmer/probe.go` injects "The codeword for this check is
