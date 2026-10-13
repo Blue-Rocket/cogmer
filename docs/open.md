@@ -240,10 +240,13 @@ A rule built on the hook call itself as evidence is weaker, and needs a decision
 
 Whether the hook fails open. With the server absent or crashing, the hook returned nothing
 and no error or delay was seen, and a recovered server worked in the same session. With the
-server taking a call and never answering, the hook's delay was not isolated from the model's
-own 60 second timeout, and whether the hook's 15 second limit is honored was not observed. A
-delay there would break the rule that a session must never be worse for having cogmer
-installed, so a bridge would need a short deadline of its own.
+server taking a call and never answering, the user reported a wait of the full 60 seconds,
+past the 15 seconds the hook declared, and Desktop did not restart the hung server. That
+breaks the rule that a session must never be worse for having cogmer installed, so the bridge
+would have to answer within a deadline of its own however its daemon behaves, with a watchdog
+that exits the bridge when a call runs long, since an exit recovers on the next call. A
+bridge that is stopped from outside, such as by a sleeping machine, would still cost a minute
+for each prompt, and accepting that is a decision.
 
 How a user installs it. The server runs on the user's machine and so cannot ship inside the
 plugin, which loads in the sandbox. A user adds an entry to `claude_desktop_config.json` by
@@ -253,13 +256,13 @@ reports that it may not be.
 Whether the tool name is stable. It was the same across one restart of Claude Desktop, and
 nothing found documents it. Hook files name the target, so a name that changes breaks capture
 and injection with no sign. Cowork knows the computer by its name, and the tool name carries
-none, so which computer a call reaches for a user with two, and whether renaming a computer
-changes the name, are untested. A hook in the sandbox cannot list the session's servers, and a
+none, so which computer a call reaches for a user with two is untested. A rename is rare
+enough to handle in the documentation, which tells the user what to run again. A hook in the sandbox cannot list the session's servers, and a
 wildcard in the server name did not call the host, so the name has to be written into the hook
 file. A setup step on the user's machine that writes the Desktop entry and the plugin together,
 and a check on the host that no call from Cowork has arrived lately, would make a changed name
-visible. A `SessionStart` call reached the host in one of four sessions, so a bridge cannot
-depend on it.
+visible. A `SessionStart` call reached the host in one of seven sessions, and in none of three
+new sessions started with the host program already running, so a bridge cannot depend on it.
 
 The commands. Each `/cogmer:` command runs a shell command, and in the sandbox there is no
 daemon, so each would need a form that calls the server. A reply with no transcript also

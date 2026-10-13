@@ -76,10 +76,12 @@ copy killed, and one prompt sent in the same session.
 **Result:** the server logged one call taken at 15:31:39 and nothing after it, since it
 handles one request at a time, and Desktop logged no timeout of its own between 15:31:39
 and the kill at about 15:34. The model reported that its own call to the tool got no answer
-for 60 seconds and then timed out, and that the hook's line was missing. The wait the hook
-alone adds was not isolated, because the prompt also asked the model to call the tool, so the
-60 seconds belongs to that call. The probe's hooks set a timeout of 15 seconds and whether
-Cowork honors it was not observed.
+for 60 seconds and then timed out, and that the hook's line was missing. The user
+reported that the hang slowed the session for the full 60 second timeout, not timed with a
+stopwatch. The probe's hooks set a timeout of 15 seconds, so the wait was four times the limit
+the hook declared, and the prompt had also asked the model to call the tool, so the 60 seconds
+may be that call's. Desktop did not restart the hung server, so a second prompt would have
+waited behind the first.
 
 **Run:** probe 0.0.7, which adds to the session-start report the server names read from the
 harness's command line and the output of `claude mcp list`, and a third host call on each prompt
@@ -98,6 +100,17 @@ run counter continued from 3 to 4, so files under `HOME` survive a restart of th
 session and did not survive into a new session. The transcript holds the command hook's output
 as a `hook_success` line: at the end of the first prompt it held 4 such lines and the probe's own
 text once.
+
+**Run:** probe 0.0.8, with the host program already running and the mode file empty, and
+three brand-new sessions, each given the one message "Quote every line in your context that
+starts with `SessionStart`. Then stop."
+
+**Result:** in each session the plugin's command hook fired and the model quoted
+`SessionStart:startup hook success: [cogmer-probe] SessionStart fired...`. The host logged the
+`UserPromptSubmit` and `Stop` calls of sessions `127a86a2` (16:33:44), `907de45c` (16:34:01)
+and `7ed422fc` (16:34:19), and no `SessionStart` call for any of them. Counting the earlier
+sessions, a `SessionStart` call reached the host once in seven sessions that had one configured.
+The cause was not found. The call may run before Cowork attaches the host bridge to the session.
 
 Other observations from the Desktop logs on 2026-10-13: Desktop connects a configured server
 for Cowork and Code sessions through what `mcp-server-<name>.log` calls a shared pool, and

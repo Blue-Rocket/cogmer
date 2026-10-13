@@ -65,6 +65,9 @@ for line in sys.stdin:
             if k == "event":
                 continue
             v = str(v)
+            if k == "source":
+                shape.append("source=%s" % v[:20])
+                continue
             shape.append("%s: %d chars%s%s" % (k, len(v), ", UNRESOLVED" if "${" in v else "",
                                                (", first8=" + v[:8]) if k == "session" else ""))
         log("ping event=%s | %s" % (args.get("event", ""), "; ".join(shape)))
