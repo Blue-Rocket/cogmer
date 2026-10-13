@@ -32,19 +32,6 @@ out.
 
 A decision, a comment or a test says what the code does, and a change that breaks it is caught.
 
-**The boundary around injected turns is removed from their text, when it could be
-chosen to be absent from it.** `FormatTeamContext` in `cmd/cogmer/daemon.go` generates
-a random value for the boundary, then deletes any copy of that value from each
-colleague's turn, so a turn that contains it arrives altered. A random 20-character
-value almost never occurs in a turn, so the effect is rare, but the text is changed
-when it does. Choosing a value that occurs in none of the turns in the block, and
-generating another in the rare case that one does, would leave every turn as written
-and need no removal. `TestTeammateContentCannotEscapeTheBlock` in
-`cmd/cogmer/transcript_test.go` checks the boundary and should pass unchanged. D-040
-(the injected block is fenced with an unforgeable value) records the removal, so the
-change rewrites that part of it under W-38 (a partial change rewrites the earlier
-entry).
-
 **The view leaves the derived name off a user's own turns, and no decision records
 why.** Commit `33ce996` made the choice. D-021 (peer names are derived from the
 identity) is cited for it, but D-021 says only what the name is for; it says nothing
