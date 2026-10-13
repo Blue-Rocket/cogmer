@@ -53,6 +53,28 @@ if [ "$event" = "SessionStart" ]; then
   echo "mounts that may be host folders: $(mount 2>/dev/null | grep -iE 'virtiofs|9p|fuse|/mnt|/sessions' | cut -c1-110 | head -6 | tr '\n' '|')"
   echo "/sessions: $(ls -la /sessions 2>&1 | head -6 | tr '\n' '|')"
   echo "plugin data dir: ${CLAUDE_PLUGIN_DATA:-unset} -> $(ls -ld "${CLAUDE_PLUGIN_DATA:-/nonexistent}" 2>&1 | cut -c1-100)"
+  # Can a hook find out which servers this session has? Names and types only, never values.
+  if [ -n "${CLAUDE_PID:-}" ] && [ -r "/proc/$CLAUDE_PID/cmdline" ] && command -v python3 >/dev/null 2>&1; then
+    echo "mcp servers named in the harness command line: $(python3 - "$CLAUDE_PID" <<'PY' 2>&1 | cut -c1-400
+import json, os, sys
+args = open("/proc/%s/cmdline" % sys.argv[1], "rb").read().decode("utf-8", "replace").split("\0")
+found = []
+for i, a in enumerate(args):
+    if a == "--mcp-config" and i + 1 < len(args):
+        v = args[i + 1]
+        try:
+            d = json.loads(v) if v.lstrip().startswith("{") else json.load(open(v))
+            for k, srv in (d.get("mcpServers") or {}).items():
+                found.append("%s(%s)" % (k, srv.get("type", "stdio") if isinstance(srv, dict) else "?"))
+        except Exception as e:
+            found.append("unreadable --mcp-config: %s" % type(e).__name__)
+print(", ".join(found) or "no --mcp-config argument; flags: " + " ".join(sorted({a for a in args if a.startswith("--")}))[:200])
+PY
+)"
+  fi
+  if command -v claude >/dev/null 2>&1; then
+    echo "claude mcp list (names and status only): $( (timeout 20 claude mcp list 2>&1 || echo "failed or timed out") | sed -E 's/^([^:]+):.* - /\1: /' | head -12 | cut -c1-90 | tr '\n' '|')"
+  fi
   echo "tools: python3=$(command -v python3 || echo no) curl=$(command -v curl || echo no) go=$(command -v go || echo no) git=$(command -v git || echo no)"
   echo "existing cogmer state here: $(ls -d "$HOME"/.cogmer "$HOME"/.cogmer/bin 2>&1 | tr '\n' ' ')"
   echo "env names (CLAUDE|CODEX|COGMER|ANTHROPIC|COWORK|SESSION): $(env | cut -d= -f1 | grep -iE 'claude|codex|cogmer|anthropic|cowork|session' | sort | tr '\n' ' ')"

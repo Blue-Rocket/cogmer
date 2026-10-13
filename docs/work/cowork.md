@@ -24,8 +24,8 @@ failed for `controlplane.tailscale.com`, `login.tailscale.com`, `derp1.tailscale
 `derp2.tailscale.com`, `derp10.tailscale.com` and `example.com`, through an HTTPS proxy on
 the loopback address. The relay cogmer uses is Tailscale's, so a daemon in the VM could be
 installed and could reach no peer. The probe's run counter and first-seen file restarted
-at 1 in each of four sessions, each with a different boot id, so nothing written under
-`HOME` survives to the next session. The only writable mount is `/mnt/attach/outputs`, an
+at 1 in each of four new sessions, each with a different boot id, so nothing written under
+`HOME` survives into the next session. The only writable mount is `/mnt/attach/outputs`, an
 rclone filestore, and no folder of the user's was mounted.
 
 **Run:** probe 0.0.3 with an `mcp_tool` hook naming the server `cogmer-host-probe`, then the
@@ -80,6 +80,24 @@ for 60 seconds and then timed out, and that the hook's line was missing. The wai
 alone adds was not isolated, because the prompt also asked the model to call the tool, so the
 60 seconds belongs to that call. The probe's hooks set a timeout of 15 seconds and whether
 Cowork honors it was not observed.
+
+**Run:** probe 0.0.7, which adds to the session-start report the server names read from the
+harness's command line and the output of `claude mcp list`, and a third host call on each prompt
+naming `server: "remote-*"`. One session was started, and then resumed after the VM had
+restarted.
+
+**Result:** the harness's command line had no `--mcp-config` argument, only `--preload`, and
+`claude mcp list` in the VM printed "No MCP servers configured", so a hook in the VM cannot list
+the servers of its session, although the model's tool list holds the host program's tool. The
+call naming `remote-*` never reached the host, in either run. A `SessionStart` call reached the host once, at
+14:21:02 in the probe 0.0.4 session, and did not in the sessions of 14:33, 16:07 and 16:18, the last of
+them the resumed one, although the `UserPromptSubmit` and `Stop` calls of those sessions did.
+The host program was running at 14:33 and 16:18 and had not yet been started at 16:07. After the resume the VM had a new boot identifier and the same
+session identifier and transcript (662,014 bytes, five `hook_success` lines), and the probe's
+run counter continued from 3 to 4, so files under `HOME` survive a restart of the VM within a
+session and did not survive into a new session. The transcript holds the command hook's output
+as a `hook_success` line: at the end of the first prompt it held 4 such lines and the probe's own
+text once.
 
 Other observations from the Desktop logs on 2026-10-13: Desktop connects a configured server
 for Cowork and Code sessions through what `mcp-server-<name>.log` calls a shared pool, and

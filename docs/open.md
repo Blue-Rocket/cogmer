@@ -254,7 +254,12 @@ Whether the tool name is stable. It was the same across one restart of Claude De
 nothing found documents it. Hook files name the target, so a name that changes breaks capture
 and injection with no sign. Cowork knows the computer by its name, and the tool name carries
 none, so which computer a call reaches for a user with two, and whether renaming a computer
-changes the name, are untested.
+changes the name, are untested. A hook in the sandbox cannot list the session's servers, and a
+wildcard in the server name did not call the host, so the name has to be written into the hook
+file. A setup step on the user's machine that writes the Desktop entry and the plugin together,
+and a check on the host that no call from Cowork has arrived lately, would make a changed name
+visible. A `SessionStart` call reached the host in one of four sessions, so a bridge cannot
+depend on it.
 
 The commands. Each `/cogmer:` command runs a shell command, and in the sandbox there is no
 daemon, so each would need a form that calls the server. A reply with no transcript also

@@ -54,6 +54,16 @@
               "format": "json"
             },
             "timeout": 15
+          },
+          {
+            "type": "mcp_tool",
+            "server": "remote-*",
+            "tool": "cogmer-host-probe__ping",
+            "input": {
+              "event": "wildcard-server",
+              "format": "plain"
+            },
+            "timeout": 15
           }
         ]
       }
