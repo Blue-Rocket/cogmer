@@ -68,6 +68,11 @@ for line in sys.stdin:
             if k == "source":
                 shape.append("source=%s" % v[:20])
                 continue
+            if k == "prompt" and v.startswith("/"):
+                # A typed slash command: record its start, so the log shows whether the hook
+                # sees the text as typed or the command file's expansion.
+                shape.append("prompt starts %r (%d chars)" % (v[:40], len(v)))
+                continue
             shape.append("%s: %d chars%s%s" % (k, len(v), ", UNRESOLVED" if "${" in v else "",
                                                (", first8=" + v[:8]) if k == "session" else ""))
         log("ping event=%s | %s" % (args.get("event", ""), "; ".join(shape)))
