@@ -143,6 +143,14 @@ transcript recorded the JSON reply as an attachment of type `hook_additional_con
 reply as `hook_success` with `command` set to `hostprobe/ping`, which are the record types seen in
 Cowork. The harness behaves the same on the user's machine as in Cowork on these two points.
 
+**Run:** the probe server changed to log the start of a prompt that begins with `/`, and the user
+typed `/cogmer-probe:probe-report` in a Cowork session.
+
+**Result:** the host logged `prompt starts '/cogmer-probe:probe-report' (26 chars)` for the
+`UserPromptSubmit` call. The hook receives the text as typed and not the command file's
+expansion. The user also reported, from memory and not from a run built to check, that Cowork
+showed no approval prompt when the model called the probe's tool directly.
+
 Other observations from the Desktop logs on 2026-10-13: Desktop connects a configured server
 for Cowork and Code sessions through what `mcp-server-<name>.log` calls a shared pool, and
 `main.log` shows a `[remote-tools-device]` component that holds a keep-awake claim on the
