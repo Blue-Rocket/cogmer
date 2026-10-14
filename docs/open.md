@@ -253,6 +253,26 @@ and would need to follow.
 does the same job, and `verify` has no slash command, so it may be a subcommand
 nobody has a route to.
 
+## The room view
+
+A reader of the shared transcript sees a turn as its author meant it to look.
+
+**Render Markdown in the shared transcript.** The page's script, read in `cmd/cogmer/ui.html` on
+2026-10-13 and not run, turns only these into markup: fenced code blocks, inline code, `**bold**`,
+and a list of lines that each begin with a hyphen or an asterisk. A heading, a numbered list,
+emphasis with underscores, a quotation, a table and a link all show as the characters typed, and
+an assistant's turn is often written in them. The page escapes a turn before it applies any markup,
+because a colleague's turn is untrusted text, and it makes no request outside the machine, so a
+renderer has to keep both. Three questions follow from that. Whether to extend the hand-written
+renderer or to carry a Markdown library inside the binary, which would have to be read and kept
+current for the whole of what it accepts. How a link is shown: as text with its address, or as a
+link the reader can follow, limited to `http` and `https`, opened with no referrer, since a
+`javascript:` address or a link that carries the reader's page with it is how a colleague's text
+would act in the reader's browser. And an image, which would load from an address a colleague
+chose and so tell them when the reader looked, and is shown as its address and never fetched. No
+test runs the page's script, so a renderer needs one that does, against turns that hold markup
+meant to break out of the page. The Markdown export keeps the text as written.
+
 ## Beyond one conversation
 
 What cogmer might do beyond sharing one conversation, once a room works for a pair.
