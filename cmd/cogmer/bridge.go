@@ -9,6 +9,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -106,6 +108,19 @@ type bridge struct {
 	grace           time.Duration
 	exit            func(int)
 
+	// The daemon the bridge keeps running (D-208). With no control, the bridge only relays.
+	control     daemonControl
+	startEvery  time.Duration // the least time between two starts
+	startWait   time.Duration // how long a typed command waits for a daemon it started
+	restartWait time.Duration // how long a restart waits for the new daemon to answer
+	startMu     sync.Mutex
+	lastStart   time.Time
+
+	// The prompts the bridge answered itself, so that the stop call of the same turn is not
+	// relayed and the model's account of the command is not published.
+	handledMu sync.Mutex
+	handled   map[string]bool
+
 	mu sync.Mutex // serializes writes to out
 }
 
@@ -114,9 +129,74 @@ func runBridge() {
 		in: os.Stdin, out: os.Stdout,
 		post:     postToDaemon,
 		deadline: bridgeDeadline, commandDeadline: bridgeCommandDeadline, grace: bridgeGrace,
-		exit: os.Exit,
+		exit:    os.Exit,
+		control: localDaemon{}, startEvery: 10 * time.Second, startWait: 6 * time.Second,
+		restartWait: restartWait(),
 	}
+	go b.startAtLaunch()
 	b.serve()
+}
+
+// restartWait is how long a restart waits for the daemon to answer. COGMER_RESTART_WAIT
+// sets it in seconds, as it does for the plugin's restart.
+func restartWait() time.Duration {
+	if v := os.Getenv("COGMER_RESTART_WAIT"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			return time.Duration(n) * time.Second
+		}
+	}
+	return 5 * time.Second
+}
+
+// startAtLaunch does for a Cowork user what the session-start hook does for the others: it
+// starts a daemon when none answers and the user has not stopped it, and starts one over a
+// daemon of another version, which gives way (D-158). It waits for nothing.
+func (b *bridge) startAtLaunch() {
+	if b.control == nil {
+		return
+	}
+	running, ok := b.control.Answering()
+	switch {
+	case !ok && b.control.Stopped():
+		return
+	case ok && !shouldReplace(running, version):
+		return
+	}
+	b.startDaemon("at launch", false)
+}
+
+// startDaemon starts a daemon unless one was started a moment ago, and says whether it did.
+// A command the user typed starts one whatever was started before.
+func (b *bridge) startDaemon(why string, force bool) bool {
+	b.startMu.Lock()
+	defer b.startMu.Unlock()
+	if b.control == nil {
+		return false
+	}
+	if !force && !b.lastStart.IsZero() && time.Since(b.lastStart) < b.startEvery {
+		return false
+	}
+	b.lastStart = time.Now()
+	if err := b.control.Start(); err != nil {
+		log.Printf("bridge: could not start the daemon (%s): %v", why, err)
+		return false
+	}
+	log.Printf("bridge: started the daemon (%s)", why)
+	return true
+}
+
+// waitAnswering waits up to a limit for a daemon to answer.
+func (b *bridge) waitAnswering(limit time.Duration) bool {
+	deadline := time.Now().Add(limit)
+	for {
+		if _, ok := b.control.Answering(); ok {
+			return true
+		}
+		if !time.Now().Before(deadline) {
+			return false
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 
 // postToDaemon sends one hook call to the local daemon.
@@ -210,8 +290,14 @@ func (b *bridge) call(m bridgeMessage) {
 		return
 	}
 	deadline := b.deadlineFor(p.Name, p.Arguments)
+	work := func() string { return b.relay(p.Name, endpoint.path, endpoint.fields, p.Arguments, deadline) }
+	if local, ok := b.localCommand(p.Name, p.Arguments); ok {
+		work = func() string { return b.runLocal(local, p.Arguments) }
+	} else if p.Name == "stop" && b.wasHandled(p.Arguments) {
+		work = func() string { return "" }
+	}
 	done := make(chan string, 1)
-	go func() { done <- b.relay(p.Name, endpoint.path, endpoint.fields, p.Arguments, deadline) }()
+	go func() { done <- work() }()
 	select {
 	case text := <-done:
 		b.reply(m.ID, text)
@@ -266,7 +352,18 @@ func (b *bridge) relay(tool, path string, fields []string, args map[string]any, 
 	raw, err := b.post(path, body, deadline)
 	if err != nil {
 		log.Printf("bridge: daemon unreachable (%v); continuing without collaboration", err)
-		return ""
+		raw, err = b.afterFailure(tool, path, body, args, deadline)
+		if err != nil {
+			// A command the user typed has to answer, since the model is told to relay what
+			// it printed and would otherwise have nothing to relay.
+			if cmd, typed := isTypedCommand(args); typed && tool == "prompt" && b.control != nil {
+				if host, ok := hostByName(bridgeHost); ok {
+					return string(host.PromptHookOutput("## Output of " + typedCommandName(host, cmd.name) +
+						"\n\nThe cogmer daemon on this machine is not running and could not be started. The daemon's log says why."))
+				}
+			}
+			return ""
+		}
 	}
 	if tool != "prompt" {
 		return ""
@@ -308,4 +405,128 @@ func (b *bridge) write(v any) {
 	if _, err := fmt.Fprintf(b.out, "%s\n", buf); err != nil {
 		log.Printf("bridge: could not write a reply: %v", err)
 	}
+}
+
+// isTypedCommand says whether a prompt call carries a command the user typed.
+func isTypedCommand(args map[string]any) (typedCommand, bool) {
+	host, ok := hostByName(bridgeHost)
+	if !ok {
+		return typedCommand{}, false
+	}
+	ch, ok := host.(typedCommandHost)
+	if !ok {
+		return typedCommand{}, false
+	}
+	prompt, _ := args["prompt"].(string)
+	return parseTypedCommand(prompt, ch.CommandPrefix())
+}
+
+// afterFailure is what a call that found no daemon does. A call that is only a hook starts
+// a daemon, unless the user stopped it, and goes without: a session is never held up for
+// one, and the next call finds it. A command the user typed is what the user asked for, so
+// it ends their stop, starts a daemon, waits for it and tries once more.
+func (b *bridge) afterFailure(tool, path string, body []byte, args map[string]any, deadline time.Duration) ([]byte, error) {
+	if b.control == nil {
+		return nil, errNoDaemon
+	}
+	_, typed := isTypedCommand(args)
+	if tool != "prompt" || !typed {
+		if !b.control.Stopped() {
+			b.startDaemon("a call found none", false)
+		}
+		return nil, errNoDaemon
+	}
+	b.control.SetStopped(false)
+	b.startDaemon("a command found none", true)
+	if !b.waitAnswering(b.startWait) {
+		return nil, errNoDaemon
+	}
+	return b.post(path, body, deadline)
+}
+
+var errNoDaemon = fmt.Errorf("no daemon answered")
+
+// localCommands are the commands the bridge runs itself, because each acts on the daemon
+// and a daemon that ran one would end the process that has to answer.
+var localCommands = map[string]bool{"self-restart": true, "self-stop": true}
+
+func (b *bridge) localCommand(tool string, args map[string]any) (string, bool) {
+	if tool != "prompt" || b.control == nil {
+		return "", false
+	}
+	cmd, ok := isTypedCommand(args)
+	if !ok || !localCommands[cmd.name] {
+		return "", false
+	}
+	return cmd.name, true
+}
+
+func handledKey(args map[string]any) string {
+	session, _ := args["session_id"].(string)
+	prompt, _ := args["prompt_id"].(string)
+	return session + "\x00" + prompt
+}
+
+func (b *bridge) wasHandled(args map[string]any) bool {
+	b.handledMu.Lock()
+	defer b.handledMu.Unlock()
+	return b.handled[handledKey(args)]
+}
+
+// runLocal runs a command the bridge answers itself and returns the reply for the hook.
+func (b *bridge) runLocal(name string, args map[string]any) string {
+	b.handledMu.Lock()
+	if b.handled == nil {
+		b.handled = map[string]bool{}
+	}
+	if len(b.handled) >= commandPromptsKept {
+		b.handled = map[string]bool{}
+	}
+	b.handled[handledKey(args)] = true
+	b.handledMu.Unlock()
+
+	host, ok := hostByName(bridgeHost)
+	if !ok {
+		return ""
+	}
+	var text string
+	switch name {
+	case "self-restart":
+		text = b.restartDaemon()
+	default:
+		text = b.stopDaemon()
+	}
+	return string(host.PromptHookOutput("## Output of " + typedCommandName(host, name) + "\n\n" + text))
+}
+
+// restartDaemon stops the daemon and starts one, and says whether it answers. Started and
+// answering are different facts, and somebody who asks for a restart wants the second, so
+// it waits, for a bounded time (D-195).
+func (b *bridge) restartDaemon() string {
+	if out, err := b.control.Stop(true); err != nil {
+		return "The daemon could not be stopped, so it was not restarted.\n\n" + strings.TrimSpace(out)
+	}
+	b.control.SetStopped(false)
+	if !b.startDaemon("a restart", true) {
+		return "The daemon was stopped and could not be started again. The daemon's log says why."
+	}
+	if b.waitAnswering(b.restartWait) {
+		v, _ := b.control.Answering()
+		return fmt.Sprintf("The daemon was restarted and is answering on %s, version %s.\n\n"+
+			"Nothing that was captured is lost, because it is written to disk before it is shared. "+
+			"Connecting to colleagues again can take a few seconds more.", addr(), v)
+	}
+	return fmt.Sprintf("The daemon was started and is not answering on %s yet.\n\nThe daemon's log says what happened.", addr())
+}
+
+// stopDaemon stops the daemon and leaves the mark that stops the bridge from starting one
+// at the next prompt. A typed command starts it again.
+func (b *bridge) stopDaemon() string {
+	out, err := b.control.Stop(false)
+	if err != nil {
+		return "The daemon could not be stopped.\n\n" + strings.TrimSpace(out)
+	}
+	b.control.SetStopped(true)
+	return "The daemon on this machine was stopped.\n\n" +
+		"Nothing is captured or shared in Cowork until it runs again. Any /cogmer: command starts it."
 }

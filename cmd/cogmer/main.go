@@ -423,6 +423,9 @@ func listenWithin(address string, wait time.Duration) (net.Listener, error) {
 }
 
 func runDaemon() {
+	// A daemon that is running ends the user's stop, so the marker that says one stands
+	// is removed here, whoever started this daemon (D-208).
+	_ = os.Remove(stoppedMarker())
 	id, err := LoadIdentity()
 	if err != nil {
 		log.Fatalf("identity: %v", err)
@@ -1946,6 +1949,9 @@ func runStop(args []string) {
 	}
 	if len(outcomes) == 0 {
 		fmt.Printf("nothing is listening on %s or %s\n", addr(), peerAddr())
+	}
+	if !forRestart {
+		localDaemon{}.SetStopped(true)
 	}
 	for _, o := range outcomes {
 		if o.Stopped && !forRestart {

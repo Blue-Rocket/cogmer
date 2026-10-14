@@ -229,8 +229,6 @@ arrives) and D-207 (the Cowork bridge offers no tool that runs a command) decide
 that found what they rest on, its runs and what was only read are in `docs/work/cowork.md` and
 `docs/work/cowork-probe/`, and both are deleted with this item. What remains, in order:
 
-The bridge starting the daemon when a call finds none, as the session-start hook does for the
-other hosts, since a user who works only in Cowork has no such hook, and without delaying the call.
 The bridge's empty reply to a call with nothing to add, an empty text block, has been seen to
 raise nothing only in a probe, so it is checked in a Cowork session once the plugin exists.
 

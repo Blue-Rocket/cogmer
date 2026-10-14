@@ -4,7 +4,8 @@
 
 **Decision.** `cogmer stop` ends the cogmer daemons on this installation's addresses and starts
 none, and says that nothing is captured or shared until a daemon runs and that a new session
-starts one. `/cogmer:self-stop` runs it.
+starts one. It leaves a file that says the stop stands, which a daemon removes when it starts and
+which a Cowork bridge reads (D-208). `/cogmer:self-stop` runs it.
 
 **Support.**
 - A person who stops the daemon may want it stopped, and the next session's start hook starts one

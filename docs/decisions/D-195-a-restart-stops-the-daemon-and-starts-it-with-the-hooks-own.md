@@ -28,7 +28,7 @@ When it does not, it relays the reason the daemon recorded.
 - *`stop` starting the daemon.* Somebody who wants it stopped would have to stop it twice. D-193 (`stop` ends
   the daemon and starts nothing, and `/cogmer:self-stop` runs it).
 
-**Limits.** The five-second wait may end before a slow machine's daemon answers, and the command then says
+**Limits.** A Cowork user's daemon is started by the bridge's own Go function, which this command does not share (D-208). The five-second wait may end before a slow machine's daemon answers, and the command then says
 it was started and is not answering yet, which is true and may be gone a moment later.
 
 **Revisit when** the hook's start function moves into the binary, since both starts would then be one.
