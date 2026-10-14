@@ -239,8 +239,6 @@ command files run a shell command in the sandbox today, where there is no daemon
 The setup command that writes the Desktop entry and the plugin together, and the documentation
 for a renamed computer.
 
-A line in `room-status` when no call from Cowork has arrived lately.
-
 When it is built, D-205 to D-207 become active, D-201's limit on remote sessions is rewritten to
 name the bridge, D-147's trigger for a server that cogmer ships is answered with the test above,
 and D-119 is checked against the Cowork command route. The probe left an entry named

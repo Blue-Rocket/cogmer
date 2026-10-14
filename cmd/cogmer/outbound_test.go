@@ -45,7 +45,7 @@ var outboundCalls = map[site]struct {
 	{"stop_unix.go", "exec.Command"}:          {2, "lsof and ps, which read this machine's processes"},
 	{"stop_windows.go", "exec.Command"}:       {2, "netstat and tasklist, which read this machine's processes"},
 	{"bridge.go", "http.Client"}:              {1, "the daemon on loopback, for the Cowork bridge's relay of a hook's call"},
-	{"main.go", "http.Client"}:                {5, "the daemon on loopback, for the hooks, the commands, its list of peers and its self-check, and a health probe of one address"},
+	{"main.go", "http.Client"}:                {6, "the daemon on loopback, for the hooks, the commands, its list of peers and its self-check, when each host last called, and a health probe of one address"},
 	{"main.go", "http.Get"}:                   {0, ""},
 	{"transport.go", "http.Client"}:           {2, "a peer, over TLS pinned to its key, by TCP or the overlay"},
 	{"sync.go", "http.Client"}:                {1, "the peer client it is handed, which is the one above"},

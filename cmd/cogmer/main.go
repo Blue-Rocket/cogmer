@@ -1169,7 +1169,52 @@ func runGuests() {
 			rows = append(rows, guestRow{Name: firstNonEmpty(m.Label(p), PeerName(p)), ID: p, Self: p == id.PeerID})
 		}
 		renderGuests(os.Stdout, r.RoomName, rows, reach, self, up)
+		if line := coworkLine(m.SessionIDsInRoom(r.RoomID), fetchHostCalls(), up); line != "" {
+			fmt.Println()
+			fmt.Println(line)
+		}
 	})
+}
+
+// coworkLine says whether a Cowork session of this room has reached this machine, when
+// the room has one. A Cowork session whose hooks stop reaching the bridge captures and
+// injects nothing and shows nothing, so this is where it shows (D-205). It says nothing
+// when the room has no Cowork session or no daemon answered.
+func coworkLine(sessions []string, calls map[string]string, daemonUp bool) string {
+	if !daemonUp {
+		return ""
+	}
+	n := 0
+	for _, s := range sessions {
+		if strings.HasPrefix(s, (coworkHost{}).SessionID("")) {
+			n++
+		}
+	}
+	if n == 0 {
+		return ""
+	}
+	if age, ok := calls["cowork"]; ok {
+		return fmt.Sprintf("Cowork: %d session(s) in this room. A Cowork session last reached this machine %s ago.", n, age)
+	}
+	return fmt.Sprintf("Cowork: %d session(s) in this room, and no call from Cowork has reached this machine yet. "+
+		"If one is in use, typing a cogmer command in it shows whether cogmer answers there.", n)
+}
+
+// fetchHostCalls asks the running daemon when each host last called it.
+func fetchHostCalls() map[string]string {
+	c := &http.Client{Timeout: 2 * time.Second}
+	resp, err := c.Get("http://" + addr() + "/peers")
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+	var body struct {
+		HostCalls map[string]string `json:"hostCalls"`
+	}
+	if resp.StatusCode != http.StatusOK || json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&body) != nil {
+		return nil
+	}
+	return body.HostCalls
 }
 
 // fetchPeers asks the running daemon whom it can reach. The answer lives in the

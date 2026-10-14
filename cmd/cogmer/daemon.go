@@ -90,6 +90,10 @@ type Daemon struct {
 	commands       commandRunner
 	commandPrompts commandPrompts
 
+	// When each host last made a hook call, so that a host whose calls have stopped
+	// arriving shows (D-205).
+	hostCalls hostCalls
+
 	// Pairings awaiting their ceremony, one per opened page (D-180).
 	pairs pairRegistry
 
@@ -264,6 +268,7 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	d.hostCalls.note(host.Name())
 	// A prompt that is a command is answered before anything else, with no lock held
 	// because a command talks to this daemon. It is not a turn of the room, it needs no
 	// room, and it offers nothing (D-209). A host that has no process to run a command in
@@ -360,6 +365,7 @@ func (d *Daemon) handleStop(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	d.hostCalls.note(host.Name())
 	// What the model said about a command is for the person who typed it (D-209).
 	if d.commandPrompts.has(req.SessionID, req.PromptID) {
 		writeJSON(w, map[string]any{"stored": false})

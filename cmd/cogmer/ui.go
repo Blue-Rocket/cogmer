@@ -531,7 +531,7 @@ func (d *Daemon) handleSelf(w http.ResponseWriter, r *http.Request) {
 // commands that tell a person whom they can reach. A read like the view's, so it
 // needs no header, and the daemon sends no CORS headers (D-087).
 func (d *Daemon) handlePeers(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, map[string]any{"peers": d.peerStatus(), "self": d.selfStatus()})
+	writeJSON(w, map[string]any{"peers": d.peerStatus(), "self": d.selfStatus(), "hostCalls": d.hostCalls.ages()})
 }
 
 func (d *Daemon) peerStateLocked(addr string) *peerState {

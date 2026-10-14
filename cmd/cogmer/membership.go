@@ -824,6 +824,24 @@ func (m *Membership) SessionsInRoom(roomID string) int {
 	return n
 }
 
+// SessionIDsInRoom is the sessions bound to a room, by the identifiers they are stored
+// under.
+func (m *Membership) SessionIDsInRoom(roomID string) []string {
+	rows, err := m.db.Query(`SELECT session_id FROM session_rooms WHERE room_id = ? AND left_at IS NULL ORDER BY session_id`, roomID)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var s string
+		if rows.Scan(&s) == nil {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
 // IsGuest is the admission decision. Authentication established who is asking;
 // this establishes whether they may (D-044).
 func (m *Membership) IsGuest(roomID, peerID string) bool {

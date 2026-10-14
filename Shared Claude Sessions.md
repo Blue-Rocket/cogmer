@@ -982,6 +982,10 @@ A room's status says, for each colleague, whether this machine can reach them, a
 one it cannot, for how long it has been trying. A colleague who cannot be reached looks
 the same as a quiet room, and without being told, nobody knows to look.
 
+When a room has a Claude Cowork session, its status also says how long ago a Cowork session
+last reached this machine, or that none has yet, since a Cowork session whose hooks do not
+reach cogmer captures and receives nothing and shows nothing.
+
 A peer can be recorded without being verified, for scripts and tests, and such a peer
 cannot collaborate until the comparison happens.
 
