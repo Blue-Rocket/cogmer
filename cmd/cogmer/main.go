@@ -92,6 +92,8 @@ func main() {
 		runRevoke(os.Args[2:])
 	case "doctor":
 		runDoctorCommand(os.Args[2:])
+	case "cowork-setup":
+		runCoworkSetup(os.Args[2:])
 	case "probe-mcp":
 		if len(os.Args) >= 3 {
 			runProbeMCP(os.Args[2])
@@ -127,6 +129,7 @@ func usage() {
   cogmer hook prompt     UserPromptSubmit hook (capture + inject)
   cogmer hook stop       Stop hook (capture assistant turn)
   cogmer bridge          the MCP server Claude Cowork's hooks call (D-205)
+  cogmer cowork-setup    add the bridge to Claude Desktop and write the plugin for Cowork
   cogmer seed            Insert a simulated teammate conversation
   cogmer log             Print the room transcript
   cogmer version         Print the build version

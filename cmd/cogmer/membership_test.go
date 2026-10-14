@@ -809,7 +809,7 @@ func TestEverySlashCommandNamesARealSubcommand(t *testing.T) {
 		known[m[1]] = true
 	}
 
-	sub := regexp.MustCompile(`cli\.sh" ([a-z]+)`)
+	sub := regexp.MustCompile(`cli\.sh" ([a-z-]+)`)
 	for _, f := range files {
 		body, err := os.ReadFile(f)
 		if err != nil {

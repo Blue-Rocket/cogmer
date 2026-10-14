@@ -2123,6 +2123,20 @@ through the host's own controls before those hooks can capture or inject anythin
 Codex commands use the cogmer skill with the room, peer and self command names.
 They bind the session that invoked them, never a session selected for the machine.
 
+## Claude Cowork installation
+
+Claude Cowork runs its sessions in a sandbox that cannot reach other machines, so cogmer runs on
+the user's own machine, where it was installed through Claude Code or Codex, and a small bridge
+connects the two. A user runs the self-cowork command once in a Claude Code or Codex session. It
+adds the bridge to Claude Desktop's configuration, keeping a copy of the file it changed, and
+writes a plugin for Cowork that names the bridge. The user restarts Claude Desktop and installs
+that plugin in Cowork, and the commands then work there as they do in Claude Code, and the turns
+of the session are captured and offered as in any host. A Cowork turn counts as delivered when
+its reply is complete, because no transcript of the session can be read from this machine, and
+its turns show no count of tool operations.
+
+A renamed computer, or a moved cogmer, needs the command run again and the new plugin installed.
+
 ## Where each command lives
 
 Three homes, and the command decides which it belongs in.

@@ -103,7 +103,7 @@ func TestTheTypedCommandsAreTheOnesThePluginHas(t *testing.T) {
 	if len(files) == 0 {
 		t.Skip("plugin commands not readable")
 	}
-	call := regexp.MustCompile(`cli\.sh" ([a-z]+)`)
+	call := regexp.MustCompile(`cli\.sh" ([a-z-]+)`)
 	mainSrc, err := os.ReadFile("main.go")
 	if err != nil {
 		t.Fatal(err)

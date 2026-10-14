@@ -8,6 +8,7 @@ server asks the client to run inference.
 **Support.**
 - Through sampling, a peer's daemon could cause inference in an interactive session by way
   of a server, which §3.7 (a remote event never drives an interactive session) forbids.
+- The Cowork bridge is an MCP server that cogmer ships, and a test fails if it makes any request of the client or declares more than the tools capability. `cmd/cogmer/bridge_test.go`, `TestTheBridgeDeclaresOnlyToolsAndNeverMakesARequest`.
 - Whether Claude Code implements sampling has not been tested.
   `84a0751:docs/decisions.md`.
 
@@ -15,4 +16,4 @@ server asks the client to run inference.
 - *An MCP server that exposes sampling.* It would be a route by which a peer drives a
   session.
 
-**Revisit when** cogmer ships an MCP server.
+**Revisit when** cogmer ships a second MCP server, or a server needs the client to run inference.

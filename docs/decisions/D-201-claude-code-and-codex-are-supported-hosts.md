@@ -12,4 +12,4 @@
 **Rejected.**
 - *Ordering CoWork before Codex and deferring OpenAI hosts.* Codex provides the extension mechanisms this integration uses. `plugin/.codex-plugin/plugin.json`, `plugin/hooks/codex-hooks.json`.
 
-**Limits.** Remote cloud sessions are outside this integration. The plugin scripts and daemon must run on the session's machine.
+**Limits.** A session in a remote sandbox is outside this integration, except through the bridge that D-205 (Claude Cowork is a supported host through a bridge on the user's machine) describes. The plugin scripts and daemon run on the user's machine.

@@ -28,12 +28,13 @@ requires it.
 - The test requires the frontmatter on every file and fails if the directory is empty, because the
   defect it guards is the command added later by somebody who does not know the frontmatter matters.
   `cmd/cogmer/commandinvocation_test.go`, `TestNoCommandIsModelInvocable`.
+- The Cowork plugin's command files carry the frontmatter too, and a test requires it. `cmd/cogmer/cowork_setup_test.go`, `TestNoCoworkCommandIsModelInvocableOrRunsAShell`.
 
 **Rejected.**
 - *Disabling invocation only on the commands that change something.* The others buy no capability
   and cost context in every session, and the rule would carry an exception.
 
-**Limits.** No registry check covers it, for the reason D-118 gives, that it is a property of plugin
+**Limits.** The bridge's tools are a different route, which D-207 (the Cowork bridge offers no tool that runs a command) governs. No registry check covers it, for the reason D-118 gives, that it is a property of plugin
 load time. Moving to the `skills/<name>/SKILL.md` layout is a separate change.
 
 **Revisit when** a command appears that the model genuinely should reach without being asked. The

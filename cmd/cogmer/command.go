@@ -56,6 +56,7 @@ var typedCommands = map[string][]commandStep{
 var typedCommandsUnavailable = map[string]string{
 	"self-stop":    "stops the daemon that would be running it",
 	"self-restart": "restarts the daemon that would be running it",
+	"self-cowork":  "sets Cowork up on this machine, which a session of another host does",
 }
 
 const (

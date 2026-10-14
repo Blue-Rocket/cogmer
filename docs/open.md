@@ -229,20 +229,14 @@ arrives) and D-207 (the Cowork bridge offers no tool that runs a command) decide
 that found what they rest on, its runs and what was only read are in `docs/work/cowork.md` and
 `docs/work/cowork-probe/`, and both are deleted with this item. What remains, in order:
 
-The bridge's empty reply to a call with nothing to add, an empty text block, has been seen to
-raise nothing only in a probe, so it is checked in a Cowork session once the plugin exists.
+The Cowork plugin and the setup command are built and checked by tests and a local run. What a Cowork
+session does with them has not been seen: that the plugin installs from the zip, that a typed command's
+output reaches the model, that the empty text block the bridge returns for a call with nothing to add
+raises nothing, that the plugin's name does not collide with another of the same name, and that a
+computer's rename needs only the command again.
 
-The Cowork plugin: hooks of type `mcp_tool` naming `remote-devices` and the bridge's tool names,
-and command files that tell the model to relay the context a command produced. The plugin's
-command files run a shell command in the sandbox today, where there is no daemon.
-
-The setup command that writes the Desktop entry and the plugin together, and the documentation
-for a renamed computer.
-
-When it is built, D-205 to D-207 become active, D-201's limit on remote sessions is rewritten to
-name the bridge, D-147's trigger for a server that cogmer ships is answered with the test above,
-and D-119 is checked against the Cowork command route. The probe left an entry named
-`cogmer-host-probe` in the user's Claude Desktop configuration, the probe plugin installed in
+When a Cowork session has been seen to work with them, D-205 and D-207 become active. The probe left an
+entry named `cogmer-host-probe` in the user's Claude Desktop configuration, the probe plugin installed in
 Cowork, and the files `~/.cogmer-host-probe.*`, to be removed by the user.
 
 ## Tidying the commands

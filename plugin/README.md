@@ -67,6 +67,7 @@ every room, and `self-` commands act on you.
 | `self-name [what people should call you]` | show or set the name other people see for you |
 | `self-stop` | stop the daemon on this machine; nothing is captured or shared until a new session starts one |
 | `self-restart` | stop the daemon and start it again, without a new session |
+| `self-cowork` | add the bridge to Claude Desktop and write the plugin to upload in Cowork |
 
 ## Pairing happens in your browser, not through the model
 

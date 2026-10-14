@@ -57,6 +57,22 @@ When testing an unpublished build, run `go build -o bin/cogmer ./cmd/cogmer`, se
 checkout with `codex plugin marketplace add .`. The release download is available
 only after that version has been published.
 
+## Use it from Claude Cowork
+
+Claude Cowork runs its session in a sandbox that cannot reach other machines, so cogmer runs on your
+own computer and a small bridge connects the two. cogmer has to be installed on that computer first,
+through Claude Code or Codex as above, since that fetches and verifies the program. Then, in a Claude
+Code session, run `/cogmer:self-cowork`, or in a Codex session `$cogmer self-cowork`. It adds the
+bridge to Claude Desktop's configuration, keeping a copy of the file as it was, and writes a plugin
+for Cowork. Quit Claude Desktop completely and open it again, upload that plugin in Cowork under
+Customize, then Plugins, and start a new Cowork session. Typing `/cogmer:self-status` there shows
+whether it works.
+
+Run `/cogmer:self-cowork` again if you rename your computer or move cogmer, and upload the new plugin.
+Cowork's own limits apply: its hooks are Anthropic's to change, a Cowork turn counts as delivered when
+its reply is complete, and `cogmer doctor --host cowork` checks what that rests on. A Cowork session
+cannot tell the daemon about the tool operations in a turn, so its turns show none.
+
 ## Pair, once, on a call
 
 Send your colleague your pairing string, which this command prints:
