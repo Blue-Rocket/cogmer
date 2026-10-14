@@ -130,6 +130,19 @@ from a call that only succeeded. The count of records containing the plain marke
 each prompt, where one was expected, and that was not explained. The host cannot read the
 transcript, and no field the host receives carries what it holds.
 
+**Run:** Claude Code 2.1.296 on the user's machine, outside Cowork, started with
+`claude --setting-sources project -p` in a scratch directory with `--settings` naming two
+`mcp_tool` hooks on `UserPromptSubmit` and `--mcp-config --strict-mcp-config` naming a local
+stdio server. Both hooks call the probe server's `ping`, one asking for the plain reply and one
+for the JSON `additionalContext` reply, with `COGMER_ADDR` pointed at a closed port. The prompt
+asked the model to quote every line of its context that contains `host-probe`. One turn.
+
+**Result:** the server logged both calls. The model quoted one line, `UserPromptSubmit hook
+additional context: [cogmer-host-probe json] reached ...`, and none from the plain reply. The
+transcript recorded the JSON reply as an attachment of type `hook_additional_context` and the plain
+reply as `hook_success` with `command` set to `hostprobe/ping`, which are the record types seen in
+Cowork. The harness behaves the same on the user's machine as in Cowork on these two points.
+
 Other observations from the Desktop logs on 2026-10-13: Desktop connects a configured server
 for Cowork and Code sessions through what `mcp-server-<name>.log` calls a shared pool, and
 `main.log` shows a `[remote-tools-device]` component that holds a keep-awake claim on the

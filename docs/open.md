@@ -240,8 +240,9 @@ The transcript records context that reached the model as an attachment of type
 `hook_additional_context` and a call that only succeeded as `hook_success`, so evidence exists in
 the sandbox and no field the host receives carries it. A rule that counts a turn delivered when the
 call returned the JSON form is weaker, needs a decision, and would be guarded by a check that the
-harness still adds the JSON form to the model's context, which the same harness could be asked to
-show on the user's machine without Cowork.
+harness still adds the JSON form to the model's context. That check can run on the user's machine
+without Cowork, since Claude Code 2.1.296 added the JSON form and dropped the plain form there
+on 2026-10-13, as Cowork did, and the bridge would be the stdio server the check starts.
 
 Whether the hook fails open. With the server absent or crashing, the hook returned nothing
 and no error or delay was seen, and a recovered server worked in the same session. With the
