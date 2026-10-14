@@ -50,6 +50,10 @@ func newOfflinePeer(t *testing.T, roomID, roomName string) *offlinePeer {
 	}
 
 	d := &Daemon{id: id, members: m, stores: map[string]*Store{roomID: store}}
+	// These tests pull from an address directly. The daemons here share one advertised
+	// address, so what a server records for a guest is not the address it was dialed at,
+	// and the choice of rooms by guest is tested on its own.
+	d.askRooms = func(_ string, rooms []Room) []Room { return rooms }
 	t.Cleanup(d.closeStores)
 
 	up := &atomic.Bool{}

@@ -218,7 +218,11 @@ func (d *Daemon) pullFrom(addr string) (int, error) {
 	// up. One bad room must not make a peer silent.
 	total := 0
 	var failed []string
-	for _, r := range rooms {
+	ask := d.roomsToAsk
+	if d.askRooms != nil {
+		ask = d.askRooms
+	}
+	for _, r := range ask(addr, rooms) {
 		n, err := d.pullRoom(client, addr, r)
 		if err != nil {
 			failed = append(failed, fmt.Sprintf("%s: %v", r.RoomName, err))
@@ -233,8 +237,15 @@ func (d *Daemon) pullFrom(addr string) (int, error) {
 }
 
 // syncTargets is every address worth asking: those configured for this machine,
-// and those each room was joined through. A room carries its own peers because
-// reachability is a property of a room's membership, not of the daemon.
+// and the guests of each room, at the address recorded for each (D-103). A room
+// carries its own peers because reachability is a property of a room's membership,
+// not of the daemon.
+//
+// A peer that is known and is in no room is not here. Asking its address sends it a
+// signed request naming a room it is not a guest of, which tells a stranger the room's
+// identifier and this machine's address every second for as long as the record lasts,
+// and a pairing that was never finished leaves a record. Verification and an
+// invitation reach the peer by their own routes, which do not need it polled.
 func (d *Daemon) syncTargets() []string {
 	seen := map[string]bool{}
 	var out []string
@@ -247,15 +258,32 @@ func (d *Daemon) syncTargets() []string {
 	for _, a := range peerList() {
 		add(a)
 	}
-	// Machine-scope addresses, learned when pairing. These exist before any room
-	// does, which is what lets verification precede admission.
-	for _, a := range d.members.PeerEndpoints() {
-		add(a)
-	}
 	if rooms, err := d.members.Rooms(); err == nil {
 		for _, r := range rooms {
 			for _, a := range d.members.RoomPeers(r.RoomID, d.id.PeerID) {
 				add(a)
+			}
+		}
+	}
+	return out
+}
+
+// roomsToAsk is the rooms to pull from an address: those it is a guest's address in,
+// and every room for an address configured for this machine, which names no peer. A room
+// is never pulled from an address that is not one of its guests', so a guest of one
+// room is not told about another.
+func (d *Daemon) roomsToAsk(addr string, rooms []Room) []Room {
+	for _, a := range peerList() {
+		if a == addr {
+			return rooms
+		}
+	}
+	var out []Room
+	for _, r := range rooms {
+		for _, a := range d.members.RoomPeers(r.RoomID, d.id.PeerID) {
+			if a == addr {
+				out = append(out, r)
+				break
 			}
 		}
 	}

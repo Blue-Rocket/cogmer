@@ -139,6 +139,7 @@ func TestAColleagueWhoReachedUsIsSaidToHaveDone(t *testing.T) {
 	if err := d.members.Allow(peer.PeerID, "vivid-gannet"); err != nil {
 		t.Fatal(err)
 	}
+	shareARoom(t, d, peer.PeerID)
 	if err := d.members.SetPeerEndpoint(peer.PeerID, "127.0.0.1:59998"); err != nil {
 		t.Fatal(err)
 	}

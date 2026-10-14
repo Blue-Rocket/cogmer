@@ -85,6 +85,9 @@ func TestThePeerListCarriesWhenEachColleagueLastWroteATurn(t *testing.T) {
 		if err := d.members.Allow(p, []string{"alice", "bob"}[i]); err != nil {
 			t.Fatal(err)
 		}
+		if err := d.members.Invite(room.RoomID, p); err != nil {
+			t.Fatal(err)
+		}
 		if err := d.members.SetPeerEndpoint(p, "127.0.0.1:5999"+string(rune('0'+i))); err != nil {
 			t.Fatal(err)
 		}

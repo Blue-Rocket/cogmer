@@ -97,8 +97,11 @@ type Daemon struct {
 	commands       commandRunner
 	commandPrompts commandPrompts
 
-	// pull asks one peer for what it holds, which is pullFrom unless a test stands in.
-	pull func(addr string) (int, error)
+	// pull asks one peer for what it holds, which is pullFrom unless a test stands in, and
+	// askRooms chooses the rooms to ask it about, which is roomsToAsk unless a test pulls
+	// from an address it has not recorded for a guest.
+	pull     func(addr string) (int, error)
+	askRooms func(addr string, rooms []Room) []Room
 
 	// When each host last made a hook call, so that a host whose calls have stopped
 	// arriving shows (D-205).

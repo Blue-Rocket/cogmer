@@ -292,9 +292,10 @@ func TestPairingOutlivesTheRoomsItEnables(t *testing.T) {
 	}
 }
 
-// A paired peer is reachable before any room exists, which is what lets
-// verification precede admission rather than follow it.
-func TestAPairedPeerIsReachableWithoutARoom(t *testing.T) {
+// A paired peer who is in no room is not asked for anything, since a request for a room
+// goes only to a guest of it (D-103), and verification still reaches the peer at the
+// address recorded for it, which is how it precedes admission.
+func TestAPairedPeerInNoRoomIsVerifiedAtItsAddressAndNotPolled(t *testing.T) {
 	m := testMembership(t)
 	alice := testIdentity(t)
 	if err := m.Allow(alice.PeerID, "alice"); err != nil {
@@ -304,16 +305,17 @@ func TestAPairedPeerIsReachableWithoutARoom(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	t.Setenv("COGMER_PEERS", "")
 	d := &Daemon{id: testIdentity(t), members: m}
 	t.Cleanup(d.closeStores)
-	found := false
 	for _, a := range d.syncTargets() {
 		if a == "198.51.100.7:4783" {
-			found = true
+			t.Error("a peer in no room is asked for a room's turns")
 		}
 	}
-	if !found {
-		t.Error("a paired peer's address is not reachable until a room exists")
+	targets := d.verifyTargets(alice.PeerID)
+	if len(targets) == 0 || targets[0] != "198.51.100.7:4783" {
+		t.Errorf("verification does not reach a paired peer at its address: %v", targets)
 	}
 }
 

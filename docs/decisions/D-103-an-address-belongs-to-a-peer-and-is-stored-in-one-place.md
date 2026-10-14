@@ -17,6 +17,7 @@ of this peer written explicitly.
 - No room holds an address for a non-guest, since `verifyRequest` refuses a request from anybody
   who is not a guest before an address is recorded, and joining admits the host as it records
   them. `cmd/cogmer/auth.go`, `verifyRequest`.
+- A peer that is known and is in no room is not asked, and a guest is asked only about the rooms it is a guest of, so a stranger is not sent a room's identifier. `cmd/cogmer/sync.go`, `syncTargets`, `roomsToAsk`, `cmd/cogmer/syncscope_test.go`, `TestAPeerInNoRoomIsNotAskedAndAGuestIsAskedOnlyAboutItsOwnRooms`.
 - A user is a guest of their own rooms and is never in their own known-peers list, so the join
   excludes this peer by saying so and does not rely on a missing row that somebody will later
   add for another reason. `cmd/cogmer/membership.go`, `RoomPeers`.

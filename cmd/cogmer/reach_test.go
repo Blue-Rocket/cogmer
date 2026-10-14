@@ -86,6 +86,7 @@ func TestAColleagueIsNamedAndTimedWhileUnreachable(t *testing.T) {
 		t.Fatal(err)
 	}
 	const addr = "127.0.0.1:59999"
+	shareARoom(t, d, peer.PeerID)
 	if err := d.members.SetPeerEndpoint(peer.PeerID, addr); err != nil {
 		t.Fatal(err)
 	}
