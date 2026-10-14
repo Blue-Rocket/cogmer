@@ -221,61 +221,45 @@ worked in D-107 and D-108, which may or may not be what it said.
 ## Claude Cowork as a host
 
 A user in Claude Cowork shares a conversation with a colleague as users of Claude Code and
-Codex do.
+Codex do, through a bridge on the user's machine.
 
-**Whether Claude Cowork becomes a supported host.** A Cowork session runs in a sandbox whose
-network reaches no relay, so the daemon has to stay on the user's machine, and a Cowork
-session can reach it. On 2026-10-13 a plugin hook of type `mcp_tool` called a program on the
-user's machine through the tool `cogmer-host-probe__ping` on a server named `remote-devices`,
-passed it the session identifier, the prompt and the last assistant message, and the program's
-reply reached the model as context when the reply was the JSON form with `additionalContext`
-and not when it was a plain line. That is the capture and the injection a host needs. Observed
-in a probe, `docs/work/cowork.md` has each run, and the probe's source is
-`docs/work/cowork-probe/`. What stands between that and a host:
+**Build the Cowork host that D-205 (Claude Cowork is a supported host through a bridge on the
+user's machine), D-206 (a Cowork turn counts as delivered when the stop call for its prompt
+arrives) and D-207 (the Cowork bridge offers no tool that runs a command) decide.** The probe
+that found what they rest on, its runs and what was only read are in `docs/work/cowork.md` and
+`docs/work/cowork-probe/`, and both are deleted with this item. What remains, in order:
 
-How a turn is known to have been delivered. The daemon reads the session's transcript for
-that, and the transcript is in the sandbox, so with no evidence a turn would stay pending
-under D-202 (host-specific hooks use the shared peer protocol) and be offered at every prompt.
-The transcript records context that reached the model as an attachment of type
-`hook_additional_context` and a call that only succeeded as `hook_success`, so evidence exists in
-the sandbox and no field the host receives carries it. A rule that counts a turn delivered when the
-call returned the JSON form is weaker, needs a decision, and would be guarded by a check that the
-harness still adds the JSON form to the model's context. That check can run on the user's machine
-without Cowork, since Claude Code 2.1.296 added the JSON form and dropped the plain form there
-on 2026-10-13, as Cowork did, and the bridge would be the stdio server the check starts.
+The bridge, a subcommand of the binary that is a stdio MCP server with the two tools `prompt` and
+`stop`. It calls the daemon with the deadline the hook client uses, answers a call of its own
+within that deadline whatever the daemon does, serves calls concurrently, exits when a call runs
+past its deadline so that Desktop starts it again, declares only the tools capability and never
+sends the client a sampling request, and has a test that it offers no other tool.
 
-Whether the hook fails open. With the server absent or crashing, the hook returned nothing
-and no error or delay was seen, and a recovered server worked in the same session. With the
-server taking a call and never answering, the user reported a wait of the full 60 seconds,
-past the 15 seconds the hook declared, and Desktop did not restart the hung server. That
-breaks the rule that a session must never be worse for having cogmer installed, so the bridge
-would have to answer within a deadline of its own however its daemon behaves, with a watchdog
-that exits the bridge when a call runs long, since an exit recovers on the next call. A
-bridge that is stopped from outside, such as by a sleeping machine, would still cost a minute
-for each prompt, and accepting that is a decision.
+The host in `cmd/cogmer/host.go`: the name `cowork`, the `cowork:` session prefix, no transcript
+evidence, delivery committed at the stop call, and a reply in the JSON form only.
 
-How a user installs it. The server runs on the user's machine and so cannot ship inside the
-plugin, which loads in the sandbox. A user adds an entry to `claude_desktop_config.json` by
-hand. Whether a Desktop extension would be passed into a session is untested, and issue 26259
-reports that it may not be.
+The daemon running a typed `/cogmer:` command from the prompt text of a `cowork` request and
+returning its output as context.
 
-Whether the tool name is stable. It was the same across one restart of Claude Desktop, and
-nothing found documents it. Hook files name the target, so a name that changes breaks capture
-and injection with no sign. Cowork knows the computer by its name, and the tool name carries
-none, so which computer a call reaches for a user with two is untested. A rename is rare
-enough to handle in the documentation, which tells the user what to run again. A hook in the sandbox cannot list the session's servers, and a
-wildcard in the server name did not call the host, so the name has to be written into the hook
-file. A setup step on the user's machine that writes the Desktop entry and the plugin together,
-and a check on the host that no call from Cowork has arrived lately, would make a changed name
-visible. A `SessionStart` call reached the host in one of seven sessions, and in none of three
-new sessions started with the host program already running. The hooks reference says
-`mcp_tool` hooks on `SessionStart` at launch are skipped because no MCP client exists yet,
-so a bridge cannot depend on one and needs nothing at launch, since the first prompt's
-call has reached the host in every session.
+The Cowork plugin: hooks of type `mcp_tool` naming `remote-devices` and the bridge's tool names,
+and command files that tell the model to relay the context a command produced. The plugin's
+command files run a shell command in the sandbox today, where there is no daemon.
 
-The commands. Each `/cogmer:` command runs a shell command, and in the sandbox there is no
-daemon, so each would need a form that calls the server. A reply with no transcript also
-carries no count of tool operations, which the view shows.
+The setup command that writes the Desktop entry and the plugin together, and the documentation
+for a renamed computer.
+
+New behaviors in `cmd/cogmer/behaviors.go`, each with a negative test: a JSON reply from an
+`mcp_tool` hook reaches the model and a plain one does not, a `SessionStart` call is skipped at
+launch, and a hook's call to an absent server returns nothing. The D-206 check in `cogmer doctor`
+runs a local Claude Code session against the bridge.
+
+A line in `room-status` when no call from Cowork has arrived lately.
+
+When it is built, D-205 to D-207 become active, D-201's limit on remote sessions is rewritten to
+name the bridge, D-147's trigger for a server that cogmer ships is answered with the test above,
+and D-119 is checked against the Cowork command route. The probe left an entry named
+`cogmer-host-probe` in the user's Claude Desktop configuration, the probe plugin installed in
+Cowork, and the files `~/.cogmer-host-probe.*`, to be removed by the user.
 
 ## Tidying the commands
 
