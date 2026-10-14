@@ -339,7 +339,7 @@ func hookContextJSON(context string) []byte {
 // pending, whatever a behavior check found (D-202).
 func (codexHost) MayTrustWithoutEvidence(string) bool { return false }
 
-var errDeepUnsupported = fmt.Errorf("the compaction checks are not available for Codex")
+var errDeepUnsupported = fmt.Errorf("the compaction checks are not available for this host")
 
 func (codexHost) Doctor(deep bool) (bool, error) {
 	if deep {
@@ -356,11 +356,10 @@ func (codexHost) Doctor(deep bool) (bool, error) {
 // runs the same harness.
 type coworkHost struct{}
 
-// coworkReplyShape names the behavior that a Claude Code session adds the JSON form of an
+// coworkReplyShape is the behavior that a Claude Code session adds the JSON form of an
 // mcp_tool hook's reply to the model's context. It is checked on the user's machine
-// because no check can run inside Cowork (D-206). It becomes the behavior's number in
-// the registry when the check is written, and until then nothing records it as failing.
-const coworkReplyShape = "cowork-reply-shape"
+// because no check can run inside Cowork (D-206).
+const coworkReplyShape = "B30"
 
 func (coworkHost) Name() string { return "cowork" }
 
@@ -379,11 +378,12 @@ func (coworkHost) SessionID(raw string) string { return "cowork:" + raw }
 func (coworkHost) CommandText(text string) string { return text }
 
 // Executable, Installed and Version describe the Claude Code on this machine, which a
-// check runs against. Installed is false until a setup exists that says Cowork is in
+// check runs against, and Version is the key its verification is recorded under, apart
+// from Claude Code's own. Installed is false until a setup exists that says Cowork is in
 // use here, so that `doctor` does not check a host nobody has set up unless it is named.
 func (coworkHost) Executable() string { return "claude" }
 func (coworkHost) Installed() bool    { return false }
-func (coworkHost) Version() string    { return ClaudeVersion() }
+func (coworkHost) Version() string    { return coworkVerificationKey() }
 
 // PromptHookOutput is the reply the bridge returns to a prompt hook, with no trailing
 // newline, since it is the text of a tool result and not a line of standard output.
@@ -420,14 +420,15 @@ func (coworkHost) MayTrustWithoutEvidence(version string) bool {
 	return !BehaviorKnownBroken(version, coworkReplyShape)
 }
 
-// CoworkBehaviors is empty until the reply-shape check exists.
-var CoworkBehaviors = []Behavior{}
-
 func (coworkHost) Behaviors() []Behavior { return CoworkBehaviors }
 
-// Preflight has nothing to run until the reply-shape check exists.
-func (coworkHost) Preflight(string) {}
+// Preflight checks what Cowork relies on in the Claude Code on this machine, once for each
+// version (D-129).
+func (coworkHost) Preflight(room string) { EnsureCoworkVerified(room) }
 
-var errNoCoworkChecks = fmt.Errorf("no Cowork checks exist yet")
-
-func (coworkHost) Doctor(bool) (bool, error) { return true, errNoCoworkChecks }
+func (coworkHost) Doctor(deep bool) (bool, error) {
+	if deep {
+		return true, errDeepUnsupported
+	}
+	return runCoworkDoctor(), nil
+}

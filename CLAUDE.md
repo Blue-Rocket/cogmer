@@ -106,7 +106,7 @@ every target cross-compiles with `CGO_ENABLED=0`.
   the one on `PATH`.
 - **`cogmer doctor` checks the behaviors we rely on** in each installed host, in
   about 13s and two Claude turns for Claude Code and one turn for Codex, and
-  `--host` picks one. `--deep` adds a Claude Code compaction, in about 40s. It runs
+  `--host` picks one, and `--host cowork` checks what Cowork relies on in the Claude Code on this machine, in one turn. `--deep` adds a Claude Code compaction, in about 40s. It runs
   by itself when a room is formed under a Claude Code version this machine has not
   checked, and `COGMER_PREFLIGHT=off` turns that off for CI.
 - **`docs/relied-on-behaviors.md` is generated** by `cogmer behaviors --markdown`.

@@ -92,6 +92,10 @@ func main() {
 		runRevoke(os.Args[2:])
 	case "doctor":
 		runDoctorCommand(os.Args[2:])
+	case "probe-mcp":
+		if len(os.Args) >= 3 {
+			runProbeMCP(os.Args[2])
+		}
 	case "codex-probe-hook":
 		if len(os.Args) == 4 {
 			runCodexProbeHook(os.Args[2], os.Args[3])

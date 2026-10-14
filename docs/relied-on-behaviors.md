@@ -31,6 +31,10 @@ If this changes, a colleague's turns never reach your Claude, while the browser 
 
 If this changes, responses are not captured. If Stop stops firing, no response reaches the room; if it stops carrying last_assistant_message, every captured response loses its final text block, which is not yet in the transcript when Stop fires (B05). Either way the room shows prompts with incomplete or missing answers.
 
+### B29: Stop carries the same prompt_id as the prompt that began the turn
+
+If this changes, the turns a prompt offered are never matched to its stop call, so the daemon commits no delivery without a transcript to read, which is every Cowork turn and every Claude Code turn after B20 is recorded as failing: the turns are offered again at every prompt. It is noisy and loses nothing.
+
 ### B04: last_assistant_message contains ONLY the turn's final text block
 
 If this changes, nothing breaks: mergeTail also handles a last_assistant_message that holds the whole turn. The check fails so that this entry can be corrected, and so that the change does not pass unseen.
@@ -119,4 +123,24 @@ If this changes, a colleague's turns are never confirmed as delivered and are of
 ### B28: CODEX_THREAD_ID in a shell tool equals the hook session identifier
 
 If this changes, a room command cannot identify the session that invoked it. The command refuses rather than choosing another session's room.
+
+## Cowork session checks
+
+Claude Cowork runs the Claude Code harness in a sandbox that no check can reach, so
+`cogmer doctor --host cowork` checks these against the Claude Code on this machine, in
+one isolated turn that starts a small MCP server of this binary and fires hooks at it.
+A machine with no Claude Code has no check, and Cowork's compaction behavior is not checked.
+The result is recorded apart from Claude Code's own for the same version.
+
+### B30: A Claude Code session adds the JSON form of an mcp_tool hook's reply to the model's context
+
+If this changes, a colleague's turns reach a Cowork session's model not at all, while every call succeeds and every turn is counted delivered when its stop call arrives, so the loss is silent. Once doctor has recorded this check as failing for the installed version, the daemon stops counting a Cowork turn delivered without evidence, and the turns are offered again at every prompt, which is noisy and loses nothing. The plain form of the same reply is recorded as a successful hook and does not reach the model, and a change there would not break this.
+
+### B31: A hook of type mcp_tool that names a server that is not there shows nothing and leaves the session working
+
+If this changes, a Cowork user whose bridge is stopped, crashed or not yet started sees an error or a failed session on every prompt, which breaks the rule that cogmer never makes a session worse. A hook that calls an absent server is what a stopped bridge looks like to the harness.
+
+### B32: A hook of type mcp_tool on SessionStart is not called at launch
+
+If this changes, nothing breaks: a Cowork bridge needs nothing at launch, because the first prompt's call is the first that reaches it. A call at launch would let the bridge start the daemon, and learn of a session, before its first prompt, which could replace what it does on the first call.
 

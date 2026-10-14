@@ -54,6 +54,14 @@ type Probe struct {
 	FailingLineOutput string
 	ControlLineOutput string
 
+	// What the Cowork check saw: the model's answer, whether the session failed, the events
+	// the probe server was called with, and the words and server name the hooks used.
+	McpAnswer       string
+	McpErr          error
+	McpCalls        []string
+	McpJSONWord     string
+	McpAbsentServer string
+
 	// compaction tier
 	PreCompactBytes      int64
 	PostCompactBytes     int64

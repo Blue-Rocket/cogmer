@@ -203,3 +203,17 @@ func TestTheGUISessionCheckRunsWithNoProbe(t *testing.T) {
 	}()
 	_ = behavior(t, "B23").Check(nil)
 }
+
+func TestB29DetectsAStopThatNoLongerCarriesThePromptID(t *testing.T) {
+	good := &Probe{Hooks: map[string][]map[string]any{
+		"UserPromptSubmit": {{"prompt_id": "p-1"}},
+		"Stop":             {{"prompt_id": "p-1"}},
+	}}
+	mustPass(t, "B29", good)
+	mustDetect(t, "B29", &Probe{Hooks: map[string][]map[string]any{
+		"UserPromptSubmit": {{"prompt_id": "p-1"}}, "Stop": {{"prompt_id": "p-2"}}}}, "a different prompt id at Stop")
+	mustDetect(t, "B29", &Probe{Hooks: map[string][]map[string]any{
+		"UserPromptSubmit": {{"prompt_id": "p-1"}}, "Stop": {{"session_id": "s"}}}}, "no prompt id at Stop")
+	mustDetect(t, "B29", &Probe{Hooks: map[string][]map[string]any{
+		"UserPromptSubmit": {{"prompt": "x"}}, "Stop": {{"prompt_id": "p-1"}}}}, "no prompt id at the prompt")
+}

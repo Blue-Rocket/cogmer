@@ -76,6 +76,26 @@ var Behaviors = []Behavior{
 		Check:    func(p *Probe) error { return p.requireFields("Stop", "last_assistant_message", "session_id") },
 	},
 	{
+		ID:       "B29",
+		Title:    "Stop carries the same prompt_id as the prompt that began the turn",
+		Reliance: "If this changes, the turns a prompt offered are never matched to its stop call, so the daemon commits no delivery without a transcript to read, which is every Cowork turn and every Claude Code turn after B20 is recorded as failing: the turns are offered again at every prompt. It is noisy and loses nothing.",
+		Tier:     TierSession,
+		Check: func(p *Probe) error {
+			if err := p.requireFields("UserPromptSubmit", "prompt_id"); err != nil {
+				return err
+			}
+			if err := p.requireFields("Stop", "prompt_id"); err != nil {
+				return err
+			}
+			a, _ := p.field("UserPromptSubmit", "prompt_id")
+			b, _ := p.field("Stop", "prompt_id")
+			if a != b {
+				return fmt.Errorf("Stop carries prompt_id %v and the prompt carried %v, so a turn's pending injections cannot be matched to its stop call", b, a)
+			}
+			return nil
+		},
+	},
+	{
 		ID:       "B04",
 		Title:    "last_assistant_message contains ONLY the turn's final text block",
 		Reliance: "If this changes, nothing breaks: mergeTail also handles a last_assistant_message that holds the whole turn. The check fails so that this entry can be corrected, and so that the change does not pass unseen.",
@@ -417,6 +437,15 @@ func MarkdownReport() string {
 	b.WriteString("These checks use an isolated turn, with real hook output and a shell tool.\n")
 	b.WriteString("Codex compaction behavior is not checked.\n\n")
 	for _, bh := range CodexBehaviors {
+		fmt.Fprintf(&b, "### %s: %s\n\n%s\n\n", bh.ID, bh.Title, bh.Reliance)
+	}
+	b.WriteString("## Cowork session checks\n\n")
+	b.WriteString("Claude Cowork runs the Claude Code harness in a sandbox that no check can reach, so\n")
+	b.WriteString("`cogmer doctor --host cowork` checks these against the Claude Code on this machine, in\n")
+	b.WriteString("one isolated turn that starts a small MCP server of this binary and fires hooks at it.\n")
+	b.WriteString("A machine with no Claude Code has no check, and Cowork's compaction behavior is not checked.\n")
+	b.WriteString("The result is recorded apart from Claude Code's own for the same version.\n\n")
+	for _, bh := range CoworkBehaviors {
 		fmt.Fprintf(&b, "### %s: %s\n\n%s\n\n", bh.ID, bh.Title, bh.Reliance)
 	}
 	return b.String()

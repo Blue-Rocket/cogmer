@@ -34,6 +34,7 @@ var outboundCalls = map[site]struct {
 	goes  string
 }{
 	{"browser.go", "exec.Command"}:            {3, "opens the pairing page the daemon serves on loopback"},
+	{"cowork_probe.go", "exec.Command"}:       {1, "runs the user's own claude on a fixed behavior probe"},
 	{"daemonstart.go", "exec.Command"}:        {1, "starts a daemon of this binary, detached, as the plugin's shell function does"},
 	{"daemonstart.go", "exec.CommandContext"}: {1, "runs this binary's stop subcommand for a Cowork user"},
 	{"command.go", "exec.CommandContext"}:     {1, "runs this binary's own subcommands for a command typed in a Cowork session, with no shell"},
