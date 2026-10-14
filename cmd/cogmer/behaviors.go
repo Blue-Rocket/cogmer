@@ -384,6 +384,22 @@ var Behaviors = []Behavior{
 		},
 	},
 	{
+		ID:       "B34",
+		Title:    "A hook's output as long as the daemon's block budget is recorded whole and not stored as a preview",
+		Reliance: "If this changes so that the host's limit falls below the budget, every block over it reaches the model as a preview of its first two thousand characters and a pointer to a file, so the newest turns, which are at the end of the block, are missing, and the recorded block is not the one offered, so it is never confirmed delivered and is offered again at every prompt and grows. It fails silently. This is what happened when the limit was 10,000 characters and the budget 60,000, and a room's offered turns grew from 21 to more than 180.",
+		Tier:     TierSession,
+		Check: func(p *Probe) error {
+			if p.BudgetBlock == "" {
+				return fmt.Errorf("the transcript recorded nothing for a hook output of %d characters, so this check saw nothing", p.BudgetSize)
+			}
+			if strings.Contains(p.BudgetBlock, persistedOutputMark) || len(p.BudgetBlock) < p.BudgetSize-100 {
+				return fmt.Errorf("a hook output of %d characters was recorded as %d characters and %q, so the host no longer injects a block of the daemon's budget whole; lower defaultMaxInjectedBlock",
+					p.BudgetSize, len(p.BudgetBlock), firstLine(p.BudgetBlock))
+			}
+			return nil
+		},
+	},
+	{
 		ID:       "B24",
 		Title:    "A slash command whose ! line exits non-zero produces no model turn",
 		Reliance: "If this changes, nothing breaks: cli.sh exits 0 on every path, which is correct either way. The check fails so that the reason for that rule can be revisited, since a failing line that still ran a turn would let a command report failure by its exit status. Where it holds, a command that exits non-zero leaves the model unable to explain or act on what happened, and the person sees only a failed shell line, so a path that exited 1 again would fail silently.",

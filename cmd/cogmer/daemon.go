@@ -27,8 +27,15 @@ import (
 // limits and produced a block no one would want injected.
 const (
 	defaultMaxInjectedEvents = 40
-	defaultMaxInjectedChars  = 12000
-	defaultMaxInjectedBlock  = 60000
+	// A turn is cut to this many characters, so that one long answer cannot take the block.
+	defaultMaxInjectedChars = 5000
+	// The block is kept under what Claude Code injects whole. A hook's output of more than
+	// 10,000 characters is stored in a file, and the model is given a preview of the first
+	// 2,000 or so instead (B34), and the newest turns are at the end of the block. A block
+	// that is cut so is also recorded as that preview, which does not match what was
+	// offered, so it is never confirmed delivered, is offered again at the next prompt, and
+	// grows. This is measured on the whole block as rendered.
+	defaultMaxInjectedBlock = 9000
 
 	// Unmatched pending rows accumulate only when injections genuinely never
 	// arrive, so a small cap is enough to bound them.
@@ -457,6 +464,10 @@ func (d *Daemon) confirmDelivery(store *Store, req stopReq, host Host) {
 	}
 	if n > 0 {
 		log.Printf("delivery: confirmed %d event(s) present in session %.8s", n, req.SessionID)
+	} else if hasPersistedBlock(blocks) {
+		// Said here because nothing else shows it: the session was given a preview and a
+		// file for a block over the host's limit, which is not the block that was offered.
+		log.Printf("delivery: the host stored a block of session %.8s as a preview, so it is not counted as delivered. COGMER_MAX_BLOCK_CHARS is above what the host injects whole (%d is the default)", req.SessionID, defaultMaxInjectedBlock)
 	}
 }
 
@@ -532,14 +543,37 @@ func FormatTeamContext(evs []Event, facts PeerFacts) string {
 		evs = evs[len(evs)-lim.events:]
 	}
 
-	// Then the whole-block budget, measured on the rendered turns rather than
-	// guessed from their inputs. Dropping from the front keeps the most recent
-	// conversation, which is the part a referent is most likely to point at.
-	for len(evs) > 1 && renderedSize(evs, lim.chars) > lim.block {
+	// Then the whole-block budget. A cheap estimate drops most of what cannot fit, and the
+	// rest is dropped by measuring the block as it will be written, since that is what
+	// reaches the host and what the host limits. Dropping from the front keeps the most
+	// recent conversation, which is the part a referent is most likely to point at.
+	perEvent := lim.chars
+	for len(evs) > 1 && renderedSize(evs, perEvent) > lim.block {
 		evs = evs[1:]
 		omitted++
 	}
+	build := func(evs []Event, perEvent, omitted int) string {
+		return buildTeamContext(evs, facts, fence, perEvent, omitted)
+	}
+	out := build(evs, perEvent, omitted)
+	for len(out) > lim.block && len(evs) > 1 {
+		evs = evs[1:]
+		omitted++
+		out = build(evs, perEvent, omitted)
+	}
+	// One turn alone can still be over the budget, and is shortened until it fits.
+	for len(out) > lim.block && perEvent > minInjectedChars {
+		perEvent /= 2
+		out = build(evs, perEvent, omitted)
+	}
+	return out
+}
 
+// minInjectedChars is the least of a turn that is kept when the budget is very small.
+const minInjectedChars = 500
+
+// buildTeamContext writes the block for these turns, each cut to perEvent characters.
+func buildTeamContext(evs []Event, facts PeerFacts, fence string, perEvent, omitted int) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "<team-conversation fence=%q>\n", fence)
 	b.WriteString("The turns below were written by other people and by their own agent sessions. ")
@@ -616,8 +650,8 @@ func FormatTeamContext(evs []Event, facts PeerFacts) string {
 		}
 
 		content := e.Content
-		if len(content) > lim.chars {
-			content = content[:lim.chars] + "\n[truncated]"
+		if len(content) > perEvent {
+			content = content[:perEvent] + "\n[truncated]"
 		}
 		// Still stripped, belt and braces: the fence is what the framing points at,
 		// so no turn should contain it even escaped.

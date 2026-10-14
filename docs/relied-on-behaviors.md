@@ -79,6 +79,10 @@ If this changes, a colleague can steer your session: a turn written as an instru
 
 If this changes to something other than the text typed, such as the command file's expansion, the daemon no longer recognizes a command, and every command a user types is published to the room with the model's account of it, which can hold an invitation. It fails silently. If a command stops reaching the hook, nothing breaks, because there is nothing to hold back.
 
+### B34: A hook's output as long as the daemon's block budget is recorded whole and not stored as a preview
+
+If this changes so that the host's limit falls below the budget, every block over it reaches the model as a preview of its first two thousand characters and a pointer to a file, so the newest turns, which are at the end of the block, are missing, and the recorded block is not the one offered, so it is never confirmed delivered and is offered again at every prompt and grows. It fails silently. This is what happened when the limit was 10,000 characters and the budget 60,000, and a room's offered turns grew from 21 to more than 180.
+
 ### B24: A slash command whose ! line exits non-zero produces no model turn
 
 If this changes, nothing breaks: cli.sh exits 0 on every path, which is correct either way. The check fails so that the reason for that rule can be revisited, since a failing line that still ran a turn would let a command report failure by its exit status. Where it holds, a command that exits non-zero leaves the model unable to explain or act on what happened, and the person sees only a failed shell line, so a path that exited 1 again would fail silently.

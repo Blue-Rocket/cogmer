@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -55,6 +56,10 @@ type Probe struct {
 	ControlLineOutput string
 	// ControlPrompt is the prompt the hook received for that control command (B33).
 	ControlPrompt string
+	// BudgetBlock is what the transcript recorded for a hook output of as many characters
+	// as the daemon's block budget, and BudgetSize how many that was (B34).
+	BudgetBlock string
+	BudgetSize  int
 
 	// What the Cowork check saw: the model's answer, whether the session failed, the events
 	// the probe server was called with, and the words and server name the hooks used.
@@ -264,7 +269,8 @@ func RunProbe(deep bool) (*Probe, error) {
 		p.ToolEnvSessionID = strings.TrimSpace(string(b))
 	}
 	p.freezeSessionEvidence()
-	p.FailingLineOutput, p.ControlLineOutput, p.ControlPrompt = runCommandProbe(claude, dir)
+	p.FailingLineOutput, p.ControlLineOutput, p.ControlPrompt, p.BudgetBlock = runCommandProbe(claude, dir)
+	p.BudgetSize = defaultMaxInjectedBlock
 
 	if deep {
 		if _, err := run("-p", "/compact", "--resume", p.SessionID, "--settings", settings); err != nil {
@@ -440,11 +446,11 @@ func claudeArgs(args ...string) []string {
 	return append([]string{"--setting-sources", "project"}, args...)
 }
 
-func runCommandProbe(claude, dir string) (failing, control, controlPrompt string) {
+func runCommandProbe(claude, dir string) (failing, control, controlPrompt, budgetBlock string) {
 	work := filepath.Join(dir, "commandprobe")
 	cmds := filepath.Join(work, ".claude", "commands")
 	if err := os.MkdirAll(cmds, 0o700); err != nil {
-		return "", "", ""
+		return "", "", "", ""
 	}
 	write := func(name, exit, reply string) {
 		body := "---\ndescription: probe\nallowed-tools: Bash(sh:*)\n---\n" +
@@ -457,8 +463,11 @@ func runCommandProbe(claude, dir string) (failing, control, controlPrompt string
 	// what B33 reads. The failing command runs without one, as before.
 	var hookArgs []string
 	if self, err := os.Executable(); err == nil {
-		hooks := map[string]any{"UserPromptSubmit": []any{map[string]any{"hooks": []any{map[string]any{
-			"type": "command", "command": quoteCmd(self, "probe-hook", "UserPromptSubmit", work)}}}}}
+		hooks := map[string]any{"UserPromptSubmit": []any{map[string]any{"hooks": []any{
+			map[string]any{"type": "command", "command": quoteCmd(self, "probe-hook", "UserPromptSubmit", work)},
+			// an output as long as the daemon's block budget, to see how the host records it (B34)
+			map[string]any{"type": "command", "command": quoteCmd(self, "probe-bighook", fmt.Sprint(defaultMaxInjectedBlock))},
+		}}}}
 		settings := filepath.Join(work, "settings.json")
 		buf, _ := json.Marshal(map[string]any{"hooks": hooks})
 		if os.WriteFile(settings, buf, 0o600) == nil {
@@ -475,7 +484,7 @@ func runCommandProbe(claude, dir string) (failing, control, controlPrompt string
 	}
 	failing = run("/probe-fail")
 	if failing != "" {
-		return failing, "", ""
+		return failing, "", "", ""
 	}
 	control = run("/probe-ok", hookArgs...)
 	if data, err := os.ReadFile(filepath.Join(work, "UserPromptSubmit.jsonl")); err == nil {
@@ -485,5 +494,56 @@ func runCommandProbe(claude, dir string) (failing, control, controlPrompt string
 			controlPrompt, _ = m["prompt"].(string)
 		}
 	}
-	return failing, control, controlPrompt
+	if data, err := os.ReadFile(filepath.Join(work, "UserPromptSubmit.jsonl")); err == nil {
+		lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+		var m map[string]any
+		if json.Unmarshal([]byte(lines[len(lines)-1]), &m) == nil {
+			if tp, _ := m["transcript_path"].(string); tp != "" {
+				budgetBlock = recordedBudgetBlock(tp)
+			}
+		}
+	}
+	return failing, control, controlPrompt, budgetBlock
+}
+
+// budgetProbeMark opens the output of the budget probe's hook.
+const budgetProbeMark = "BUDGET-PROBE"
+
+// runProbeBigHook is the hook that writes an output of the length it is given, which the
+// probe reads back from the transcript (B34).
+func runProbeBigHook(args []string) {
+	n := defaultMaxInjectedBlock
+	if len(args) > 0 {
+		if v, err := strconv.Atoi(args[0]); err == nil && v > len(budgetProbeMark) {
+			n = v
+		}
+	}
+	fmt.Print(budgetProbeMark + strings.Repeat("0123456789", n/10+1)[:n-len(budgetProbeMark)])
+}
+
+// recordedBudgetBlock is what a transcript holds for the budget probe's output.
+func recordedBudgetBlock(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		if !strings.Contains(line, "hook_success") {
+			continue
+		}
+		var r struct {
+			Attachment struct {
+				Type    string `json:"type"`
+				Content string `json:"content"`
+				Stdout  string `json:"stdout"`
+			} `json:"attachment"`
+		}
+		if json.Unmarshal([]byte(line), &r) != nil || r.Attachment.Type != "hook_success" {
+			continue
+		}
+		if strings.HasPrefix(r.Attachment.Stdout, budgetProbeMark) || strings.HasPrefix(r.Attachment.Content, budgetProbeMark) {
+			return r.Attachment.Content
+		}
+	}
+	return ""
 }

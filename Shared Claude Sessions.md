@@ -1689,6 +1689,10 @@ Injection has limits, which can be configured:
 The limits are a safety valve, not the ordinary path. Exceeding them means an unusually
 long or busy pairing.
 
+The whole block is kept below the length at which the host stops giving a hook's output to
+the model whole, since a longer one reaches the model as a preview of its first part, and
+the newest turns are at its end.
+
 When a limit is exceeded, the newest portion that fits is injected, with a note
 saying that earlier conversation in the room exists and was left out.
 

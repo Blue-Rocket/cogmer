@@ -161,6 +161,20 @@ type attachmentRecord struct {
 	} `json:"attachment"`
 }
 
+// persistedOutputMark opens what Claude Code records for a hook's output that it stored in
+// a file instead of injecting, which it does for more than about 10,000 characters (B34).
+const persistedOutputMark = "<persisted-output>"
+
+// hasPersistedBlock reports whether any recorded block is such a preview.
+func hasPersistedBlock(blocks []string) bool {
+	for _, b := range blocks {
+		if strings.Contains(b, persistedOutputMark) {
+			return true
+		}
+	}
+	return false
+}
+
 // InjectedBlocks returns every UserPromptSubmit hook output recorded in a
 // transcript, in file order.
 //

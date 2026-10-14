@@ -92,6 +92,8 @@ func main() {
 		runRevoke(os.Args[2:])
 	case "doctor":
 		runDoctorCommand(os.Args[2:])
+	case "probe-bighook":
+		runProbeBigHook(os.Args[2:])
 	case "cowork-setup":
 		runCoworkSetup(os.Args[2:])
 	case "probe-mcp":
@@ -167,8 +169,8 @@ Environment:
   COGMER_PEERS       comma-separated peer addresses to synchronize with
   COGMER_SYNC_MS     poll interval in milliseconds (default 1000)
   COGMER_MAX_EVENTS       turns per injected block (default 40)
-  COGMER_MAX_EVENT_CHARS  characters per turn (default 12000)
-  COGMER_MAX_BLOCK_CHARS  characters per block (default 60000)
+  COGMER_MAX_EVENT_CHARS  characters per turn (default 5000)
+  COGMER_MAX_BLOCK_CHARS  characters per block (default 9000)
 `)
 }
 

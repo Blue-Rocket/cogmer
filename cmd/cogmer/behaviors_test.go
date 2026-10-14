@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"io"
+	"os"
 	"strings"
 	"testing"
 )
@@ -223,4 +225,38 @@ func TestB33DetectsACommandThatNoLongerReachesThePromptHookAsTyped(t *testing.T)
 	mustPass(t, "B33", &Probe{ControlPrompt: "  /probe-ok with arguments"})
 	mustDetect(t, "B33", &Probe{ControlPrompt: "Reply with the single word TURN-RAN."}, "the command file's expansion")
 	mustDetect(t, "B33", &Probe{}, "a command that never reached the hook")
+}
+
+func TestB34DetectsAHostThatNoLongerInjectsABlockOfTheBudgetWhole(t *testing.T) {
+	whole := strings.Repeat("0", defaultMaxInjectedBlock)
+	mustPass(t, "B34", &Probe{BudgetSize: defaultMaxInjectedBlock, BudgetBlock: whole})
+	preview := "<persisted-output>\nOutput too large (9.0KB). Full output saved to: /x\n\nPreview (first 2KB):\nBUDGET-PROBE0123\n...\n</persisted-output>"
+	mustDetect(t, "B34", &Probe{BudgetSize: defaultMaxInjectedBlock, BudgetBlock: preview}, "a block stored as a preview")
+	mustDetect(t, "B34", &Probe{BudgetSize: defaultMaxInjectedBlock, BudgetBlock: whole[:5000]}, "a block cut short")
+	mustDetect(t, "B34", &Probe{BudgetSize: defaultMaxInjectedBlock}, "an output the transcript never recorded")
+}
+
+// The daemon's block budget is below the length at which Claude Code stores a hook's
+// output in a file, which was observed to be 10,000 characters, so the model is given the
+// whole block and the recorded block is the one that was offered (B34).
+func TestTheBlockBudgetIsBelowWhatTheHostInjectsWhole(t *testing.T) {
+	if defaultMaxInjectedBlock >= 10000 {
+		t.Errorf("the block budget is %d, which the host stores as a preview", defaultMaxInjectedBlock)
+	}
+	if defaultMaxInjectedBlock < 6000 {
+		t.Errorf("the block budget is %d, which leaves little room for turns after the framing", defaultMaxInjectedBlock)
+	}
+}
+
+func TestTheProbeHookWritesAnOutputOfTheLengthItIsGiven(t *testing.T) {
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	runProbeBigHook([]string{"9000"})
+	w.Close()
+	os.Stdout = old
+	b, _ := io.ReadAll(r)
+	if len(b) != 9000 || !strings.HasPrefix(string(b), budgetProbeMark) {
+		t.Errorf("the hook wrote %d characters beginning %q", len(b), string(b)[:20])
+	}
 }
