@@ -217,3 +217,10 @@ func TestB29DetectsAStopThatNoLongerCarriesThePromptID(t *testing.T) {
 	mustDetect(t, "B29", &Probe{Hooks: map[string][]map[string]any{
 		"UserPromptSubmit": {{"prompt": "x"}}, "Stop": {{"prompt_id": "p-1"}}}}, "no prompt id at the prompt")
 }
+
+func TestB33DetectsACommandThatNoLongerReachesThePromptHookAsTyped(t *testing.T) {
+	mustPass(t, "B33", &Probe{ControlPrompt: "/probe-ok"})
+	mustPass(t, "B33", &Probe{ControlPrompt: "  /probe-ok with arguments"})
+	mustDetect(t, "B33", &Probe{ControlPrompt: "Reply with the single word TURN-RAN."}, "the command file's expansion")
+	mustDetect(t, "B33", &Probe{}, "a command that never reached the hook")
+}

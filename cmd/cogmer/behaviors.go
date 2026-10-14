@@ -356,14 +356,29 @@ var Behaviors = []Behavior{
 	},
 	{
 		ID:       "B18",
-		Title:    "Slash commands do not reach UserPromptSubmit",
-		Reliance: "If this changes, every slash command a user types, including /compact, is captured as a prompt and published to the room.",
+		Title:    "Built-in slash commands do not reach UserPromptSubmit",
+		Reliance: "If this changes, every built-in command a user types, including /compact, is captured as a prompt and published to the room. A command from a plugin or a project does reach the hook, which B33 records and the daemon holds back.",
 		Tier:     TierCompaction,
 		Check: func(p *Probe) error {
 			for _, pl := range p.HookAll("UserPromptSubmit") {
 				if s, _ := pl["prompt"].(string); strings.HasPrefix(strings.TrimSpace(s), "/") {
 					return fmt.Errorf("slash command %q reached UserPromptSubmit; it would be published to the room", s)
 				}
+			}
+			return nil
+		},
+	},
+	{
+		ID:       "B33",
+		Title:    "A project or plugin command reaches UserPromptSubmit with the text as typed",
+		Reliance: "If this changes to something other than the text typed, such as the command file's expansion, the daemon no longer recognizes a command, and every command a user types is published to the room with the model's account of it, which can hold an invitation. It fails silently. If a command stops reaching the hook, nothing breaks, because there is nothing to hold back.",
+		Tier:     TierSession,
+		Check: func(p *Probe) error {
+			if p.ControlPrompt == "" {
+				return fmt.Errorf("the prompt hook did not fire for a project command, so there is nothing for the daemon to hold back and the hold-back can be removed")
+			}
+			if !strings.HasPrefix(strings.TrimSpace(p.ControlPrompt), "/probe-ok") {
+				return fmt.Errorf("a project command reached the prompt hook as %.60q and not as typed, so the daemon would not recognize it and would publish it", p.ControlPrompt)
 			}
 			return nil
 		},

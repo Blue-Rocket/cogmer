@@ -17,10 +17,11 @@ import (
 // command files call for the other hosts, and hands the output back as context for the
 // model to relay. The output is not a turn of the room.
 
-// typedCommandHost is a host whose prompt text can be a command the user typed, and says
-// what such a prompt begins with.
-type typedCommandHost interface {
-	CommandPrefix() string
+// typedCommandRunner is a host whose commands the daemon runs from the text of the prompt.
+// The other hosts run their own commands in the session, and the daemon only holds the
+// prompt back from the room (D-209).
+type typedCommandRunner interface {
+	RunsTypedCommands() bool
 }
 
 // commandStep is one subcommand of the binary, with the heading its output carries when a
@@ -218,10 +219,7 @@ func (d *Daemon) runTypedCommand(host Host, rawSession string, cmd typedCommand)
 
 // typedCommandName writes a command's name as the user typed it.
 func typedCommandName(host Host, name string) string {
-	if ch, ok := host.(typedCommandHost); ok {
-		return ch.CommandPrefix() + name
-	}
-	return name
+	return host.CommandPrefix() + name
 }
 
 // commandPrompts remembers the prompts that were commands, so that the stop call of the

@@ -53,6 +53,8 @@ type Probe struct {
 	// control is what shows that commands load in the probe directory at all.
 	FailingLineOutput string
 	ControlLineOutput string
+	// ControlPrompt is the prompt the hook received for that control command (B33).
+	ControlPrompt string
 
 	// What the Cowork check saw: the model's answer, whether the session failed, the events
 	// the probe server was called with, and the words and server name the hooks used.
@@ -262,7 +264,7 @@ func RunProbe(deep bool) (*Probe, error) {
 		p.ToolEnvSessionID = strings.TrimSpace(string(b))
 	}
 	p.freezeSessionEvidence()
-	p.FailingLineOutput, p.ControlLineOutput = runCommandProbe(claude, dir)
+	p.FailingLineOutput, p.ControlLineOutput, p.ControlPrompt = runCommandProbe(claude, dir)
 
 	if deep {
 		if _, err := run("-p", "/compact", "--resume", p.SessionID, "--settings", settings); err != nil {
@@ -426,7 +428,9 @@ func assertGUISession(manager string) error {
 // "no turn ran" and not "commands did not load here".
 //
 // They run in a directory of their own and without the probe's settings, so the
-// probe's hooks do not record these prompts as if they were part of the probe turn.
+// probe's hooks do not record these prompts as if they were part of the probe turn. The
+// control carries one hook of its own, recording into that directory, to read the prompt
+// it was given (B33).
 // claudeArgs is how every probe run starts Claude Code. It loads only the project's
 // settings and the probe's own, not the user's, which is where installed plugins are
 // enabled, so the real cogmer plugin's hooks cannot fire inside the probe session and
@@ -436,11 +440,11 @@ func claudeArgs(args ...string) []string {
 	return append([]string{"--setting-sources", "project"}, args...)
 }
 
-func runCommandProbe(claude, dir string) (failing, control string) {
+func runCommandProbe(claude, dir string) (failing, control, controlPrompt string) {
 	work := filepath.Join(dir, "commandprobe")
 	cmds := filepath.Join(work, ".claude", "commands")
 	if err := os.MkdirAll(cmds, 0o700); err != nil {
-		return "", ""
+		return "", "", ""
 	}
 	write := func(name, exit, reply string) {
 		body := "---\ndescription: probe\nallowed-tools: Bash(sh:*)\n---\n" +
@@ -449,8 +453,20 @@ func runCommandProbe(claude, dir string) (failing, control string) {
 	}
 	write("probe-fail", "1", "TURN-RAN-AFTER-FAILURE")
 	write("probe-ok", "0", "TURN-RAN")
-	run := func(command string) string {
-		cmd := exec.Command(claude, claudeArgs("-p", command)...)
+	// The control command runs with a hook that records the prompt it is given, which is
+	// what B33 reads. The failing command runs without one, as before.
+	var hookArgs []string
+	if self, err := os.Executable(); err == nil {
+		hooks := map[string]any{"UserPromptSubmit": []any{map[string]any{"hooks": []any{map[string]any{
+			"type": "command", "command": quoteCmd(self, "probe-hook", "UserPromptSubmit", work)}}}}}
+		settings := filepath.Join(work, "settings.json")
+		buf, _ := json.Marshal(map[string]any{"hooks": hooks})
+		if os.WriteFile(settings, buf, 0o600) == nil {
+			hookArgs = []string{"--settings", settings}
+		}
+	}
+	run := func(command string, extra ...string) string {
+		cmd := exec.Command(claude, claudeArgs(append([]string{"-p", command}, extra...)...)...)
 		cmd.Dir = work
 		cmd.Stdin = strings.NewReader("")
 		cmd.Env = append(os.Environ(), "COGMER_ADDR=127.0.0.1:1")
@@ -459,7 +475,15 @@ func runCommandProbe(claude, dir string) (failing, control string) {
 	}
 	failing = run("/probe-fail")
 	if failing != "" {
-		return failing, ""
+		return failing, "", ""
 	}
-	return failing, run("/probe-ok")
+	control = run("/probe-ok", hookArgs...)
+	if data, err := os.ReadFile(filepath.Join(work, "UserPromptSubmit.jsonl")); err == nil {
+		lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+		var m map[string]any
+		if json.Unmarshal([]byte(lines[len(lines)-1]), &m) == nil {
+			controlPrompt, _ = m["prompt"].(string)
+		}
+	}
+	return failing, control, controlPrompt
 }

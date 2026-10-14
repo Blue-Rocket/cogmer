@@ -75,6 +75,10 @@ If this changes, a slash command cannot tell which session ran it, so `/cogmer:r
 
 If this changes, a colleague can steer your session: a turn written as an instruction would be followed rather than read. The injected block frames its content as information, never instruction, and that framing travels in the same hook output as the content, so it holds only while Claude Code places hook output where a session reads it as data. Nothing in the protocol would show the change. A session given a turn claiming SYSTEM OVERRIDE refused it and told its user on Claude Code 2.1.275 (commit b09b208).
 
+### B33: A project or plugin command reaches UserPromptSubmit with the text as typed
+
+If this changes to something other than the text typed, such as the command file's expansion, the daemon no longer recognizes a command, and every command a user types is published to the room with the model's account of it, which can hold an invitation. It fails silently. If a command stops reaching the hook, nothing breaks, because there is nothing to hold back.
+
 ### B24: A slash command whose ! line exits non-zero produces no model turn
 
 If this changes, nothing breaks: cli.sh exits 0 on every path, which is correct either way. The check fails so that the reason for that rule can be revisited, since a failing line that still ran a turn would let a command report failure by its exit status. Where it holds, a command that exits non-zero leaves the model unable to explain or act on what happened, and the person sees only a failed shell line, so a path that exited 1 again would fail silently.
@@ -93,9 +97,9 @@ If this changes, reassembly can lose the record it anchors on, which was written
 
 If this changes, reassembly mistakes the compaction summary for a user's prompt, and every turn after a compaction is anchored on it and published with the wrong text. It fails silently.
 
-### B18: Slash commands do not reach UserPromptSubmit
+### B18: Built-in slash commands do not reach UserPromptSubmit
 
-If this changes, every slash command a user types, including /compact, is captured as a prompt and published to the room.
+If this changes, every built-in command a user types, including /compact, is captured as a prompt and published to the room. A command from a plugin or a project does reach the hook, which B33 records and the daemon holds back.
 
 ### B19: Injected teammate context survives compaction
 

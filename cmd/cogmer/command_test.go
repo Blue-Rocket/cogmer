@@ -86,6 +86,14 @@ func TestATypedCommandIsReadFromTheFirstLineOfThePrompt(t *testing.T) {
 	if _, ok := parseTypedCommand("/cogmer:room-create", ""); ok {
 		t.Error("a host with no prefix had a prompt read as a command")
 	}
+	if got, ok := parseTypedCommand("$cogmer room-join a-room", "$cogmer "); !ok || got.name != "room-join" || strings.Join(got.args, " ") != "a-room" {
+		t.Errorf("a Codex command read as %v %v", got, ok)
+	}
+	for _, not := range []string{"$cogmerx room-join", "$cogmer", "tell $cogmer room-join"} {
+		if _, ok := parseTypedCommand(not, "$cogmer "); ok {
+			t.Errorf("%q was read as a Codex command", not)
+		}
+	}
 }
 
 // The table is the plugin's command files seen from the daemon, and a command added to one
@@ -320,29 +328,58 @@ func TestACommandTypedInCoworkIsNotATurnOfTheRoom(t *testing.T) {
 	}
 }
 
-// Only a host whose prompts can be commands has them run. A Claude Code prompt that begins
-// the same way is captured as it always was.
-func TestAClaudeCodePromptThatLooksLikeACommandIsNotRunByTheDaemon(t *testing.T) {
-	m := testMembership(t)
-	id := testIdentity(t)
-	room, _ := m.CreateRoom(id.PeerID, false)
-	if err := m.BindSession("claude", room.RoomID); err != nil {
-		t.Fatal(err)
-	}
-	d := &Daemon{id: id, members: m, commands: commandRunner{exe: "/no/such/program"}}
-	t.Cleanup(d.closeStores)
-	b, _ := json.Marshal(promptReq{SessionID: "claude", PromptID: "p", Prompt: "/cogmer:room-create"})
-	r := httptest.NewRequest(http.MethodPost, "/hook/prompt", bytes.NewReader(b))
-	r.Header.Set(localGuardHeader, localGuardValue)
-	w := httptest.NewRecorder()
-	d.LocalRoutes().ServeHTTP(w, r)
-	if strings.Contains(w.Body.String(), "Output of") {
-		t.Errorf("the daemon ran a command for a Claude Code prompt: %s", w.Body.String())
-	}
-	store, _ := d.storeFor(room.RoomID)
-	events, _ := store.ListRoom(room.RoomID)
-	if len(events) != 1 {
-		t.Errorf("a Claude Code prompt was not captured as before: %d events", len(events))
+// A host that runs its own commands has the prompt of one held back from the room and
+// nothing run by the daemon, and the model's account of it is not stored (D-209).
+func TestACommandTypedInAnotherHostIsHeldBackFromTheRoomAndNotRun(t *testing.T) {
+	for _, c := range []struct {
+		host, session, prompt, ordinary string
+	}{
+		{"", "claude", "/cogmer:room-create", "an ordinary prompt"},
+		{"codex", "codex:cx", "$cogmer room-create", "an ordinary prompt"},
+	} {
+		t.Run(c.session, func(t *testing.T) {
+			m := testMembership(t)
+			id := testIdentity(t)
+			room, _ := m.CreateRoom(id.PeerID, false)
+			if err := m.BindSession(c.session, room.RoomID); err != nil {
+				t.Fatal(err)
+			}
+			d := &Daemon{id: id, members: m, commands: commandRunner{exe: "/no/such/program"}}
+			d.versions.lookup = func(Host) string { return "1.0" }
+			t.Cleanup(d.closeStores)
+			raw := strings.TrimPrefix(c.session, "codex:")
+			post := func(endpoint string, payload any) map[string]any {
+				t.Helper()
+				b, _ := json.Marshal(payload)
+				r := httptest.NewRequest(http.MethodPost, endpoint, bytes.NewReader(b))
+				r.Header.Set(localGuardHeader, localGuardValue)
+				w := httptest.NewRecorder()
+				d.LocalRoutes().ServeHTTP(w, r)
+				if w.Code != http.StatusOK {
+					t.Fatalf("%s: %d %s", endpoint, w.Code, w.Body.String())
+				}
+				var out map[string]any
+				_ = json.Unmarshal(w.Body.Bytes(), &out)
+				return out
+			}
+			turn := func(prompt, id string) promptReq {
+				return promptReq{Host: c.host, SessionID: raw, PromptID: id, TurnID: id, Prompt: prompt}
+			}
+			out := post("/hook/prompt", turn(c.prompt, "cmd-1"))
+			if ctx, _ := out["context"].(string); ctx != "" {
+				t.Errorf("a command typed in %s was answered by the daemon: %q", c.session, ctx)
+			}
+			post("/hook/stop", stopReq{Host: c.host, SessionID: raw, PromptID: "cmd-1", TurnID: "cmd-1",
+				LastAssistantMessage: "Here is your invitation: SECRET-INVITE", TranscriptPath: "/nonexistent"})
+			store, _ := d.storeFor(room.RoomID)
+			if events, _ := store.ListRoom(room.RoomID); len(events) != 0 {
+				t.Errorf("a command or the account of one became %d turn(s) of the room: %q", len(events), events[0].Content)
+			}
+			post("/hook/prompt", turn(c.ordinary, "p-2"))
+			if events, _ := store.ListRoom(room.RoomID); len(events) != 1 || events[0].Content != c.ordinary {
+				t.Errorf("an ordinary prompt was not captured as before: %v", events)
+			}
+		})
 	}
 }
 

@@ -232,14 +232,6 @@ that found what they rest on, its runs and what was only read are in `docs/work/
 The bridge's empty reply to a call with nothing to add, an empty text block, has been seen to
 raise nothing only in a probe, so it is checked in a Cowork session once the plugin exists.
 
-A command typed in Claude Code or Codex may be captured as a turn of the room, with the model's
-account of it, which can hold an invitation or a pairing string. `handlePrompt` captures the prompt
-it is given and `handleStop` the last message, and a Cowork prompt that is a command is held back
-from the room (D-207) because of it, while nothing holds one back for the other hosts. A project
-command typed in `claude -p` reached the prompt hook with its text as typed on 2026-10-14, so the
-prompt is captured when the session is in a room, and what B18 records is only that a built-in
-command does not reach the hook.
-
 The Cowork plugin: hooks of type `mcp_tool` naming `remote-devices` and the bridge's tool names,
 and command files that tell the model to relay the context a command produced. The plugin's
 command files run a shell command in the sandbox today, where there is no daemon.

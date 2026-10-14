@@ -1292,6 +1292,10 @@ the daemon at once gives the event its identifier, advances David's sequence, st
 the event, and shows it in the local view. The event reaches peers when they next
 synchronize.
 
+A command that David types to cogmer, such as `/cogmer:room-status`, is not a turn of the
+room. The daemon does not store it, offers no colleague's turn with it, and does not store
+what David's agent says about it, since that can hold an invitation or a pairing string.
+
 The agent session never waits for synchronization with peers before answering a prompt.
 
 ---

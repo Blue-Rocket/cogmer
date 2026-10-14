@@ -39,6 +39,9 @@ type Host interface {
 	// CommandText rewrites text that names a command into this host's way of invoking
 	// one.
 	CommandText(text string) string
+	// CommandPrefix is what the prompt of a command a user typed begins with. A prompt
+	// that does is no turn of the room, and nothing about it is published (D-209).
+	CommandPrefix() string
 	// Executable is what is run to ask the host for its version.
 	Executable() string
 	Installed() bool
@@ -258,6 +261,7 @@ func (claudeHost) Name() string                     { return "claude" }
 func (claudeHost) SessionEnv() string               { return "CLAUDE_CODE_SESSION_ID" }
 func (claudeHost) SessionID(raw string) string      { return raw }
 func (claudeHost) CommandText(text string) string   { return text }
+func (claudeHost) CommandPrefix() string            { return "/cogmer:" }
 func (claudeHost) Executable() string               { return "claude" }
 func (claudeHost) Behaviors() []Behavior            { return Behaviors }
 func (claudeHost) Version() string                  { return ClaudeVersion() }
@@ -302,6 +306,10 @@ func (codexHost) Preflight(room string)       { EnsureCodexVerified() }
 func (codexHost) CommandText(text string) string {
 	return strings.ReplaceAll(text, "/cogmer:", "$cogmer ")
 }
+
+// CommandPrefix is the form the skill is invoked in. Codex's own prompt for it was not
+// observed, so this is the text a user types and nothing more is assumed.
+func (codexHost) CommandPrefix() string { return "$cogmer " }
 
 // NormalizeHook requires the identifiers Codex's hooks carry. A turn is identified by
 // turn_id, which stands in for the prompt identifier.
@@ -370,6 +378,10 @@ func (coworkHost) SessionEnv() string { return "COGMER_COWORK_SESSION_ID" }
 // CommandPrefix is what a prompt that is a command begins with: the plugin's name, as
 // Claude Code's commands are typed.
 func (coworkHost) CommandPrefix() string { return "/cogmer:" }
+
+// RunsTypedCommands marks a host whose commands the daemon runs, because the session
+// has no process on this machine to run them in (D-207).
+func (coworkHost) RunsTypedCommands() bool { return true }
 
 func (coworkHost) SessionID(raw string) string { return "cowork:" + raw }
 

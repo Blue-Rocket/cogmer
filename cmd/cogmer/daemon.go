@@ -264,16 +264,19 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	// A prompt that is a command is run and answered before anything else, with no lock
-	// held because the command talks to this daemon. It is not a turn of the room, it
-	// needs no room, and it offers nothing (D-207).
-	if ch, ok := host.(typedCommandHost); ok {
-		if cmd, isCommand := parseTypedCommand(req.Prompt, ch.CommandPrefix()); isCommand {
-			d.commandPrompts.note(req.SessionID, req.PromptID)
-			log.Printf("COMMAND session=%.8s %s", req.SessionID, cmd.name)
+	// A prompt that is a command is answered before anything else, with no lock held
+	// because a command talks to this daemon. It is not a turn of the room, it needs no
+	// room, and it offers nothing (D-209). A host that has no process to run a command in
+	// has the daemon run it (D-207), and for the others the host has run it already.
+	if cmd, isCommand := parseTypedCommand(req.Prompt, host.CommandPrefix()); isCommand {
+		d.commandPrompts.note(req.SessionID, req.PromptID)
+		log.Printf("COMMAND session=%.8s %s", req.SessionID, cmd.name)
+		if runner, ok := host.(typedCommandRunner); ok && runner.RunsTypedCommands() {
 			writeJSON(w, map[string]any{"context": d.runTypedCommand(host, rawSession, cmd)})
-			return
+		} else {
+			writeJSON(w, map[string]any{"context": ""})
 		}
+		return
 	}
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -357,7 +360,7 @@ func (d *Daemon) handleStop(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	// What the model said about a command is for the person who typed it (D-207).
+	// What the model said about a command is for the person who typed it (D-209).
 	if d.commandPrompts.has(req.SessionID, req.PromptID) {
 		writeJSON(w, map[string]any{"stored": false})
 		return

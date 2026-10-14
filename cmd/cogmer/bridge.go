@@ -325,12 +325,8 @@ func (b *bridge) deadlineFor(tool string, args map[string]any) time.Duration {
 	if !ok {
 		return b.deadline
 	}
-	ch, ok := host.(typedCommandHost)
-	if !ok {
-		return b.deadline
-	}
 	prompt, _ := args["prompt"].(string)
-	if _, isCommand := parseTypedCommand(prompt, ch.CommandPrefix()); isCommand {
+	if _, isCommand := parseTypedCommand(prompt, host.CommandPrefix()); isCommand {
 		return b.commandDeadline
 	}
 	return b.deadline
@@ -413,12 +409,8 @@ func isTypedCommand(args map[string]any) (typedCommand, bool) {
 	if !ok {
 		return typedCommand{}, false
 	}
-	ch, ok := host.(typedCommandHost)
-	if !ok {
-		return typedCommand{}, false
-	}
 	prompt, _ := args["prompt"].(string)
-	return parseTypedCommand(prompt, ch.CommandPrefix())
+	return parseTypedCommand(prompt, host.CommandPrefix())
 }
 
 // afterFailure is what a call that found no daemon does. A call that is only a hook starts
