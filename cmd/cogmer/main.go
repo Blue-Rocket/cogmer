@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -92,6 +93,8 @@ func main() {
 		runRevoke(os.Args[2:])
 	case "doctor":
 		runDoctorCommand(os.Args[2:])
+	case "diagnose-endpoint":
+		runDiagnoseEndpoint(os.Args[2:])
 	case "probe-bighook":
 		runProbeBigHook(os.Args[2:])
 	case "cowork-setup":
@@ -662,6 +665,29 @@ func runHook(kind string, host Host) {
 		_, _ = os.Stdout.Write(host.PromptHookOutput(out.Context))
 	}
 	os.Exit(0)
+}
+
+// runDiagnoseEndpoint is `cogmer diagnose-endpoint <endpoint>`: it says where a connection to an
+// endpoint fails, as the daemon does in its log when a peer has stopped answering. It is for
+// finding out why a peer cannot be reached from this machine.
+func runDiagnoseEndpoint(args []string) {
+	if len(args) != 1 {
+		log.Fatal("diagnose-endpoint needs one endpoint")
+	}
+	e, err := ParseEndpoint(args[0])
+	if err != nil {
+		log.Fatalf("diagnose-endpoint: %v", err)
+	}
+	dg, ok := dialers[e.Scheme].(Diagnoser)
+	if !ok {
+		log.Fatalf("diagnose-endpoint: a %s endpoint has no diagnosis", e.Scheme)
+	}
+	// The network library writes a great deal to the log, and a person asking for a diagnosis
+	// wants the diagnosis.
+	log.SetOutput(io.Discard)
+	ctx, cancel := context.WithTimeout(context.Background(), diagnoseWithin)
+	defer cancel()
+	fmt.Println(dg.Diagnose(ctx, e))
 }
 
 // runDoctorCommand reads `doctor [--deep] [--host NAME]` and checks each host it

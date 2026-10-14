@@ -80,6 +80,19 @@ type Dialer interface {
 	Dial(ctx context.Context, e Endpoint) (net.Conn, error)
 }
 
+// A transport that can say why it cannot reach an endpoint, and can discard what it holds
+// for one, may offer both. The daemon asks when a peer has stopped answering, so that the
+// log says where a connection fails and not only that it does.
+type Diagnoser interface {
+	Diagnose(ctx context.Context, e Endpoint) string
+}
+
+type Resetter interface {
+	// Reset discards what is held for an endpoint, so that the next dial builds it again, and
+	// says whether there was anything.
+	Reset(e Endpoint) bool
+}
+
 type tcpDialer struct{}
 
 // A bare TCP endpoint is no longer a cleartext one: every peer connection is

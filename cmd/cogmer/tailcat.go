@@ -104,6 +104,108 @@ func (d *tailcatDialer) Dial(ctx context.Context, e Endpoint) (net.Conn, error) 
 	return conn, nil
 }
 
+// Reset discards the client held for an address. A client is built once and kept (see above),
+// so one that has got into a state it cannot leave would fail for as long as the daemon runs.
+func (d *tailcatDialer) Reset(e Endpoint) bool {
+	d.mu.Lock()
+	c, ok := d.clients[e.Value]
+	delete(d.clients, e.Value)
+	d.mu.Unlock()
+	if ok {
+		go func() { _ = c.Close() }()
+	}
+	return ok
+}
+
+// pingOutcome is one relay ping: how long it took, or why it failed.
+type pingOutcome struct {
+	Took time.Duration
+	Err  error
+}
+
+// tailcatDiagnosis is what a diagnosis found.
+type tailcatDiagnosis struct {
+	Region     string      // the relay the address pins, as the address names it
+	Held       pingOutcome // a relay ping on the connection this daemon holds
+	Fresh      pingOutcome // a relay ping on a new connection
+	Path       string      // what a path-discovery ping found, or why it failed
+	HeldAbsent bool        // no connection was held, so the first is the same as the second
+}
+
+func (o pingOutcome) String() string {
+	if o.Err != nil {
+		return fmt.Sprintf("failed after %s (%v)", o.Took.Round(100*time.Millisecond), o.Err)
+	}
+	return fmt.Sprintf("answered in %s", o.Took.Round(time.Millisecond))
+}
+
+// describe writes a diagnosis as one line of facts and one of what they suggest. The reading
+// is an inference from the three pings, and says so.
+func (t tailcatDiagnosis) describe() string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "the address pins %s. Relay ping, connection held by this daemon: %s. Relay ping, a new connection: %s. Path: %s.",
+		t.Region, t.Held, t.Fresh, t.Path)
+	var reading string
+	switch {
+	case t.Held.Err != nil && t.Fresh.Err == nil:
+		reading = "a new connection reaches the peer and the one held does not, so the held one is stuck and is replaced"
+	case t.Held.Err != nil && t.Fresh.Err != nil:
+		reading = "the peer does not answer through that relay, which means it is not running, is attached to another relay, or its replies do not return"
+	case t.Held.Err == nil && t.Fresh.Err != nil:
+		reading = "the held connection reaches the peer and a new one does not, which is unusual and worth repeating"
+	default:
+		reading = "the relay path works, so the failure is above it, in the tunnel's TCP connection or the peer's server"
+	}
+	fmt.Fprintf(&b, " Reading: %s.", reading)
+	return b.String()
+}
+
+// Diagnose pings the peer three ways at once, so that the answer takes as long as the
+// slowest and not their sum: through the relay on the connection held, through the relay on a
+// new connection, and by path discovery, which says whether traffic would go direct.
+func (d *tailcatDialer) Diagnose(ctx context.Context, e Endpoint) string {
+	diag := tailcatDiagnosis{Region: "no relay that could be read from it"}
+	if info, err := tailcat.ParseAddr(tailcat.Addr(e.Value)); err != nil {
+		diag.Region = fmt.Sprintf("an address that could not be read (%v)", err)
+	} else if len(info.Region) > 0 && info.Region[0] != nil {
+		diag.Region = fmt.Sprintf("relay region %d (%s)", info.Region[0].RegionID, info.Region[0].RegionCode)
+	} else if info.RegionID != 0 {
+		diag.Region = fmt.Sprintf("relay region %d", info.RegionID)
+	}
+	held := d.clientFor(e.Value)
+	fresh := tailcat.NewClient(tailcat.Addr(e.Value))
+	defer func() { go func() { _ = fresh.Close() }() }()
+
+	ping := func(c *tailcat.Client) pingOutcome {
+		start := time.Now()
+		res, err := c.Ping(ctx)
+		if err != nil {
+			return pingOutcome{Took: time.Since(start), Err: err}
+		}
+		return pingOutcome{Took: res.Latency}
+	}
+	var wg sync.WaitGroup
+	wg.Add(3)
+	go func() { defer wg.Done(); diag.Held = ping(held) }()
+	go func() { defer wg.Done(); diag.Fresh = ping(fresh) }()
+	go func() {
+		defer wg.Done()
+		res, err := held.DiscoPing(ctx)
+		switch {
+		case err != nil:
+			diag.Path = fmt.Sprintf("no answer (%v)", err)
+		case res.Err != "":
+			diag.Path = fmt.Sprintf("no answer (%s)", res.Err)
+		case res.Endpoint != "":
+			diag.Path = fmt.Sprintf("direct, to %s in %.0fms", res.Endpoint, res.LatencySeconds*1000)
+		default:
+			diag.Path = fmt.Sprintf("through relay region %d (%s) in %.0fms", res.DERPRegionID, res.DERPRegionCode, res.LatencySeconds*1000)
+		}
+	}()
+	wg.Wait()
+	return diag.describe()
+}
+
 // loadTailcatKey keeps the tunnel key across restarts, so that a peer's published
 // address stays the one others recorded.
 //

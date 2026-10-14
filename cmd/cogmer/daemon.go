@@ -97,6 +97,9 @@ type Daemon struct {
 	commands       commandRunner
 	commandPrompts commandPrompts
 
+	// The addresses a diagnosis of why a peer cannot be reached is running for.
+	diagnosing map[string]bool
+
 	// pull asks one peer for what it holds, which is pullFrom unless a test stands in, and
 	// askRooms chooses the rooms to ask it about, which is roomsToAsk unless a test pulls
 	// from an address it has not recorded for a guest.

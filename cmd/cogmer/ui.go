@@ -422,7 +422,19 @@ type peerState struct {
 	downSince time.Time
 	lastErr   string
 	reported  time.Time // when the current outage was last mentioned
+	rebuilt   time.Time // when the connection held to this peer was last discarded
 }
+
+const (
+	// rebuildAfter is how long a peer must have failed before the connection held to it is
+	// discarded, and rebuildEvery the least time between two such discards. A connection is
+	// built once and kept, so one that got into a state it cannot leave would fail for as long
+	// as the daemon ran, which one user's did for 22 hours.
+	rebuildAfter = 3 * time.Minute
+	rebuildEvery = 5 * time.Minute
+	// diagnoseWithin bounds one diagnosis.
+	diagnoseWithin = 15 * time.Second
+)
 
 // downRepeat is how often a continuing outage is mentioned again. Long enough that
 // it is not noise, short enough that somebody reading a log an hour later learns
@@ -578,9 +590,26 @@ func (d *Daemon) markPeerUnreachable(addr string, err error) {
 	if due {
 		st.reported = time.Now()
 	}
+	rebuild := !first && time.Since(since) >= rebuildAfter && time.Since(st.rebuilt) >= rebuildEvery
+	if rebuild {
+		st.rebuilt = time.Now()
+	}
+	diagnose := due && !d.diagnosing[addr]
+	if diagnose {
+		if d.diagnosing == nil {
+			d.diagnosing = map[string]bool{}
+		}
+		d.diagnosing[addr] = true
+	}
 	st.lastErr = err.Error()
 	d.peerMu.Unlock()
 
+	if rebuild {
+		d.discardConnection(addr, time.Since(since))
+	}
+	if diagnose {
+		d.diagnose(addr)
+	}
 	if !due {
 		return
 	}
@@ -589,6 +618,44 @@ func (d *Daemon) markPeerUnreachable(addr string, err error) {
 		return
 	}
 	log.Printf("peer %s still unreachable after %s: %v", shortEndpoint(addr), time.Since(since).Round(time.Second), err)
+}
+
+// discardConnection throws away the connection held to a peer that has not answered for a
+// while, so that the next poll builds a new one.
+func (d *Daemon) discardConnection(addr string, failing time.Duration) {
+	e, err := ParseEndpoint(addr)
+	if err != nil {
+		return
+	}
+	if r, ok := dialers[e.Scheme].(Resetter); ok && r.Reset(e) {
+		log.Printf("peer %s: discarded the connection held to it after %s of failures, and the next poll builds a new one", shortEndpoint(addr), failing.Round(time.Second))
+	}
+}
+
+// diagnose says in the log where a connection to a peer fails, when the transport can. It runs
+// in the background, since a diagnosis waits on the network, and at most one runs for an
+// address.
+func (d *Daemon) diagnose(addr string) {
+	e, err := ParseEndpoint(addr)
+	dg, ok := Diagnoser(nil), false
+	if err == nil {
+		dg, ok = dialers[e.Scheme].(Diagnoser)
+	}
+	if !ok {
+		d.peerMu.Lock()
+		delete(d.diagnosing, addr)
+		d.peerMu.Unlock()
+		return
+	}
+	d.inBackground(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), diagnoseWithin)
+		defer cancel()
+		text := dg.Diagnose(ctx, e)
+		d.peerMu.Lock()
+		delete(d.diagnosing, addr)
+		d.peerMu.Unlock()
+		log.Printf("peer %s: why it cannot be reached: %s", shortEndpoint(addr), text)
+	})
 }
 
 var _ = sync.Mutex{}
