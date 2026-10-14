@@ -85,6 +85,11 @@ type Daemon struct {
 	// hold up a replacement for a network call.
 	background sync.WaitGroup
 
+	// How a command typed in a session of a host that has no process to run it in is
+	// run (D-207), and the prompts that were commands.
+	commands       commandRunner
+	commandPrompts commandPrompts
+
 	// Pairings awaiting their ceremony, one per opened page (D-180).
 	pairs pairRegistry
 
@@ -254,9 +259,21 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("unsupported hook host %q", req.Host), http.StatusBadRequest)
 		return
 	}
+	rawSession := req.SessionID
 	if err := host.NormalizeHook(&req.SessionID, &req.PromptID, req.TurnID); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+	// A prompt that is a command is run and answered before anything else, with no lock
+	// held because the command talks to this daemon. It is not a turn of the room, it
+	// needs no room, and it offers nothing (D-207).
+	if ch, ok := host.(typedCommandHost); ok {
+		if cmd, isCommand := parseTypedCommand(req.Prompt, ch.CommandPrefix()); isCommand {
+			d.commandPrompts.note(req.SessionID, req.PromptID)
+			log.Printf("COMMAND session=%.8s %s", req.SessionID, cmd.name)
+			writeJSON(w, map[string]any{"context": d.runTypedCommand(host, rawSession, cmd)})
+			return
+		}
 	}
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -338,6 +355,11 @@ func (d *Daemon) handleStop(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := host.NormalizeHook(&req.SessionID, &req.PromptID, req.TurnID); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// What the model said about a command is for the person who typed it (D-207).
+	if d.commandPrompts.has(req.SessionID, req.PromptID) {
+		writeJSON(w, map[string]any{"stored": false})
 		return
 	}
 	room, ok := d.members.RoomForSession(req.SessionID)

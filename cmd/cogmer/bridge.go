@@ -36,6 +36,10 @@ const (
 	// bridgeDeadline is the longest a call waits for the daemon. It is the deadline the
 	// hook client uses for the other hosts.
 	bridgeDeadline = 3 * time.Second
+	// bridgeCommandDeadline is the longest a call waits when the prompt is a command the
+	// user typed, which the daemon runs for up to typedCommandTimeout. A command is what
+	// the user asked for, and the plugin's own command files wait for it.
+	bridgeCommandDeadline = typedCommandTimeout + 5*time.Second
 	// bridgeGrace is how long past its deadline a call may still be running before the
 	// bridge exits. An exit is recovered from, since Claude Desktop starts the server
 	// again at the next call, and a hung bridge is not.
@@ -97,8 +101,10 @@ type bridge struct {
 	out      io.Writer
 	post     func(path string, body []byte, deadline time.Duration) ([]byte, error)
 	deadline time.Duration
-	grace    time.Duration
-	exit     func(int)
+	// commandDeadline is the deadline of a call whose prompt is a typed command.
+	commandDeadline time.Duration
+	grace           time.Duration
+	exit            func(int)
 
 	mu sync.Mutex // serializes writes to out
 }
@@ -107,7 +113,7 @@ func runBridge() {
 	b := &bridge{
 		in: os.Stdin, out: os.Stdout,
 		post:     postToDaemon,
-		deadline: bridgeDeadline, grace: bridgeGrace,
+		deadline: bridgeDeadline, commandDeadline: bridgeCommandDeadline, grace: bridgeGrace,
 		exit: os.Exit,
 	}
 	b.serve()
@@ -203,13 +209,14 @@ func (b *bridge) call(m bridgeMessage) {
 		b.failure(m.ID, -32602, "unknown tool")
 		return
 	}
+	deadline := b.deadlineFor(p.Name, p.Arguments)
 	done := make(chan string, 1)
-	go func() { done <- b.relay(p.Name, endpoint.path, endpoint.fields, p.Arguments) }()
+	go func() { done <- b.relay(p.Name, endpoint.path, endpoint.fields, p.Arguments, deadline) }()
 	select {
 	case text := <-done:
 		b.reply(m.ID, text)
-	case <-time.After(b.deadline):
-		log.Printf("bridge: %s did not finish within %s; answering with nothing", p.Name, b.deadline)
+	case <-time.After(deadline):
+		log.Printf("bridge: %s did not finish within %s; answering with nothing", p.Name, deadline)
 		b.reply(m.ID, "")
 		select {
 		case <-done:
@@ -222,9 +229,30 @@ func (b *bridge) call(m bridgeMessage) {
 	}
 }
 
+// deadlineFor is how long a call may take: the usual deadline, or the longer one for a
+// prompt that is a command the user typed.
+func (b *bridge) deadlineFor(tool string, args map[string]any) time.Duration {
+	if tool != "prompt" || b.commandDeadline == 0 {
+		return b.deadline
+	}
+	host, ok := hostByName(bridgeHost)
+	if !ok {
+		return b.deadline
+	}
+	ch, ok := host.(typedCommandHost)
+	if !ok {
+		return b.deadline
+	}
+	prompt, _ := args["prompt"].(string)
+	if _, isCommand := parseTypedCommand(prompt, ch.CommandPrefix()); isCommand {
+		return b.commandDeadline
+	}
+	return b.deadline
+}
+
 // relay sends the hook's fields to the daemon and returns the text the hook's reply
 // carries, empty when there is none or when anything fails.
-func (b *bridge) relay(tool, path string, fields []string, args map[string]any) string {
+func (b *bridge) relay(tool, path string, fields []string, args map[string]any, deadline time.Duration) string {
 	payload := map[string]any{"host": bridgeHost}
 	for _, f := range fields {
 		if s, ok := args[f].(string); ok {
@@ -235,7 +263,7 @@ func (b *bridge) relay(tool, path string, fields []string, args map[string]any) 
 	if err != nil {
 		return ""
 	}
-	raw, err := b.post(path, body, b.deadline)
+	raw, err := b.post(path, body, deadline)
 	if err != nil {
 		log.Printf("bridge: daemon unreachable (%v); continuing without collaboration", err)
 		return ""

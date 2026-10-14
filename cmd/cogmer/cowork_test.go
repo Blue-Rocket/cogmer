@@ -28,13 +28,18 @@ func TestACoworkSessionIsStoredUnderItsHostAndNeedsBothIdentifiers(t *testing.T)
 	}
 }
 
-// A Cowork command runs in the daemon from the text of the prompt, so no process carries a
-// session in its environment, and no environment may be taken for Cowork's.
-func TestCoworkIsNeverFoundInTheEnvironment(t *testing.T) {
+// A command typed in Cowork runs as a child of the daemon, which sets the session for it,
+// so the variable is found only in such a child, and what the daemon itself holds from the
+// session that started it is never taken for Cowork's.
+func TestCoworkIsFoundOnlyThroughItsOwnVariableOrADeclaration(t *testing.T) {
 	env := func(m map[string]string) func(string) string { return func(k string) string { return m[k] } }
 	h, err := hostFromEnv(env(map[string]string{"CLAUDE_CODE_SESSION_ID": "x"}))
 	if err != nil || h == nil || h.Name() != "claude" {
 		t.Errorf("one Claude Code variable gave %v %v", h, err)
+	}
+	h, err = hostFromEnv(env(map[string]string{"COGMER_COWORK_SESSION_ID": "x"}))
+	if err != nil || h == nil || h.Name() != "cowork" {
+		t.Errorf("Cowork's variable alone gave %v %v", h, err)
 	}
 	h, err = hostFromEnv(env(map[string]string{"COGMER_HOST": "cowork"}))
 	if err != nil || h == nil || h.Name() != "cowork" {
@@ -43,24 +48,16 @@ func TestCoworkIsNeverFoundInTheEnvironment(t *testing.T) {
 	if h, err := hostFromEnv(env(map[string]string{"": "x"})); err != nil || h != nil {
 		t.Errorf("an empty variable name matched a host: %v %v", h, err)
 	}
-	var amb *AmbiguousHostError
-	_, err = hostFromEnv(env(map[string]string{"CLAUDE_CODE_SESSION_ID": "x", "CODEX_THREAD_ID": "y"}))
-	if !errorsAs(err, &amb) || strings.Contains(strings.Join(amb.Hosts, ","), "cowork") {
-		t.Errorf("an ambiguous environment named %v", err)
-	}
 	t.Setenv("COGMER_HOST", "cowork")
-	t.Setenv("CLAUDE_CODE_SESSION_ID", "leaked")
+	t.Setenv("CLAUDE_CODE_SESSION_ID", "the session that started the daemon")
+	t.Setenv("COGMER_COWORK_SESSION_ID", "")
 	if got := sessionID(); got != "" {
-		t.Errorf("a Cowork command took the session %q from the environment", got)
+		t.Errorf("a Cowork command took the session %q from another host's variable", got)
 	}
-}
-
-func errorsAs(err error, target **AmbiguousHostError) bool {
-	a, ok := err.(*AmbiguousHostError)
-	if ok {
-		*target = a
+	t.Setenv("COGMER_COWORK_SESSION_ID", "abc")
+	if got := sessionID(); got != "cowork:abc" {
+		t.Errorf("a Cowork command's session is %q, want cowork:abc", got)
 	}
-	return ok
 }
 
 func TestACoworkTurnIsTheLastMessageWithNoToolCount(t *testing.T) {

@@ -239,8 +239,11 @@ pending injections relies on for every host and which `cmd/cogmer/behaviors.go` 
 (seen on Claude Code 2.1.296 on 2026-10-13, and not yet in a Cowork session, whose hook must pass
 `${prompt_id}` to the `stop` tool). It becomes a behavior with a negative test.
 
-The daemon running a typed `/cogmer:` command from the prompt text of a `cowork` request and
-returning its output as context.
+A command typed in Claude Code or Codex may be captured as a turn of the room, with the model's
+account of it, which can hold an invitation or a pairing string. `handlePrompt` captures the prompt
+it is given and `handleStop` the last message, and a Cowork prompt that is a command is held back
+from the room (D-207) because of it, while nothing holds one back for the other hosts. This is read
+in the code and not observed in a session.
 
 The Cowork plugin: hooks of type `mcp_tool` naming `remote-devices` and the bridge's tool names,
 and command files that tell the model to relay the context a command produced. The plugin's

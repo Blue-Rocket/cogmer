@@ -364,9 +364,13 @@ const coworkReplyShape = "cowork-reply-shape"
 
 func (coworkHost) Name() string { return "cowork" }
 
-// SessionEnv is empty. A command typed in Cowork runs in the daemon from the text of
-// the prompt (D-207), so no process carries the session in its environment.
-func (coworkHost) SessionEnv() string { return "" }
+// SessionEnv is a variable the daemon sets for the command it runs for a Cowork session
+// (D-207). No process of a Cowork session holds it, because the session runs in a sandbox.
+func (coworkHost) SessionEnv() string { return "COGMER_COWORK_SESSION_ID" }
+
+// CommandPrefix is what a prompt that is a command begins with: the plugin's name, as
+// Claude Code's commands are typed.
+func (coworkHost) CommandPrefix() string { return "/cogmer:" }
 
 func (coworkHost) SessionID(raw string) string { return "cowork:" + raw }
 

@@ -3,8 +3,9 @@
 **Date:** 2026-09-18 · **Status:** active · **Areas:** commands, rooms
 
 **Decision.** A session-scoped command reads its session from the variable of its host, `CLAUDE_CODE_SESSION_ID`
-for Claude Code or `CODEX_THREAD_ID` for Codex, the host being the one its entry point declares (D-203), and a
-command passes no session id. Run at a terminal, where the variable is absent, a session-scoped command has no
+for Claude Code, `CODEX_THREAD_ID` for Codex, or `COGMER_COWORK_SESSION_ID` for Cowork, which the daemon sets for the command
+it runs from a typed prompt (D-207), the host being the one its entry point declares (D-203), and a command passes no
+session id. Run at a terminal, where the variable is absent, a session-scoped command has no
 session to act on and refuses, and no machine-level setting stands in for it.
 
 **Support.**
@@ -14,6 +15,8 @@ session to act on and refuses, and no machine-level setting stands in for it.
 - A command with no session says so and names the slash command to run inside a session.
   `cmd/cogmer/main.go`, `sessionRoom`.
 - Codex exports the thread identifier into a shell tool environment, matching its hook session. B28 (CODEX_THREAD_ID equals the hook session identifier).
+- A command the daemon runs for a Cowork session has the host and that session in its environment and no other host's session, whatever session started the daemon.
+  `cmd/cogmer/command.go`, `childEnvironment`, `cmd/cogmer/command_test.go`, `TestTheChildOfACommandHoldsNoOtherHostsSession`.
 
 **Rejected.**
 - *Passing the session id as an argument.* Binding a room to the session that asked for it
