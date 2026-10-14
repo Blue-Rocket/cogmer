@@ -1,6 +1,6 @@
 {
   "name": "cogmer",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "description": "Share a conversation between Claude Code and Codex sessions, peer to peer.",
   "author": { "name": "David Foote" },
   "skills": "./skills/",
