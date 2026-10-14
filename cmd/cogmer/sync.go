@@ -118,20 +118,76 @@ func peerList() []string {
 	return out
 }
 
-// RunSync polls each configured peer. A failed poll is not an error condition:
-// peers are expected to be absent, and the next round recovers whatever was
-// missed (§26).
+// syncBackoffCap is the longest a peer that does not answer is left between two polls.
+const syncBackoffCap = 15 * time.Second
+
+// RunSync polls each address worth asking, every one in a loop of its own. A failed poll
+// is not an error condition: peers are expected to be absent, and the next round recovers
+// whatever was missed (§26).
+//
+// The loops are separate because a peer that does not answer holds its poll for as long as
+// the request's timeout, and one loop for every peer made that wait the interval between
+// polls of all of them: with one peer unreachable for a day, a colleague who was reachable
+// received each turn half a minute after it was written. A peer that does not answer is
+// also polled less often, up to syncBackoffCap, and at the usual interval again once it
+// answers.
 func (d *Daemon) RunSync(_ []string, every time.Duration) {
+	stops := map[string]chan struct{}{}
 	for {
-		peers := d.syncTargets() // re-read: a room joined since last round has peers
-		for _, addr := range peers {
-			if n, err := d.pullFrom(addr); err != nil {
-				d.markPeerUnreachable(addr, err)
-			} else if n > 0 {
-				log.Printf("sync: received %d event(s) from %s", n, shortEndpoint(addr))
+		want := map[string]bool{}
+		for _, addr := range d.syncTargets() { // re-read: a room joined since last round has peers
+			want[addr] = true
+			if _, running := stops[addr]; !running {
+				stop := make(chan struct{})
+				stops[addr] = stop
+				go d.syncPeer(addr, every, stop)
+			}
+		}
+		for addr, stop := range stops {
+			if !want[addr] {
+				close(stop)
+				delete(stops, addr)
 			}
 		}
 		time.Sleep(every)
+	}
+}
+
+// syncPeer polls one address until it is told to stop.
+func (d *Daemon) syncPeer(addr string, every time.Duration, stop <-chan struct{}) {
+	pull := d.pull
+	if pull == nil {
+		pull = d.pullFrom
+	}
+	failures := 0
+	for {
+		select {
+		case <-stop:
+			return
+		default:
+		}
+		n, err := pull(addr)
+		delay := every
+		if err != nil {
+			d.markPeerUnreachable(addr, err)
+			failures++
+			for i := 1; i < failures && delay < syncBackoffCap; i++ {
+				delay *= 2
+			}
+			if delay > syncBackoffCap {
+				delay = syncBackoffCap
+			}
+		} else {
+			failures = 0
+			if n > 0 {
+				log.Printf("sync: received %d event(s) from %s", n, shortEndpoint(addr))
+			}
+		}
+		select {
+		case <-stop:
+			return
+		case <-time.After(delay):
+		}
 	}
 }
 
