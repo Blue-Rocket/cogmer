@@ -40,6 +40,7 @@ var outboundCalls = map[site]struct {
 	{"probe.go", "exec.Command"}:              {4, "runs the user's own claude and this binary on fixed test prompts, and launchctl"},
 	{"stop_unix.go", "exec.Command"}:          {2, "lsof and ps, which read this machine's processes"},
 	{"stop_windows.go", "exec.Command"}:       {2, "netstat and tasklist, which read this machine's processes"},
+	{"bridge.go", "http.Client"}:              {1, "the daemon on loopback, for the Cowork bridge's relay of a hook's call"},
 	{"main.go", "http.Client"}:                {5, "the daemon on loopback, for the hooks, the commands, its list of peers and its self-check, and a health probe of one address"},
 	{"main.go", "http.Get"}:                   {0, ""},
 	{"transport.go", "http.Client"}:           {2, "a peer, over TLS pinned to its key, by TCP or the overlay"},

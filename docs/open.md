@@ -229,11 +229,10 @@ arrives) and D-207 (the Cowork bridge offers no tool that runs a command) decide
 that found what they rest on, its runs and what was only read are in `docs/work/cowork.md` and
 `docs/work/cowork-probe/`, and both are deleted with this item. What remains, in order:
 
-The bridge, a subcommand of the binary that is a stdio MCP server with the two tools `prompt` and
-`stop`. It calls the daemon with the deadline the hook client uses, answers a call of its own
-within that deadline whatever the daemon does, serves calls concurrently, exits when a call runs
-past its deadline so that Desktop starts it again, declares only the tools capability and never
-sends the client a sampling request, and has a test that it offers no other tool.
+The bridge starting the daemon when a call finds none, as the session-start hook does for the
+other hosts, since a user who works only in Cowork has no such hook, and without delaying the call.
+The bridge's empty reply to a call with nothing to add, an empty text block, has been seen to
+raise nothing only in a probe, so it is checked in a Cowork session once the plugin exists.
 
 The host in `cmd/cogmer/host.go`: the name `cowork`, the `cowork:` session prefix, no transcript
 evidence, delivery committed at the stop call, and a reply in the JSON form only.

@@ -48,6 +48,8 @@ func main() {
 			os.Exit(2)
 		}
 		runHookCommand(os.Args[2:])
+	case "bridge":
+		runBridge()
 	case "seed":
 		runSeed()
 	case "log":
@@ -120,6 +122,7 @@ func usage() {
   cogmer stop            Stop the cogmer daemon on this installation's addresses
   cogmer hook prompt     UserPromptSubmit hook (capture + inject)
   cogmer hook stop       Stop hook (capture assistant turn)
+  cogmer bridge          the MCP server Claude Cowork's hooks call (D-205)
   cogmer seed            Insert a simulated teammate conversation
   cogmer log             Print the room transcript
   cogmer version         Print the build version
