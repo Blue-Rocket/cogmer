@@ -396,8 +396,8 @@ func (d *Daemon) confirmDelivery(store *Store, req stopReq, host Host) {
 		version := d.hostVersion(host)
 		if !host.MayTrustWithoutEvidence(version) {
 			if n, _ := store.PendingCount(req.SessionID); n > 0 {
-				log.Printf("delivery: no injection evidence in session %.8s (%d pending); re-offering. If this repeats, run `cogmer doctor` (B20)",
-					req.SessionID, n)
+				log.Printf("delivery: no injection evidence in session %.8s (%d pending); re-offering. If this repeats, run `cogmer doctor --host %s`",
+					req.SessionID, n, host.Name())
 			}
 			return
 		}

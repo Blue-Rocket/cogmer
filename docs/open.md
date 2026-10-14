@@ -234,8 +234,10 @@ other hosts, since a user who works only in Cowork has no such hook, and without
 The bridge's empty reply to a call with nothing to add, an empty text block, has been seen to
 raise nothing only in a probe, so it is checked in a Cowork session once the plugin exists.
 
-The host in `cmd/cogmer/host.go`: the name `cowork`, the `cowork:` session prefix, no transcript
-evidence, delivery committed at the stop call, and a reply in the JSON form only.
+The Stop hook carries `prompt_id`, equal to the prompt's, which the daemon's commit of a turn's
+pending injections relies on for every host and which `cmd/cogmer/behaviors.go` does not record
+(seen on Claude Code 2.1.296 on 2026-10-13, and not yet in a Cowork session, whose hook must pass
+`${prompt_id}` to the `stop` tool). It becomes a behavior with a negative test.
 
 The daemon running a typed `/cogmer:` command from the prompt text of a `cowork` request and
 returning its output as context.

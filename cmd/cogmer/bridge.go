@@ -249,16 +249,13 @@ func (b *bridge) relay(tool, path string, fields []string, args map[string]any) 
 	if json.Unmarshal(raw, &out) != nil || out.Context == "" {
 		return ""
 	}
-	// Claude Code adds a reply to the model's context only in this form. A plain line
-	// is recorded as a successful hook and never reaches the model (D-206).
-	reply, err := json.Marshal(map[string]any{"hookSpecificOutput": map[string]any{
-		"hookEventName":     "UserPromptSubmit",
-		"additionalContext": out.Context,
-	}})
-	if err != nil {
+	// Claude Code adds a reply to the model's context only in the form the host writes. A
+	// plain line is recorded as a successful hook and never reaches the model (D-206).
+	host, ok := hostByName(bridgeHost)
+	if !ok {
 		return ""
 	}
-	return string(reply)
+	return string(host.PromptHookOutput(out.Context))
 }
 
 func (b *bridge) reply(id json.RawMessage, text string) {

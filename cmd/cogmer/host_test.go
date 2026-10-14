@@ -100,7 +100,7 @@ func TestACommandIsWrittenTheWayItsHostInvokesIt(t *testing.T) {
 }
 
 func TestDoctorChecksTheHostNamedTheHostInUseOrEveryHostInstalled(t *testing.T) {
-	both := func(Host) bool { return true }
+	both := func(h Host) bool { return h.Name() != "cowork" }
 	onlyCodex := func(h Host) bool { return h.Name() == "codex" }
 	none := func(Host) bool { return false }
 	names := func(hs []Host) string {
@@ -113,6 +113,12 @@ func TestDoctorChecksTheHostNamedTheHostInUseOrEveryHostInstalled(t *testing.T) 
 
 	if hs, err := doctorTargets("codex", claudeHost{}, both); err != nil || names(hs) != "codex" {
 		t.Errorf("a named host is not the one checked: %v %v", names(hs), err)
+	}
+	if hs, err := doctorTargets("cowork", nil, both); err != nil || names(hs) != "cowork" {
+		t.Errorf("a named Cowork host was not the one checked: %v %v", names(hs), err)
+	}
+	if (coworkHost{}).Installed() {
+		t.Error("Cowork counts as installed with no setup that says it is in use, so a terminal doctor would check it")
 	}
 	if hs, err := doctorTargets("", codexHost{}, both); err != nil || names(hs) != "codex" {
 		t.Errorf("inside Codex, doctor checks %v %v", names(hs), err)

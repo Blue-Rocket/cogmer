@@ -55,7 +55,7 @@ type Host interface {
 }
 
 // hosts is every host cogmer supports.
-var hosts = []Host{claudeHost{}, codexHost{}}
+var hosts = []Host{claudeHost{}, codexHost{}, coworkHost{}}
 
 // hostByName finds a host by the name a hook or a wrapper declares. A hook that
 // declares none is Claude Code's, which is every hook installed before there was a
@@ -99,7 +99,7 @@ func hostFromEnv(getenv func(string) string) (Host, error) {
 	}
 	var found []Host
 	for _, h := range hosts {
-		if getenv(h.SessionEnv()) != "" {
+		if env := h.SessionEnv(); env != "" && getenv(env) != "" {
 			found = append(found, h)
 		}
 	}
@@ -126,7 +126,11 @@ func sessionID() string {
 	if err != nil || h == nil {
 		return ""
 	}
-	raw := os.Getenv(h.SessionEnv())
+	env := h.SessionEnv()
+	if env == "" {
+		return ""
+	}
+	raw := os.Getenv(env)
 	if raw == "" {
 		return ""
 	}
@@ -318,10 +322,17 @@ func (codexHost) InjectedBlocks(path string) ([]string, error) { return CodexInj
 
 // PromptHookOutput is the JSON Codex reads a hook's context from.
 func (codexHost) PromptHookOutput(context string) []byte {
+	return append(hookContextJSON(context), '\n')
+}
+
+// hookContextJSON is the structured form in which a prompt hook hands context to the
+// model, which Codex and Claude Code's hooks of type mcp_tool read, and which the plain
+// form of the latter is dropped in favor of (D-206).
+func hookContextJSON(context string) []byte {
 	b, _ := json.Marshal(map[string]any{"hookSpecificOutput": map[string]string{
 		"hookEventName": "UserPromptSubmit", "additionalContext": context,
 	}})
-	return append(b, '\n')
+	return b
 }
 
 // MayTrustWithoutEvidence is never true for Codex: missing evidence leaves a turn
@@ -336,3 +347,83 @@ func (codexHost) Doctor(deep bool) (bool, error) {
 	}
 	return runCodexDoctor(), nil
 }
+
+// --- Claude Cowork ---
+
+// coworkHost is a Cowork session reached through the bridge (D-205). The session runs in
+// a sandbox, so nothing here can read its transcript or its environment, and the host
+// program whose behavior is checked is the Claude Code on the user's own machine, which
+// runs the same harness.
+type coworkHost struct{}
+
+// coworkReplyShape names the behavior that a Claude Code session adds the JSON form of an
+// mcp_tool hook's reply to the model's context. It is checked on the user's machine
+// because no check can run inside Cowork (D-206). It becomes the behavior's number in
+// the registry when the check is written, and until then nothing records it as failing.
+const coworkReplyShape = "cowork-reply-shape"
+
+func (coworkHost) Name() string { return "cowork" }
+
+// SessionEnv is empty. A command typed in Cowork runs in the daemon from the text of
+// the prompt (D-207), so no process carries the session in its environment.
+func (coworkHost) SessionEnv() string { return "" }
+
+func (coworkHost) SessionID(raw string) string { return "cowork:" + raw }
+
+// CommandText is the text itself: a Cowork plugin's commands are typed with the plugin's
+// name in front, as Claude Code's are.
+func (coworkHost) CommandText(text string) string { return text }
+
+// Executable, Installed and Version describe the Claude Code on this machine, which a
+// check runs against. Installed is false until a setup exists that says Cowork is in
+// use here, so that `doctor` does not check a host nobody has set up unless it is named.
+func (coworkHost) Executable() string { return "claude" }
+func (coworkHost) Installed() bool    { return false }
+func (coworkHost) Version() string    { return ClaudeVersion() }
+
+// PromptHookOutput is the reply the bridge returns to a prompt hook, with no trailing
+// newline, since it is the text of a tool result and not a line of standard output.
+func (coworkHost) PromptHookOutput(context string) []byte { return hookContextJSON(context) }
+
+// NormalizeHook requires the identifiers the bridge relays. A turn is identified by
+// the prompt identifier its hooks carry, which the stop call repeats.
+func (c coworkHost) NormalizeHook(session, prompt *string, turn string) error {
+	if *session == "" || *prompt == "" {
+		return fmt.Errorf("Cowork calls require session_id and prompt_id")
+	}
+	*session = c.SessionID(*session)
+	return nil
+}
+
+// ReassembleTurn is the text of the last assistant message and nothing else. The
+// transcript is in the sandbox, so a turn carries no count of its tool operations.
+func (coworkHost) ReassembleTurn(_, lastMessage, _ string) (*AssistantTurn, error) {
+	return &AssistantTurn{Text: lastMessage}, nil
+}
+
+// InjectedBlocks is none, because the evidence of an injection is in the sandbox.
+func (coworkHost) InjectedBlocks(string) ([]string, error) { return nil, nil }
+
+// MayTrustWithoutEvidence is true for a turn whose stop call arrived, unless the check
+// that the harness still adds the JSON form is recorded as failing on this machine's
+// Claude Code (D-206). A version not yet looked up is not trusted, so that the first
+// stop after the daemon starts offers the turns again and loses nothing, and a machine
+// with no Claude Code, whose version is "unknown", has no check to fail.
+func (coworkHost) MayTrustWithoutEvidence(version string) bool {
+	if version == "" {
+		return false
+	}
+	return !BehaviorKnownBroken(version, coworkReplyShape)
+}
+
+// CoworkBehaviors is empty until the reply-shape check exists.
+var CoworkBehaviors = []Behavior{}
+
+func (coworkHost) Behaviors() []Behavior { return CoworkBehaviors }
+
+// Preflight has nothing to run until the reply-shape check exists.
+func (coworkHost) Preflight(string) {}
+
+var errNoCoworkChecks = fmt.Errorf("no Cowork checks exist yet")
+
+func (coworkHost) Doctor(bool) (bool, error) { return true, errNoCoworkChecks }
