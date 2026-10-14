@@ -6,8 +6,9 @@ bin/
 # CodeGraph index — rebuilt from source, machine-specific
 .codegraph/
 
-# The compiled binary. Rebuilt by `go build`; 17MB per commit otherwise.
+# The compiled binary, and its Windows form. Rebuilt by `go build`; 17MB per commit otherwise.
 /cogmer
+/cogmer.exe
 
 dist/
 
