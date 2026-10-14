@@ -235,6 +235,13 @@ output reaches the model, that the empty text block the bridge returns for a cal
 raises nothing, that the plugin's name does not collide with another of the same name, and that a
 computer's rename needs only the command again.
 
+An interactive Claude Code session on 2026-10-14 showed "Stop hook error: MCP server
+'remote-devices' not connected" for a Stop hook that names a server that is absent. B31 (a hook of type
+mcp_tool that names a server that is not there shows nothing) says nothing shows, and its check runs
+with `claude -p`. Find out whether an interactive session differs, and if it does, whether the Cowork
+plugin's hooks show the error when the bridge has not started. A user whose bridge is down would then
+see an error on every prompt.
+
 When a Cowork session has been seen to work with them, D-205 and D-207 become active. The probe left an
 entry named `cogmer-host-probe` in the user's Claude Desktop configuration, the probe plugin installed in
 Cowork, and the files `~/.cogmer-host-probe.*`, to be removed by the user.
