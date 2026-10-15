@@ -260,25 +260,43 @@ and would need to follow.
 does the same job, and `verify` has no slash command, so it may be a subcommand
 nobody has a route to.
 
-## The room view
+## Pasted images
 
-A reader of the shared transcript sees a turn as its author meant it to look.
+An image a user pastes into a session is part of the conversation the user shares, so a colleague should
+see the image and the colleague's model should be able to use the image.
 
-**Render Markdown in the shared transcript.** The page's script, read in `cmd/cogmer/ui.html` on
-2026-10-13 and not run, turns only these into markup: fenced code blocks, inline code, `**bold**`,
-and a list of lines that each begin with a hyphen or an asterisk. A heading, a numbered list,
-emphasis with underscores, a quotation, a table and a link all show as the characters typed, and
-an assistant's turn is often written in them. The page escapes a turn before it applies any markup,
-because a colleague's turn is untrusted text, and it makes no request outside the machine, so a
-renderer has to keep both. Three questions follow from that. Whether to extend the hand-written
-renderer or to carry a Markdown library inside the binary, which would have to be read and kept
-current for the whole of what it accepts. How a link is shown: as text with its address, or as a
-link the reader can follow, limited to `http` and `https`, opened with no referrer, since a
-`javascript:` address or a link that carries the reader's page with it is how a colleague's text
-would act in the reader's browser. And an image, which would load from an address a colleague
-chose and so tell them when the reader looked, and is shown as its address and never fetched. No
-test runs the page's script, so a renderer needs one that does, against turns that hold markup
-meant to break out of the page. The Markdown export keeps the text as written.
+**A pasted image may be missing from the shared transcript.** A turn is stored as text. A prompt is taken
+from the text the hook receives, and an assistant's turn from the `text` and `tool_use` blocks of the
+transcript, read in `cmd/cogmer/transcript.go` on 2026-10-14 and not run. What a hook payload and the
+transcript hold for a pasted image has not been observed, so whether the image reaches the daemon at all
+is unknown, and a colleague may read "what do you make of this?" with nothing to look at.
+
+Two things decide the fix. A probe of Claude Code with an image pasted answers what reaches the daemon,
+and is recorded in the behavior registry as the other behaviors cogmer relies on are. Then the room
+stores either the image or a note about it:
+- Store the image in the event. The event format then needs a new version beside the old ones, rooms
+  grow larger, and the image meets the size limits that bound what peers exchange.
+- Store a note that an image was attached, with its type and size. The note tells the reader something
+  was left out and costs almost nothing.
+
+Showing a stored image in the view loosens the room page's policy (D-212, the room page's security policy
+allows no image and no request to another address) to `img-src 'self'`. That is safe when the daemon
+identifies each image by its bytes, accepts raster types only, serves it with `X-Content-Type-Options:
+nosniff` and a size limit, and writes the image element into the page itself.
+
+**A colleague's pasted image never reaches the model.** Context is injected as text in a hook's output,
+under a budget of 9,000 characters (D-170, injected context has a character budget for the whole block),
+so an image cannot be injected as an image unless Claude Code accepts an image in some form of hook
+output, which has not been looked for.
+
+Every fix depends on "A pasted image is missing from the shared transcript", since an image that is not
+stored cannot be injected. Two ways remain:
+- The text of the turn can say an image was attached. The colleague's model then knows there is an image
+  it cannot see, and the text costs almost nothing.
+- The daemon can write the image to a file on the reader's machine and the injected text can name the
+  path, so that the model reads the file with its own tool. That puts a colleague's bytes on the reader's
+  disk, so this option needs a place the model is allowed to read, a limit on size and count, cleanup,
+  and a decision on whether the model's permission prompt for a file outside the project is acceptable.
 
 ## Beyond one conversation
 

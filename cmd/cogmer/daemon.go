@@ -73,6 +73,9 @@ type Daemon struct {
 	// The version each host reports, remembered for a few minutes. The daemon serves
 	// the sessions of every host at once and holds no host of its own (D-203).
 	versions hostVersions
+	// Each turn's rendering for the view, so the stream does not render a room again at
+	// every arrival (D-211).
+	rendered renderedTurns
 
 	// One store per room, opened on first use. The daemon is the machine's local
 	// service, not a room: §5 has it serving several concurrently, and a session

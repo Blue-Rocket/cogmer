@@ -153,21 +153,19 @@ func TestSnapshotCarriesContentAsData(t *testing.T) {
 	}
 }
 
-// The page must escape before applying any markup, or a teammate's message
-// becomes script in everyone else's browser.
-func TestPageEscapesBeforeRendering(t *testing.T) {
+// A teammate's message becomes script in everyone else's browser if the page turns its
+// text into markup. The daemon renders it (D-211), and the page writes only what the
+// daemon rendered, or the text escaped.
+func TestPageWritesOnlyWhatTheDaemonRenderedOrEscapedText(t *testing.T) {
 	src := string(uiPage)
-	iEsc := strings.Index(src, "const esc=")
-	iUse := strings.Index(src, "esc(md)")
-	if iEsc < 0 || iUse < 0 {
-		t.Fatal("the page no longer escapes content before rendering it")
+	for _, want := range []string{"e.html", "esc(e.content)"} {
+		if !strings.Contains(src, want) {
+			t.Errorf("the page no longer uses %q for a turn's body", want)
+		}
 	}
-	if iUse < iEsc {
-		t.Error("content is rendered before the escape function exists")
-	}
-	for _, frag := range []string{"innerHTML=md", "innerHTML=e.content", "innerHTML = md"} {
+	for _, frag := range []string{"innerHTML=e.content", "innerHTML = e.content", "+e.content+", "render(e.content)"} {
 		if strings.Contains(src, frag) {
-			t.Errorf("page writes unescaped content to innerHTML: %q", frag)
+			t.Errorf("page writes a turn's text to the page as markup: %q", frag)
 		}
 	}
 }

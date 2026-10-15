@@ -1514,7 +1514,10 @@ The view:
 - updates live;
 - shows who wrote each turn, and whose assistant wrote each response;
 - shows when each turn was written;
-- renders Markdown and code;
+- renders the Markdown in a turn, because rendered Markdown is much easier to understand than the characters typed;
+- leaves unrendered what could act in the reader's browser, for safety: markup a colleague typed is
+  shown as typed, a link is followable only when it is a web address, and an image is shown as its
+  address and never loaded;
 - shows whether it is connected;
 - shows which colleagues are offline, by name, and for how long;
 - shows when each colleague last wrote a turn in the room, so a colleague who is reachable

@@ -209,3 +209,81 @@ func TestThePageKeepsTheReadersPlace(t *testing.T) {
 		}
 	}
 }
+
+// The page shows what the daemon rendered, so the stream has to carry it, and a
+// colleague's markup has to arrive as text.
+func TestTheStreamCarriesEachTurnRenderedAsMarkdown(t *testing.T) {
+	d, room := testDaemon(t)
+	appendFrom(t, d, room, testIdentity(t).PeerID, 1, "## Plan\n\n1. one\n\nthen <script>alert(1)</script> ![x](https://tracker.example/p.png)")
+	st, err := d.viewSnapshot(room)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := st.Events[0].HTML
+	for _, want := range []string{"<h2>Plan</h2>", "<ol>", "&lt;script&gt;alert(1)&lt;/script&gt;", "[image: x] https://tracker.example/p.png"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the rendered turn lacks %q: %s", want, got)
+		}
+	}
+	if strings.Contains(got, "<script") || strings.Contains(got, "<img") {
+		t.Errorf("a colleague's markup reaches the page as markup: %s", got)
+	}
+	if st.Events[0].Content != "## Plan\n\n1. one\n\nthen <script>alert(1)</script> ![x](https://tracker.example/p.png)" {
+		t.Error("the turn's own text is changed, and the export would keep the change")
+	}
+}
+
+// The renderer refuses an image, and the page's policy refuses one again, so that an
+// address in a turn is not fetched whichever of the two is wrong.
+func TestTheRoomPageAllowsNoImageAndNoRequestBeyondTheDaemon(t *testing.T) {
+	d, room := testDaemon(t)
+	rec := httptest.NewRecorder()
+	d.LocalRoutes().ServeHTTP(rec, httptest.NewRequest("GET", "/room/"+room.RoomName, nil))
+	if rec.Code != 200 {
+		t.Fatalf("the room page gave %d", rec.Code)
+	}
+	csp := rec.Header().Get("Content-Security-Policy")
+	for _, want := range []string{"default-src 'none'", "img-src 'none'", "connect-src 'self'", "frame-ancestors 'none'"} {
+		if !strings.Contains(csp, want) {
+			t.Errorf("the policy lacks %q: %s", want, csp)
+		}
+	}
+	for _, loose := range []string{"*", "https:", "http:", "data:", "'unsafe-eval'"} {
+		if strings.Contains(csp, loose) {
+			t.Errorf("the policy allows %q: %s", loose, csp)
+		}
+	}
+	if rec.Header().Get("Referrer-Policy") != "no-referrer" {
+		t.Error("the page sends a referrer to a link a reader follows")
+	}
+}
+
+// Only the view's stream is rendered. The export is a download of the text as written, and
+// the text injected into a session is that text too, since a model reads Markdown and
+// markup rendered for a browser would be noise in its context.
+func TestMarkdownIsRenderedOnlyForTheViewsStream(t *testing.T) {
+	d, room := testDaemon(t)
+	text := "## Plan\n\n**bold** and [a link](https://example.com)"
+	appendFrom(t, d, room, testIdentity(t).PeerID, 1, text)
+
+	st, err := d.snapshot(room)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Events[0].HTML != "" {
+		t.Errorf("a snapshot that the export reads is rendered: %s", st.Events[0].HTML)
+	}
+
+	store, _ := d.storeFor(room.RoomID)
+	evs, err := store.ListRoom(room.RoomID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evs[0].Content != text {
+		t.Errorf("the stored text is not the text written: %q", evs[0].Content)
+	}
+	injected := FormatTeamContext(evs, nil)
+	if !strings.Contains(injected, "**bold**") || strings.Contains(injected, "<strong>") || strings.Contains(injected, "<h2>") {
+		t.Errorf("what is injected into a session is not the text as written: %s", injected)
+	}
+}

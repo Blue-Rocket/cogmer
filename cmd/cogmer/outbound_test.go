@@ -115,13 +115,19 @@ func TestEveryWayOutOfTheCodeIsAccountedFor(t *testing.T) {
 // Every dependency outside the standard library is code that can open connections
 // of its own, as tailcat does. A new one is a new question about what leaves.
 var knownDependencies = map[string]string{
-	"github.com/tailscale/tailcat":  "the overlay: relay introduction, WireGuard, hole punching (D-068)",
-	"tailscale.com/tailcfg":         "the relay region type tailcat takes",
-	"tailscale.com/types/key":       "tailcat's key type",
-	"tailscale.com/wgengine/filter": "tailcat's packet filter ports",
-	"github.com/yuin/goldmark":      "renders text to HTML locally",
-	"modernc.org/sqlite":            "the local stores",
-	"golang.org/x/term":             "reads a terminal",
+	"github.com/tailscale/tailcat":           "the overlay: relay introduction, WireGuard, hole punching (D-068)",
+	"tailscale.com/tailcfg":                  "the relay region type tailcat takes",
+	"tailscale.com/types/key":                "tailcat's key type",
+	"tailscale.com/wgengine/filter":          "tailcat's packet filter ports",
+	"github.com/yuin/goldmark":               "renders text to HTML locally",
+	"github.com/yuin/goldmark/ast":           "renders text to HTML locally; its packages import no network or process package",
+	"github.com/yuin/goldmark/extension":     "renders text to HTML locally; its packages import no network or process package",
+	"github.com/yuin/goldmark/parser":        "renders text to HTML locally; its packages import no network or process package",
+	"github.com/yuin/goldmark/renderer/html": "renders text to HTML locally; its packages import no network or process package",
+	"github.com/yuin/goldmark/text":          "renders text to HTML locally; its packages import no network or process package",
+	"github.com/yuin/goldmark/util":          "renders text to HTML locally; its packages import no network or process package",
+	"modernc.org/sqlite":                     "the local stores",
+	"golang.org/x/term":                      "reads a terminal",
 }
 
 func TestEveryDependencyIsOneWeKnowTheReachOf(t *testing.T) {

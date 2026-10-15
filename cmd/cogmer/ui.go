@@ -37,9 +37,14 @@ type uiEvent struct {
 	// which now refuses an unverified peer's events outright. So the marker sat on
 	// every turn that could exist, and a warning that is always on is not a
 	// warning. Seeing one now means a filter failed, which is worth shouting about.
-	Verified  bool     `json:"verified"`
-	EventType string   `json:"eventType"`
-	Content   string   `json:"content"`
+	Verified  bool   `json:"verified"`
+	EventType string `json:"eventType"`
+	Content   string `json:"content"`
+	// HTML is Content rendered as Markdown by the daemon that shows the room, never by the
+	// page, so that what a colleague's text can do in the reader's browser is decided
+	// where a test reads it (D-211). It is made for the view's stream only: it is not
+	// stored, not sent to a peer, and not in what is injected into a session.
+	HTML      string   `json:"html"`
 	Clock     string   `json:"clock"`
 	ToolCalls int      `json:"toolCalls"`
 	Tools     []string `json:"tools"`
@@ -181,6 +186,17 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 	return st, nil
 }
 
+// viewSnapshot is the room as the view's stream sends it: the snapshot with each turn's
+// Markdown rendered. The export and every other reader of a snapshot take the text as
+// written (D-211).
+func (d *Daemon) viewSnapshot(cur Room) (uiState, error) {
+	st, err := d.snapshot(cur)
+	for i := range st.Events {
+		st.Events[i].HTML = d.rendered.get(st.Events[i].EventID, st.Events[i].Content)
+	}
+	return st, err
+}
+
 // turnTime is a turn's time for a reader: the clock for today, and the date with it
 // for any other day. It is absolute, since a relative age would be wrong by the time
 // the page next redrew.
@@ -208,6 +224,12 @@ func (d *Daemon) roomFromPath(path string) (Room, bool) {
 	return r, true
 }
 
+// roomPagePolicy lets the room page run its own script and style, and read this daemon's
+// stream, and nothing else. Its images are none, so an address a colleague put in a turn
+// cannot be fetched even if the renderer let one through (D-212).
+const roomPagePolicy = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
+	"connect-src 'self'; img-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+
 func (d *Daemon) handleUI(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/":
@@ -227,6 +249,8 @@ func (d *Daemon) handleUI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Content-Security-Policy", roomPagePolicy)
+		w.Header().Set("Referrer-Policy", "no-referrer")
 		_, _ = w.Write(uiPage)
 		return
 	}
@@ -279,7 +303,7 @@ func (d *Daemon) handleStream(w http.ResponseWriter, r *http.Request) {
 	defer d.unsubscribe(ch)
 
 	send := func() bool {
-		st, err := d.snapshot(room)
+		st, err := d.viewSnapshot(room)
 		if err != nil {
 			return false
 		}
