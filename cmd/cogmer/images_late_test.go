@@ -69,7 +69,7 @@ func TestCodexTurnImagesReadsOnlyTheNamedTurnsUserMessage(t *testing.T) {
 	mine := codexUserLine("turn-1", []codexImage{{1, disk, img1}, {2, "", img2}}, "[Image #1] [Image #2] compare")
 	path := writeRollout(t, meta, other, codexInstructions("turn-1"), assistant, mine)
 
-	imgs, found, next := codexTurnImages(path, "turn-1", "[Image #1] [Image #2] compare", 0)
+	imgs, found, at, next := codexTurnImages(path, "turn-1", "[Image #1] [Image #2] compare", 0)
 	if !found || len(imgs) != 2 {
 		t.Fatalf("found %v, %+v", found, imgs)
 	}
@@ -82,22 +82,25 @@ func TestCodexTurnImagesReadsOnlyTheNamedTurnsUserMessage(t *testing.T) {
 	if info, _ := os.Stat(path); next != info.Size() {
 		t.Errorf("next offset %d, file is %d", next, info.Size())
 	}
-	if _, found, _ := codexTurnImages(path, "turn-absent", "[Image #1] [Image #2] compare", 0); found {
+	if raw, _ := os.ReadFile(path); !strings.HasPrefix(string(raw[at:]), mine) {
+		t.Errorf("the message is not at offset %d", at)
+	}
+	if _, found, _, _ := codexTurnImages(path, "turn-absent", "[Image #1] [Image #2] compare", 0); found {
 		t.Error("a turn that is not there was found")
 	}
-	if _, found, _ := codexTurnImages(filepath.Join(t.TempDir(), "none.jsonl"), "turn-1", "x", 0); found {
+	if _, found, _, _ := codexTurnImages(filepath.Join(t.TempDir(), "none.jsonl"), "turn-1", "x", 0); found {
 		t.Error("a transcript that is not there was read")
 	}
 	// A message that names no image is found, so that the watch ends.
 	noImage := writeRollout(t, codexInstructions("turn-2"), codexUserLine("turn-2", nil, "[Image #1] but nothing was attached"))
-	if imgs, found, _ := codexTurnImages(noImage, "turn-2", "[Image #1] but nothing was attached", 0); !found || len(imgs) != 0 {
+	if imgs, found, _, _ := codexTurnImages(noImage, "turn-2", "[Image #1] but nothing was attached", 0); !found || len(imgs) != 0 {
 		t.Errorf("a message with no image: %v %+v", found, imgs)
 	}
 	// Only the message with the prompt's text counts, whatever else the turn holds.
-	if _, found, _ := codexTurnImages(noImage, "turn-2", "some other prompt", 0); found {
+	if _, found, _, _ := codexTurnImages(noImage, "turn-2", "some other prompt", 0); found {
 		t.Error("a message that is not the prompt was found")
 	}
-	if _, found, _ := codexTurnImages(writeRollout(t, codexInstructions("turn-2")), "turn-2", "[Image #1] hi", 0); found {
+	if _, found, _, _ := codexTurnImages(writeRollout(t, codexInstructions("turn-2")), "turn-2", "[Image #1] hi", 0); found {
 		t.Error("the instructions of a turn were taken for its prompt")
 	}
 }
@@ -107,12 +110,12 @@ func TestCodexTurnImagesReadsOnlyTheNamedTurnsUserMessage(t *testing.T) {
 func TestCodexTurnImagesWaitsForALineToBeComplete(t *testing.T) {
 	line := codexUserLine("turn-1", []codexImage{{1, "", pngBytes(t, 63)}}, "[Image #1]")
 	path := writeRollout(t, line[:len(line)/2])
-	imgs, found, next := codexTurnImages(path, "turn-1", "[Image #1]", 0)
+	imgs, found, _, next := codexTurnImages(path, "turn-1", "[Image #1]", 0)
 	if found || imgs != nil || next != 0 {
 		t.Fatalf("half a line: %v %v %d", found, imgs, next)
 	}
 	writeFile(t, path, []byte(line))
-	imgs, found, _ = codexTurnImages(path, "turn-1", "[Image #1]", next)
+	imgs, found, _, _ = codexTurnImages(path, "turn-1", "[Image #1]", next)
 	if !found || len(imgs) != 1 {
 		t.Errorf("the whole line: %v %+v", found, imgs)
 	}
@@ -347,5 +350,65 @@ func TestACodexHookWithNoTranscriptStartsNoWatch(t *testing.T) {
 	d.background.Wait()
 	if evs := roomEvents(t, d, room); len(evs) != 1 {
 		t.Errorf("%d events", len(evs))
+	}
+}
+
+// Prompts with the same words are told apart by their turns, and by where their messages are.
+func TestIdenticalPromptsGetTheirOwnImages(t *testing.T) {
+	const words = "[Image #1] what is this?"
+	a, b := pngBytes(t, 71), pngBytes(t, 72)
+	inTurns := writeRollout(t,
+		codexInstructions("t1"), codexUserLine("t1", []codexImage{{1, "", a}}, words),
+		codexInstructions("t2"), codexUserLine("t2", []codexImage{{1, "", b}}, words))
+	for turn, want := range map[string][]byte{"t1": a, "t2": b} {
+		imgs, found, _, _ := codexTurnImages(inTurns, turn, words, 0)
+		if !found || len(imgs) != 1 || !bytes.Equal(imgs[0].Data, want) {
+			t.Errorf("turn %s: %v %+v", turn, found, imgs)
+		}
+	}
+}
+
+func TestTwoPromptsWithTheSameWordsInOneTurnTakeOneMessageEach(t *testing.T) {
+	const words = "[Image #1] what is this?"
+	d, room, post := codexRoom(t)
+	a, b := pngBytes(t, 73), pngBytes(t, 74)
+	rollout := writeRollout(t, codexInstructions("t1"),
+		codexUserLine("t1", []codexImage{{1, "", a}}, words),
+		codexUserLine("t1", []codexImage{{1, "", b}}, words))
+	post(promptReq{Host: "codex", SessionID: "cs", TurnID: "t1", Prompt: words, TranscriptPath: rollout})
+	post(promptReq{Host: "codex", SessionID: "cs", TurnID: "t1", Prompt: words, TranscriptPath: rollout})
+	d.background.Wait()
+
+	var got []string
+	for _, e := range roomEvents(t, d, room) {
+		if e.EventType == EventUserImage {
+			for _, r := range imageRefs(e.Metadata) {
+				got = append(got, r.SHA256)
+			}
+		}
+	}
+	if len(got) != 2 || got[0] == got[1] {
+		t.Fatalf("the two prompts took %v; each message goes to one prompt", got)
+	}
+	for _, want := range [][]byte{a, b} {
+		if got[0] != hashOf(want) && got[1] != hashOf(want) {
+			t.Errorf("an image went to no prompt: %s", hashOf(want)[:12])
+		}
+	}
+}
+
+func TestAMessageIsClaimedOnce(t *testing.T) {
+	d := &Daemon{}
+	if !d.claimLateMessage("/a", 10) || d.claimLateMessage("/a", 10) {
+		t.Error("a message can be claimed twice, or never")
+	}
+	if !d.claimLateMessage("/a", 11) || !d.claimLateMessage("/b", 10) {
+		t.Error("a claim on one message blocks another")
+	}
+	for i := int64(0); i < 5000; i++ {
+		d.claimLateMessage("/c", i)
+	}
+	if len(d.lateClaimed) > 4096 {
+		t.Errorf("%d claims are kept", len(d.lateClaimed))
 	}
 }

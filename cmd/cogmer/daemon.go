@@ -111,6 +111,10 @@ type Daemon struct {
 	// imageWatch is how often and for how long the daemon reads a transcript for an image that
 	// a host shows after its prompt, which is every 250 ms for 10 s unless a test says otherwise.
 	imageWatchEvery, imageWatchWithin time.Duration
+	// lateClaimed is the transcript messages whose images a prompt has taken, so that one
+	// message is not given to two prompts.
+	lateMu      sync.Mutex
+	lateClaimed map[string]bool
 	// imagePeers chooses the addresses to ask for a room's images, which is every guest's
 	// address unless a test fetches from one directly.
 	imagePeers func(room Room) []string

@@ -34,11 +34,11 @@ type lateImage struct {
 type lateImageHost interface {
 	// LateImages reads the transcript from a byte offset for the user's message of one turn, which
 	// is the one whose text is the prompt. It returns the images the message holds, whether the
-	// message was found, and the offset to continue from.
-	LateImages(path, turnID, prompt string, offset int64) (imgs []lateImage, found bool, next int64)
+	// message was found, the offset where the message starts, and the offset to continue from.
+	LateImages(path, turnID, prompt string, offset int64) (imgs []lateImage, found bool, at, next int64)
 }
 
-func (codexHost) LateImages(path, turnID, prompt string, offset int64) ([]lateImage, bool, int64) {
+func (codexHost) LateImages(path, turnID, prompt string, offset int64) ([]lateImage, bool, int64, int64) {
 	return codexTurnImages(path, turnID, prompt, offset)
 }
 
@@ -50,22 +50,23 @@ var codexImageOpen = regexp.MustCompile(`^<image name=\[Image #(\d+)\](?: path="
 // the file it came from, then the image as a data URL, then a closing text item. Only lines that
 // are complete are read, so an offset that stops in the middle of a line that Codex is still
 // writing is not passed.
-func codexTurnImages(path, turnID, prompt string, offset int64) ([]lateImage, bool, int64) {
+func codexTurnImages(path, turnID, prompt string, offset int64) (imgs []lateImage, found bool, at, next int64) {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, false, offset
+		return nil, false, 0, offset
 	}
 	defer f.Close()
 	if _, err := f.Seek(offset, io.SeekStart); err != nil {
-		return nil, false, offset
+		return nil, false, 0, offset
 	}
 	r := bufio.NewReaderSize(f, 1<<20)
-	next := offset
+	next = offset
 	for {
 		line, err := r.ReadBytes('\n')
 		if err != nil {
-			return nil, false, next // an incomplete last line is read again later
+			return nil, false, 0, next // an incomplete last line is read again later
 		}
+		start := next
 		next += int64(len(line))
 		var rec struct {
 			Payload struct {
@@ -112,7 +113,7 @@ func codexTurnImages(path, turnID, prompt string, offset int64) ([]lateImage, bo
 		if cur != nil { // named and given no bytes
 			out = append(out, *cur)
 		}
-		return out, true, next
+		return out, true, start, next
 	}
 }
 
@@ -191,11 +192,16 @@ func (d *Daemon) followLateImages(h lateImageHost, room Room, store *Store, req 
 	deadline := time.Now().Add(within)
 	var offset int64
 	for {
-		imgs, found, next := h.LateImages(req.TranscriptPath, req.TurnID, req.Prompt, offset)
+		imgs, found, at, next := h.LateImages(req.TranscriptPath, req.TurnID, req.Prompt, offset)
 		offset = next
 		if found {
-			d.publishLateImages(room, store, req.SessionID, promptEvent, imgs)
-			return
+			// A message goes to one prompt. Two prompts with the same text in one turn would
+			// otherwise both take the first message's images.
+			if d.claimLateMessage(req.TranscriptPath, at) {
+				d.publishLateImages(room, store, req.SessionID, promptEvent, imgs)
+				return
+			}
+			continue
 		}
 		if time.Now().After(deadline) {
 			log.Printf("image: the transcript of session %.8s did not show the images of a prompt within %s", req.SessionID, within)
@@ -203,6 +209,25 @@ func (d *Daemon) followLateImages(h lateImageHost, room Room, store *Store, req 
 		}
 		time.Sleep(every)
 	}
+}
+
+// claimLateMessage reports whether this is the first claim on a message of a transcript, which
+// is named by where it starts.
+func (d *Daemon) claimLateMessage(path string, at int64) bool {
+	d.lateMu.Lock()
+	defer d.lateMu.Unlock()
+	if d.lateClaimed == nil {
+		d.lateClaimed = map[string]bool{}
+	}
+	if len(d.lateClaimed) >= 4096 { // a claim matters for seconds, so forgetting old ones is safe
+		d.lateClaimed = map[string]bool{}
+	}
+	key := path + "\x00" + strconv.FormatInt(at, 10)
+	if d.lateClaimed[key] {
+		return false
+	}
+	d.lateClaimed[key] = true
+	return true
 }
 
 func (d *Daemon) publishLateImages(room Room, store *Store, sessionID, promptEvent string, imgs []lateImage) {
