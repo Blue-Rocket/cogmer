@@ -47,5 +47,5 @@ and `tasklist` and ended outright. The daemon handles SIGTERM by closing its lis
 survivable for the reason above. Only Windows 11 on ARM64 in English was run. `d4594cf`.
 
 **Revisit when** Windows prints a listening socket in a form `parseNetstatListeners` does not read, or a Windows
-edition lacks `netstat` or `tasklist`. A daemon of another version is stopped through this path, by D-158 (a
-daemon of another version gives way to the one the hook starts).
+edition lacks `netstat` or `tasklist`. An older daemon is stopped through this path, by D-158 (an
+older daemon gives way to the program the hook starts).

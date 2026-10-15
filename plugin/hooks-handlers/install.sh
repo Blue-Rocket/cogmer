@@ -47,8 +47,34 @@ fi
 
 want="$(cat "$root/VERSION" 2>/dev/null || echo unknown)"
 
-# Already the version this plugin expects.
-if [ -x "$target" ] && [ "$("$target" version 2>/dev/null)" = "$want" ]; then
+# newer A B succeeds when version A is newer than version B. Each is dotted numbers, compared
+# number by number, so 0.10.2 is newer than 0.9.1, and a missing number is zero. A version that
+# is not dotted numbers of up to nine digits, without leading zeros, such as dev, is neither newer
+# nor older than anything, and is replaced when it differs.
+newer() {
+  local num='(0|[1-9][0-9]{0,8})'
+  [[ "$1" =~ ^$num(\.$num)*$ && "$2" =~ ^$num(\.$num)*$ ]] || return 1
+  local -a a b
+  local IFS=. i x y
+  read -r -a a <<< "$1"
+  read -r -a b <<< "$2"
+  for ((i = 0; i < ${#a[@]} || i < ${#b[@]}; i++)); do
+    x=$((10#${a[i]:-0}))
+    y=$((10#${b[i]:-0}))
+    ((x > y)) && return 0
+    ((x < y)) && return 1
+  done
+  return 1
+}
+
+installed=""
+[ -x "$target" ] && installed="$("$target" version 2>/dev/null)"
+
+# Already the version this plugin expects, or a newer one. A newer program stays: an older copy
+# of the plugin, such as one a desktop app installed, would otherwise move the machine back at
+# every session it starts (D-215).
+if [ -n "$installed" ] && { [ "$installed" = "$want" ] || newer "$installed" "$want"; }; then
+  [ "$installed" != "$want" ] && say "keeping $installed: this plugin expects $want, which is older"
   start_daemon_if_needed
   exit 0
 fi

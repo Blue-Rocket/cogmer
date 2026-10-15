@@ -138,3 +138,8 @@ once on each machine.
 
 The next session after an update fetches the new binary in the background and
 replaces the daemon that is running, so there is nothing to stop or restart.
+
+If cogmer is installed in two places on one machine, such as with the terminal commands above and from the
+desktop app's Plugins page, the newer plugin's program stays whichever one starts a session, and
+`/cogmer:self-status` says when a plugin is older than the program. Keep one copy, and remove the older one
+if the status says so.

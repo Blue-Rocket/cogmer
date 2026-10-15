@@ -1577,8 +1577,12 @@ func versionReport(plugin, binary, daemon string, answering bool) string {
 	default:
 		fmt.Fprintf(&b, "  daemon  %s\n", daemon)
 	}
-	if plugin != "" && shouldReplace(binary, plugin) {
-		b.WriteString("\nThe binary is not the version this plugin expects yet. A new session fetches it.\n")
+	switch {
+	case plugin != "" && shouldReplace(binary, plugin):
+		b.WriteString("\nThe binary is older than this plugin expects. A new session fetches it.\n")
+	case plugin != "" && olderThan(plugin, binary):
+		b.WriteString("\nThis plugin is older than the binary, which is not moved back. Update the plugin in this host, " +
+			"and if cogmer is installed in two places, remove the older copy.\n")
 	}
 	switch {
 	case !answering:
@@ -1971,16 +1975,64 @@ func daemonVersionAt(address string) (string, bool) {
 	return body.Version, body.OK && body.PeerID != ""
 }
 
-// shouldReplace says whether a daemon of version running gives way to this
-// binary, version mine (D-158). Any difference counts, because the plugin decides
-// which version a machine runs and may move it either way. A build from source
-// reports dev and is never replaced, nor replaces one, because a maintainer runs it
-// by hand and every new session would otherwise end it.
+// shouldReplace says whether something of version running gives way to a binary of version
+// mine: only an older one does, and one that reports no version, as a daemon built before
+// /healthz carried one does (D-158, D-215). Having no version is a difference, and a difference
+// is replaced when there is no order to go by. A plugin that is older than the program on the
+// machine is an old copy, such as one a desktop app installed, and must not move the machine
+// back. A build from source reports dev and is never replaced, nor replaces one, because a
+// maintainer runs it by hand and every new session would otherwise end it. A version that is
+// not dotted numbers is replaced when it differs, since there is no order to go by.
 func shouldReplace(running, mine string) bool {
 	if running == "dev" || mine == "dev" {
 		return false
 	}
-	return running != mine
+	a, b := versionNumbers(running), versionNumbers(mine)
+	if a == nil || b == nil {
+		return running != mine
+	}
+	return versionLess(a, b)
+}
+
+// olderThan says whether a is a version older than b, when both are dotted numbers.
+func olderThan(a, b string) bool {
+	x, y := versionNumbers(a), versionNumbers(b)
+	return x != nil && y != nil && versionLess(x, y)
+}
+
+// versionNumbers reads a version made of dotted numbers, such as 0.10.2, and returns nil for
+// anything else.
+func versionNumbers(v string) []int {
+	if v == "" {
+		return nil
+	}
+	var out []int
+	for _, part := range strings.Split(v, ".") {
+		n, err := strconv.Atoi(part)
+		if err != nil || n < 0 || part != strconv.Itoa(n) {
+			return nil
+		}
+		out = append(out, n)
+	}
+	return out
+}
+
+// versionLess orders two versions number by number, so 0.9.1 is older than 0.10.0. A version
+// with fewer numbers is read as if the rest were zero.
+func versionLess(a, b []int) bool {
+	for i := 0; i < len(a) || i < len(b); i++ {
+		var x, y int
+		if i < len(a) {
+			x = a[i]
+		}
+		if i < len(b) {
+			y = b[i]
+		}
+		if x != y {
+			return x < y
+		}
+	}
+	return false
 }
 
 // stopOutcome is what stopping found at one listening process.

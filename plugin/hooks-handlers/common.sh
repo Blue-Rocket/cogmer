@@ -72,7 +72,7 @@ start_daemon_if_needed() {
       # Already running is the ordinary outcome, not an error. A daemon of another
       # version is the one exception: after an update it would keep the old code
       # serving until something else ended it. The daemon started below decides
-      # whether to replace it, and replaces it, detached like any start (D-158).
+      # whether to replace it, which it does only for an older one, detached like any start (D-158).
       running="$(printf '%s' "$health" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')"
       want="$("$bin" version 2>/dev/null)"
       if [ "$running" = "$want" ]; then

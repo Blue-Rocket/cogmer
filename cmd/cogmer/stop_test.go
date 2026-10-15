@@ -20,11 +20,18 @@ func TestShouldReplace(t *testing.T) {
 		want          bool
 	}{
 		{"0.7.2", "0.7.3", true},
-		{"0.7.3", "0.7.2", true}, // the plugin may move a machine back
-		{"", "0.7.3", true},      // a daemon from before /healthz carried a version
+		{"0.7.3", "0.7.2", false}, // an older copy of the plugin does not move a machine back (D-215)
+		{"", "0.7.3", true},       // a daemon from before /healthz carried a version
 		{"0.7.3", "0.7.3", false},
 		{"dev", "0.7.3", false}, // a maintainer's hand-started build
 		{"0.7.3", "dev", false},
+		{"0.9.1", "0.10.0", true}, // numbers, not letters: 0.10.0 is the newer
+		{"0.10.0", "0.9.1", false},
+		{"0.10.2", "0.7.4", false},
+		{"0.7", "0.7.1", true}, // a missing number is zero
+		{"0.7.0", "0.7", false},
+		{"0.7.4-rc1", "0.7.4", true}, // no order to go by, so a difference replaces
+		{"0.7.4", "garbage", true},
 	}
 	for _, c := range cases {
 		if got := shouldReplace(c.running, c.mine); got != c.want {

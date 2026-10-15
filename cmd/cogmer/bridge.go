@@ -149,8 +149,8 @@ func restartWait() time.Duration {
 }
 
 // startAtLaunch does for a Cowork user what the session-start hook does for the others: it
-// starts a daemon when none answers and the user has not stopped it, and starts one over a
-// daemon of another version, which gives way (D-158). It waits for nothing.
+// starts a daemon when none answers and the user has not stopped it, and starts one over an
+// older daemon, which gives way (D-158). It waits for nothing.
 func (b *bridge) startAtLaunch() {
 	if b.control == nil {
 		return
