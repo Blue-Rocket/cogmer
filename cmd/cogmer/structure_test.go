@@ -531,7 +531,7 @@ var decisionOrder = []struct {
 	required bool
 }{
 	{"Decision.", true},
-	{"Support.", true},
+	{"Support.", false}, // older entries only (W-30)
 	{"Rejected.", false},
 	{"Limits.", false},
 	{"Revisit when", false},
@@ -652,7 +652,9 @@ func TestDecisionProblemsCatchesEachRule(t *testing.T) {
 		{"not built", "# D-124 — T\n\n" + strings.Replace(complete, "active", "not built", 1), nil},
 		{"no Revisit when", "# D-124 — T\n\n" + strings.Replace(complete, "\n\n**Revisit when** z.", "", 1), nil},
 		{"no Rejected", "# D-124 — T\n\n" + strings.Replace(complete, "**Rejected.** y\n\n", "", 1), nil},
-		{"missing Support", "# D-124 — T\n\n" + strings.Replace(complete, support, "", 1), []string{"D-124 has no **Support.**"}},
+		{"no Support, as a new entry has", "# D-124 — T\n\n" + strings.Replace(complete, support, "", 1), nil},
+		{"only a Decision", "# D-124 — T\n\n" + date + "**Decision.** x\n", nil},
+		{"no Decision", "# D-124 — T\n\n" + date + "**Rejected.** y\n", []string{"D-124 has no **Decision.**"}},
 		{"Support with no list", "# D-124 — T\n\n" + strings.Replace(complete, support, "**Support.** It is so.\n\n", 1), []string{"D-124 has **Support.** with no list"}},
 		{"superseded status", "# D-124 — T\n\n" + strings.Replace(complete, "active", "superseded by D-126", 1), []string{"D-124 has no **Date:** line whose status"}},
 		{"a date that is not one", "# D-124 — T\n\n" + strings.Replace(complete, "2026-09-23", "d", 1), []string{"D-124 has no **Date:** line whose status"}},

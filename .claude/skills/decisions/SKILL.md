@@ -5,9 +5,10 @@ description: Find the decisions that govern an area before proposing a change to
 
 # Decisions
 
-`docs/decisions/` holds one file for each decision. Each records what is decided, the facts it
-rests on with their sources, the alternatives rejected and why, and what it does not cover. The
-rejected alternatives are what stop a change proposing again something that was ruled out.
+`docs/decisions/` holds one file for each decision. Each says what is decided and why it
+persuaded us, and names the alternatives rejected and why. Older entries also hold a Support list
+and some hold Limits. The rejected alternatives are what stop a change proposing again something
+that was ruled out.
 
 ## Find the decisions for an area
 

@@ -14,7 +14,7 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | ID | rule | enforcement |
 |---|---|---|
 | W-01 | the words for the people involved | judgment |
-| W-02 | put the answer first | judgment |
+| W-02 | put the answer first, in each item, paragraph and list item | judgment |
 | W-03 | plain, complete sentences, one idea each | judgment |
 | W-04 | state the fact, not a saying about it | judgment |
 | W-05 | leave out the process | judgment |
@@ -46,8 +46,7 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-31 | a decision's title states the decision | judgment |
 | W-32 | a decision describes only the present | judgment |
 | W-33 | a decision uses none of the history words | checked |
-| W-34 | every supporting fact names a source | checked |
-| W-35 | a supporting fact holds now | judgment |
+| W-34 | an older entry's supporting facts each name a source | checked |
 | W-36 | **Rejected.** names only an alternative likely to be proposed again | judgment |
 | W-37 | a reversed decision becomes a tombstone | checked |
 | W-38 | a partial change rewrites the earlier entry | judgment |
@@ -94,14 +93,18 @@ a user turn, say which is meant.
 
 ## Rules
 
-W-02. Put the answer first. The first sentence of any item says what is true, what
-was decided or what is wrong. Background, evidence and history come after it, and
-only if the reader needs them to trust or apply the answer.
+W-02. Put the answer first. The first sentence of any item, and of each paragraph
+and list item within it, says what is true, what was decided or what is wrong.
+Background, evidence and history come after it, and only if the reader needs them to
+trust or apply the answer. Never make the reader infer the point of a paragraph from
+its supporting details: state the point, then say why it is true.
 
 W-03. Write plain, complete sentences in paragraphs. Use one idea per sentence and
 the active voice. When a sentence needs a second reading, split it. Use a pronoun only
 where it can refer to one thing. Where it could refer to more than one, repeat the
-noun.
+noun. This holds inside a sentence as much as between sentences: where a sentence
+holds a subject, an object or a noun in an earlier phrase, and the pronoun could mean
+any of them, write the noun.
 
 W-04. State the fact rather than a saying about it. "A check that cannot fail reads
 as protection" makes the reader work out the rule. "Every behavior check has a
@@ -244,9 +247,9 @@ where a maintainer would otherwise be likely to propose it again, in one sentenc
 
 ### A decision (a file in `docs/decisions/`)
 
-A decision entry is a log of what was decided and what supports it. It is not the
-story of how the decision was reached, and what was observed on the way is cited
-under W-42.
+A decision entry reminds a reader what was decided and what persuaded us, in under a
+minute. It is not the story of how the decision was reached, and what was observed
+on the way is cited under W-42.
 
 W-84 says how a decision relates to the specification.
 
@@ -255,29 +258,24 @@ W-84 says how a decision relates to the specification.
 
 **Date:** YYYY-MM-DD · **Status:** active | not built · **Areas:** <one or more>
 
-**Decision.** <One to three sentences saying what we do. The first sentence must
-make sense on its own.>
-
-**Support.**
-- <A fact the decision rests on.> <Its source: a specification section, another
-  decision, a commit, a file and function, or external
-  documentation with its URL.>
+**Decision.** <Two or three plain sentences: what we do, and the reason that
+persuaded us. The first sentence must make sense on its own.>
 
 **Rejected.**
-- *<Alternative.>* <Why not, in one or two sentences, citing a source where one
-  exists.>
-
-**Limits.** <What this does not cover or decide, and what it assumes that nothing
-checks.>
+- *<Alternative.>* <Why not, in one or two sentences.>
 
 **Revisit when** <a condition somebody could observe>.
 ```
 
+A new entry has no **Support.** An older entry that has one keeps it until somebody
+rewrites the entry. **Limits.** is rare: an entry has one only when something that
+nothing checks could hurt a reader who did not know it.
+
 W-30. An entry follows this template: a **Date:** line whose status is "active" or
 "not built" and which ends with **Areas:**, a comma-separated list of one or more areas
-from `docs/decisions/areas.md`, then **Decision.**, **Support.** with a list under it, an optional
-**Rejected.**, an optional **Limits.** and an optional **Revisit when**, in that order.
-Omit an optional field when it has nothing to hold.
+from `docs/decisions/areas.md`, then **Decision.**, an optional **Rejected.**, an optional
+**Limits.** and an optional **Revisit when**, in that order. An older entry may also have **Support.**
+after **Decision.** Omit an optional field when it has nothing to hold.
 
 W-31. The title is the decision, not the topic: "`stop` finds a daemon by the
 addresses it holds", not "Stopping the daemon".
@@ -294,18 +292,12 @@ W-33. Words that describe the system as it stood when the decision was made
 "previously", "replaced") are history whatever their tense, and an entry uses none
 of them.
 
-W-34. Every item under **Support.** has a source, and the source is where the fact
+W-34. Every item under an older entry's **Support.** has a source, and the source is where the fact
 is kept: a § section of the specification, a decision, a behavior such as B04, a
 file named in backticks, a commit, or a URL. A commit is cited as `<commit>` for its
 message, or as `<commit>:<path>` for a file as that commit holds it. If the only
 record of a fact would be the decision itself, commit it first, usually in a commit
 message under W-91, and cite that commit.
-
-W-35. A support item states a fact that holds now. When the evidence is something
-that happened, such as a failure or an earlier design, the item states the fact it
-showed, and the commit it cites holds the event. "An environment variable has the
-same value in every session a machine starts", not "the variable made a command act
-on the wrong room".
 
 W-36. **Rejected.** names an alternative only where a maintainer would otherwise be
 likely to propose it again, which is the test W-29 sets for a rule. An alternative
@@ -348,7 +340,8 @@ later decision's **Rejected.** in the same way.
 
 W-39. When rewriting an entry, keep every fact, reference and number from the
 original, either in the entry or in the commit it now cites. Remove one
-only by saying in the commit message what was removed and why.
+only by saying in the commit message what was removed and why. An older entry
+rewritten to the current template drops its **Support.**, and the commit message says so.
 
 W-40. An entry records one decision. A second decision, one that has alternatives
 of its own and could be reversed without reversing the first, gets its own entry.
@@ -548,8 +541,8 @@ The test parses each document with `github.com/yuin/goldmark` and checks only th
 prose, because the rules govern prose and the documents quote code that breaks them:
 the decision template's own heading, with its em-dash, sits in a fenced block. Code
 spans, code blocks and text inside HTML blocks are not checked. goldmark is pure Go,
-so every target still builds with `CGO_ENABLED=0`, and only test files import it, so
-the binary does not contain it. goldmark can split one sentence into several text
+so every target still builds with `CGO_ENABLED=0`. The daemon also uses it, to render the
+Markdown in a turn for the view. goldmark can split one sentence into several text
 nodes, so the test joins a document's prose before matching a phrase. Scanning lines
 with regular expressions would need its own handling for indented code, code spans
 and table cells, and each one missed reports a problem in text no rule governs.

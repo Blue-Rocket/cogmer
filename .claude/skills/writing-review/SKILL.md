@@ -50,6 +50,11 @@ when you can name the rule's ID and point to the sentence of the guide that the
 text breaks. When a reading is
 arguable, report it as a question rather than a finding.
 
+Read each pronoun against every noun before it in its own sentence as well as in the
+sentences before. A pronoun that could mean the subject or the object, or a noun in an
+earlier phrase, breaks W-03 even when nothing earlier than the sentence is in doubt,
+and no test can find it.
+
 Check every citation's few words against what it cites. Open the decision, the
 section or the file and confirm the words describe it and the fact attributed to
 it is there. A citation that resolves but says something the source does not
