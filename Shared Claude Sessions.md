@@ -1300,6 +1300,15 @@ A command that David types to cogmer, such as `/cogmer:room-status`, is not a tu
 room. The daemon does not store it, offers no colleague's turn with it, and does not store
 what David's agent says about it, since that can hold an invitation or a pairing string.
 
+An image David pastes into a prompt is sent to the room with the prompt, so a colleague sees what David
+asked about.
+
+An image over 5 MB is not sent, and the turn says it was too large, so that one huge image cannot fill a
+colleague's disk or hold up the room.
+
+A colleague's daemon fetches an image from any machine that holds it, so the image is available while its
+author is offline.
+
 The agent session never waits for synchronization with peers before answering a prompt.
 
 ---
@@ -1515,6 +1524,7 @@ The view:
 - shows who wrote each turn, and whose assistant wrote each response;
 - shows when each turn was written;
 - renders the Markdown in a turn, because rendered Markdown is much easier to understand than the characters typed;
+- shows an image pasted into a turn once its bytes reach this machine, and says when one is on its way or was not sent;
 - leaves unrendered what could act in the reader's browser, for safety: markup a colleague typed is
   shown as typed, a link is followable only when it is a web address, and an image is shown as its
   address and never loaded;

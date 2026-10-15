@@ -265,35 +265,50 @@ nobody has a route to.
 An image a user pastes into a session is part of the conversation the user shares, so a colleague should
 see the image and the colleague's model should be able to use the image.
 
-**A pasted image does not reach the shared transcript.** A colleague reads "[Image #1] what is in this
-image?" with no picture. Claude Code 2.1.300 puts that placeholder in the prompt text a hook receives, holds
-the picture as a base64 image block in the transcript record, and saves it as a file that the next record
-names, observed on 2026-10-15 by pasting one screenshot. The daemon takes a prompt from the hook's text and
-never reads the image.
+**Pasted images are written and tested for the Claude Code terminal and desktop app, and not yet seen between two machines.**
+The daemon finds the image a prompt sent in the files its host saves, names it in the turn's signed metadata,
+and serves it to colleagues, whose daemons fetch it by its hash and show it in the room view (D-213, a pasted
+image is sent to peers and each receiver stores it as a file). The tests run two daemons in one process.
 
-D-213 (a pasted image is sent to peers and each receiver stores it as a file) decides the direction: a hash
-of the image in the signed event, which is a new event version beside the old ones, and a fetch from any peer.
-The bytes would travel as raw bytes, fetched by hash, because base64 in JSON is a third larger and a retry
-can resume from where it stopped. The screenshot is 252,818 bytes as a file and 337,092 characters as base64,
-observed on 2026-10-15. A peer request has a limit of 30 seconds for the whole transfer, read in
-`cmd/cogmer/sync.go` on 2026-10-15, so a large image over a slow relay could fail and start again, delaying
-turns on the same connection. A queue of its own, with a timeout that grows with the image's size, would keep
-turns from waiting. The speed of a relay for large transfers has not been measured.
+Two hosts were observed on 2026-10-15. The Claude Code terminal (2.1.300) saves an image the moment it is
+pasted, even if the user then removes it from the prompt, and puts "[Image #N]" in the prompt text, so only an
+image the text names is sent. The Claude Code desktop app (2.1.295) saves an image when the prompt is sent, in
+the same second as the prompt hook, puts no placeholder in the text, and saves nothing for an image removed
+before sending, so an image saved in the last 30 seconds that the session has not sent is sent. The hook's
+environment names which one runs, as `CLAUDE_CODE_ENTRYPOINT` is `cli` or `claude-desktop`, and any other
+value is read as the terminal. A `claude -p` stream-json image block produced neither the placeholder nor the
+file, so the behavior registry, which checks each behavior with `claude -p`, cannot check any of this.
 
-Still to decide is what the view shows while the bytes are missing, and the cleanup of the files when a room
-is left.
-Showing a stored image in the view loosens the room page's policy (D-212, the room
-page's security policy allows no image and no request to another address) to `img-src 'self'`. That is safe
-when the daemon identifies each image by its bytes, accepts raster types only, serves it with
-`X-Content-Type-Options: nosniff` and a size limit, and writes the image element into the page itself.
+Codex 0.159.3 was observed on 2026-10-15. It puts "[Image #N]" in the prompt text a hook receives and gives
+the hook no image and no path. The picture appears in the session's transcript after the hook returns, with
+the path of a file named `codex-clipboard-` and random letters in the system temp folder, and nothing at
+prompt time ties that file to the session. D-214 (an image a host shows after the prompt is sent in a second
+event) records the approach, which is not built, and until it is a turn from Codex reaches a colleague with
+its text and no picture.
+
+Cowork was observed on 2026-10-15 by pasting one image and sending "image test", ten characters. The hook
+received that text with no placeholder and no field for an attachment, so nothing at the hook shows an image
+was sent. Cowork runs Claude Code in a Linux sandbox, so an image file would be there, and the daemon on the
+user's machine cannot read the sandbox's files. The bridge carries only the hook's fields, so a Cowork image
+has no route to the daemon, and a turn from Cowork reaches a colleague with its text and no picture. A route
+would have to be built, and the sandbox mounts a folder at `/mnt/attach/outputs`, which suggests where
+attachments are kept and has not been checked. The Claude Code editor extensions are not observed and are
+read as the terminal.
+
+D-213 becomes active when a colleague on another machine sees a picture sent from each host that sends one.
+
+Three questions are left. The relay speed for large transfers has not been measured, and a fetch may take
+20 seconds plus one second for each 50 KB. Image files stay with a room's database, and nothing removes
+either today, so D-132 (a closed room's log is archived, which is not built) has to say what becomes of a
+closed room's images. And a 5 MB image can hold a very large picture, and no limit on its pixel size is
+checked before the browser decodes it.
 
 **A colleague's pasted image never reaches the model.** Context is injected as text in a hook's output,
 under a budget of 9,000 characters (D-170, injected context has a character budget for the whole block),
 so an image cannot be injected as an image unless Claude Code accepts an image in some form of hook
 output, which has not been looked for.
 
-Every fix depends on "A pasted image does not reach the shared transcript", since an image that is not
-stored cannot be injected. Two ways remain:
+Two ways remain:
 - The text of the turn can say an image was attached. The colleague's model then knows there is an image
   it cannot see, and the text costs almost nothing.
 - The injected text can name the path of the file the receiver stored (D-213), so that the model reads the

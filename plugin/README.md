@@ -101,6 +101,9 @@ it can say so when a command does not work.
 - Your conversation goes to the colleagues in a room. Each turn reaches their machines and
   their agent sessions, and so their model provider under their account. Their turns reach your
   provider, under yours.
+- An image you paste into a prompt goes to the colleagues in the room, with whatever it shows. An image
+  over 5 MB is not sent, and a colleague's view says so. Each colleague's machine keeps a copy as a file in
+  `~/.cogmer`, and cogmer gives their model the turn's text and not the image.
 - A relay introduces two machines on different networks. cogmer uses the free relays that
   Tailscale runs for its tailcat library. The conversation is encrypted between the two machines
   and the relay cannot read it. The daemon holds a connection to the relay for as long as it
