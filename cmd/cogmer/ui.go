@@ -91,6 +91,9 @@ type uiState struct {
 	SelfPeerID string    `json:"selfPeerId"`
 	Events     []uiEvent `json:"events"`
 	Peers      []uiPeer  `json:"peers"`
+	// SessionsInRoom is how many sessions on this machine are in the room. A turn nobody has been
+	// given waits for the next prompt of one of them, and with none there is nothing to wait for.
+	SessionsInRoom int `json:"sessionsInRoom"`
 }
 
 // subscribe registers a channel woken whenever the room changes.
@@ -153,7 +156,8 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 	}
 	now := time.Now()
 	lastTurn := map[string]string{}
-	st := uiState{Room: cur.RoomID, RoomName: cur.RoomName, SelfPeerID: d.id.PeerID, Peers: d.peerStatus()}
+	st := uiState{Room: cur.RoomID, RoomName: cur.RoomName, SelfPeerID: d.id.PeerID, Peers: d.peerStatus(),
+		SessionsInRoom: len(d.members.SessionIDsInRoom(cur.RoomID))}
 	labels := d.members.Labels()
 	var imageEvents []Event
 	for _, e := range evs {

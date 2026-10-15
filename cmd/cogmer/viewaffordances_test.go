@@ -288,3 +288,68 @@ func TestMarkdownIsRenderedOnlyForTheViewsStream(t *testing.T) {
 		t.Errorf("what is injected into a session is not the text as written: %s", injected)
 	}
 }
+
+// The tag on a turn nobody has been given says what will happen to it. A session that has not
+// prompted for an hour is no fault, so the tag does not read as one, and a room with no session of
+// the user's in it is the case that does need saying.
+func TestTheViewSaysWhetherASessionIsThereToBeGivenATurn(t *testing.T) {
+	d, room, _ := promptRoom(t, false)
+	st, err := d.snapshot(room)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.SessionsInRoom != 1 {
+		t.Errorf("a room with a session in it reports %d", st.SessionsInRoom)
+	}
+	if _, err := d.members.LeaveSession("s"); err != nil {
+		t.Fatal(err)
+	}
+	if st, _ = d.snapshot(room); st.SessionsInRoom != 0 {
+		t.Errorf("a room its session left reports %d", st.SessionsInRoom)
+	}
+}
+
+// The tag on a turn says the turn's own fact. What to do about turns waiting, and why it matters,
+// is said once, above them: injection waits for the user's next prompt, which few know.
+func TestThePageSaysOnceAboveTheTurnsWhatToDoAboutTurnsNotGiven(t *testing.T) {
+	src := string(uiPage)
+	for _, want := range []string{
+		"not yet given to your assistant", // the tag
+		"id=\"notice\"",
+		"included the next time you send a prompt in a session in this room",
+		"no session of yours is in this room",
+		"/cogmer:room-join ", "$cogmer room-join ",
+		"state.sessionsInRoom>0",
+	} {
+		if !strings.Contains(src, want) {
+			t.Errorf("the page lacks %q", want)
+		}
+	}
+	for _, old := range []string{"not yet in your session", "arrives with your next prompt", ">no session of yours is in this room</span>"} {
+		if strings.Contains(src, old) {
+			t.Errorf("the page still repeats on each turn: %q", old)
+		}
+	}
+	// The room's name came from whoever invited the user, so the notice is not built from markup.
+	i, j := strings.Index(src, "function showNotice"), strings.Index(src, "function draw")
+	if i < 0 || j < i {
+		t.Fatal("the page has no showNotice before draw")
+	}
+	if strings.Contains(src[i:j], "innerHTML") {
+		t.Error("the notice is built with innerHTML")
+	}
+}
+
+// A font a person installed by hand can be missing its regular weight, which made every word of
+// the room page bold on a machine with Roboto installed. The pages take the system's own font.
+func TestThePagesTakeTheSystemFontAndNameNoInstalledOne(t *testing.T) {
+	expired := string(pairExpiredPage())
+	for name, src := range map[string]string{"room page": string(uiPage), "pairing page": pairPageSrc, "expired pairing page": expired} {
+		if !strings.Contains(src, "font:15px/1.6 system-ui,") {
+			t.Errorf("the %s does not set its font from the system's", name)
+		}
+		if strings.Contains(src, "Roboto") || strings.Contains(src, "ui-sans-serif") {
+			t.Errorf("the %s names a font that is not on every machine", name)
+		}
+	}
+}

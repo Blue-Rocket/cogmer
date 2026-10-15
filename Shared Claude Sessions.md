@@ -1532,8 +1532,11 @@ The view:
 - shows which colleagues are offline, by name, and for how long;
 - shows when each colleague last wrote a turn in the room, so a colleague who is reachable
   and whose turns have stopped arriving can be told from one who is quiet;
-- marks a colleague's turn that no session on this machine has been given yet, except in a
-  show-only room, which gives none;
+- marks a colleague's turn that no session on this machine has been given yet, except in a show-only
+  room, which gives none;
+- says once, above the turns, how many have not been given to the user's assistant, that they are
+  included with the next prompt sent in a session in the room, and how to join the room when no session
+  is in it, so the user knows why the assistant lacks them and what to do;
 - keeps the reader's place: a turn arriving does not close a list of tool operations the
   reader opened or clear text the reader selected, and when the reader has scrolled away
   from the newest turn, a button says how many colleagues' turns arrived and jumps to them,

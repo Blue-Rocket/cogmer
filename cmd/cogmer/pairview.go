@@ -203,7 +203,7 @@ func pairExpiredPage() []byte {
 <style>:root{--bg:#faf9f7;--fg:#1c1b19;--dim:#6b6660}
 @media (prefers-color-scheme:dark){:root{--bg:#16150f;--fg:#e8e4dc;--dim:#8f8a82}}
 body{margin:0;background:var(--bg);color:var(--fg);
-font:15px/1.6 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
 main{max-width:34rem;margin:0 auto;padding:4rem 1.5rem}
 h1{font-size:15px;letter-spacing:.14em;text-transform:uppercase}
 p{color:var(--dim)}code{font:13px ui-monospace,Menlo,monospace}</style>
