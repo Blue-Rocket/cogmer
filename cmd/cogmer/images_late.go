@@ -234,10 +234,15 @@ func (d *Daemon) publishLateImages(room Room, store *Store, sessionID, promptEve
 	if len(imgs) > maxImagesPerTurn {
 		imgs = imgs[:maxImagesPerTurn]
 	}
+	// Files are read and hashed before the lock is taken. Every write to a room's database is
+	// made under it, because two writers at once can fail one of them with "database is locked",
+	// and when that one is a prompt hook the prompt is lost.
 	var prepared []preparedImage
 	for _, img := range imgs {
 		prepared = append(prepared, prepareLate(img))
 	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	refs := storeImages(store, prepared)
 	if len(refs) == 0 {
 		return
@@ -247,8 +252,6 @@ func (d *Daemon) publishLateImages(room Room, store *Store, sessionID, promptEve
 	for _, r := range refs {
 		names = append(names, "pasted image "+strconv.Itoa(r.N))
 	}
-	d.mu.Lock()
-	defer d.mu.Unlock()
 	if _, err := d.appendLocal(store, room, sessionID, EventUserImage, "["+strings.Join(names, ", ")+"]",
 		map[string]any{"images": refs, "forEvent": promptEvent}); err != nil {
 		log.Printf("image: the images of a prompt were not published: %v", err)

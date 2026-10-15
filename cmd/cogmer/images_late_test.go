@@ -369,6 +369,21 @@ func TestIdenticalPromptsGetTheirOwnImages(t *testing.T) {
 }
 
 func TestTwoPromptsWithTheSameWordsInOneTurnTakeOneMessageEach(t *testing.T) {
+	twoPromptsInOneTurn(t)
+}
+
+// Two writers to a room's database at once can fail one of them with "database is locked", and when
+// that one is a prompt hook the prompt is lost. The writes the image code makes in the background
+// take the daemon's lock like every other, and this runs the scenario that collides without it
+// enough times that a missing lock shows.
+func TestImageWritesNeverCollideWithPromptWrites(t *testing.T) {
+	for i := 0; i < 40; i++ {
+		twoPromptsInOneTurn(t)
+	}
+}
+
+func twoPromptsInOneTurn(t *testing.T) {
+	t.Helper()
 	const words = "[Image #1] what is this?"
 	d, room, post := codexRoom(t)
 	a, b := pngBytes(t, 73), pngBytes(t, 74)

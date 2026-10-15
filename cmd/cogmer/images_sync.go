@@ -197,7 +197,9 @@ func (d *Daemon) fetchImage(room Room, store *Store, row imageRow) bool {
 	if row.Attempts%5 == 0 {
 		log.Printf("image: could not fetch %.12s for %s (attempt %d): %v", row.SHA256, room.RoomName, row.Attempts+1, lastErr)
 	}
+	d.mu.Lock()
 	_ = store.ImageFailed(row.SHA256, time.Now().Add(imageBackoff(row.Attempts+1)))
+	d.mu.Unlock()
 	return false
 }
 
@@ -227,7 +229,13 @@ func (d *Daemon) fetchImageFrom(addr string, room Room, store *Store, row imageR
 			return err
 		}
 	}
-	return finishImage(store, row, part, final)
+	if err := finishImage(row, part, final); err != nil {
+		return err
+	}
+	// The write is made under the lock every writer to a room's database takes.
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return store.CompleteImage(row.SHA256)
 }
 
 func (d *Daemon) requestBlob(addr string, room Room, row imageRow, part string, offset, remaining int64) error {
@@ -277,7 +285,7 @@ func (d *Daemon) requestBlob(addr string, room Room, row imageRow, part string, 
 // finishImage checks a complete partial file against what the signed event named, and moves it
 // into place only if it is that image. Anything else is deleted, since continuing from bytes
 // that are wrong would fail the same way each time.
-func finishImage(store *Store, row imageRow, part, final string) error {
+func finishImage(row imageRow, part, final string) error {
 	data, err := os.ReadFile(part)
 	if err != nil {
 		return err
@@ -297,8 +305,5 @@ func finishImage(store *Store, row imageRow, part, final string) error {
 	if err := os.Chmod(part, 0o600); err != nil {
 		return err
 	}
-	if err := os.Rename(part, final); err != nil {
-		return err
-	}
-	return store.CompleteImage(row.SHA256)
+	return os.Rename(part, final)
 }
