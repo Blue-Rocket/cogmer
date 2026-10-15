@@ -265,7 +265,7 @@ nobody has a route to.
 An image a user pastes into a session is part of the conversation the user shares, so a colleague should
 see the image and the colleague's model should be able to use the image.
 
-**Pasted images are written and tested for the Claude Code terminal and desktop app, and not yet seen between two machines.**
+**Pasted images are written and tested for the Claude Code terminal and desktop app and for Codex, and not yet seen between two machines.**
 The daemon finds the image a prompt sent in the files its host saves, names it in the turn's signed metadata,
 and serves it to colleagues, whose daemons fetch it by its hash and show it in the room view (D-213, a pasted
 image is sent to peers and each receiver stores it as a file). The tests run two daemons in one process.
@@ -283,8 +283,10 @@ Codex 0.159.3 was observed on 2026-10-15. It puts "[Image #N]" in the prompt tex
 the hook no image and no path. The picture appears in the session's transcript after the hook returns, with
 the path of a file named `codex-clipboard-` and random letters in the system temp folder, and nothing at
 prompt time ties that file to the session. D-214 (an image a host shows after the prompt is sent in a second
-event) records the approach, which is not built, and until it is a turn from Codex reaches a colleague with
-its text and no picture.
+event) is built for it: the daemon reads the transcript for the message whose text is the prompt, because the
+turn holds other user messages, and publishes the image in a second event. It is checked against the file
+Codex wrote during the paste, which gave the image and the hash of the saved file, and has not run in a live
+Codex session with a colleague.
 
 Cowork was observed on 2026-10-15 by pasting one image and sending "image test", ten characters. The hook
 received that text with no placeholder and no field for an attachment, so nothing at the hook shows an image

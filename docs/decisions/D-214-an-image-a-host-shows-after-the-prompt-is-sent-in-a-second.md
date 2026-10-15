@@ -5,7 +5,7 @@
 **Decision.** When a host shows a pasted image only after its prompt has been published, as Codex does, the
 daemon watches the session's transcript, and when the image appears it publishes a second signed event that
 carries the image's hash and points at the prompt's event. A colleague's view shows the picture under the
-prompt's turn, and the injected context leaves the second event out. The hash has to be in a signed event,
+prompt's turn only when the prompt's author wrote the second event, and the injected context leaves it out. The hash has to be in a signed event,
 and the prompt's event is signed before the bytes exist.
 
 **Rejected.**
