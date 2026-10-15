@@ -25,6 +25,7 @@ func TestMarkdownRendersWhatAnAssistantWrites(t *testing.T) {
 		{"strikethrough", "~~gone~~", "<del>gone</del>"},
 		{"rule", "a\n\n---\n\nb", "<hr"},
 		{"a line break inside a paragraph", "one\ntwo", "one<br"},
+		{"a table with a right-aligned column", "| a | b |\n|---|--:|\n| 1 | 2 |", `<td style="text-align:right">2</td>`},
 		{"a link to a web address", "[the docs](https://example.com/a)", `<a href="https://example.com/a"`},
 		{"a bare web address", "see https://example.com/a now", `<a href="https://example.com/a"`},
 	}
@@ -151,6 +152,10 @@ func TestWhatIsRenderedHoldsNoMarkupBeyondWhatTheRendererWrites(t *testing.T) {
 	}
 }
 
+// columnAlignment is the one style the renderer writes: goldmark sets it on a table cell
+// from the alignment marker of the column, an enumeration the text of a turn cannot extend.
+var columnAlignment = regexp.MustCompile(`^text-align:(left|right|center)$`)
+
 var (
 	tagInOutput  = regexp.MustCompile(`<(/?)([a-zA-Z][a-zA-Z0-9]*)((?:\s+[^<>]*?)?)\s*/?>`)
 	attrInOutput = regexp.MustCompile(`\s([a-zA-Z-]+)(?:="([^"]*)")?`)
@@ -161,7 +166,7 @@ var rendered = map[string][]string{
 	"p": nil, "br": nil, "hr": nil, "strong": nil, "em": nil, "del": nil, "code": {"class"},
 	"pre": nil, "blockquote": nil, "ul": nil, "ol": {"start"}, "li": nil,
 	"h1": nil, "h2": nil, "h3": nil, "h4": nil, "h5": nil, "h6": nil,
-	"table": nil, "thead": nil, "tbody": nil, "tr": nil, "th": {"align"}, "td": {"align"},
+	"table": nil, "thead": nil, "tbody": nil, "tr": nil, "th": {"align", "style"}, "td": {"align", "style"},
 	"a": {"href", "target", "rel", "title"}, "input": {"checked", "disabled", "type"},
 }
 
@@ -186,6 +191,9 @@ func onlyMarkupWeWrite(html string) string {
 			}
 			if name == "href" && !followable(unescapeAttr(a[2])) {
 				return "\x01address " + a[2] + "\x01"
+			}
+			if name == "style" && !columnAlignment.MatchString(a[2]) {
+				return "\x01style " + a[2] + "\x01"
 			}
 		}
 		return ""
@@ -216,7 +224,7 @@ func contains(list []string, s string) bool {
 func TestTheMarkupCheckerSeesWhatItIsFor(t *testing.T) {
 	for _, bad := range []string{
 		"<script>x</script>", `<a href="javascript:x">x</a>`, `<a href="https://x" onclick="y">x</a>`,
-		`<img src="https://x">`, "<p>a <!-- b --> c</p>", `<a href="https://x" style="y">x</a>`, "<p>1 < 2</p>",
+		`<img src="https://x">`, `<td style="color:red">x</td>`, `<td style="text-align:right;background:url(//x)">x</td>`, `<a href="https://x" style="text-align:right">x</a>`, "<p>a <!-- b --> c</p>", `<a href="https://x" style="y">x</a>`, "<p>1 < 2</p>",
 	} {
 		if onlyMarkupWeWrite(bad) == "" {
 			t.Errorf("the checker passes %s", bad)
