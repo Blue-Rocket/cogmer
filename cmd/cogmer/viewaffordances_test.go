@@ -233,9 +233,10 @@ func TestTheStreamCarriesEachTurnRenderedAsMarkdown(t *testing.T) {
 	}
 }
 
-// The renderer refuses an image, and the page's policy refuses one again, so that an
-// address in a turn is not fetched whichever of the two is wrong.
-func TestTheRoomPageAllowsNoImageAndNoRequestBeyondTheDaemon(t *testing.T) {
+// The renderer writes an image element only for a pasted image, and the page's policy loads an
+// image only from the daemon, so that an address in a turn is not fetched whichever of the two
+// is wrong.
+func TestTheRoomPageAllowsOnlyTheDaemonsOwnImagesAndRequests(t *testing.T) {
 	d, room := testDaemon(t)
 	rec := httptest.NewRecorder()
 	d.LocalRoutes().ServeHTTP(rec, httptest.NewRequest("GET", "/room/"+room.RoomName, nil))
@@ -243,7 +244,7 @@ func TestTheRoomPageAllowsNoImageAndNoRequestBeyondTheDaemon(t *testing.T) {
 		t.Fatalf("the room page gave %d", rec.Code)
 	}
 	csp := rec.Header().Get("Content-Security-Policy")
-	for _, want := range []string{"default-src 'none'", "img-src 'none'", "connect-src 'self'", "frame-ancestors 'none'"} {
+	for _, want := range []string{"default-src 'none'", "img-src 'self'", "connect-src 'self'", "frame-ancestors 'none'"} {
 		if !strings.Contains(csp, want) {
 			t.Errorf("the policy lacks %q: %s", want, csp)
 		}

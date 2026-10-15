@@ -49,7 +49,12 @@ const (
 	EventAssistantMessage = "ASSISTANT_MESSAGE"
 )
 
-type Store struct{ db *sql.DB }
+type Store struct {
+	db *sql.DB
+	// imageDir holds the room's pasted images as files named by their hash (D-213). It is
+	// fixed when the store opens, since the state directory is resolved from the environment.
+	imageDir string
+}
 
 const schema = `
 CREATE TABLE IF NOT EXISTS events (
@@ -114,6 +119,18 @@ CREATE TABLE IF NOT EXISTS pending_injection (
   created_at        TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_pending_session ON pending_injection(origin_session_id);
+
+-- Where each pasted image a room's events name stands on this machine (D-213). The event
+-- names the image and its hash; this is whether the bytes are here yet. state is 'have' when
+-- the file is stored and 'wanted' while it is still to be fetched from a peer.
+CREATE TABLE IF NOT EXISTS images (
+  sha256     TEXT PRIMARY KEY,
+  media_type TEXT NOT NULL,
+  size       INTEGER NOT NULL,
+  state      TEXT NOT NULL,
+  attempts   INTEGER NOT NULL DEFAULT 0,
+  next_try   TEXT NOT NULL DEFAULT ''
+);
 `
 
 // roomExists reports whether a room already has a local replica.
@@ -139,7 +156,7 @@ func OpenStore(room string) (*Store, error) {
 	if err := migrate(db); err != nil {
 		return nil, err
 	}
-	return &Store{db: db}, nil
+	return &Store{db: db, imageDir: filepath.Join(dir, room+".images")}, nil
 }
 
 func (s *Store) Close() error { return s.db.Close() }

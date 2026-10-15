@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -42,6 +46,11 @@ type Host interface {
 	// CommandPrefix is what the prompt of a command a user typed begins with. A prompt
 	// that does is no turn of the room, and nothing about it is published (D-209).
 	CommandPrefix() string
+	// PastedImages is the files holding the images that were sent with a prompt, found from
+	// the prompt's text and the directory the host keeps the session's files in. A path is
+	// empty when the prompt names an image and no file is there. A host that saves none
+	// returns nothing.
+	PastedImages(prompt string, ctx imageContext) []pastedFile
 	// Executable is what is run to ask the host for its version.
 	Executable() string
 	Installed() bool
@@ -280,6 +289,97 @@ func (claudeHost) InjectedBlocks(path string) ([]string, error) { return Injecte
 // failing. "No evidence" is otherwise as consistent with an injection that never
 // arrived as with a changed transcript format, and committing on trust would lose that
 // context silently.
+// pastedFile is one image sent with a prompt, and where the host saved it.
+type pastedFile struct {
+	N    int
+	Path string
+}
+
+// imageContext is what a host needs to find the images sent with a prompt.
+type imageContext struct {
+	// ScratchpadDir is the session's scratch directory, which the hook reports.
+	ScratchpadDir string
+	// Entrypoint is the host's own name for the program running the session.
+	Entrypoint string
+	// Attached is the numbers of the images this session has already sent.
+	Attached map[int]bool
+	// Now is when the prompt arrived.
+	Now time.Time
+}
+
+// desktopEntrypoint is what Claude Code's desktop app reports as its entry point.
+const desktopEntrypoint = "claude-desktop"
+
+// desktopImageWindow is how recently the desktop app must have saved an image for it to have
+// been sent with this prompt. The app saves the file at the moment of sending, and the hook
+// runs within a second of it.
+const desktopImageWindow = 30 * time.Second
+
+var imageFileName = regexp.MustCompile(`^(\d+)\.[A-Za-z0-9]+$`)
+
+// PastedImages finds the images sent with a prompt in the images directory beside the
+// session's scratchpad. Where the host saves an image differs by entry point, and so does how
+// to tell which were sent.
+//
+// The terminal saves an image when it is pasted, so a file is there for an image the user
+// pasted and then removed from the prompt. Only an image the prompt names by its
+// "[Image #N]" placeholder was sent. The desktop app saves an image when the prompt is sent
+// and puts no placeholder in the text, so a file saved just now that this session has not
+// sent before was sent with this prompt. Any other entry point is read as the terminal is,
+// since that sends nothing the user did not name.
+func (claudeHost) PastedImages(prompt string, ctx imageContext) []pastedFile {
+	if ctx.ScratchpadDir == "" {
+		return nil
+	}
+	dir := filepath.Join(filepath.Dir(ctx.ScratchpadDir), "images")
+	if ctx.Entrypoint == desktopEntrypoint {
+		return desktopImages(dir, ctx)
+	}
+	var out []pastedFile
+	for _, n := range imageNumbers(prompt) {
+		f := pastedFile{N: n}
+		if matches, _ := filepath.Glob(filepath.Join(dir, strconv.Itoa(n)+".*")); len(matches) > 0 {
+			f.Path = matches[0]
+		}
+		out = append(out, f)
+	}
+	return out
+}
+
+func desktopImages(dir string, ctx imageContext) []pastedFile {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	var out []pastedFile
+	for _, e := range entries {
+		m := imageFileName.FindStringSubmatch(e.Name())
+		if m == nil {
+			continue
+		}
+		n, err := strconv.Atoi(m[1])
+		if err != nil || n <= 0 || ctx.Attached[n] {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil || !info.Mode().IsRegular() {
+			continue
+		}
+		if age := ctx.Now.Sub(info.ModTime()); age > desktopImageWindow || age < -desktopImageWindow {
+			continue
+		}
+		out = append(out, pastedFile{N: n, Path: filepath.Join(dir, e.Name())})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].N < out[j].N })
+	if len(out) > maxImagesPerTurn {
+		out = out[:maxImagesPerTurn]
+	}
+	return out
+}
+
+func (codexHost) PastedImages(string, imageContext) []pastedFile  { return nil }
+func (coworkHost) PastedImages(string, imageContext) []pastedFile { return nil }
+
 func (claudeHost) MayTrustWithoutEvidence(version string) bool {
 	return version != "" && BehaviorKnownBroken(version, "B20")
 }

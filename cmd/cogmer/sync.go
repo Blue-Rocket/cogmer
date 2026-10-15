@@ -381,6 +381,7 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 		switch res {
 		case InsertStored:
 			stored++
+			registerImages(store, &ev)
 		case InsertConflict:
 			log.Printf("sync: CONFLICT from %s — peer %s sequence %d is already held by a different event; run `cogmer conflicts`",
 				addr, PeerName(ev.PeerID), ev.PeerSequence)

@@ -9,6 +9,8 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -56,6 +58,9 @@ type uiEvent struct {
 	// the model has not been given. It is never set in a show-only room, which
 	// gives nothing to a session (D-200).
 	NotInSession bool `json:"notInSession,omitempty"`
+	// Images are the pasted images the turn's event names, as the event names them. Whether
+	// this machine holds each one is not said here; the view's stream says it in HTML.
+	Images []imageRef `json:"images,omitempty"`
 }
 
 type uiPeer struct {
@@ -168,6 +173,7 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 			Mine: e.PeerID == d.id.PeerID, At: at,
 		}
 		ue.NotInSession = !ue.Mine && !cur.ShowOnly && !delivered[e.EventID]
+		ue.Images = imageRefs(e.Metadata)
 		if len(e.Metadata) > 0 {
 			var m struct {
 				ToolCalls int      `json:"toolCalls"`
@@ -187,14 +193,99 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 }
 
 // viewSnapshot is the room as the view's stream sends it: the snapshot with each turn's
-// Markdown rendered. The export and every other reader of a snapshot take the text as
-// written (D-211).
+// Markdown rendered, and its pasted images shown as far as this machine holds them. The export
+// and every other reader of a snapshot take the text as written (D-211).
 func (d *Daemon) viewSnapshot(cur Room) (uiState, error) {
 	st, err := d.snapshot(cur)
-	for i := range st.Events {
-		st.Events[i].HTML = d.rendered.get(st.Events[i].EventID, st.Events[i].Content)
+	if err != nil {
+		return st, err
 	}
-	return st, err
+	var held map[string]imageRow
+	if cur.RoomID != "" {
+		if store, serr := d.storeFor(cur.RoomID); serr == nil {
+			held, _ = store.ImageRows()
+		}
+	}
+	for i := range st.Events {
+		e := &st.Events[i]
+		e.HTML = d.rendered.get(e.EventID, e.Content) + imagesHTML(cur.RoomName, e.Images, held)
+	}
+	return st, nil
+}
+
+// imagesHTML is the part of a turn that shows its pasted images. The daemon writes each
+// element, from an address it builds out of a validated hash, so no address a colleague typed
+// becomes an image (D-212, D-213). An image whose bytes are not here is said to be coming, and
+// one that was not sent says why.
+func imagesHTML(room string, refs []imageRef, held map[string]imageRow) string {
+	if len(refs) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString(`<div class="images">`)
+	for _, r := range refs {
+		switch {
+		case r.Note == imageTooLarge:
+			fmt.Fprintf(&b, `<p class="imagenote">image %d is %.1f MB, which is more than cogmer sends</p>`, r.N, float64(r.Size)/(1<<20))
+		case r.Note == imageMissing:
+			fmt.Fprintf(&b, `<p class="imagenote">image %d could not be read on its sender's machine</p>`, r.N)
+		case r.Note == imageUnsupported:
+			fmt.Fprintf(&b, `<p class="imagenote">image %d is not a kind of image cogmer sends</p>`, r.N)
+		case r.Note != "" || !validSHA(r.SHA256):
+			fmt.Fprintf(&b, `<p class="imagenote">image %d was not sent</p>`, r.N)
+		case held[r.SHA256].State == imageHave:
+			fmt.Fprintf(&b, `<img class="pasted" src="/image/%s/%s" alt="pasted image %d">`,
+				template.HTMLEscapeString(url.PathEscape(room)), r.SHA256, r.N)
+		default:
+			fmt.Fprintf(&b, `<p class="imagenote">image %d is on its way</p>`, r.N)
+		}
+	}
+	b.WriteString(`</div>`)
+	return b.String()
+}
+
+// handleImage serves one pasted image of a room to the view. It is a read, like the stream,
+// and answers for an image the room names and this machine holds.
+func (d *Daemon) handleImage(w http.ResponseWriter, r *http.Request) {
+	name, sha, ok := strings.Cut(strings.TrimPrefix(r.URL.Path, "/image/"), "/")
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	room, ok := d.roomFromPath("/room/" + name)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	store, err := d.storeFor(room.RoomID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	// An image the room does not name has no row, and so is not held.
+	row, _, err := store.ImageRow(sha)
+	if err != nil || row.State != imageHave || !imageTypes[row.Type] {
+		http.NotFound(w, r)
+		return
+	}
+	path, err := store.imagePath(sha)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	defer f.Close()
+	w.Header().Set("Content-Type", row.Type)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	// A page that opens the image itself runs nothing and loads nothing.
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.Header().Set("Cache-Control", "private, max-age=31536000, immutable")
+	http.ServeContent(w, r, "", time.Time{}, f)
 }
 
 // turnTime is a turn's time for a reader: the clock for today, and the date with it
@@ -228,7 +319,7 @@ func (d *Daemon) roomFromPath(path string) (Room, bool) {
 // stream, and nothing else. Its images are none, so an address a colleague put in a turn
 // cannot be fetched even if the renderer let one through (D-212).
 const roomPagePolicy = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
-	"connect-src 'self'; img-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+	"connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 
 func (d *Daemon) handleUI(w http.ResponseWriter, r *http.Request) {
 	switch {
@@ -402,6 +493,14 @@ func exportMarkdown(st uiState, at time.Time) string {
 			b.WriteString(")")
 		}
 		fmt.Fprintf(&b, "\n\n%s\n", strings.TrimRight(e.Content, "\n"))
+		for _, im := range e.Images {
+			switch {
+			case im.Note != "":
+				fmt.Fprintf(&b, "\n*[image %d was not sent: %s]*\n", im.N, im.Note)
+			default:
+				fmt.Fprintf(&b, "\n*[image %d, %s, %.0f KB]*\n", im.N, im.Type, float64(im.Size)/1024)
+			}
+		}
 		if e.ToolCalls > 0 {
 			counted := map[string]int{}
 			var order []string

@@ -108,6 +108,9 @@ type Daemon struct {
 	// from an address it has not recorded for a guest.
 	pull     func(addr string) (int, error)
 	askRooms func(addr string, rooms []Room) []Room
+	// imagePeers chooses the addresses to ask for a room's images, which is every guest's
+	// address unless a test fetches from one directly.
+	imagePeers func(room Room) []string
 
 	// When each host last made a hook call, so that a host whose calls have stopped
 	// arriving shows (D-205).
@@ -152,6 +155,12 @@ type promptReq struct {
 	Prompt    string `json:"prompt"`
 	CWD       string `json:"cwd"`
 	PromptID  string `json:"prompt_id"`
+	// ScratchpadDir is the session's scratch directory, which Claude Code reports with each
+	// prompt and keeps the session's pasted images beside (D-213).
+	ScratchpadDir string `json:"scratchpad_dir"`
+	// Entrypoint is what the host calls the program running the session, which the hook reads
+	// from its environment. The images of a prompt are found differently for each.
+	Entrypoint string `json:"entrypoint"`
 }
 
 type stopReq struct {
@@ -184,13 +193,14 @@ func (d *Daemon) LocalRoutes() *http.ServeMux {
 	mux.HandleFunc("/", d.handleUI)
 	mux.HandleFunc("/stream", d.handleStream)
 	mux.HandleFunc("/export", d.handleExport)
+	mux.HandleFunc("/image/", d.handleImage)
 	mux.HandleFunc("/pair/new", guardLocal(d.handlePairNew))
 	mux.HandleFunc("/offer/send", guardLocal(d.handleSendOffer))
 	// The ceremony page itself is a GET somebody navigated to.
 	mux.HandleFunc("/pair/", d.handlePairPage)
 	mux.HandleFunc("/verify/start", guardLocal(d.handleVerifyStart))
 	mux.HandleFunc("/verify/confirm", guardLocal(d.handleVerifyConfirm))
-	// Deliberately NOT guarded: /healthz, /events, /stream, /export and the page itself are
+	// Deliberately NOT guarded: /healthz, /events, /stream, /export, /image and the page itself are
 	// reads. A cross-origin page cannot read their responses, because we send no
 	// CORS headers and the browser withholds an opaque response from the script.
 	// Guarding them would break the view, which fetches them as ordinary GETs.
@@ -210,6 +220,7 @@ func (d *Daemon) PeerRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", d.health)
 	mux.HandleFunc("/sync", d.handleSync)
+	mux.HandleFunc("/blob", d.handleBlob)
 	mux.HandleFunc("/verify", d.handleVerify)
 	mux.HandleFunc("/offer", d.handleOffer)
 	return mux
@@ -302,6 +313,8 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	// Read before the lock is taken, since a file is read and hashed.
+	pasted := d.pastedImages(host, req)
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -319,13 +332,17 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	meta := map[string]any{"cwd": req.CWD, "promptId": req.PromptID}
+	if refs := storeImages(store, pasted); len(refs) > 0 {
+		meta["images"] = refs
+	}
+
 	// A room joined show-only gives nothing to this machine's sessions (D-200). The
 	// prompt is still captured, since the room's members read it in the view, and
 	// nothing is read, offered or recorded as pending, so nothing could later be
 	// confirmed as delivered.
 	if room.ShowOnly {
-		if _, err := d.appendLocal(store, room, req.SessionID, EventUserPrompt, req.Prompt,
-			map[string]any{"cwd": req.CWD, "promptId": req.PromptID}); err != nil {
+		if _, err := d.appendLocal(store, room, req.SessionID, EventUserPrompt, req.Prompt, meta); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -343,8 +360,7 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := d.appendLocal(store, room, req.SessionID, EventUserPrompt, req.Prompt,
-		map[string]any{"cwd": req.CWD, "promptId": req.PromptID}); err != nil {
+	if _, err := d.appendLocal(store, room, req.SessionID, EventUserPrompt, req.Prompt, meta); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

@@ -44,7 +44,10 @@
   .body li>p{margin:0}
   .body h1,.body h2,.body h3,.body h4,.body h5,.body h6{margin:.9em 0 .4em;line-height:1.3}
   .body h1{font-size:1.25em} .body h2{font-size:1.15em} .body h3,.body h4,.body h5,.body h6{font-size:1em}
-  .body > :first-child{margin-top:0}
+  .md > :first-child{margin-top:0}
+  .body img.pasted{max-width:100%;height:auto;display:block;border-radius:5px;margin:.5em 0}
+  .images{margin-top:.5em}
+  .imagenote{color:var(--dim);font-size:13px;margin:.4em 0}
   .body blockquote{margin:.7em 0;padding:0 0 0 12px;border-left:3px solid var(--line);color:var(--dim)}
   .body table{border-collapse:collapse;margin:.7em 0;display:block;overflow-x:auto}
   .body th,.body td{border:1px solid var(--line);padding:4px 9px;text-align:left}
@@ -126,19 +129,19 @@ const ROOM = decodeURIComponent(location.pathname.replace(/^\/room\//, ''));
     return '<span class="name '+(mine?'me':'them')+'">'+esc(name)+'</span>'
       +ident+notyet+'<span class="time">'+esc(e.clock)+'</span>';
   }
-  function bodyHtml(e){
+  function toolsHtml(e){
     // A real disclosure rather than a triangle that does nothing: the tool
     // names are stored, so the summary expands to them.
-    let tools='';
-    if((e.toolCalls||0)>0){
-      const names=(e.tools&&e.tools.length)?e.tools:[];
-      const counted={}; names.forEach(n=>counted[n]=(counted[n]||0)+1);
-      const list=Object.keys(counted).map(n=>esc(n)+(counted[n]>1?' \u00d7'+counted[n]:'')).join(', ');
-      tools='<details class="tools"><summary>'+e.toolCalls+' tool operation'
-           +(e.toolCalls>1?'s':'')+'</summary>'+(list||'(names not recorded)')+'</details>';
-    }
-    return (e.html||'<p>'+esc(e.content)+'</p>')+tools;
+    if(!((e.toolCalls||0)>0)) return '';
+    const names=(e.tools&&e.tools.length)?e.tools:[];
+    const counted={}; names.forEach(n=>counted[n]=(counted[n]||0)+1);
+    const list=Object.keys(counted).map(n=>esc(n)+(counted[n]>1?' \u00d7'+counted[n]:'')).join(', ');
+    return '<details class="tools"><summary>'+e.toolCalls+' tool operation'
+         +(e.toolCalls>1?'s':'')+'</summary>'+(list||'(names not recorded)')+'</details>';
   }
+  // The daemon wrote the HTML of a turn, its pasted images included, and the text is only
+  // the fallback.
+  const mdHtml=e=>e.html||'<p>'+esc(e.content)+'</p>';
 
   function draw(state){
     roomTitle=state.roomName||state.room;
@@ -165,9 +168,14 @@ const ROOM = decodeURIComponent(location.pathname.replace(/^\/room\//, ''));
       let t=turns.get(e.eventId);
       if(!t){
         const el=document.createElement('div'); el.className='turn';
-        el.innerHTML='<div class="who"></div><div class="body">'+bodyHtml(e)+'</div>';
-        t={el,who:el.firstChild,html:''}; turns.set(e.eventId,t);
+        el.innerHTML='<div class="who"></div><div class="body"><div class="md"></div>'+toolsHtml(e)+'</div>';
+        t={el,who:el.firstChild,md:el.querySelector('.md'),html:'',body:''}; turns.set(e.eventId,t);
       }
+      // A turn is drawn once, but its body can change after: a pasted image arrives from a
+      // peer later than the turn does. Only the body is rewritten, and a tool list the
+      // reader opened is not part of it.
+      const m=mdHtml(e);
+      if(m!==t.body){t.md.innerHTML=m;t.body=m;}
       // Events are ordered by time and a late arrival can sort before one already
       // shown, so each turn is put where it belongs.
       const at=feed.children[i];

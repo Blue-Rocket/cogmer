@@ -547,6 +547,7 @@ func runDaemon() {
 	}
 
 	go d.RunSync(peerList(), syncInterval())
+	go d.RunImages(2 * time.Second)
 	// One set of routes over both listeners. Every check a request passes is the
 	// same whichever carried it, which is the point of the listener interface
 	// rather than a happy accident.
@@ -617,6 +618,15 @@ func takeValue(args []string, flag string) ([]string, string) {
 	return out, value
 }
 
+// addEntrypoint puts into a hook's payload what the host calls the program running the session.
+// Claude Code names it in the environment of its hooks, and the images of a prompt are found
+// differently for the terminal and the desktop app.
+func addEntrypoint(payload map[string]any, getenv func(string) string) {
+	if v := getenv("CLAUDE_CODE_ENTRYPOINT"); v != "" {
+		payload["entrypoint"] = v
+	}
+}
+
 // runHook implements both hook entry points for one host.
 //
 // Invariant from §3.1: the host must keep working when the daemon is down.
@@ -642,6 +652,7 @@ func runHook(kind string, host Host) {
 		os.Exit(0)
 	}
 	payload["host"] = host.Name()
+	addEntrypoint(payload, os.Getenv)
 
 	body, _ := json.Marshal(payload)
 	client := &http.Client{Timeout: 3 * time.Second}
