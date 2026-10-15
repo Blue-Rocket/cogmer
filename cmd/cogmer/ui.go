@@ -155,7 +155,14 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 	lastTurn := map[string]string{}
 	st := uiState{Room: cur.RoomID, RoomName: cur.RoomName, SelfPeerID: d.id.PeerID, Peers: d.peerStatus()}
 	labels := d.members.Labels()
+	var imageEvents []Event
 	for _, e := range evs {
+		// Images that a host showed after their prompt belong to that prompt's turn, and are no
+		// turn of their own (D-214).
+		if e.EventType == EventUserImage {
+			imageEvents = append(imageEvents, e)
+			continue
+		}
 		ts, at := e.Timestamp, e.Timestamp
 		if t, err := time.Parse(time.RFC3339Nano, e.Timestamp); err == nil {
 			ts = t.Local().Format("15:04:05")
@@ -186,10 +193,33 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 		}
 		st.Events = append(st.Events, ue)
 	}
+	mergeImageEvents(&st, imageEvents)
 	for i := range st.Peers {
 		st.Peers[i].LastTurn = lastTurn[st.Peers[i].PeerID]
 	}
 	return st, nil
+}
+
+// mergeImageEvents puts the images of each image event into the turn it points at. Only the
+// author of a turn can add images to it: an image event from anyone else is not shown, since
+// it would put a picture under words the author wrote.
+func mergeImageEvents(st *uiState, evs []Event) {
+	at := map[string]int{}
+	for i, e := range st.Events {
+		at[e.EventID] = i
+	}
+	for _, ie := range evs {
+		i, ok := at[imageEventTarget(ie.Metadata)]
+		if !ok || st.Events[i].PeerID != ie.PeerID {
+			continue
+		}
+		for _, ref := range imageRefs(ie.Metadata) {
+			if len(st.Events[i].Images) >= maxImagesPerTurn {
+				break
+			}
+			st.Events[i].Images = append(st.Events[i].Images, ref)
+		}
+	}
 }
 
 // viewSnapshot is the room as the view's stream sends it: the snapshot with each turn's

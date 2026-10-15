@@ -108,6 +108,9 @@ type Daemon struct {
 	// from an address it has not recorded for a guest.
 	pull     func(addr string) (int, error)
 	askRooms func(addr string, rooms []Room) []Room
+	// imageWatch is how often and for how long the daemon reads a transcript for an image that
+	// a host shows after its prompt, which is every 250 ms for 10 s unless a test says otherwise.
+	imageWatchEvery, imageWatchWithin time.Duration
 	// imagePeers chooses the addresses to ask for a room's images, which is every guest's
 	// address unless a test fetches from one directly.
 	imagePeers func(room Room) []string
@@ -161,6 +164,9 @@ type promptReq struct {
 	// Entrypoint is what the host calls the program running the session, which the hook reads
 	// from its environment. The images of a prompt are found differently for each.
 	Entrypoint string `json:"entrypoint"`
+	// TranscriptPath is where the host writes the session's transcript, which a host that
+	// shows an image only after its prompt is published is read from (D-214).
+	TranscriptPath string `json:"transcript_path"`
 }
 
 type stopReq struct {
@@ -342,10 +348,12 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 	// nothing is read, offered or recorded as pending, so nothing could later be
 	// confirmed as delivered.
 	if room.ShowOnly {
-		if _, err := d.appendLocal(store, room, req.SessionID, EventUserPrompt, req.Prompt, meta); err != nil {
+		ev, err := d.appendLocal(store, room, req.SessionID, EventUserPrompt, req.Prompt, meta)
+		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		d.watchForLateImages(host, room, store, req, ev)
 		d.notify()
 		log.Printf("USER_PROMPT room=%s session=%.8s show-only, nothing offered", room.RoomName, req.SessionID)
 		writeJSON(w, map[string]any{"context": ""})
@@ -360,10 +368,12 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := d.appendLocal(store, room, req.SessionID, EventUserPrompt, req.Prompt, meta); err != nil {
+	ev, err := d.appendLocal(store, room, req.SessionID, EventUserPrompt, req.Prompt, meta)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	d.watchForLateImages(host, room, store, req, ev)
 
 	// Offered, not delivered. Nothing is marked delivered here: this response
 	// may never reach the hook (3s timeout, daemon restart), and committing now

@@ -47,6 +47,9 @@ type Event struct {
 const (
 	EventUserPrompt       = "USER_PROMPT"
 	EventAssistantMessage = "ASSISTANT_MESSAGE"
+	// EventUserImage carries images that a host showed after the prompt they belong to was
+	// published. It names the prompt's event, and is no turn of the room (D-214).
+	EventUserImage = "USER_IMAGE"
 )
 
 type Store struct {
@@ -445,9 +448,9 @@ func (s *Store) ListRoom(room string) ([]Event, error) {
 // already in its own context window (§19).
 func (s *Store) UndeliveredFor(room, sessionID string) ([]Event, error) {
 	rows, err := s.db.Query(`SELECT `+selectCols+` FROM events
-		WHERE room_id = ? AND origin_session_id != ?
+		WHERE room_id = ? AND origin_session_id != ? AND event_type != ?
 		  AND event_id NOT IN (SELECT event_id FROM session_delivered WHERE origin_session_id = ?)
-		`+orderBy, room, sessionID, sessionID)
+		`+orderBy, room, sessionID, EventUserImage, sessionID)
 	if err != nil {
 		return nil, err
 	}
