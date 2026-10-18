@@ -1,0 +1,29 @@
+cloud network probe, 2026-10-18T16:20:56Z
+session: cse_01GjWUvEyu8EPBFF6kR1ALGJ
+proxy: 127.0.0.1:43901
+
+== 1. the public relay
+PASS  relay map from tailcat.dev (HTTP 200)
+PASS  relay host tc301a.ipn.dev (HTTP 200)
+PASS  relay host tc302a.ipn.dev (HTTP 200)
+PASS  relay host tc303a.ipn.dev (HTTP 200)
+FAIL  a tunnel opened and dialed through the relay: tailcat_test.go:47: a dialer the listener had never seen could not open a tunnel: tailcat: context deadline exceeded
+PASS  a tunnel opened and dialed through the relay, as a WebSocket
+diagnosis of tc://tco2FwWCAF11ItisZjk3tgGPa85u-JZphMp-bhdhA42hC5P2rmLGFrWCARjAQgnmfsPeWXhrUVODPaxeb1KS5UfeHc1ypPqfXMFWFygaFhToGjYWhudGMzMDJhLmlwbi5kZXZhNG0yMDguMTExLjM5LjM4YTZzMjYwNzpmNzQwOjA6M2Y6OjcyMA:
+  the address pins relay region 1 (1). Relay ping, connection held by this daemon: failed after 10s (context deadline exceeded). Relay ping, a new connection: failed after 10s (context deadline exceeded). Path: no answer (context deadline exceeded). Reading: the peer does not answer through that relay, which means it is not running, is attached to another relay, or its replies do not return.
+
+== 2. SSH over port 443 to GitHub
+FAIL  ssh.github.com:443: no answer
+FAIL  github.com:22 directly
+
+== summary
+PASS  relay map from tailcat.dev (HTTP 200)
+PASS  relay host tc301a.ipn.dev (HTTP 200)
+PASS  relay host tc302a.ipn.dev (HTTP 200)
+PASS  relay host tc303a.ipn.dev (HTTP 200)
+FAIL  a tunnel opened and dialed through the relay: tailcat_test.go:47: a dialer the listener had never seen could not open a tunnel: tailcat: context deadline exceeded
+PASS  a tunnel opened and dialed through the relay, as a WebSocket
+FAIL  ssh.github.com:443: no answer
+FAIL  github.com:22 directly
+
+written to the address pins relay region 1 (1). Relay ping, connection held by this daemon: failed after 10s (context deadline exceeded). Relay ping, a new connection: failed after 10s (context deadline exceeded). Path: no answer (context deadline exceeded). Reading: the peer does not answer through that relay, which means it is not running, is attached to another relay, or its replies do not return.: commit it, naming the network access level in the message
