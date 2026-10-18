@@ -67,6 +67,16 @@ else
   record FAIL "a tunnel opened and dialed through the relay, as a WebSocket: $(printf '%s' "$why" | sed 's/^[[:space:]]*//')"
 fi
 
+# The tunnel as a release builds it, with the tag and nothing else set, so that cogmer
+# itself has to switch to WebSocket in a cloud session (D-217). Outside a cloud session
+# it is the plain tunnel again.
+if COGMER_NETWORK_TESTS=1 timeout 180 env -u TS_DEBUG_DERP_WS_CLIENT go test -tags ts_debug_websockets ./cmd/cogmer -run TestATunnelAdmitsADialerItHasNeverSeen -count=1 >/tmp/cogmer-tunnel-release.log 2>&1; then
+  record PASS "a tunnel opened and dialed through the relay, as a release builds it (CLAUDE_CODE_REMOTE=${CLAUDE_CODE_REMOTE:-unset})"
+else
+  why=$(grep -m1 -E 'tailcat_test.go:|panic' /tmp/cogmer-tunnel-release.log || grep -m1 FAIL /tmp/cogmer-tunnel-release.log)
+  record FAIL "a tunnel opened and dialed through the relay, as a release builds it (CLAUDE_CODE_REMOTE=${CLAUDE_CODE_REMOTE:-unset}): $(printf '%s' "$why" | sed 's/^[[:space:]]*//')"
+fi
+
 # The diagnosis runs both ways too, since a relay connection that fails in one mode says
 # nothing about the peer.
 if [ "${1:-}" != "" ]; then

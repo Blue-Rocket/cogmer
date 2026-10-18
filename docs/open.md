@@ -290,7 +290,10 @@ the plugin synced into `~/.claude/plugins/synced/`. Its SessionStart hook ran: `
 recorded the 0.10.3 binary downloaded from the release and installed, and a later start in the
 same container started the daemon again. `/cogmer:self-status` answered, with plugin, binary and
 daemon at 0.10.3. The daemon could not reach the relay, as the probe found for the build without
-WebSocket mode. Whether UserPromptSubmit and Stop fire in a cloud session is not shown, since
+WebSocket mode. D-217 (a cloud session's daemon carries its relay connection as a WebSocket) is
+built and in no release yet. A cloud session started after the next release would show whether
+its daemon reaches the relay, and its `daemon.log` says how the relay connection is carried. The
+probe's tunnel test "as a release builds it" checks the same switch without a release. Whether UserPromptSubmit and Stop fire in a cloud session is not shown, since
 neither leaves a trace outside a room.
 
 ## Tidying the commands

@@ -56,6 +56,38 @@ const tailcatPort = 4783
 
 const tailcatRegionFile = "tailcat-region.json"
 
+// A cloud session carries its relay connection as a WebSocket (D-217).
+//
+// A Claude Code cloud session sends everything through an HTTPS proxy that passes
+// ordinary requests and breaks the relay's own protocol upgrade. From one, the relay
+// map and the relay hosts answered and a tunnel timed out, and the same tunnel carried
+// as a WebSocket reached a daemon on another machine (e415f1d). Tailscale's relay
+// client offers WebSocket behind the ts_debug_websockets build tag, which
+// scripts/release.sh sets, and behind this variable, which is read at each connection
+// and so is set here, before any is made. Outside a cloud session nothing changes, and
+// a value the user set is left alone.
+const relayWebSocketVar = "TS_DEBUG_DERP_WS_CLIENT"
+
+func init() { relayAsWebSocketInCloud(os.Getenv, os.Setenv) }
+
+// relayAsWebSocketInCloud sets relayWebSocketVar in a cloud session where nothing has
+// set it, and reports whether it did.
+func relayAsWebSocketInCloud(getenv func(string) string, setenv func(string, string) error) bool {
+	if getenv("CLAUDE_CODE_REMOTE") != "true" || getenv(relayWebSocketVar) != "" {
+		return false
+	}
+	return setenv(relayWebSocketVar, "1") == nil
+}
+
+// relayMode says how the relay connection is carried, for the daemon's log, so that a
+// cloud session's log shows whether the switch above took effect.
+func relayMode() string {
+	if v := os.Getenv(relayWebSocketVar); v != "" {
+		return fmt.Sprintf("as a WebSocket (%s=%s; it takes effect only in a build with the ts_debug_websockets tag)", relayWebSocketVar, v)
+	}
+	return "as the relay's own protocol"
+}
+
 const tailcatKeyFile = "tailcat.key"
 
 // tailcatEnabled reports whether to offer a tailcat endpoint. On unless refused:

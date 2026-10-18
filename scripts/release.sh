@@ -20,12 +20,18 @@ rm -rf dist && mkdir -p dist
 # these crosses somebody's network.
 flags="-s -w -X main.version=${version}"
 
+# The tag compiles in Tailscale's WebSocket relay client, which a daemon in a Claude
+# Code cloud session uses because that session's proxy breaks the relay's own upgrade
+# (D-217). Outside a cloud session it is compiled in and unused, and the Windows
+# build has no such client.
+tags="ts_debug_websockets"
+
 targets="darwin:arm64 darwin:amd64 linux:amd64 linux:arm64 windows:amd64"
 for t in $targets; do
   os="${t%%:*}"; arch="${t##*:}"
   out="dist/cogmer_${version}_${os}_${arch}"
   [ "$os" = windows ] && out="${out}.exe"
-  CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build -ldflags "$flags" -o "$out" ./cmd/cogmer
+  CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build -tags "$tags" -ldflags "$flags" -o "$out" ./cmd/cogmer
   printf '%-44s %s\n' "$(basename "$out")" "$(du -h "$out" | cut -f1)"
 done
 

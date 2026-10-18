@@ -499,6 +499,7 @@ func runDaemon() {
 			log.Printf("  tailcat unavailable (%v) — reachable only at %s", err, peerAddr())
 		} else {
 			tcListener, advertised = l, endpoint
+			log.Printf("  relay connection carried %s", relayMode())
 			d.selfCheck = newSelfCheck(srv, endpoint)
 			d.relayNow = newRelayProbe(srv)
 			defer l.Close()
