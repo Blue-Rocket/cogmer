@@ -1,6 +1,6 @@
 {
   "name": "cogmer",
-  "version": "0.10.3",
+  "version": "0.10.4",
   "description": "Share a conversation between Claude Code and Codex sessions. Turns replicate directly between your machines, peer to peer, with no server holding the conversation.",
   "author": {
     "name": "David Foote"
