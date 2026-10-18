@@ -1,0 +1,25 @@
+cloud network probe, 2026-10-18T11:36:46Z
+session: cse_01GjWUvEyu8EPBFF6kR1ALGJ
+proxy: 127.0.0.1:39661
+
+== 1. the public relay
+PASS  relay map from tailcat.dev (HTTP 200)
+PASS  relay host tc301a.ipn.dev (HTTP 200)
+PASS  relay host tc302a.ipn.dev (HTTP 200)
+PASS  relay host tc303a.ipn.dev (HTTP 200)
+FAIL  a tunnel opened and dialed through the relay: tailcat_test.go:47: a dialer the listener had never seen could not open a tunnel: tailcat: context deadline exceeded
+
+== 2. SSH over port 443 to GitHub
+FAIL  ssh.github.com:443: no answer
+FAIL  github.com:22 directly
+
+== summary
+PASS  relay map from tailcat.dev (HTTP 200)
+PASS  relay host tc301a.ipn.dev (HTTP 200)
+PASS  relay host tc302a.ipn.dev (HTTP 200)
+PASS  relay host tc303a.ipn.dev (HTTP 200)
+FAIL  a tunnel opened and dialed through the relay: tailcat_test.go:47: a dialer the listener had never seen could not open a tunnel: tailcat: context deadline exceeded
+FAIL  ssh.github.com:443: no answer
+FAIL  github.com:22 directly
+
+written to docs/work/cloud-network-probe-20261018T113646Z.txt: commit it, naming the network access level in the message
