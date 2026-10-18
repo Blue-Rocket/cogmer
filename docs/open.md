@@ -285,9 +285,27 @@ opened and dialed inside the session as a WebSocket, and timed out without it. N
 opened a TCP connection through the tunnel to another machine's peer port, or a TLS handshake
 on it.
 
+A cloud session given cogmer through the user's claude.ai plugins, observed on 2026-10-18, had
+the plugin synced into `~/.claude/plugins/synced/`. Its SessionStart hook ran: `install.log`
+recorded the 0.10.3 binary downloaded from the release and installed, and a later start in the
+same container started the daemon again. `/cogmer:self-status` answered, with plugin, binary and
+daemon at 0.10.3. The daemon could not reach the relay, as the probe found for the build without
+WebSocket mode. Whether UserPromptSubmit and Stop fire in a cloud session is not shown, since
+neither leaves a trace outside a room.
+
 ## Tidying the commands
 
 The plugin's commands sit in the layout Claude Code prefers, and each has a reason to exist.
+
+**cogmer's Codex skill is loaded into Claude Code sessions, and gives the model a route to the
+commands.** `plugin/skills/cogmer/SKILL.md` is written for Codex and only
+`.codex-plugin/plugin.json` declares it, but Claude Code loads a plugin's `skills/` directory by
+itself. On 2026-10-18 the model in a Claude Code cloud session followed it to `codex-cli.sh`,
+which refused for want of a Codex session, then ran `cli.sh` through its shell. D-119 (no slash
+command is reachable by the model) keeps the command files from the model, and the skill
+reaches the same commands. Moving the skill to a directory only the Codex manifest names would
+keep it out of Claude Code; whether Claude Code reads a skills field in its own manifest that
+could exclude it is unchecked.
 
 **Move `plugin/commands/*.md` to the `skills/<name>/SKILL.md` layout.** The
 documentation calls `commands/` legacy and says the two are loaded identically. D-119
