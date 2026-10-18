@@ -246,6 +246,30 @@ When a Cowork session has been seen to work with them, D-205 and D-207 become ac
 entry named `cogmer-host-probe` in the user's Claude Desktop configuration, the probe plugin installed in
 Cowork, and the files `~/.cogmer-host-probe.*`, to be removed by the user.
 
+## Cloud sessions in a room
+
+A user in a Claude Code cloud session, such as one started from the iPhone app, shares a
+conversation with colleagues without a daemon on their own computer being reachable.
+
+**Build the cloud-session identity that D-216 (a cloud session signs with a key of its own that
+a machine identity vouches for) decides.** Nothing of it is built. Four changes wait for the
+build rather than the draft, so that no active decision describes a system that does not exist:
+
+- D-101 (peer connections are TLS pinned to a key this machine has recorded) is rewritten to
+  accept a key whose chain ends at a recorded key.
+- D-143 (admission is proved by signing a fresh challenge) is rewritten for a challenge
+  signed by a session key on behalf of the admitted machine.
+- §6 gains the requirement that a cloud session acts for a machine identity, with its
+  benefit to the user, in the same commit as the code (W-85).
+- D-216 becomes active.
+
+D-216 leaves undecided which identifier a cloud session's events carry. The session key's
+would leave D-152 (events are signed at origin) and the sequence of D-029 (the sequence lives
+with the identity) unchanged. D-216 also leaves undecided how long a session key lives, how a
+cloud session learns which colleagues its machine verified and which rooms it is in, how it
+reaches peers, and how its hooks load. On 2026-10-17 a cloud session's proxy refused
+Tailscale's relay hosts with HTTP 403, observed in a cloud session of this repository.
+
 ## Tidying the commands
 
 The plugin's commands sit in the layout Claude Code prefers, and each has a reason to exist.
