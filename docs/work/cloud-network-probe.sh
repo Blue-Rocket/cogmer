@@ -67,11 +67,18 @@ else
   record FAIL "a tunnel opened and dialed through the relay, as a WebSocket: $(printf '%s' "$why" | sed 's/^[[:space:]]*//')"
 fi
 
+# The diagnosis runs both ways too, since a relay connection that fails in one mode says
+# nothing about the peer.
 if [ "${1:-}" != "" ]; then
   home=$(mktemp -d)
-  out=$(COGMER_HOME="$home" COGMER_HOST=claude timeout 120 go run ./cmd/cogmer diagnose-endpoint "$1" 2>&1)
-  echo "diagnosis of $1:"
-  printf '%s\n' "$out" | sed 's/^/  /'
+  diagnosis=$(COGMER_HOME="$home" COGMER_HOST=claude timeout 120 go run ./cmd/cogmer diagnose-endpoint "$1" 2>&1)
+  echo "diagnosis of $1, as cogmer builds it:"
+  printf '%s\n' "$diagnosis" | sed 's/^/  /'
+  rm -rf "$home"
+  home=$(mktemp -d)
+  diagnosis=$(TS_DEBUG_DERP_WS_CLIENT=1 COGMER_HOME="$home" COGMER_HOST=claude timeout 120 go run -tags ts_debug_websockets ./cmd/cogmer diagnose-endpoint "$1" 2>&1)
+  echo "diagnosis of $1, as a WebSocket:"
+  printf '%s\n' "$diagnosis" | sed 's/^/  /'
   rm -rf "$home"
 fi
 echo

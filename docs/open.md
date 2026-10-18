@@ -276,9 +276,12 @@ item. Below the Full network level, on 2026-10-18, every check failed (`0139779`
 level the same day, the relay map and three relay hosts answered over HTTPS, but the tunnel test
 timed out dialing and `ssh.github.com:443` returned no SSH banner (`b88f417`). The session trusts
 its proxy's certificate authority, so the proxy may decrypt HTTPS and pass only HTTP, which would
-break both the relay's protocol upgrade and SSH. That is inferred, not shown. The probe now also
-tries the tunnel with the relay connection carried as a WebSocket; run it again at the Full
-level to learn whether that passes.
+break both the relay's protocol upgrade and SSH. That is inferred, not shown. A third run in the
+same session, at a level not re-checked, opened and dialed the tunnel with the relay connection
+carried as a WebSocket, while the tunnel without it timed out again (`acbb224`). Its diagnosis of
+a daemon on another machine failed, but it ran without WebSocket mode, so it says nothing about
+that daemon. The probe now diagnoses a given address both ways; run it again at the Full level
+with the address of a daemon known to be running.
 
 ## Tidying the commands
 
