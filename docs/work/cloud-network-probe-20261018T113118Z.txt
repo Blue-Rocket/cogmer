@@ -1,0 +1,19 @@
+cloud network probe, 2026-10-18T11:31:18Z
+session: cse_01JWf8J96868rjFsWdnqmYGt
+proxy: 127.0.0.1:37525
+
+== 1. the public relay
+FAIL  relay map from tailcat.dev (HTTP 000)
+FAIL  a tunnel opened and dialed through the relay: tailcat_test.go:25: StartTailcat: fetching DERPMap for region -1: Get "https://tailcat.dev/derpmap.json": Forbidden
+
+== 2. SSH over port 443 to GitHub
+FAIL  ssh.github.com:443: nc: Proxy error: "HTTP/1.1 403 Forbidden"
+FAIL  github.com:22 directly
+
+== summary
+FAIL  relay map from tailcat.dev (HTTP 000)
+FAIL  a tunnel opened and dialed through the relay: tailcat_test.go:25: StartTailcat: fetching DERPMap for region -1: Get "https://tailcat.dev/derpmap.json": Forbidden
+FAIL  ssh.github.com:443: nc: Proxy error: "HTTP/1.1 403 Forbidden"
+FAIL  github.com:22 directly
+
+written to docs/work/cloud-network-probe-20261018T113118Z.txt: commit it, naming the network access level in the message

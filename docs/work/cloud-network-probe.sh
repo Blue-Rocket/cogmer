@@ -16,8 +16,14 @@
 #      through the session's proxy to ssh.github.com:443, and GitHub's SSH
 #      banner read through it. Port 22 is tried directly as well.
 #
-# It writes nothing outside a temporary directory, and needs no credential.
+# It writes its output to docs/work/cloud-network-probe-<UTC time>.txt as well as
+# printing it, so the run can be committed as it was printed. Name the network
+# access level in the commit message. It needs no credential, and writes nothing
+# else outside temporary files.
 set -u
+
+out="docs/work/cloud-network-probe-$(date -u +%Y%m%dT%H%M%SZ).txt"
+exec > >(tee "$out") 2>&1
 
 proxy="${HTTPS_PROXY:-${https_proxy:-}}"
 proxy_hostport="$(printf '%s' "$proxy" | sed -E 's#^[a-z]+://##; s#^[^@]*@##; s#/.*$##')"
@@ -77,3 +83,5 @@ echo
 
 echo "== summary"
 printf '%s\n' "${results[@]}"
+echo
+echo "written to $out: commit it, naming the network access level in the message"

@@ -270,8 +270,9 @@ cloud session learns which colleagues its machine verified and which rooms it is
 reaches peers, and how its hooks load.
 
 `docs/work/cloud-network-probe.sh` tests, from a cloud session, whether cogmer's transport
-opens a tunnel through the public relay and whether SSH over port 443 reaches GitHub, and is
-deleted with this item. Below the Full network level, on 2026-10-18, both failed: the proxy
+opens a tunnel through the public relay and whether SSH over port 443 reaches GitHub. It
+writes each run to a dated file beside it, and the script and its runs are deleted with this
+item. Below the Full network level, on 2026-10-18, both failed: the proxy
 refused `tailcat.dev`, which serves the relay map, and the CONNECT to `ssh.github.com:443`.
 Run it at the Full level to learn whether the level is the cause.
 
