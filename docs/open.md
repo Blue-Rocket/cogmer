@@ -272,9 +272,13 @@ reaches peers, and how its hooks load.
 `docs/work/cloud-network-probe.sh` tests, from a cloud session, whether cogmer's transport
 opens a tunnel through the public relay and whether SSH over port 443 reaches GitHub. It
 writes each run to a dated file beside it, and the script and its runs are deleted with this
-item. Below the Full network level, on 2026-10-18, both failed: the proxy
-refused `tailcat.dev`, which serves the relay map, and the CONNECT to `ssh.github.com:443`.
-Run it at the Full level to learn whether the level is the cause.
+item. Below the Full network level, on 2026-10-18, every check failed (`0139779`). At the Full
+level the same day, the relay map and three relay hosts answered over HTTPS, but the tunnel test
+timed out dialing and `ssh.github.com:443` returned no SSH banner (`b88f417`). The session trusts
+its proxy's certificate authority, so the proxy may decrypt HTTPS and pass only HTTP, which would
+break both the relay's protocol upgrade and SSH. That is inferred, not shown. The probe now also
+tries the tunnel with the relay connection carried as a WebSocket; run it again at the Full
+level to learn whether that passes.
 
 ## Tidying the commands
 

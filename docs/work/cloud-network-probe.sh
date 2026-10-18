@@ -11,7 +11,9 @@
 #      the relay map, the relay hosts it names, and a tunnel opened and dialed
 #      end to end (TestATunnelAdmitsADialerItHasNeverSeen). Given the tc://
 #      address of a daemon on another machine, it also diagnoses a connection
-#      to that daemon, which is the case a cloud session would be in.
+#      to that daemon, which is the case a cloud session would be in. The
+#      tunnel test runs twice: as cogmer builds it, and with the relay
+#      connection carried as a WebSocket.
 #   2. SSH over port 443 to GitHub, which deploy keys need: a CONNECT tunnel
 #      through the session's proxy to ssh.github.com:443, and GitHub's SSH
 #      banner read through it. Port 22 is tried directly as well.
@@ -53,6 +55,16 @@ if COGMER_NETWORK_TESTS=1 timeout 180 go test ./cmd/cogmer -run TestATunnelAdmit
 else
   why=$(grep -m1 -E 'tailcat_test.go:|panic' /tmp/cogmer-tunnel.log || grep -m1 FAIL /tmp/cogmer-tunnel.log)
   record FAIL "a tunnel opened and dialed through the relay: $(printf '%s' "$why" | sed 's/^[[:space:]]*//')"
+fi
+
+# The same tunnel with the relay connection carried as a WebSocket, which a proxy that
+# inspects HTTPS may pass where it breaks the relay's own upgrade. Tailscale's relay
+# client offers it behind a build tag and an environment variable.
+if TS_DEBUG_DERP_WS_CLIENT=1 COGMER_NETWORK_TESTS=1 timeout 180 go test -tags ts_debug_websockets ./cmd/cogmer -run TestATunnelAdmitsADialerItHasNeverSeen -count=1 >/tmp/cogmer-tunnel-ws.log 2>&1; then
+  record PASS "a tunnel opened and dialed through the relay, as a WebSocket"
+else
+  why=$(grep -m1 -E 'tailcat_test.go:|panic' /tmp/cogmer-tunnel-ws.log || grep -m1 FAIL /tmp/cogmer-tunnel-ws.log)
+  record FAIL "a tunnel opened and dialed through the relay, as a WebSocket: $(printf '%s' "$why" | sed 's/^[[:space:]]*//')"
 fi
 
 if [ "${1:-}" != "" ]; then
