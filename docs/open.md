@@ -267,8 +267,13 @@ D-216 leaves undecided which identifier a cloud session's events carry. The sess
 would leave D-152 (events are signed at origin) and the sequence of D-029 (the sequence lives
 with the identity) unchanged. D-216 also leaves undecided how long a session key lives, how a
 cloud session learns which colleagues its machine verified and which rooms it is in, how it
-reaches peers, and how its hooks load. On 2026-10-17 a cloud session's proxy refused
-Tailscale's relay hosts with HTTP 403, observed in a cloud session of this repository.
+reaches peers, and how its hooks load.
+
+`docs/work/cloud-network-probe.sh` tests, from a cloud session, whether cogmer's transport
+opens a tunnel through the public relay and whether SSH over port 443 reaches GitHub, and is
+deleted with this item. Below the Full network level, on 2026-10-18, both failed: the proxy
+refused `tailcat.dev`, which serves the relay map, and the CONNECT to `ssh.github.com:443`.
+Run it at the Full level to learn whether the level is the cause.
 
 ## Tidying the commands
 
