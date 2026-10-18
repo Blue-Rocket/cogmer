@@ -270,18 +270,20 @@ cloud session learns which colleagues its machine verified and which rooms it is
 reaches peers, and how its hooks load.
 
 `docs/work/cloud-network-probe.sh` tests, from a cloud session, whether cogmer's transport
-opens a tunnel through the public relay and whether SSH over port 443 reaches GitHub. It
-writes each run to a dated file beside it, and the script and its runs are deleted with this
-item. Below the Full network level, on 2026-10-18, every check failed (`0139779`). At the Full
-level the same day, the relay map and three relay hosts answered over HTTPS, but the tunnel test
-timed out dialing and `ssh.github.com:443` returned no SSH banner (`b88f417`). The session trusts
-its proxy's certificate authority, so the proxy may decrypt HTTPS and pass only HTTP, which would
-break both the relay's protocol upgrade and SSH. That is inferred, not shown. A third run in the
-same session, at a level not re-checked, opened and dialed the tunnel with the relay connection
-carried as a WebSocket, while the tunnel without it timed out again (`acbb224`). Its diagnosis of
-a daemon on another machine failed, but it ran without WebSocket mode, so it says nothing about
-that daemon. The probe now diagnoses a given address both ways; run it again at the Full level
-with the address of a daemon known to be running.
+opens a tunnel through the public relay and whether SSH over port 443 reaches GitHub. It writes
+each run to a dated file beside it, and the script and its runs are deleted with this item.
+Below the Full network level, on 2026-10-18, every check failed (`0139779`). At the Full level
+the same day, the relay map and three relay hosts answered over HTTPS, but the tunnel test
+timed out dialing and `ssh.github.com:443` returned no SSH banner (`b88f417`). The session
+trusts its proxy's certificate authority, so the proxy may decrypt HTTPS and pass only HTTP,
+which would break both the relay's protocol upgrade and SSH. That is inferred, not shown. A
+later run at the Full level reached a daemon on another machine through the relay, as a
+WebSocket: both relay pings answered, in 817ms and 774ms, and path discovery found the route
+through relay region 1 in 132ms, with no change to that daemon (`e415f1d`). Without WebSocket
+mode the same pings got no answer in 10s, so the failure there is at the relay. The tunnel
+opened and dialed inside the session as a WebSocket, and timed out without it. No run has
+opened a TCP connection through the tunnel to another machine's peer port, or a TLS handshake
+on it.
 
 ## Tidying the commands
 
