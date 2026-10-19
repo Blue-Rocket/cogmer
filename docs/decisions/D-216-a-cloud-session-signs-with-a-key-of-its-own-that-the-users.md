@@ -1,0 +1,17 @@
+# D-216 — A cloud session signs with a key of its own that the user's shared key vouches for
+
+**Date:** 2026-10-18 · **Status:** not built · **Areas:** identity, sync, admission
+
+**Decision.** A cloud session signs its events, its admission proofs and its connections with a key it generates when it starts, and that key carries a chain of certificates to the user (D-219, a user is a master key that certifies machines through a shared key). The shared key certifies a cloud key, as it certifies any machine's key, with no expiry and without the right to hold the shared key. The cloud key is the one secret stored in the cloud environment, and it certifies each session's key with an expiry. A receiver accepts a key whose chain ends at a master key it has verified, and refuses one whose chain does not, so that a colleague verifies the user once (§25), never each session, and sees a cloud session's turns under the user's name with the cloud key's label. Each session's key numbers its own events, so cloud sessions that run at the same time never claim the same sequence number. A removal of the cloud key (D-220, a removal names the last event of a machine that counts) revokes it, and a receiver that holds the removal refuses every event and connection under that cloud key that reaches it afterwards.
+
+**Rejected.**
+- *Copying a machine's private key into the cloud environment.* Two writers under one key issue the same sequence numbers, which a receiver sets aside as conflicts (D-027, a sequence conflict is quarantined), and a copied key never expires, so whoever reads it speaks as that machine until the user removes it.
+- *A second permanent identity for cloud sessions.* Colleagues verify it as a separate user, two cloud sessions running at once collide on its sequence numbers, and a stolen key holds until every colleague forgets that user.
+- *The cloud key signing events itself.* Concurrent cloud sessions would share its sequence numbers.
+- *A cloud key that expires.* Renewing it needs a machine that holds the shared key, which a user away from their machines cannot reach.
+- *Pairing each cloud session.* The comparison needs both people on a call (D-052, verifying a peer is its own act, run by both users at once), once for every session.
+- *A cloud session that relays every exchange to one of the user's machines.* It works only while that machine is awake and reachable, which is the dependence this decision removes.
+
+**Limits.** The cloud key is readable by anything that runs in the session, including the model's shell, so a model steered by room content can copy it, and whoever holds it speaks under that cloud key in every room the user is admitted to until a removal reaches each colleague's daemon. It cannot certify machines or hold the shared key, so it can speak only in the rooms the user is admitted to. A colleague's daemon learns of a removal only by syncing with a peer that holds it, and events accepted before then remain, since events are immutable. A colleague whose cogmer predates the scheme refuses a delegated event as a version problem (D-058, an event is verified under the scheme it was signed with). This entry does not decide how a cloud session learns which colleagues its user verified and which rooms it is in, how it reaches peers, or how its hooks load.
+
+**Revisit when** a cloud session can sign with a secret it cannot read, or a cloud key is used by someone other than the user who issued it.

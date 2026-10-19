@@ -2,9 +2,11 @@
 
 **Date:** 2026-09-17 · **Status:** active · **Areas:** identity, sync
 
-**Decision.** Every event is signed by the peer that created it, over a length-prefixed
+**Decision.** Every event is signed by the machine that created it, over a length-prefixed
 encoding of its own fields with a leading purpose tag, and every receiver checks it
-against the key the originating peer's identifier names.
+against that machine's key, whose certificates must end at the master key the
+originating peer's identifier names (D-219, a user is a master key that certifies
+machines through a shared key).
 
 **Support.**
 - A relaying peer can then carry an event and cannot author one. §13 (transitive

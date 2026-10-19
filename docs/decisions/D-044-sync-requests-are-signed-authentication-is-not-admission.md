@@ -3,9 +3,10 @@
 **Date:** 2026-09-17 · **Status:** active · **Areas:** sync, identity, admission
 
 **Decision.** Every sync request carries the caller's identifier, a timestamp and a nonce,
-signed with a purpose tag. The receiver checks the signature against the key the
-identifier names, and refuses a timestamp more than two minutes off or a nonce it has
-seen.
+signed with a purpose tag by the machine making it. The receiver checks the signature
+against that machine's key, whose certificates must end at the master key the identifier
+names (D-219, a user is a master key that certifies machines through a shared key), and
+refuses a timestamp more than two minutes off or a nonce it has seen.
 
 **Support.**
 - Peers poll, so a handshake for each poll would cost two round trips a second to avoid

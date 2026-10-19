@@ -3,9 +3,10 @@
 **Date:** 2026-09-20 · **Status:** active · **Areas:** trust, transport, identity
 
 **Decision.** Every peer connection is TLS with a required client certificate, over every
-transport including the overlay. Each side accepts only a key this machine has recorded: the
-named peer's key when verifying, and any recorded peer's key when syncing. No setting turns
-the encryption off.
+transport including the overlay. Each side accepts only a machine key whose certificates end
+at a master key this machine has recorded (D-219, a user is a master key that certifies
+machines through a shared key): the named peer's master key when verifying, and any recorded
+peer's when syncing. No setting turns the encryption off.
 
 **Support.**
 - Room content is a person's prompts and whatever their Claude said back, so confidentiality
@@ -16,7 +17,7 @@ the encryption off.
   runs one of its own, whether the key in the certificate is the key known, which is
   stricter than the machinery it leaves out. `cmd/cogmer/peertls.go`, `pinnedVerifier`.
 - The certificate is a container that the format requires, generated self-signed at startup
-  from the identity key, and the pin is on the key inside it, so regenerating it costs nothing
+  from the machine's key, and the check is on the key inside it, so regenerating it costs nothing
   and its expiry is meaningless. `cmd/cogmer/peertls.go`.
 - A client certificate is required, since a peer with nothing to pin has no business
   completing a handshake and refusing there is earlier and clearer than refusing after a body

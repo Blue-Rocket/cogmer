@@ -260,23 +260,31 @@ could start nothing there, since the Cowork route is the bridge on the user's ma
 A user in a Claude Code cloud session, such as one started from the iPhone app, shares a
 conversation with colleagues without a daemon on their own computer being reachable.
 
-**Build the cloud-session identity that D-216 (a cloud session signs with a key of its own that
-a machine identity vouches for) decides.** Nothing of it is built. Four changes wait for the
-build rather than the draft, so that no active decision describes a system that does not exist:
+**A user's machines are separate identities to colleagues, and a cloud session has no identity of
+its own to sign with.** D-219 (a user is a master key that certifies machines through a shared
+key) decides the identity that fixes both, with D-220 (a removal names the last event of a machine
+that counts), D-221 (an event whose identity version the receiver lacks is withheld from the
+assistant until fetched), D-222 (a machine tells every machine it knows of each machine it adds),
+D-223 (the recovery phrase is typed only into the daemon's browser page), D-224 (a conflict
+between identity records goes to the higher level, then to a removal, then to the lowest hash),
+D-225 (a machine sends each removal and new shared key to every colleague it knows until each
+acknowledges) and D-216 (a cloud session signs with a key of its own that the user's shared key
+vouches for). Nothing of it is built. D-044
+(sync requests are signed), D-101 (peer connections are TLS pinned to a key this machine has
+recorded), D-141 (a machine's key is created once and never leaves the machine), D-143
+(admission is proved by signing a fresh challenge) and D-152 (events are signed at origin) state
+the design, and the code still gives each machine an identity that colleagues verify, so they
+differ from the code until the build. Two changes wait for it:
 
-- D-101 (peer connections are TLS pinned to a key this machine has recorded) is rewritten to
-  accept a key whose chain ends at a recorded key.
-- D-143 (admission is proved by signing a fresh challenge) is rewritten for a challenge
-  signed by a session key on behalf of the admitted machine.
-- §6 gains the requirement that a cloud session acts for a machine identity, with its
+- §6 gains the requirement that a user is a master key that certifies machines, with its
   benefit to the user, in the same commit as the code (W-85).
-- D-216 becomes active.
+- D-216 and D-219 to D-225 become active.
 
-D-216 leaves undecided which identifier a cloud session's events carry. The session key's
-would leave D-152 (events are signed at origin) and the sequence of D-029 (the sequence lives
-with the identity) unchanged. D-216 also leaves undecided how long a session key lives, how a
-cloud session learns which colleagues its machine verified and which rooms it is in, how it
-reaches peers, and how its hooks load.
+Not decided: what the room view shows for a user to choose a cutoff across rooms, how a user who
+has lost every machine reaches colleagues, since the user could reach each colleague only by
+sending a new pairing string, how a cloud session learns which colleagues its user verified and which rooms it is in,
+how a cloud session reaches peers, how its hooks load, and whether a colleague holding shares
+of the recovery phrase could recover a user who has lost it, which no decision has examined.
 
 `docs/work/cloud-network-probe.sh` tests, from a cloud session, whether cogmer's transport
 opens a tunnel through the public relay and whether SSH over port 443 reaches GitHub. It writes
