@@ -353,3 +353,23 @@ func TestThePagesTakeTheSystemFontAndNameNoInstalledOne(t *testing.T) {
 		}
 	}
 }
+
+// A room's export is kept as a reference after the room is abandoned, so the room's view and its
+// export do not depend on a session being in it.
+func TestARoomCanStillBeExportedAfterEverySessionHasLeft(t *testing.T) {
+	d, room, post := promptRoom(t, false)
+	post(promptReq{SessionID: "s", PromptID: "p", Prompt: "what we decided about the schema"})
+	if _, err := d.members.LeaveSession("s"); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(d.members.SessionIDsInRoom(room.RoomID)); n != 0 {
+		t.Fatalf("%d sessions are still in the room", n)
+	}
+	rec := getImage(d, "/export?room="+room.RoomName)
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "what we decided about the schema") {
+		t.Fatalf("export after everyone left: %d %q", rec.Code, rec.Body.String())
+	}
+	if page := getImage(d, "/room/"+room.RoomName); page.Code != 200 {
+		t.Errorf("the room's page after everyone left gave %d", page.Code)
+	}
+}

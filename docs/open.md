@@ -246,6 +246,15 @@ When a Cowork session has been seen to work with them, D-205 and D-207 become ac
 entry named `cogmer-host-probe` in the user's Claude Desktop configuration, the probe plugin installed in
 Cowork, and the files `~/.cogmer-host-probe.*`, to be removed by the user.
 
+**The cogmer plugin starts a daemon in every Cowork sandbox, where it has nothing to do.** The second image
+probe on 2026-10-15 found `/root/.cogmer` in the sandbox, with a membership database, a tailcat key and a
+daemon log written two seconds after the session started. The sandbox is remote and its checks of the relays
+all failed, so that daemon has an identity, no room and no route to a colleague, and a user gets nothing
+from it. Which version ran there was not read. The organization's inventory on the same day listed two
+member-created copies, David's at 0.10.3 and Arielle's at 0.7.4. The sandbox's environment holds
+`CLAUDE_CODE_REMOTE`, whose value was not read. If it marks a remote sandbox, the plugin's session-start hook
+could start nothing there, since the Cowork route is the bridge on the user's machine (D-205).
+
 ## Cloud sessions in a room
 
 A user in a Claude Code cloud session, such as one started from the iPhone app, shares a
@@ -348,13 +357,17 @@ turn holds other user messages, and publishes the image in a second event. It is
 Codex wrote during the paste, which gave the image and the hash of the saved file, and has not run in a live
 Codex session with a colleague.
 
-Cowork was observed on 2026-10-15 by pasting one image and sending "image test", ten characters. The hook
-received that text with no placeholder and no field for an attachment, so nothing at the hook shows an image
-was sent. Cowork runs Claude Code in a Linux sandbox, so an image file would be there, and the daemon on the
-user's machine cannot read the sandbox's files. The bridge carries only the hook's fields, so a Cowork image
-has no route to the daemon, and a turn from Cowork reaches a colleague with its text and no picture. A route
-would have to be built, and the sandbox mounts a folder at `/mnt/attach/outputs`, which suggests where
-attachments are kept and has not been checked. The Claude Code editor extensions are not observed and are
+Cowork was observed twice on 2026-10-15, each time by pasting one image and sending "image test". The
+hook received that text with no placeholder and no field for an attachment. A second probe found the image
+saved in the sandbox at `/root/.claude/uploads/<session id>/<random name>-image.png`, there before the
+prompt hook ran, with no `images` folder beside the scratchpad. The transcript at the end of the turn held
+two image blocks and the text, with no placeholder. The session looks remote: its environment names a
+remote session and a container, and its only mount that is not system code, `/mnt/attach/outputs`, is a
+cloud file store. A marker written there reached neither `~/projects/probe`, the folder the user connected to
+the session, nor the app's own folders, and the sandbox mounts no folder of the user's machine. So the image
+is not on the user's machine, and a Cowork image has no route to the daemon that runs there. A turn from
+Cowork reaches a colleague with its text and no picture, and a route would have to be built.
+The Claude Code editor extensions are not observed and are
 read as the terminal.
 
 D-213 becomes active when a colleague on another machine sees a picture sent from each host that sends one.
@@ -377,6 +390,22 @@ Two ways remain:
   file with its own tool. That puts a colleague's bytes where the model reads them, so this option needs a
   place the model is allowed to read, cleanup, and a decision on whether the model's permission prompt for
   a file outside the project is acceptable.
+
+## Exporting the shared transcript
+
+A user can keep a room's conversation as a reference after the room is abandoned.
+
+**The export may not outlast its room, and says too little to be read later without it.** D-218 (the export is
+the whole room as text-only Markdown) decides its form. Nothing closes a room today, since the closing in
+D-015 (rooms are scoped to sessions, not to projects) and the archive in D-132 (a closed room's log is
+archived) are not built, so a room's view and export stay on the machine after every session has left, and a
+test says so. Whatever builds the closing has to leave both reachable.
+
+The text is thin for a reader who was not there. As `exportMarkdown` in `cmd/cogmer/ui.go` writes it on
+2026-10-16, the header holds the room's name, the time of the export and the number of turns. Who took part
+appears only on the turns. Each turn's time is the exporter's local time with no zone, and nothing gives the
+room's identifier, which two rooms with one name do not share, or the first and last turn. What a reader
+needs in the header has not been decided.
 
 ## Beyond one conversation
 
