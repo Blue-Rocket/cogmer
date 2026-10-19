@@ -294,16 +294,18 @@ opened and dialed inside the session as a WebSocket, and timed out without it. N
 opened a TCP connection through the tunnel to another machine's peer port, or a TLS handshake
 on it.
 
-A cloud session given cogmer through the user's claude.ai plugins, observed on 2026-10-18, had
-the plugin synced into `~/.claude/plugins/synced/`. Its SessionStart hook ran: `install.log`
-recorded the 0.10.3 binary downloaded from the release and installed, and a later start in the
-same container started the daemon again. `/cogmer:self-status` answered, with plugin, binary and
-daemon at 0.10.3. The daemon could not reach the relay, as the probe found for the build without
-WebSocket mode. D-217 (a cloud session's daemon carries its relay connection as a WebSocket) is
-built and in no release yet. A cloud session started after the next release would show whether
-its daemon reaches the relay, and its `daemon.log` says how the relay connection is carried. The
-probe's tunnel test "as a release builds it" checks the same switch without a release. Whether UserPromptSubmit and Stop fire in a cloud session is not shown, since
-neither leaves a trace outside a room.
+A cloud session with 0.10.4 reached the relay, observed on 2026-10-18. The user's claude.ai copy of
+the plugin stayed at 0.10.3 after 0.10.4 reached `main`, until the user forced a sync in Manage
+marketplaces, and how long automatic sync takes is not known. In the cloud session that followed,
+`/cogmer:self-status` answered with plugin, binary and daemon at 0.10.4, and its test connection from
+outside reached the daemon through the nyc relay in 712ms. The daemon has a key of its own, different
+from the one on the user's computer, shows the container's username as its name, and is in no room. The
+same plugin at 0.10.3, in a cloud session earlier that day, had the plugin synced into
+`~/.claude/plugins/synced/` and its SessionStart hook ran, and the daemon could not reach the relay. D-217
+(a cloud session's daemon carries its relay connection as a WebSocket) is in 0.10.4. Not shown: how the
+0.10.4 daemon's `daemon.log` says the relay connection is carried, whether UserPromptSubmit and Stop fire
+in a cloud session, since neither leaves a trace outside a room, and whether such a daemon pairs with a
+colleague, which no run has tried.
 
 ## Tidying the commands
 
