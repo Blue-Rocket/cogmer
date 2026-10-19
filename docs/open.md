@@ -268,23 +268,38 @@ assistant until fetched), D-222 (a machine tells every machine it knows of each 
 D-223 (the recovery phrase is typed only into the daemon's browser page), D-224 (a conflict
 between identity records goes to the higher level, then to a removal, then to the lowest hash),
 D-225 (a machine sends each removal and new shared key to every colleague it knows until each
-acknowledges) and D-216 (a cloud session signs with a key of its own that the user's shared key
-vouches for). Nothing of it is built. D-044
-(sync requests are signed), D-101 (peer connections are TLS pinned to a key this machine has
-recorded), D-141 (a machine's key is created once and never leaves the machine), D-143
-(admission is proved by signing a fresh challenge) and D-152 (events are signed at origin) state
-the design, and the code still gives each machine an identity that colleagues verify, so they
-differ from the code until the build. Two changes wait for it:
+acknowledges), D-226 (a cloud session takes the highest valid snapshot of its user's colleagues
+and rooms from any source), D-227 (the daemon pushes a new snapshot to the user's repo when the
+user's list changes, once the user has opted in) and D-216 (a cloud session signs with a key of
+its own that the user's shared key vouches for). Nothing of it is built. D-044 (sync requests are
+signed), D-101 (peer connections are TLS pinned to a key this machine has recorded), D-141 (a
+machine's key is created once and never leaves the machine), D-143 (admission is proved by
+signing a fresh challenge) and D-152 (events are signed at origin) state the design, and the code
+still gives each machine an identity that colleagues verify, so they differ from the code until
+the build. Two changes wait for it:
 
 - §6 gains the requirement that a user is a master key that certifies machines, with its
   benefit to the user, in the same commit as the code (W-85).
-- D-216 and D-219 to D-225 become active.
+- D-216 and D-219 to D-227 become active.
 
 Not decided: what the room view shows for a user to choose a cutoff across rooms, how a user who
 has lost every machine reaches colleagues, since the user could reach each colleague only by
-sending a new pairing string, how a cloud session learns which colleagues its user verified and which rooms it is in,
-how a cloud session reaches peers, how its hooks load, and whether a colleague holding shares
-of the recovery phrase could recover a user who has lost it, which no decision has examined.
+sending a new pairing string, how a cloud session's hooks load, and whether a colleague holding
+shares of the recovery phrase could recover a user who has lost it, which no decision has
+examined.
+
+**A user has no way to set up a cloud session's key, snapshot and repo, and three facts the setup
+depends on are unknown.** D-226 and D-227 need a cloud key, a first snapshot and a private repo
+added to the cloud environment. The setup would be one command that creates the repo with the
+`gh` command when it is installed and signed in, makes and certifies the cloud key, writes and
+pushes the first snapshot, and prints the value to paste into the environment. The unknown facts
+are where a cloud session places a repo added to it and whether the repo is on disk when the
+session-start hook runs, whether a cloud environment hides the value of an environment variable
+from other people who can edit the environment, and whether a cloud session can open a connection
+through the relay to a peer port of a user's machine and finish a TLS handshake there, which the
+live source in D-226 needs and no run has shown. A cloud session's clone of this repo was shallow,
+with 50 commits, on 2026-10-19, which limits the history check in D-226 to the commits a clone
+holds.
 
 `docs/work/cloud-network-probe.sh` tests, from a cloud session, whether cogmer's transport
 opens a tunnel through the public relay and whether SSH over port 443 reaches GitHub. It writes
