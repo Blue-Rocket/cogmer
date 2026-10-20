@@ -330,6 +330,21 @@ same plugin at 0.10.3, in a cloud session earlier that day, had the plugin synce
 in a cloud session, since neither leaves a trace outside a room, and whether such a daemon pairs with a
 colleague, which no run has tried.
 
+**A user in a cloud session has no way to see the room.** D-228 (a cloud session's user sees a room as a
+read-only page the session hands to the app) decides the route, and nothing of it is built. The room
+page in `cmd/cogmer/ui.html` receives every turn from the daemon's `/stream`, so a copy of the page saved
+to a file shows no turns (read on 2026-10-20), and `exportMarkdown` writes the whole room as text-only Markdown (D-218, the export is the
+whole room as text-only Markdown). D-228 leaves undecided the page's form, which command writes it, and
+where the file goes. Three facts would decide them, and no run has shown any of them:
+
+- whether the Claude app on an iPhone shows an HTML file that a cloud session sends, and whether it runs
+  the file's scripts, or shows only Markdown
+- which directories the app opens a file from, since a file written into the user's repository can be
+  committed with the room's conversation in it
+- whether the session can hand over a file without the model reading it, since a model that reads the
+  page reads colleagues' turns without the framing the injected block gives them (D-149, the injected
+  block frames its content by classification, not by authority)
+
 ## Tidying the commands
 
 The plugin's commands sit in the layout Claude Code prefers, and each has a reason to exist.
