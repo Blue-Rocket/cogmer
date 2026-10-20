@@ -341,9 +341,10 @@ where the file goes. Three facts would decide them, and no run has shown any of 
   the file's scripts, or shows only Markdown
 - which directories the app opens a file from, since a file written into the user's repository can be
   committed with the room's conversation in it
-- whether the session can hand over a file without the model reading it, since a model that reads the
-  page reads colleagues' turns without the framing the injected block gives them (D-149, the injected
-  block frames its content by classification, not by authority)
+- whether the session can hand over a file without the model reading it, since in a show-only room the
+  page is the only way the user reads the room, and a page that passes through the model sends the
+  room's conversation to the user's model provider, which D-200 (a room is created or joined show-only
+  or not, and the choice never changes for that room) promises does not happen
 
 ## Tidying the commands
 
