@@ -941,7 +941,7 @@ func runAllow(args []string) {
 
 func runForget(args []string) {
 	if len(args) == 0 {
-		log.Fatal("usage: cogmer forget <peer>")
+		log.Fatal(commandText("usage: /cogmer:peer-forget <peer>"))
 	}
 	withMembership(func(m *Membership, _ *Identity) {
 		pid, err := resolvePeer(m, args[0])
@@ -1017,7 +1017,7 @@ func runCreateRoom(args []string) {
 		bindInvokingSession(m, r)
 		fmt.Printf("%s\n", watchLine(r.RoomName))
 		fmt.Println("\ninvite someone you have paired with:")
-		fmt.Println("  cogmer invite <name>")
+		fmt.Println(commandText("  /cogmer:room-invite <name>"))
 	})
 }
 
@@ -1066,7 +1066,7 @@ func parseInvitation(arg string) (name, id, endpoint, host string, full bool) {
 func runJoin(args []string) {
 	args, showOnlyFlag := takeFlag(args, "--show-only")
 	if len(args) == 0 {
-		log.Fatal("usage: cogmer join <invitation> [--show-only]   (or a room you already know)")
+		log.Fatal(commandText("usage: /cogmer:room-join <invitation> [--show-only]   (or a room you already know)"))
 	}
 	refuseWhenTheHostIsUnclear()
 	withMembership(func(m *Membership, id *Identity) {
@@ -1390,7 +1390,7 @@ func shortReason(e string) string {
 
 func runInvite(args []string) {
 	if len(args) == 0 {
-		log.Fatal("usage: cogmer invite <peer>   (from inside the session that is in the room)")
+		log.Fatal(commandText("usage: /cogmer:room-invite <peer>   (from inside the session that is in the room)"))
 	}
 	withMembership(func(m *Membership, self *Identity) {
 		r := roomToChange(m)
@@ -1435,7 +1435,7 @@ func runInvite(args []string) {
 
 func runRevoke(args []string) {
 	if len(args) == 0 {
-		log.Fatal("usage: cogmer revoke <peer>   (from inside the session that is in the room)")
+		log.Fatal(commandText("usage: /cogmer:room-revoke <peer>   (from inside the session that is in the room)"))
 	}
 	withMembership(func(m *Membership, _ *Identity) {
 		r := roomToChange(m)

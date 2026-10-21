@@ -388,6 +388,41 @@ func TestCreateAndJoinRefuseBeforeWritingWhenTheHostCannotBeTold(t *testing.T) {
 	}
 }
 
+// What a command prints about the next command is written the way the host invokes it.
+// A user cannot run "cogmer invite" at a terminal, so naming it that way sends them
+// to something that does not work.
+func TestCommandsNameTheNextCommandTheWayTheHostInvokesIt(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds the binary")
+	}
+	dir := t.TempDir()
+	bin := buildVersion(t, dir, "command-text-test")
+	run := func(home string, extra []string, args ...string) string {
+		cmd := exec.Command(bin, args...)
+		cmd.Env = append([]string{"PATH=/usr/bin:/bin", "HOME=" + dir, "COGMER_HOME=" + home,
+			"COGMER_TAILCAT=off", "COGMER_PREFLIGHT=off", "COGMER_ADDR=127.0.0.1:1"}, extra...)
+		out, _ := cmd.CombinedOutput()
+		return string(out)
+	}
+	for _, c := range []struct {
+		host   string
+		env    []string
+		invite string
+		join   string
+	}{
+		{"claude", []string{"COGMER_HOST=claude", "CLAUDE_CODE_SESSION_ID=a"}, "/cogmer:room-invite <name>", "/cogmer:room-join <invitation>"},
+		{"codex", []string{"COGMER_HOST=codex", "CODEX_THREAD_ID=b"}, "$cogmer room-invite <name>", "$cogmer room-join <invitation>"},
+	} {
+		home := filepath.Join(dir, c.host)
+		if out := run(home, c.env, "create"); !strings.Contains(out, c.invite) || strings.Contains(out, "cogmer invite") {
+			t.Errorf("%s: create does not name the invite command as %q:\n%s", c.host, c.invite, out)
+		}
+		if out := run(home, c.env, "join"); !strings.Contains(out, c.join) || strings.Contains(out, "cogmer join") {
+			t.Errorf("%s: join with no argument does not name its usage as %q:\n%s", c.host, c.join, out)
+		}
+	}
+}
+
 // Outside a host the binary is for tests. A user is told to run the command through the
 // plugin, and is not told how to declare a host by hand.
 func TestTheRefusalOfAnAmbiguousHostDoesNotSendAUserToTheEnvironment(t *testing.T) {

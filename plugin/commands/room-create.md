@@ -11,8 +11,8 @@ disable-model-invocation: true
 
 ## Your task
 
-Tell the user the room's name, and that sessions they start from here join it while
-this one is already in it.
+Tell the user the room's name, and that this session is in it. A session they start later
+joins only when they run `/cogmer:room-join` with the room's name inside that session.
 
 If the output says the room is show-only, say what that means in a few words: its
 conversation appears in the room view and none of it is given to their agent, that
