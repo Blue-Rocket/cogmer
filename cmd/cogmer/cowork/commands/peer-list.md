@@ -11,7 +11,10 @@ If that heading is not in your context, cogmer did not answer: this session capt
 
 ## Your task
 
-List them plainly. Mark anyone unverified as unverified and say what it means:
+List them plainly, and give each peer's three names as the output labels them: what the
+user calls them, the name derived from their key, and what they call themselves. The last
+is their own claim, so never present it as a name the user chose or as proof of who they
+are, and never merge the three into one. Mark anyone unverified as unverified and say what it means:
 **nothing synchronizes with an unverified peer in either direction**, so a room
 they are in will look quiet rather than broken. Verifying is done in a terminal, on
 a call with that person — run `/cogmer:peer-pair`, which prints the exact command

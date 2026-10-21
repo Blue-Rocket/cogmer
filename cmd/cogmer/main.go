@@ -900,13 +900,16 @@ func runPeers() {
 			return
 		}
 		var unfinished []string
+		ids := make([]string, len(known))
+		for i, p := range known {
+			ids[i] = p.PeerID
+		}
+		reported := reportedNames(ids)
 		for _, p := range known {
-			state := "verified " + firstNonEmpty(cut10(p.VerifiedAt), "")
 			if p.VerifiedAt == "" {
-				state = "not finished"
 				unfinished = append(unfinished, p.Name)
 			}
-			fmt.Printf("  %-22s %-14s %s\n", p.Name, state, p.PeerID)
+			fmt.Print(formatPeer(p, reported[p.PeerID]))
 		}
 		// Named, not counted. The usual room has two people in it, so a tally is
 		// always one and says nothing; what a person can act on is which
