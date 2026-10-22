@@ -156,7 +156,7 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 	}
 	now := time.Now()
 	lastTurn := map[string]string{}
-	st := uiState{Room: cur.RoomID, RoomName: cur.RoomName, SelfPeerID: d.id.PeerID, Peers: d.peerStatus(),
+	st := uiState{Room: cur.RoomID, RoomName: cur.RoomName, SelfPeerID: d.id.PeerID, Peers: d.roomPeerStatus(cur.RoomID),
 		SessionsInRoom: len(d.members.SessionIDsInRoom(cur.RoomID))}
 	labels := d.members.Labels()
 	var imageEvents []Event
@@ -613,7 +613,17 @@ const reachUnknown = "checking"
 // environment, because peers learned by pairing or by joining a room are most of
 // them.
 func (d *Daemon) peerStatus() []uiPeer {
-	targets := d.syncTargets()
+	return d.statusOf(d.syncTargets())
+}
+
+// roomPeerStatus is peerStatus for one room: the guests of that room, and the addresses
+// configured for this machine, which this daemon syncs every room with. A room's page
+// says nothing of a colleague who is a guest of another room only.
+func (d *Daemon) roomPeerStatus(roomID string) []uiPeer {
+	return d.statusOf(d.roomTargets(roomID))
+}
+
+func (d *Daemon) statusOf(targets []string) []uiPeer {
 	d.peerMu.Lock()
 	defer d.peerMu.Unlock()
 	owners := d.members.EndpointOwners()

@@ -268,6 +268,27 @@ func (d *Daemon) syncTargets() []string {
 	return out
 }
 
+// roomTargets is the addresses this daemon tries for one room: those configured for the
+// machine, which name no peer and are asked about every room, and the addresses of the
+// room's guests.
+func (d *Daemon) roomTargets(roomID string) []string {
+	seen := map[string]bool{}
+	var out []string
+	add := func(a string) {
+		if a != "" && !seen[a] {
+			seen[a] = true
+			out = append(out, a)
+		}
+	}
+	for _, a := range peerList() {
+		add(a)
+	}
+	for _, a := range d.members.RoomPeers(roomID, d.id.PeerID) {
+		add(a)
+	}
+	return out
+}
+
 // roomsToAsk is the rooms to pull from an address: those it is a guest's address in,
 // and every room for an address configured for this machine, which names no peer. A room
 // is never pulled from an address that is not one of its guests', so a guest of one

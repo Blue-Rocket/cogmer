@@ -1529,7 +1529,8 @@ The view:
   shown as typed, a link is followable only when it is a web address, and an image is shown as its
   address and never loaded;
 - shows whether it is connected;
-- shows which colleagues are offline, by name, and for how long;
+- shows which of the room's colleagues are offline, by name, and for how long, and says nothing of a
+  colleague who is not in the room;
 - shows when each colleague last wrote a turn in the room, so a colleague who is reachable
   and whose turns have stopped arriving can be told from one who is quiet;
 - marks a colleague's turn that no session on this machine has been given yet, except in a show-only
