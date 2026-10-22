@@ -449,7 +449,8 @@ assistant, and the turns from their other sessions in the room. The page does th
 daemon builds the export, and D-218 (the export is the whole room as text-only Markdown) rejects controls
 that choose what the export holds, so a filter in the daemon's stream would put the export at risk of
 following it. The page has to keep the unread count and the jump button right for the turns it hides. A
-choice need not survive a reload that the user makes. Whether the user's own turns start hidden is open.
+choice need not survive a reload that the user makes. The user's own turns start hidden, and the other
+people's start shown.
 
 ## Beyond one conversation
 
