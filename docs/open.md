@@ -432,6 +432,25 @@ appears only on the turns. Each turn's time is the exporter's local time with no
 room's identifier, which two rooms with one name do not share, or the first and last turn. What a reader
 needs in the header has not been decided.
 
+## Reading a long conversation
+
+A user can read what colleagues said in a room without their own turns in the way.
+
+**The room page shows the user's own turns, which are the ones the user already has.** The page lists every
+turn of every guest in order, the user's own included, and the header offers the connection, each
+colleague's status and Export, with no control that narrows the turns (read from `cmd/cogmer/ui.html` and
+the specification's list of what the view does, on 2026-10-22). A user who wrote most of a long
+conversation scrolls past their own prompts and their assistant's responses to reach what a colleague
+wrote, though both are in the user's own session.
+
+A control in the header, beside the colleagues' status, would hide the user's own turns: their prompts, the
+responses of their assistant, and the turns from their other sessions in the room. The page does the
+filtering, because the daemon builds the export, and D-218 (the export is the whole room as text-only
+Markdown) rejects controls that choose what the export holds, so a filter in the daemon's stream would put
+the export at risk of following it. The page has to keep the unread count and the jump button right for the
+turns it hides. The same mechanism could show one colleague's turns alone, which was the first idea, and
+whether that is wanted is open. Whether the control starts on and survives a reload is also open.
+
 ## Beyond one conversation
 
 What cogmer might do beyond sharing one conversation, once a room works for a pair.
