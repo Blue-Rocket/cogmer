@@ -6,10 +6,10 @@ and is deleted with it. It records where the build on the `user-identity` branch
 that an interrupted session can resume from the pushed branch. The design is
 `docs/work/user-identity-design.md`, and the brief is `docs/work/user-identity-brief.md`.
 
-Merged: the design document.
+Merged: the design document, and the recovery phrase and master key in `userphrase.go`.
+A phrase prints and marshals as a redacted text, and no parse error quotes a word.
 
-In progress: the first run's foundation. One agent builds the records and the chain, and
-another the phrase and the master key. The precedence rule and the cutoff are built on the
+In progress: the records and the chain, in one agent. The precedence rule and the cutoff are built on the
 record types, so they start when the records are merged.
 
 Next: the second run, which starts only when the person who started the session says so.
