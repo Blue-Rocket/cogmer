@@ -41,6 +41,14 @@ What the second run's slices need to know from the first:
 Next, the slices in section 6 of the design, in order: storage, then trust, then
 propagation, then removal and recovery beside cloud.
 
+An agent's worktree starts from the remote's default branch unless `worktree.baseRef` is
+`"head"` in the Claude Code settings, so each slice needs that setting to start from
+`user-identity`. This clone has it in `.claude/settings.local.json`, which is gitignored, so
+a fresh clone needs it written again. On 2026-10-23 with Claude Code 2.1.309, an agent
+started seconds after the file was created still branched from `main`, and one started a
+minute later branched from `user-identity`. Each agent checks that its `HEAD` holds the last
+commit of `user-identity` before editing.
+
 The questions recorded are in `docs/open.md`, in the item that opens "Building the user
 identity needs answers that no decision gives", and the reasoning for each choice is in
 section 7 of the design. The first of them, that D-224 read literally voids D-220's
