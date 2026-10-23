@@ -8,8 +8,9 @@ that an interrupted session can resume from the pushed branch. The design is
 
 Merged: the design document.
 
-In progress: the first run's foundation. One agent builds the phrase and the master key,
-the records and the chain, and another builds the precedence rule and the cutoff.
+In progress: the first run's foundation. One agent builds the records and the chain, and
+another the phrase and the master key. The precedence rule and the cutoff are built on the
+record types, so they start when the records are merged.
 
 Next: the second run, which starts only when the person who started the session says so.
 
@@ -17,5 +18,9 @@ The questions recorded are in `docs/open.md`, in the item that opens "Building t
 identity needs answers that no decision gives", and the reasoning for each choice is in
 section 7 of the design.
 
-Tests: `go test ./...` has not yet run on this branch. The writing and citation checks
-pass.
+Tests: `go test ./...` passes on `beabb2a` except
+`TestTheRealOverlayCheckPassesForALiveServerAndFailsForADeadOne`, which reaches the public
+relay and timed out after 10s in this cloud container on 2026-10-23. That commit changes
+only documents, so the test fails the same way on `main`. Its guard dials `tailcat.dev:443`
+over TCP, which the container's proxy answers, while the relay's own protocol gets no answer
+here. The build runs the suite with that one test skipped.
