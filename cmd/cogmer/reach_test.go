@@ -160,3 +160,44 @@ func TestNoReachLineTalksOfTheDaemonsLifecycleOrCallsAColleagueNeverReached(t *t
 		}
 	}
 }
+
+// A failure only just begun is no outage. A daemon that has just started has not yet
+// connected to its relay, so its first polls fail whatever state the colleague is in, and
+// "unreachable for 4s" says nothing true. The colleague is being checked until the
+// failures have lasted a while.
+func TestAFailureOnlyJustBegunIsNotAnOutage(t *testing.T) {
+	d, _ := testDaemon(t)
+	peer := testIdentity(t)
+	if err := d.members.Allow(peer.PeerID, "gareth"); err != nil {
+		t.Fatal(err)
+	}
+	const addr = "127.0.0.1:59998"
+	shareARoom(t, d, peer.PeerID)
+	if err := d.members.SetPeerEndpoint(peer.PeerID, addr); err != nil {
+		t.Fatal(err)
+	}
+	status := func() uiPeer {
+		for _, p := range d.peerStatus() {
+			if p.PeerID == peer.PeerID {
+				return p
+			}
+		}
+		t.Fatal("the colleague is not among the peers")
+		return uiPeer{}
+	}
+
+	d.markPeerUnreachable(addr, errors.New("tailcat: context deadline exceeded"))
+	d.peerMu.Lock()
+	d.peerSeen[addr].downSince = time.Now().Add(-4 * time.Second)
+	d.peerMu.Unlock()
+	if p := status(); p.Trying != "" || p.Error != "" || p.Since != reachUnknown {
+		t.Errorf("four seconds of failure reads as %+v, want a colleague being checked", p)
+	}
+
+	d.peerMu.Lock()
+	d.peerSeen[addr].downSince = time.Now().Add(-(unreachableAfter + 5*time.Second))
+	d.peerMu.Unlock()
+	if p := status(); p.Trying == "" || p.Online {
+		t.Errorf("a failure that has lasted %s still reads as %+v", unreachableAfter+5*time.Second, p)
+	}
+}

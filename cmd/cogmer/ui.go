@@ -593,6 +593,12 @@ const (
 	diagnoseWithin = 15 * time.Second
 )
 
+// unreachableAfter is how long failures must last before a colleague is called
+// unreachable. A daemon takes seconds to connect to its relay, so the failures of its
+// first polls say nothing about the colleague, and a duration of four seconds is not
+// an outage anybody can act on.
+const unreachableAfter = 30 * time.Second
+
 // downRepeat is how often a continuing outage is mentioned again. Long enough that
 // it is not noise, short enough that somebody reading a log an hour later learns
 // the peer is still gone rather than only that it once went.
@@ -648,8 +654,11 @@ func (d *Daemon) statusOf(targets []string) []uiPeer {
 				}
 			}
 			// A peer that answered in the last 15 seconds is still online, so one
-			// failed poll does not read as an outage.
-			if !p.Online && !st.downSince.IsZero() {
+			// failed poll does not read as an outage. A failure only just begun is no
+			// outage either: a daemon that has just started has not yet connected to
+			// its relay, and its first attempts fail whatever state the colleague is in.
+			// Until the failures have lasted unreachableAfter, the peer is being checked.
+			if !p.Online && !st.downSince.IsZero() && time.Since(st.downSince) >= unreachableAfter {
 				p.Trying = roughDuration(time.Since(st.downSince))
 				p.Error = st.lastErr
 			}
