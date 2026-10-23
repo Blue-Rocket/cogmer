@@ -1,0 +1,116 @@
+{
+  "keys": {
+    "Master": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+    "Shared": "ed25519:VRVPQgZepaG-oFRjgmviaE65LfksEAAnqrquV8pVQgc",
+    "Machine": "ed25519:1AS8RFZa7buJkVDlsLOzK5RBvwy3iEwzEw2o28J90s8",
+    "Cloud": "ed25519:7TI0snbUztpX1ZutFPuvWnc8DzGMmZ3jpg1TxaWzTAU",
+    "Session": "ed25519:TmAIsBt05J442LETkr-szHtb_4bKIEjLsPeDYzph4t0"
+  },
+  "shared": {
+    "scheme": 1,
+    "user": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+    "version": 3,
+    "sharedKey": "ed25519:VRVPQgZepaG-oFRjgmviaE65LfksEAAnqrquV8pVQgc",
+    "signature": "uY1adP2WvaCsxTAkP3M5iNw3nZFSV7vxf7oH5L611XNmEYWi5Css2ciQ7vQiQR0s3MuRzkbE8ptAqULsUTtPDQ"
+  },
+  "machine": {
+    "scheme": 1,
+    "user": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+    "sharedVersion": 3,
+    "machine": "ed25519:1AS8RFZa7buJkVDlsLOzK5RBvwy3iEwzEw2o28J90s8",
+    "kind": "machine",
+    "name": "laptop Ünïcode",
+    "serial": 7,
+    "signature": "i3n6JejSsIjRZ_Tzk3f3j21JjMU2rJcyX79Ve1mtWOskwOzw0rX7XdlUuAmmJddK824AWP3n6nOXcao-O6dfDQ"
+  },
+  "cloud": {
+    "scheme": 1,
+    "user": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+    "sharedVersion": 3,
+    "machine": "ed25519:7TI0snbUztpX1ZutFPuvWnc8DzGMmZ3jpg1TxaWzTAU",
+    "kind": "cloud",
+    "name": "cloud",
+    "serial": 8,
+    "signature": "VFAZYBe2k1tOOTpjzlO_Cl5ygxijjcv0a3wYBlr06ypeZ8xb612h6A6hs2bDJjfm6MjzL-htZpZalle0xjBLCw"
+  },
+  "session": {
+    "scheme": 1,
+    "user": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+    "cloudKey": "ed25519:7TI0snbUztpX1ZutFPuvWnc8DzGMmZ3jpg1TxaWzTAU",
+    "session": "ed25519:TmAIsBt05J442LETkr-szHtb_4bKIEjLsPeDYzph4t0",
+    "expires": "2026-11-01T00:00:00Z",
+    "signature": "HYkUP700-XVS4MEC03i2wmPoiUtVJBTPZmSfmXjp_9pWT50l8TohFYetQb9FlCqhdV2vIRe8X6ooJdgsLBMtDA"
+  },
+  "removal": {
+    "scheme": 1,
+    "user": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+    "machine": "ed25519:1AS8RFZa7buJkVDlsLOzK5RBvwy3iEwzEw2o28J90s8",
+    "signerLevel": 2,
+    "signer": "ed25519:VRVPQgZepaG-oFRjgmviaE65LfksEAAnqrquV8pVQgc",
+    "signerVersion": 3,
+    "cutoffs": [
+      {
+        "room": "room-a",
+        "sequence": 5
+      },
+      {
+        "room": "room-b",
+        "sequence": 9
+      }
+    ],
+    "signature": "h_pXxzBtxCq9ylEDhfqqGi7Pscb_88Q8yFyb3P8Prro6U3jqqCft7UNbcuLZGBnbpNrMn-V7PZZST_skJM6_Aw"
+  },
+  "machineChain": {
+    "shared": {
+      "scheme": 1,
+      "user": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "version": 3,
+      "sharedKey": "ed25519:VRVPQgZepaG-oFRjgmviaE65LfksEAAnqrquV8pVQgc",
+      "signature": "uY1adP2WvaCsxTAkP3M5iNw3nZFSV7vxf7oH5L611XNmEYWi5Css2ciQ7vQiQR0s3MuRzkbE8ptAqULsUTtPDQ"
+    },
+    "machine": {
+      "scheme": 1,
+      "user": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "sharedVersion": 3,
+      "machine": "ed25519:1AS8RFZa7buJkVDlsLOzK5RBvwy3iEwzEw2o28J90s8",
+      "kind": "machine",
+      "name": "laptop Ünïcode",
+      "serial": 7,
+      "signature": "i3n6JejSsIjRZ_Tzk3f3j21JjMU2rJcyX79Ve1mtWOskwOzw0rX7XdlUuAmmJddK824AWP3n6nOXcao-O6dfDQ"
+    }
+  },
+  "cloudChain": {
+    "shared": {
+      "scheme": 1,
+      "user": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "version": 3,
+      "sharedKey": "ed25519:VRVPQgZepaG-oFRjgmviaE65LfksEAAnqrquV8pVQgc",
+      "signature": "uY1adP2WvaCsxTAkP3M5iNw3nZFSV7vxf7oH5L611XNmEYWi5Css2ciQ7vQiQR0s3MuRzkbE8ptAqULsUTtPDQ"
+    },
+    "machine": {
+      "scheme": 1,
+      "user": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "sharedVersion": 3,
+      "machine": "ed25519:7TI0snbUztpX1ZutFPuvWnc8DzGMmZ3jpg1TxaWzTAU",
+      "kind": "cloud",
+      "name": "cloud",
+      "serial": 8,
+      "signature": "VFAZYBe2k1tOOTpjzlO_Cl5ygxijjcv0a3wYBlr06ypeZ8xb612h6A6hs2bDJjfm6MjzL-htZpZalle0xjBLCw"
+    },
+    "session": {
+      "scheme": 1,
+      "user": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "cloudKey": "ed25519:7TI0snbUztpX1ZutFPuvWnc8DzGMmZ3jpg1TxaWzTAU",
+      "session": "ed25519:TmAIsBt05J442LETkr-szHtb_4bKIEjLsPeDYzph4t0",
+      "expires": "2026-11-01T00:00:00Z",
+      "signature": "HYkUP700-XVS4MEC03i2wmPoiUtVJBTPZmSfmXjp_9pWT50l8TohFYetQb9FlCqhdV2vIRe8X6ooJdgsLBMtDA"
+    }
+  },
+  "hashes": {
+    "cloud": "614bd0a55815565c98258c789c5382733ff600708d762488bf4d6c908a518a12",
+    "machine": "2d7be99d1cdc10584871bf5db494ccd6e50008211180f6134d0abd9ac708b567",
+    "removal": "28ae7a933d53ffb32f481403d4d9f28eea2c1db418f9d8e5cd07419f0a7c66c5",
+    "session": "5eba4a6aec0ff61d6863b727ee3c4d4353b4fa5bcb56d38f2f606db69b8aea3c",
+    "shared": "fe6ce075b743b8cb91e27a3401a8a5b2a519f88870b900c4e2a2dcd520dc870f"
+  }
+}
