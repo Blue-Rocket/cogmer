@@ -288,6 +288,30 @@ sending a new pairing string, how a cloud session's hooks load, and whether a co
 shares of the recovery phrase could recover a user who has lost it, which no decision has
 examined.
 
+**Building the user identity needs answers that no decision gives, and the build on the
+`user-identity` branch takes a choice for each.** `docs/work/user-identity-design.md`
+section 7 holds the reasoning, and each choice stands until the maintainer confirms or
+changes it:
+
+- D-224 (a conflict between identity records goes to the higher level) read literally keeps
+  a machine that removed itself, since its removal is at a lower level than its certificate,
+  which voids the self-removal that D-220 allows (a removal names the last event of a
+  machine that counts). The build treats a removal and the certificate it removes as not in conflict.
+- The phrase's word list and key derivation. The build uses 18 words from the PGP word list
+  that the pairing comparison uses, 16 bytes and two check bytes, and HKDF-SHA256. The
+  BIP-39 list would give 12 words and keep the phrase apart from the comparison's words.
+- The wire form of certificates and of an event a machine signs for its user. The build
+  signs length-prefixed fields as events are, carries JSON, and puts the user in an event's
+  peer identifier with the signing key beside it.
+- What a machine not certified under the current shared key may still do. The lean is to
+  keep its stored events and refuse its new connections and events.
+- Whether a removal signed by an older shared key counts. The build counts it, which lets a
+  thief with the old key mark the user's events for good.
+- Which of a user's machines hold the shared key. The build gives it to every machine added
+  from one that holds it, and never to a cloud key.
+- Whether an event's author must have been a guest of its room. The lean is to refuse an
+  author who never was one, which needs a record of past guests.
+
 **A user has no way to set up a cloud session's key, snapshot and repo, and three facts the setup
 depends on are unknown.** D-226 and D-227 need a cloud key, a first snapshot and a private repo
 added to the cloud environment. The setup would be one command that creates the repo with the
