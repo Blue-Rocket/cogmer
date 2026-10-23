@@ -373,6 +373,11 @@ func (s *UserState) List() []MachineCert {
 // the records would make the machine removed. A machine-level removal cannot be
 // such a removal, as it needs the certificate to be valid at all.
 //
+// Check is for a live act: a connection, a sync request or an admission proof.
+// An event of a removed machine still counts up to its cutoff, so an event is
+// judged by Counts after its chain verifies, and never refused by Check for a
+// removal (D-220, a removal names the last event of a machine that counts).
+//
 // A machine certified only under an older version is not refused here. What
 // such a machine may still do is undecided, so the caller sees it through
 // MachineState.Current and decides.
