@@ -7,10 +7,12 @@ that an interrupted session can resume from the pushed branch. The design is
 `docs/work/user-identity-design.md`, and the brief is `docs/work/user-identity-brief.md`.
 
 Merged: the design document, and the recovery phrase and master key in `userphrase.go`.
-A phrase prints and marshals as a redacted text, and no parse error quotes a word.
+A phrase prints and marshals as a redacted text, and no parse error quotes a word. The
+records and the chain are in `idrecords.go`, with frozen vectors in
+`testdata/identity_vectors.json`. A record under a scheme this build does not know hashes to
+zero, so `Resolve` uses a hash only after the record verifies.
 
-In progress: the records and the chain, in one agent. The precedence rule and the cutoff are built on the
-record types, so they start when the records are merged.
+In progress: the precedence rule and the cutoff in `idstate.go`, in one agent.
 
 Next: the second run, which starts only when the person who started the session says so.
 
