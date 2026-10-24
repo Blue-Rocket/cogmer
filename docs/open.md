@@ -302,16 +302,16 @@ read on 2026-10-24. The second run's slice 2a carries the certificate chain in t
 Either D-143 is rewritten to describe the signed request, or a challenge exchange is built, and
 the choice is the maintainer's.
 
-**A user has no way to set up a cloud session's key, snapshot and repo, and three facts the setup
+**A user has no way to set up a cloud session's key, snapshot and repo, and two facts the setup
 depends on are unknown.** D-226 and D-227 need a cloud key, a first snapshot and a private repo
 added to the cloud environment. The setup would be one command that creates the repo with the
 `gh` command when it is installed and signed in, makes and certifies the cloud key, writes and
 pushes the first snapshot, and prints the value to paste into the environment. The unknown facts
 are where a cloud session places a repo added to it and whether the repo is on disk when the
-session-start hook runs, whether a cloud environment hides the value of an environment variable
-from other people who can edit the environment, which matters only for an environment shared with others, since the maintainer creates theirs at a personal level (said on 2026-10-24), and whether a cloud session can open a connection
-through the relay to a peer port of a user's machine and finish a TLS handshake there, which the
-live source in D-226 needs and no run has shown. A cloud session's clone of this repo was shallow,
+session-start hook runs, and whether a cloud environment hides the value of an environment
+variable from other people who can edit the environment, which matters only for an environment
+shared with others, since the maintainer creates theirs at a personal level, said on 2026-10-24.
+A cloud session's clone of this repo was shallow,
 with 50 commits, on 2026-10-19, which limits the history check in D-226 to the commits a clone
 holds.
 
@@ -327,9 +327,11 @@ later run at the Full level reached a daemon on another machine through the rela
 WebSocket: both relay pings answered, in 817ms and 774ms, and path discovery found the route
 through relay region 1 in 132ms, with no change to that daemon (`e415f1d`). Without WebSocket
 mode the same pings got no answer in 10s, so the failure there is at the relay. The tunnel
-opened and dialed inside the session as a WebSocket, and timed out without it. No run has
-opened a TCP connection through the tunnel to another machine's peer port, or a TLS handshake
-on it.
+opened and dialed inside the session as a WebSocket, and timed out without it. A later run, on
+2026-10-24, opened a TCP connection through the tunnel to the maintainer's daemon in 113ms and
+completed a TLS handshake with it in 132ms, with the key its pairing string names, and the
+daemon refused the run's unrecorded client certificate (`1d2b505`). No run has synchronized a
+room between a cloud session and a paired machine.
 
 A cloud session with 0.10.4 reached the relay, observed on 2026-10-18. The user's claude.ai copy of
 the plugin stayed at 0.10.3 after 0.10.4 reached `main`, until the user forced a sync in Manage
