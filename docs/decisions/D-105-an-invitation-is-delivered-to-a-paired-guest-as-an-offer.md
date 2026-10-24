@@ -4,10 +4,12 @@
 
 **Decision.** The host's daemon delivers an invitation to a paired guest as an offer, a message
 telling the guest that they have been admitted to a room, over the connection pairing set up.
-The offer is addressed to the guest, a user, and is received by the guest's machine that the
-host's daemon reaches. A session on another of the guest's machines joins a room the user is a
-guest of by name, from the list of those rooms that the user's machines share (D-228, a user's colleagues, verifications, labels and rooms belong to the user and are copied between the user's machines). The host is given a
-string to send by hand only when the daemon cannot reach the guest.
+The offer is addressed to the guest, a user, and is sent to every machine of the guest that the
+host's daemon knows. A machine that receives it enters the room in the list of rooms the user's
+machines share, marked as offered (D-228, a user's colleagues, verifications, labels and rooms
+belong to the user and are copied between the user's machines), so a session on any of the
+guest's machines joins the room by name, including a machine the host never heard of. The host is
+given a string to send by hand only when the daemon reaches none of the guest's machines.
 
 **Support.**
 - Delivering an offer is not pushing an admission. The invitation on the room's guest list

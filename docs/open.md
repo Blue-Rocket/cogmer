@@ -293,8 +293,6 @@ slice of the second run, and none has a choice taken yet:
 - Whether one acknowledging machine of a colleague counts as the colleague for a removal or a
   new shared key (D-225, a machine sends each removal to every colleague until each
   acknowledges).
-- Which of a guest's machines an offer goes to, and whether an offered room enters the guest's
-  shared room list before they join (D-105, an invitation is delivered as an offer).
 - Whether a user's own turn from another machine that no session here holds is marked as not
   given to the assistant (D-204, the view says what the model holds).
 - Which turns a removal marks when the user names no cutoff, outside a theft (D-220).

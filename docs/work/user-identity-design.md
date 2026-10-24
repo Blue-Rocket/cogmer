@@ -449,7 +449,7 @@ slice that needs it. Each is put to the maintainer before that slice starts.
 3. Acknowledgement by a colleague (slice 4). One machine of the colleague acknowledging
    counts, since it copies the record to the colleague's other machines with the colleague's
    identity records.
-4. Offers (slice 3). An offer goes to every machine of the guest the inviting machine knows,
+4. Offers (slice 3), confirmed on 2026-10-24 and written into D-105. An offer goes to every machine of the guest the inviting machine knows,
    and an offered room enters the guest's shared room list as offered, so the guest can join
    from any machine.
 5. The user's own turn that no session here holds (slice 5). It is marked as not given to an
