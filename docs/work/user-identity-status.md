@@ -17,6 +17,12 @@ D-234 to D-239 among others. The design was revised the same day: its section 6 
 run's slices, now seven, and its section 8 proposes a choice for each detail the decisions
 leave open, for the maintainer to confirm before the slice that needs it.
 
+The second run started on 2026-10-24. Merged in it so far: slice 0, the foundation
+additions, which are `CheckEvent`, the signed `ListChange` record and `MergeListChanges`,
+`RoomIDFor`, and `ResolveGuests` in `guests.go`, which computes a room's list in rounds so
+that an expelled guest cannot admit an accomplice (D-235). Slice 1, storage, needs no detail
+left open and is next.
+
 Merged in the first run:
 
 - The design document.
