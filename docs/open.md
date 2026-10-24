@@ -298,8 +298,6 @@ changes it:
 - The wire form of certificates and of an event a machine signs for its user. The build
   signs length-prefixed fields as events are, carries JSON, and puts the user in an event's
   peer identifier with the signing key beside it.
-- What a machine not certified under the current shared key may still do. The lean is to
-  keep its stored events and refuse its new connections and events.
 - Whether an event's author must have been a guest of its room. The lean is to refuse an
   author who never was one, which needs a record of past guests. A guest list is now the
   user's, copied between the user's machines that joined the room (D-228, a user's lists are

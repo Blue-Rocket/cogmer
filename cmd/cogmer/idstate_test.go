@@ -693,3 +693,36 @@ func TestResolveDoesNotDependOnTheOrderOfRecords(t *testing.T) {
 		t.Fatal("Discarded is not sorted by kind")
 	}
 }
+
+func TestAMachineNotUnderTheCurrentKeyIsSuspendedUntilCertifiedAgain(t *testing.T) {
+	u := newStateUser("suspend")
+	known, unknown := stateKeyFrom("suspend/known"), stateKeyFrom("suspend/unknown")
+	rs := RecordSet{
+		Shared: []SharedKeyCert{u.share(1), u.share(2)},
+		Machines: []MachineCert{
+			u.certify(1, known, KindMachine, "laptop", 1), u.certify(2, known, KindMachine, "laptop", 1),
+			u.certify(1, unknown, KindMachine, "added by a thief", 2),
+		},
+	}
+	s := Resolve(u.id(), rs)
+	if !s.Counts(known.id, "room-a", 1) {
+		t.Fatal("a machine certified under the current key did not count")
+	}
+	if s.Counts(unknown.id, "room-a", 1) {
+		t.Fatal("a machine left under the old key counted, so a machine a thief added would stay in the transcript")
+	}
+	oldChain := Chain{Shared: u.share(1), Machine: u.certify(1, unknown, KindMachine, "added by a thief", 2)}
+	if _, err := s.Check(oldChain, unknown.id); err == nil || !strings.Contains(err.Error(), "suspended") {
+		t.Fatalf("a suspended machine's chain was not refused as suspended: %v", err)
+	}
+	// The known machine presenting its old chain is still current here.
+	if _, err := s.Check(Chain{Shared: u.share(1), Machine: u.certify(1, known, KindMachine, "laptop", 1)}, known.id); err != nil {
+		t.Fatalf("a machine certified again under the current key was refused for presenting its old chain: %v", err)
+	}
+
+	rs.Machines = append(rs.Machines, u.certify(2, unknown, KindMachine, "mine after all", 2))
+	s = Resolve(u.id(), rs)
+	if !s.Counts(unknown.id, "room-a", 1) {
+		t.Fatal("certifying a suspended machine under the current key did not restore it")
+	}
+}

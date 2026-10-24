@@ -8,6 +8,6 @@
 - *Only the adding machine notifying the others.* If it is lost before it reaches them, they never learn of the new machine, and two machines added at once never learn of each other.
 - *Colleagues holding the list.* A colleague holds only the machines that have sent it an event, so a machine that has not yet spoken is on no colleague's list.
 
-**Limits.** A machine's list is out of date until it next hears from another of the user's machines, and a user who picks a machine to remove sees only the machines their own machine knows. A user who is unsure which machine was taken has the master certify a new shared key (D-220, a removal names the last event of a machine that counts), and only the machines that machine knows are certified again, so an unknown machine stops counting.
+**Limits.** A machine's list is out of date until it next hears from another of the user's machines, and a user who picks a machine to remove sees only the machines their own machine knows. A user who is unsure which machine was taken has the master certify a new shared key (D-220, a removal names the last event of a machine that counts), and only the machines that machine knows are certified again, so an unknown machine is suspended until it is certified again (D-234, a machine not certified under the current shared key is suspended until it is certified again).
 
 **Revisit when** a machine is found missing from another machine's list after the two have been in contact.

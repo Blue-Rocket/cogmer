@@ -12,9 +12,9 @@ says so.
 Before the second run, the maintainer decided on 2026-10-23 that the user, and not the
 machine, is the primary entity, and answered ten questions it raised, recorded in
 `docs/work/user-primary-inventory.md`. The decisions and the specification were rewritten to
-match on 2026-10-24. The build questions in `docs/open.md` come next, of which three are
-decided: a self-removal, removals signed by an older shared key, and which machines hold
-the shared key, then a revision of the design, which gains a slice for a user's own
+match on 2026-10-24. The build questions in `docs/open.md` come next, of which four are
+decided: a self-removal, removals signed by an older shared key, which machines hold the
+shared key, and the suspension of a machine left under an older key, then a revision of the design, which gains a slice for a user's own
 machines, and only then the second run.
 
 Merged in the first run:

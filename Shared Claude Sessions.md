@@ -728,6 +728,17 @@ never given to an assistant, so that a thief's turns never reach a model as the 
 The last turn a removal lets count can only move earlier, so that whoever holds a
 removed machine, or later obtains the phrase, cannot make its marked turns count.
 
+A user whose machine was stolen renews, with the recovery phrase in the daemon's page,
+the vouching that lets their machines speak as them. Every machine the user still has is
+vouched for again, and any machine the user does not recognize, such as one a thief
+added, stops speaking as the user, so that a theft ends without the user having to find
+every machine the thief made.
+
+The turns of a machine that is no longer vouched for appear nowhere: not in the room
+view, not in an export, and never to an assistant, so that a machine the user does not
+recognize cannot pollute the conversation. If the machine was the user's after all,
+adding it again restores its turns.
+
 A user who has no machine left recovers by typing the recovery phrase into the daemon's
 page on a new machine. Colleagues recognize the recovered user with no new comparison,
 so that losing every machine does not cost a user their colleagues.

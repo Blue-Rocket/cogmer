@@ -144,9 +144,9 @@ state every receiver holding the same records computes, with no clock and no ser
 4. A machine with at least one valid removal is removed. In each room its cutoff is the
    lowest any valid removal gives it, counting 0 for a removal that does not name the room
    (D-220, a cutoff only moves earlier).
-5. A machine whose certificate is under a version below the current one is not current. It
-   is listed with its certificate, and the slices decide what it may still do (question 4 in
-   section 7).
+5. A machine whose certificate is under a version below the current one is not current, and
+   is suspended: none of its events count, and `Check` refuses its chain, until it is certified
+   under the current version (D-234).
 
 Every record that fails a check or loses a conflict is returned with the reason, so that
 the room page in the browser can show it and a test can name it.
@@ -345,10 +345,8 @@ Every slice that serves a room copies the two-room tests in `roomscope_test.go`.
    which a user might confuse with the phrase. The alternative is the BIP-39 English list of
    2,048 words, which would make the phrase 12 words and has to be added to the repository.
 3. Records are length-prefixed and signed as events are, and carried as JSON (section 3).
-4. What a machine that is not certified under the current shared version may still do.
-   Its stored events keep counting, since nothing names a cutoff for them. The design leans
-   to refusing its new connections, sync requests and events, which is what D-222's Limits
-   means by an unknown machine that stops counting.
+4. Decided on 2026-10-24 and written into D-234: a machine not certified under the current
+   shared key is suspended, and its turns appear nowhere until it is certified again.
 5. Decided on 2026-10-24 and written into D-220: a removal signed by an older shared key does
    not count, and certifying a new shared key signs the valid removals again under it.
 6. Decided on 2026-10-24 and written into D-219: every machine the user adds holds the shared

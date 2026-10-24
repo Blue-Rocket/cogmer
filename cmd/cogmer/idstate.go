@@ -342,6 +342,13 @@ func (s *UserState) Counts(machine, room string, sequence int64) bool {
 	if !ok {
 		return false
 	}
+	// A machine not certified under the current shared key is suspended: none
+	// of its events count until the user certifies it again, which only the
+	// user can do once a new key exists, so a machine a thief added with the old
+	// key stays out of every transcript for good.
+	if !m.Current {
+		return false
+	}
 	if !m.Removed {
 		return true
 	}
@@ -385,9 +392,10 @@ func (s *UserState) List() []MachineCert {
 // judged by Counts after its chain verifies, and never refused by Check for a
 // removal (D-220, a removal names the last event of a machine that counts).
 //
-// A machine certified only under an older version is not refused here. What
-// such a machine may still do is undecided, so the caller sees it through
-// MachineState.Current and decides.
+// A machine certified only under an older version than this state's current
+// one is suspended and refused, whatever chain it presents, until the user
+// certifies it under the current key. A chain under a version this state does
+// not hold yet is accepted, since it is newer than what this state knows.
 //
 // Check reads no clock: a live act also calls LiveAt on the link.
 func (s *UserState) Check(c Chain, signer string) (ChainLink, error) {
@@ -398,6 +406,12 @@ func (s *UserState) Check(c Chain, signer string) (ChainLink, error) {
 	if key, ok := s.SharedKeys[c.Shared.Version]; ok && key != c.Shared.SharedKey {
 		return ChainLink{}, fmt.Errorf("the chain's shared-key certificate for version %d lost to another under D-224 (a conflict goes to the higher level, then a removal, then the lowest hash)",
 			c.Shared.Version)
+	}
+	if link.SharedVersion < s.Current {
+		if m, ok := s.Machines[link.Machine]; !ok || !m.Current {
+			return ChainLink{}, fmt.Errorf("machine %.24s is not certified under the current shared key, version %d, so it is suspended",
+				link.Machine, s.Current)
+		}
 	}
 	// Every removed machine has a removal here, so this also covers
 	// MachineState.Removed.
