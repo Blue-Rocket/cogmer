@@ -152,7 +152,7 @@ between the user's machines (D-222).
 |---|---|
 | user | the user whose list this is |
 | entry | the one field the change is about, as the value row says |
-| value | the field as the change leaves it; an entry is one field, `colleague:<id>:label`, `:verified` or `:forgotten`, or `room:<id>:name`, `:offer` or `:machine:<key>` (D-228) |
+| value | the field as the change leaves it; an entry is one field, `colleague:<id>:label`, `:verified`, `:forgotten` or `:endpoints`, or `room:<id>:name`, `:offer` or `:machine:<key>` (D-228) |
 | counter | one more than the highest counter the machine has seen for that entry |
 | signer, chain, signature | as for any identity record (D-238) |
 
