@@ -1,6 +1,6 @@
 # D-221 — An event whose identity version the receiver lacks is withheld from the assistant until fetched
 
-**Date:** 2026-10-18 · **Status:** not built · **Areas:** identity, sync, capture
+**Date:** 2026-10-18 · **Status:** active · **Areas:** identity, sync, capture
 
 **Decision.** Each event carries, in its signed metadata, the version number of the user's shared machine-signing key that its sender holds (D-219, a user is a master key that certifies machines through a shared key) and the removals the sender has seen. A receiver that lacks that version or those removals fetches the version and the removals from any machine, because the master key or the shared key signed them and the receiver can check the signatures. Until the receiver has them, it shows the event in the room view and withholds it from the assistant, under the tag and notice of a turn not yet given to the assistant. An assistant cannot unread a forged turn, so the hold is on delivery to the assistant.
 

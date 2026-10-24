@@ -44,8 +44,12 @@ lost-or-stolen question (D-220), certifying a new shared key with the removals a
 the user confirms (D-220, D-234), suspended machines' turns hidden from the view, export and
 injection, marked turns past a cutoff, machine names and the user's own turns in the view and
 the injected block (D-232, D-233), reachability per colleague and per own machine (D-194), and
-the notice of an expulsion (D-241). Slice 6, cloud sessions, is next, and the open item for
-setting up a cloud session holds the three facts it depends on.
+the notice of an expulsion (D-241). A follow-up stops a machine serving a suspended
+machine's events or images to others (D-234). D-219 to D-225 and D-228 to D-241 are active.
+Slice 6, cloud sessions, is next: D-216, D-226 and D-227, which are not built. Of the three
+facts it depends on, a cloud session's TLS handshake with a user's daemon through the relay is
+shown (`1d2b505`), the maintainer's cloud environment is personal, and where a repo added to a
+cloud session is placed, and whether it is there when the session-start hook runs, is unknown.
 
 What slice 3 leaves open:
 

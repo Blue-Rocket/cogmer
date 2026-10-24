@@ -1,6 +1,6 @@
 # D-223 — The recovery phrase is typed only into the daemon's browser page
 
-**Date:** 2026-10-18 · **Status:** not built · **Areas:** identity, view, trust
+**Date:** 2026-10-18 · **Status:** active · **Areas:** identity, view, trust
 
 **Decision.** The daemon's page in the browser is the only place that takes the recovery phrase, and no command, argument, prompt or terminal question does. Anything typed into an assistant goes into the model's context and to the service that runs it, so a phrase typed there is a copy held by others, and a command's arguments pass through the assistant too. A cloud session never asks for the phrase, since its container is not a place the user controls.
 

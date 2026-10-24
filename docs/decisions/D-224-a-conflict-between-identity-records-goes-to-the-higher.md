@@ -1,6 +1,6 @@
 # D-224 — A conflict between identity records goes to the higher level, then to a removal, then to the lowest hash
 
-**Date:** 2026-10-19 · **Status:** not built · **Areas:** identity, sync
+**Date:** 2026-10-19 · **Status:** active · **Areas:** identity, sync
 
 **Decision.** When two signed identity records conflict, the one from the higher level wins, in the order master, shared key, machine (D-219, a user is a master key that certifies machines through a shared key). At one level a removal beats an addition, and then the lowest hash decides. Every receiver holding the same records therefore picks the same one, with no clock and no server. Among the certificates of one machine, which only the user's own machines sign, the one under the highest shared-key version wins, then the one with the highest serial, then the lowest hash, so that a machine certified again with a new name and serial takes that name. A removal and the certificate of the machine it removes do not conflict, since the removal presupposes that certificate, so every valid removal takes effect, a machine's removal of itself included (D-220, a removal names the last event of a machine that counts, room by room).
 

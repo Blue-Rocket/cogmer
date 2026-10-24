@@ -1,6 +1,6 @@
 # D-219 — A user is a master key that certifies machines through a shared key
 
-**Date:** 2026-10-18 · **Status:** not built · **Areas:** identity, pairing, admission
+**Date:** 2026-10-18 · **Status:** active · **Areas:** identity, pairing, admission
 
 **Decision.** A user is a master key derived from one recovery phrase that no machine stores, so that a colleague verifies the user once and any machine the user adds later speaks for the user. The master key certifies a shared machine-signing key, which carries a version number, and the shared key certifies each machine's own key, with the name the user gave the machine and a serial number. A machine signs its events with its own key and its own sequence, and sends the two certificates with them, so a receiver checks three links back to the master key it recorded. Every machine the user adds holds the shared key, and a cloud key never does (D-216, a cloud session signs with a key of its own that the user's shared key vouches for), so the user can add or remove a machine from any of their machines.
 

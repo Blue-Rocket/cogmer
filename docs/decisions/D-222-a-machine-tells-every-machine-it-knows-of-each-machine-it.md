@@ -1,6 +1,6 @@
 # D-222 — A machine tells every machine it knows of each machine it adds, until each has acknowledged
 
-**Date:** 2026-10-18 · **Status:** not built · **Areas:** identity, sync
+**Date:** 2026-10-18 · **Status:** active · **Areas:** identity, sync
 
 **Decision.** Any two of a user's machines exchange identity records, their own user's and those of the users they know, the user's lists (D-228, a user's colleagues, verifications, labels and rooms belong to the user and are copied between the user's machines) and the events of each room that both have joined. A machine that adds another gives the new machine its list of the user's machines, and the new machine introduces itself to every machine on that list. Each machine sends its whole list to every machine it knows and merges the lists it receives, resending until every machine on its own list has acknowledged. A list is the machine records that have not been removed, and the records only accumulate, so any order of arrival gives the same list, and machines added at the same time still learn of one another.
 

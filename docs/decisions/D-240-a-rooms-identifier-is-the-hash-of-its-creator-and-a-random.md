@@ -1,6 +1,6 @@
 # D-240 — A room's identifier is the hash of its creator and a random value, so only the founding self-invitation admits its creator
 
-**Date:** 2026-10-24 · **Status:** not built · **Areas:** rooms, admission, identity
+**Date:** 2026-10-24 · **Status:** active · **Areas:** rooms, admission, identity
 
 **Decision.** A room's identifier is the SHA-256 of its creator's identifier and a random value, and the room's first event is the creator's invitation of themselves, which carries that value, so the creator is on the room's guest list by the rule every guest is (D-235, a room's one guest list, changed by any guest through events in the room, decides whose events count). A user's invitation of themselves counts only when hashing that user's identifier with the value it carries gives the room's identifier, which only the creator can do, so nobody admits themselves to a room that exists. A user's invitation of themselves lifts no revocation, so a creator who is expelled is let back in only by another guest's invitation, and a self-invitation works once, when the room is founded. A room made before the user identity existed is not carried into it, and its users create it again.
 

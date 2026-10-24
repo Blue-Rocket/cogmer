@@ -1,6 +1,6 @@
 # D-237 — The recovery phrase is eighteen words of the PGP word list
 
-**Date:** 2026-10-24 · **Status:** not built · **Areas:** identity
+**Date:** 2026-10-24 · **Status:** active · **Areas:** identity
 
 **Decision.** The recovery phrase is 18 words of the PGP word list (D-164, the two words come from the PGP biometric word list, alternating by position): sixteen carry 16 random bytes, 128 bits, and two carry the first two bytes of their SHA-256 as a check, with even and odd positions taken from the list's two halves. The two halves alternate, so a swapped or missing word makes a phrase that does not parse, and the check misses a wrong word that falls in the right half once in 65,536. The master key is derived from the 16 bytes and not from the words (D-219, a user is a master key that certifies machines through a shared key), so the list decides only how the phrase is written down and typed.
 

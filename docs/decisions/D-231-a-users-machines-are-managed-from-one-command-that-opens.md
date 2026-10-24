@@ -1,6 +1,6 @@
 # D-231 — A user's machines are managed from one command that opens the view
 
-**Date:** 2026-10-24 · **Status:** not built · **Areas:** commands, view, identity
+**Date:** 2026-10-24 · **Status:** active · **Areas:** commands, view, identity
 
 **Decision.** `/cogmer:self-machines` opens the daemon's page, where the user adds, removes and renames machines and recovers, renaming a machine certifies it again under its key with the new name, and `/cogmer:self-status` also lists the user's machines and whether each can be reached from this machine. Recovery takes the phrase only in the page (D-223, the recovery phrase is typed only into the daemon's browser page), and adding a machine shows its words there (D-229, a machine is added from another of the user's machines, with the two-word check), so every act on the user's machines happens where a person sees it without the model (D-086, the terminal is not a user experience, and the view is the surface).
 

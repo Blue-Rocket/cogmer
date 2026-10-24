@@ -260,29 +260,14 @@ could start nothing there, since the Cowork route is the bridge on the user's ma
 A user in a Claude Code cloud session, such as one started from the iPhone app, shares a
 conversation with colleagues without a daemon on their own computer being reachable.
 
-**A user's machines are separate identities to colleagues, and a cloud session has no identity of
-its own to sign with.** D-219 (a user is a master key that certifies machines through a shared
-key) decides the identity that fixes both, with D-220 (a removal names the last event of a machine
-that counts), D-221 (an event whose identity version the receiver lacks is withheld from the
-assistant until fetched), D-222 (a machine tells every machine it knows of each machine it adds),
-D-223 (the recovery phrase is typed only into the daemon's browser page), D-224 (a conflict
-between identity records goes to the higher level, then to a removal, then to the lowest hash),
-D-225 (a machine sends each removal and new shared key to every colleague it knows until each
-acknowledges), D-226 (a cloud session takes the highest valid snapshot of its user's colleagues
-and rooms from any source), D-227 (the daemon pushes a new snapshot to the user's repo when the
-user's list changes, once the user has opted in) and D-216 (a cloud session signs with a key of
-its own that the user's shared key vouches for). D-228 to D-233 add that a user's lists are
-copied between the user's machines, that a machine is added from another of the user's machines,
-that the user identity is made in the daemon's page, that one command manages the user's
-machines, that a user's own turn from another session is marked as theirs, and that every turn
-carries its machine's name. Nothing of it is built. The specification (§6, identity) and the
-decisions that make the user the peer state the design, and the code gives each machine an
-identity that colleagues verify, so they differ from the code until the build;
-`docs/work/user-primary-inventory.md` lists those decisions. D-216 and D-219 to D-233 become active
-when their behavior is built.
+**A cloud session has no identity of its own to sign with.** D-216 (a cloud session signs with
+a key of its own that the user's shared key vouches for), D-226 (a cloud session takes the
+highest valid snapshot of its user's colleagues and rooms from any source) and D-227 (the daemon
+pushes a new snapshot to the user's repo when the user's list changes, once the user has opted
+in) decide it, and none of the three is built. They build on D-219 (a user is a master key that
+certifies machines through a shared key).
 
-Not decided: what the room view shows for a user to choose a cutoff across rooms, how a user who
-has lost every machine reaches colleagues, since the user could reach each colleague only by
+Not decided: how a user who has lost every machine reaches colleagues, since the user could reach each colleague only by
 sending a new pairing string, how a cloud session's hooks load, and whether a colleague holding
 shares of the recovery phrase could recover a user who has lost it, which no decision has
 examined.
