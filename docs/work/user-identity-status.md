@@ -25,14 +25,29 @@ that an expelled guest cannot admit an accomplice (D-235); and slice 1, storage,
 the guest-list cache, `signer` on `events`, `shared.key`, and the user and chain in
 `identity.json`. Slice 2a, the transport and signing half of trust, is merged: event scheme v4, sync
 requests under v5 with the chain, the chain in the TLS certificate (OID `2.25.2060991052`),
-pairing over users' identifiers, and addresses per machine. Slice 2b, the guest list as room
-events, is next.
+pairing over users' identifiers, and addresses per machine.
+
+Slice 2b, the guest list as room events, is merged: founding, inviting and revoking append
+guest events, a founded room's list is computed by `ResolveGuests` and cached, an event is
+stored only if its author counts on the list, a room's sync targets are the admitted users'
+machines that joined it (`room_machines`), and forgetting leaves every room's list alone. A
+room without a founding event behaves as before. Slice 3, a user's own machines, and slice 4,
+propagation, are next, and can run side by side.
+
+What the later slices need to know from slice 2b:
+
+- A cut-off machine's later events leave a gap in its sequence, and sync counts only an
+  unbroken run, so they are offered again on every poll until the revocation is lifted.
+  Nothing is lost, but slice 4 should stop offering a sequence a receiver has refused.
+- The view shows a revoked guest's turns stored before the revocation arrived, and an
+  assistant is never given those past the cutoff; slice 5 marks them in the view.
+- The command-line tools reach founding, inviting and revoking through a local route,
+  `/room/guests`.
 
 What the later slices need to know from slice 2a:
 
-- A room's sync targets are every machine of each guest, which the brief for slice 2a got
-  wrong: D-103 makes them the machines from which a session has joined the room. Slice 2b
-  fixes it, since it records which machines joined a room.
+- Slice 2a made a room's sync targets every machine of each guest, which its brief got
+  wrong; slice 2b made them the machines from which a session has joined the room (D-103).
 - The events table's uniqueness is on the signer and sequence, migrated by
   `rekeyEventsOnSigner`, since two machines of one user both write sequence 1.
 - `Sign` stays v3; `SignAs` and `Store.AppendAs` sign v4 when the machine has a user identity.

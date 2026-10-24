@@ -409,7 +409,9 @@ dependencies, and at most three slices run at once.
    with a cutoff and certifying a new shared key with the user confirming each removal to
    carry (D-220); suspension (D-234); recovery from the phrase (D-223); the user's own turns
    marked as theirs (D-232); machine names (D-233); "mine" by user (D-198); reachability
-   per colleague and per own machine (D-194). A room's list can show an invitation that
+   per colleague and per own machine (D-194); a refusal that carries the revocations that
+   expelled the user, and the notice of removal in the page, the room status and the next
+   prompt (D-241). A room's list can show an invitation that
    counted for a user who is not on the list, when a record never settled (D-235), and the
    view shows it without implying that user is a guest. Tests: the phrase reaches no command, argument
    or log; a suspended machine's turn appears in no view, export or hook output; an event

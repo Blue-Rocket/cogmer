@@ -1200,6 +1200,11 @@ Revoking withdraws a colleague's admission to one room, for every guest, and lea
 colleague known to every user who knows them, so that taking somebody out of one room
 costs nobody a pairing.
 
+A user removed from a room is told so, by whom and from which of their turns on, in the
+room's page, in the room status and in each of their sessions in the room, so that a room
+they were taken out of never looks like a room that went quiet. The room up to their last
+counting turn stays readable on their machines.
+
 Forgetting a colleague is the forgetting user's act alone. It discards the colleague on
 every one of that user's machines, and the colleague's turns stop reaching that user,
 because a colleague the user does not know is unverified to them. It changes no room's

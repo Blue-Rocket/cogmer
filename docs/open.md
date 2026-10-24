@@ -293,7 +293,6 @@ slice of the second run, and none has a choice taken yet:
 - Adding a machine or pairing on a machine with no browser, which the second run leaves out,
   since every machine a user adds has had a browser and a cloud session needs no phrase
   (D-223, the recovery phrase is typed only into the daemon's browser page).
-- Whether an expelled user is told, and what their own view of the room shows (D-235).
 - Whether an expelled user's machines keep holding and serving the room's history up to the
   cutoff, which D-071 (leaving is a pause) leaves open for a room a machine's sessions have
   left.
