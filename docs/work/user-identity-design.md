@@ -446,7 +446,8 @@ slice that needs it. Each is put to the maintainer before that slice starts.
 2. Naming a machine and the display name (slice 3). The page asks for a machine's name when
    the machine is added, with no default, and asks for the display name with an empty field,
    since a guessed name is never presented as a choice.
-3. Acknowledgement by a colleague (slice 4). One machine of the colleague acknowledging
+3. Acknowledgement by a colleague (slice 4), confirmed on 2026-10-24 and written into D-225 and
+   D-222. One machine of the colleague acknowledging
    counts, since it copies the record to the colleague's other machines with the colleague's
    identity records.
 4. Offers (slice 3), confirmed on 2026-10-24 and written into D-105. An offer goes to every machine of the guest the inviting machine knows,

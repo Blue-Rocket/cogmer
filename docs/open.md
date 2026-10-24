@@ -290,9 +290,6 @@ examined.
 **The decisions that make the user the peer leave details undecided.** Each is needed by a
 slice of the second run, and none has a choice taken yet:
 
-- Whether one acknowledging machine of a colleague counts as the colleague for a removal or a
-  new shared key (D-225, a machine sends each removal to every colleague until each
-  acknowledges).
 - Whether a user's own turn from another machine that no session here holds is marked as not
   given to the assistant (D-204, the view says what the model holds).
 - Which turns a removal marks when the user names no cutoff, outside a theft (D-220).
