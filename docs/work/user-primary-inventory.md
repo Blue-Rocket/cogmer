@@ -97,13 +97,16 @@ Answered by the maintainer:
 - R5, on 2026-10-24: every turn carries the name of the machine it came from, as a field of
   its own marked as asserted by its user, in the view and in injected context, and never
   joined to a name.
+- R0, on 2026-10-24: a peer is a user as cogmer knows them, identified by the user's master
+  key, and a machine is one of a peer's devices. Sentences that mean a device say "machine",
+  and the `peer-` commands keep their names and act on users.
+- R9, on 2026-10-24: one command, `/cogmer:self-machines`, opens the daemon's page, where the
+  user adds, removes and renames machines and recovers, and `/cogmer:self-status` also lists
+  the user's machines and whether each can be reached.
 
 Open:
 
-- R0. Whether "peer" comes to mean a user as cogmer knows them, with "machine" for a device,
-  or "peer" stays a machine and "colleague" and "user" carry the person.
 - R3. How the view and the room status show a colleague with two machines when one of them
   cannot be reached.
 - R7. Whether a room's name is unique among one machine's rooms or one user's.
 - R8. Which keys the two pairing words are derived from.
-- R9. Which command prefix holds the commands for a user's own machines.
