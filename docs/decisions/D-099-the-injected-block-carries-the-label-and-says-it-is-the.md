@@ -7,7 +7,7 @@ beside `speaker` and `peerName`, and omits the field when there is no label. The
 the label is the name the user calls that person by and is preferred over both. On this
 user's own turn from another session the label is "you", and the block carries a field this
 machine sets saying that the turn is the user's own (D-232, a user's own turn from another
-machine is injected as a report marked as the user's).
+session is injected as a report marked as the user's).
 
 **Support.**
 - The view says one name and the model would say another, `Ec2-user` or a word pair, in the

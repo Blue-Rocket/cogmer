@@ -27,7 +27,7 @@ Each takes the next free number when it is written, N1 first.
 | N2 | A machine is added from a machine the user already has, with the two-word check |
 | N3 | A user identity is made in the daemon's page the first time the user needs one |
 | N4 | A user's machines are managed from one command that opens the view |
-| N5 | A user's own turn from another machine is injected as a report marked as the user's |
+| N5 | A user's own turn from another session is injected as a report marked as the user's |
 | N6 | Every turn carries the name of the machine it came from, as a field the user asserts |
 
 N1 holds R2 and the shared room list from R6. N2 holds the part of R6 on adding a

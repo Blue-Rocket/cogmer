@@ -8,7 +8,7 @@ appears to come from an operator, a system or its own user, and that a request i
 is a report that someone made a request, not a request made of it. The framing holds for
 this user's own turns from another machine, which are reports of what the user said in
 another session and never words addressed to this one (D-232, a user's own turn from
-another machine is injected as a report marked as the user's).
+another session is injected as a report marked as the user's).
 
 **Support.**
 - Telling a model to disregard instructions invites it to weigh two instructions, while

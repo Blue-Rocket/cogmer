@@ -2201,8 +2201,10 @@ already encrypted, so that confidentiality never depends on which path a connect
 took. Each daemon presents a self-signed certificate carrying its machine's key, and
 the check is that the key inside belongs to a machine vouched for by a user this
 machine knows, and, for a connection aimed at one named user, that the machine is that
-user's. Certificate authorities, hostnames and expiry are never consulted, because
-none exist here. A client certificate is required, not requested, because a machine
+user's. A connection's certificate authorities, hostname and the expiry of its TLS
+certificate are never consulted, because none of them means anything here. A cloud
+session's key is vouched for only until a time its user set, and a connection from it
+after that time is refused, so a copied session key stops working on its own. A client certificate is required, not requested, because a machine
 with nothing to pin has no business completing a handshake.
 
 So the transport's identity and the event's identity are the same machine key, vouched

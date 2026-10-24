@@ -6,7 +6,7 @@
 whether the sessions run on one machine or on several. A turn does carry the name of the
 machine it came from (D-233, every turn carries the name of the machine it came from, as a
 field the user asserts), and this user's own turn from another machine is marked as the
-user's (D-232, a user's own turn from another machine is injected as a report marked as the
+user's (D-232, a user's own turn from another session is injected as a report marked as the
 user's), so what remains unmarked is which of the sessions on one machine wrote a turn.
 
 **Support.**

@@ -19,7 +19,7 @@ peer wrote.
   never joined to a name. D-233 (every turn carries the name of the machine it came from, as a
   field the user asserts).
 - Whether a turn is this user's own is set by the receiving machine and never by the turn's
-  text. D-232 (a user's own turn from another machine is injected as a report marked as the
+  text. D-232 (a user's own turn from another session is injected as a report marked as the
   user's).
 - It applies one level further in what D-040 (the injected block is fenced with an
   unforgeable value) and D-081 (untrusted turns in the injected block are JSON) do, which is
