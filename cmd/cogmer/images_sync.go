@@ -90,7 +90,9 @@ func (d *Daemon) handleBlob(w http.ResponseWriter, r *http.Request) {
 	if _, found, err := store.ImageRow(req.SHA256); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	} else if !found {
+	} else if !found || d.imageOnlyHidden(store, room.RoomID, req.SHA256) {
+		// An image only a suspended machine's turns name is served no more than they are
+		// (D-234).
 		http.NotFound(w, r)
 		return
 	}

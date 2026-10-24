@@ -128,6 +128,7 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	evs = d.onlyServed(room.RoomID, evs)
 	out := make([]wireEvent, 0, len(evs))
 	for _, e := range evs {
 		out = append(out, toWire(e))

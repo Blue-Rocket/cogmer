@@ -791,6 +791,124 @@ func TestARevokedGuestsTurnPastTheCutoffIsMarkedAndNeverGiven(t *testing.T) {
 	}
 }
 
+// served is the texts of the events a sync request by id for a room is answered with.
+func served(t *testing.T, a *machine, id *Identity, roomID string) string {
+	t.Helper()
+	a.use(t)
+	w := syncAs(t, a.d, id, roomID)
+	if w.Code != http.StatusOK {
+		t.Fatalf("sync for %s: %d %s", roomID, w.Code, w.Body.String())
+	}
+	var out syncResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	var texts []string
+	for _, e := range out.Events {
+		texts = append(texts, e.Content)
+	}
+	return strings.Join(texts, "|")
+}
+
+// blobFor asks a for an image of a room, signed by id as a machine of its user.
+func blobFor(t *testing.T, a *machine, id *Identity, roomID, sha string) int {
+	t.Helper()
+	c, err := signRequestAs(id, roomID, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := json.Marshal(blobRequest{Protocol: wireVersion, RoomID: roomID, SHA256: sha, PeerID: c.PeerID,
+		Timestamp: c.Timestamp, Nonce: c.Nonce, Signature: c.Signature, Signer: c.Signer, Chain: c.Chain})
+	w := httptest.NewRecorder()
+	a.d.PeerRoutes().ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/blob", bytes.NewReader(body)))
+	return w.Code
+}
+
+// A machine serves none of a suspended machine's events, nor an image only they name,
+// to a third machine that asks, in either of two rooms, and serves them again once the
+// machine is certified again (D-234).
+func TestASuspendedMachinesEventsAndImagesAreServedToNobodyUntilItIsCertifiedAgain(t *testing.T) {
+	a, b := twoMachines(t)
+	first := sharedWith(t, a, b, "LAPTOP FIRST")
+	second := foundAndSay(t, a, "LAPTOP SECOND")
+	a.d.exchangeSelfLists()
+	joinByName(t, b, second.RoomName, "b-second")
+	pullOn(t, b, a.addr)
+	keepAddresses(t, a, b)
+	img := pngBytes(t, 23)
+	sha := hashOf(img)
+	b.use(t)
+	bstore, _ := b.d.storeFor(first.RoomID)
+	if err := bstore.SaveImage(sha, "image/png", img); err != nil {
+		t.Fatal(err)
+	}
+	b.d.mu.Lock()
+	_, err := b.d.appendLocal(bstore, first, "b-session", EventUserPrompt, "DESK FIRST [Image #1]",
+		map[string]any{"images": []imageRef{{N: 1, SHA256: sha, Type: "image/png", Size: int64(len(img))}}})
+	b.d.mu.Unlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	say1(t, b, second, "DESK SECOND")
+	pullOn(t, a, b.addr)
+	astore, _ := a.d.storeFor(first.RoomID)
+	if err := astore.SaveImage(sha, "image/png", img); err != nil {
+		t.Fatal(err)
+	}
+
+	ben := newTestUser(t)
+	third := ben.machine(t, "desktop")
+	a.use(t)
+	if err := a.d.members.Allow(ben.id, "ben"); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.d.members.MarkVerified(ben.id); err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range []Room{first, second} {
+		if err := a.d.InviteUser(r.RoomID, ben.id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := served(t, a, third, first.RoomID); !strings.Contains(got, "DESK FIRST") || blobFor(t, a, third, first.RoomID, sha) != http.StatusOK {
+		t.Fatalf("before the new key the desk's turn and image are not served: %s", got)
+	}
+
+	var nk newKeyResult
+	a.local(t, "/machines/newkey", newKeyRequest{Phrase: strings.Join(fixedPhrase().Words(), " ")}, &nk)
+	if nk.Status != "certified" || nk.Suspended != 1 {
+		t.Fatalf("certifying: %+v", nk)
+	}
+	for _, c := range []struct {
+		room        Room
+		have, avoid string
+	}{{first, "LAPTOP FIRST", "DESK FIRST"}, {second, "LAPTOP SECOND", "DESK SECOND"}} {
+		got := served(t, a, third, c.room.RoomID)
+		if !strings.Contains(got, c.have) || strings.Contains(got, c.avoid) || strings.Contains(got, "DESK") {
+			t.Errorf("while the desk is suspended %s is served as %s", c.room.RoomName, got)
+		}
+	}
+	if code := blobFor(t, a, third, first.RoomID, sha); code != http.StatusNotFound {
+		t.Errorf("the suspended machine's image is served: %d", code)
+	}
+
+	a.use(t)
+	if err := a.d.certifyMachine(b.d.id.PeerID, "desk"); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		room Room
+		have string
+	}{{first, "DESK FIRST"}, {second, "DESK SECOND"}} {
+		if got := served(t, a, third, c.room.RoomID); !strings.Contains(got, c.have) {
+			t.Errorf("once certified again %s is served as %s", c.room.RoomName, got)
+		}
+	}
+	if code := blobFor(t, a, third, first.RoomID, sha); code != http.StatusOK {
+		t.Errorf("once certified again the image is served %d", code)
+	}
+}
+
 // A machine removes itself from its own page: the removal is signed and kept, the
 // machine stops holding the shared key, and its later turns stop counting (D-220).
 func TestAMachineRemovesItselfFromItsOwnPage(t *testing.T) {

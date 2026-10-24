@@ -94,6 +94,40 @@ func (s *standings) onlyShown(evs []Event) []Event {
 	return out
 }
 
+// onlyServed drops the events of suspended machines from what this machine serves to
+// other machines, as the view and the export drop them: a receiver serves none of a
+// suspended machine's events, and serves them again once the machine is certified
+// again, since they are kept (D-234, a machine not certified under the current shared
+// key is suspended until it is certified again). Sync counts an unbroken run, so a
+// requester simply asks again for what was left out.
+func (d *Daemon) onlyServed(roomID string, evs []Event) []Event {
+	return d.standingsFor(roomID).onlyShown(evs)
+}
+
+// imageOnlyHidden reports whether every event of a room that names an image is a
+// suspended machine's, so that the image is not served while its turns are not
+// (D-234). An image no event names is judged as before, by the room's image rows.
+func (d *Daemon) imageOnlyHidden(store *Store, roomID, sha string) bool {
+	evs, err := store.ListRoom(roomID)
+	if err != nil {
+		return false
+	}
+	judge := d.standingsFor(roomID)
+	named := false
+	for _, e := range evs {
+		for _, r := range imageRefs(e.Metadata) {
+			if r.SHA256 != sha {
+				continue
+			}
+			named = true
+			if judge.of(e) != standingHidden {
+				return false
+			}
+		}
+	}
+	return named
+}
+
 // turnMachine is the name of the machine a turn came from, as its user gave it: the
 // name in the machine's certificate for an event signed for a user, and the name the
 // event carries otherwise. It is the user's claim, and is shown and injected as a
