@@ -470,7 +470,7 @@ slice that needs it. Each is put to the maintainer before that slice starts.
     two guests who revoke each other are both out.
 11. The creator's admission (slice 0), confirmed on 2026-10-24 and written into D-240: the
     founding self-invitation, under a room identifier that commits to the creator.
-12. Turns past a lifted cutoff (slice 2). They are fetched again by ordinary sync, since a
+12. Turns past a lifted cutoff (slice 2), confirmed on 2026-10-24 and written into D-236. They are fetched again by ordinary sync, since a
     receiver never stored them and they are still offered by machines that hold them.
 13. A forgotten guest on a room's list, and a cached list (slices 1 and 5), confirmed on
     2026-10-24: the list shows the guest by derived name, marked unverified (D-073), and

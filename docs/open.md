@@ -311,8 +311,6 @@ slice of the second run, and none has a choice taken yet:
   that keeps capturing turns nobody receives looks like a quiet room (D-194, a colleague this
   machine cannot reach is named, with how long), and can never join another room (D-016, a
   session never joins a second room).
-- Whether a revoked guest's turns after the cutoff are fetched again when a new invitation
-  lifts the revocation (D-236, a revocation names the last turn that counts).
 
 **A user has no way to set up a cloud session's key, snapshot and repo, and three facts the setup
 depends on are unknown.** D-226 and D-227 need a cloud key, a first snapshot and a private repo
