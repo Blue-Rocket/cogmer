@@ -300,8 +300,6 @@ changes it:
   peer identifier with the signing key beside it.
 - What a machine not certified under the current shared key may still do. The lean is to
   keep its stored events and refuse its new connections and events.
-- Whether a removal signed by an older shared key counts. The build counts it, which lets a
-  thief with the old key mark the user's events for good.
 - Which of a user's machines hold the shared key. The build gives it to every machine added
   from one that holds it, and never to a cloud key.
 - Whether an event's author must have been a guest of its room. The lean is to refuse an

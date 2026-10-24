@@ -312,15 +312,58 @@ func TestTheMasterRemovesAnyMachine(t *testing.T) {
 	wantDiscarded(t, s, forged.Hash(), "removal", "master key")
 }
 
-func TestASharedKeyOfAnOlderWinningVersionRemoves(t *testing.T) {
+func TestARemovalSignedByAnOlderSharedKeyDoesNotCount(t *testing.T) {
 	u := newStateUser("older")
 	m := stateKeyFrom("older/m")
+	old := mustRemove(t, u.sharedKey(1), LevelShared, 1, u.id(), m.id)
 	rs := RecordSet{Shared: []SharedKeyCert{u.share(1), u.share(2)}}
 	rs.Machines = []MachineCert{u.certify(2, m, KindMachine, "laptop", 1)}
-	rs.Removals = []Removal{mustRemove(t, u.sharedKey(1), LevelShared, 1, u.id(), m.id)}
+	rs.Removals = []Removal{old}
 	s := Resolve(u.id(), rs)
-	if s.Current != 2 || !s.Machines[m.id].Removed {
-		t.Fatal("a removal by the winning shared key of an older version did not take effect")
+	if s.Current != 2 || s.Machines[m.id].Removed {
+		t.Fatal("a removal signed by the shared key of an older version took effect, so a thief holding that key could mark the user's events for good")
+	}
+	wantDiscarded(t, s, old.Hash(), "removal", "only the current version")
+
+	// Before the new version is known here, the same removal is by the current key.
+	s = Resolve(u.id(), RecordSet{
+		Shared:   []SharedKeyCert{u.share(1)},
+		Machines: []MachineCert{u.certify(1, m, KindMachine, "laptop", 1)},
+		Removals: []Removal{old},
+	})
+	if !s.Machines[m.id].Removed {
+		t.Fatal("a removal by the current shared key did not take effect")
+	}
+}
+
+func TestARemovalSignedAgainUnderTheNewSharedKeyCounts(t *testing.T) {
+	u := newStateUser("carried")
+	m := stateKeyFrom("carried/m")
+	room := RoomCutoff{Room: "room-a", Sequence: 4}
+	old := mustRemove(t, u.sharedKey(1), LevelShared, 1, u.id(), m.id, room)
+	again := mustRemove(t, u.sharedKey(2), LevelShared, 2, u.id(), m.id, room)
+	s := Resolve(u.id(), RecordSet{
+		Shared:   []SharedKeyCert{u.share(1), u.share(2)},
+		Machines: []MachineCert{u.certify(1, m, KindMachine, "laptop", 1)},
+		Removals: []Removal{old, again},
+	})
+	st := s.Machines[m.id]
+	if !st.Removed || st.Cutoffs["room-a"] != 4 {
+		t.Fatalf("a removal signed again under the new shared key did not carry its cutoff: %+v", st)
+	}
+}
+
+func TestAMachineRemovesItselfWhateverItsVersion(t *testing.T) {
+	u := newStateUser("selfold")
+	m := stateKeyFrom("selfold/m")
+	self := mustRemove(t, m, LevelMachine, 0, u.id(), m.id)
+	s := Resolve(u.id(), RecordSet{
+		Shared:   []SharedKeyCert{u.share(1), u.share(2)},
+		Machines: []MachineCert{u.certify(1, m, KindMachine, "laptop", 1)},
+		Removals: []Removal{self},
+	})
+	if !s.Machines[m.id].Removed {
+		t.Fatal("a machine certified under an older version could not remove itself")
 	}
 }
 
@@ -613,6 +656,7 @@ func TestResolveDoesNotDependOnTheOrderOfRecords(t *testing.T) {
 		Removals: []Removal{
 			mustRemove(t, u.master, LevelMaster, 0, u.id(), m2.id, RoomCutoff{"a", 3}, RoomCutoff{"b", 2}),
 			mustRemove(t, u.sharedKey(1), LevelShared, 1, u.id(), m2.id, RoomCutoff{"a", 6}),
+			mustRemove(t, u.sharedKey(2), LevelShared, 2, u.id(), m2.id, RoomCutoff{"a", 5}),
 			mustRemove(t, m3, LevelMachine, 0, u.id(), m3.id, RoomCutoff{"a", 1}),
 			mustRemove(t, m1, LevelMachine, 0, u.id(), m3.id),
 			mustRemove(t, u.master, LevelMaster, 0, u.id(), stateKeyFrom("order/later").id),

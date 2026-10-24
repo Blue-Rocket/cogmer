@@ -229,12 +229,15 @@ func Resolve(user string, rs RecordSet) *UserState {
 }
 
 // mayRemove decides whether a verified removal's signer has the authority it
-// claims. The master may remove any machine, and so may a shared key that won
-// its version, of any version: counting only the current version would let a
-// user's own removal fall away when the user certifies a new key. A machine or
-// cloud key may remove only itself, and only once certified, which is also what
-// leaves a session key, which has no machine certificate, unable to remove
-// anything.
+// claims. The master may remove any machine, and so may the shared key of the
+// current version. A removal signed by an older shared key does not count, so
+// that a thief holding a stolen machine's old shared key cannot mark the user's
+// events for good: certifying a new shared key ends what the old one can do, and
+// the machine that certifies it signs again, under the new key, the removals it
+// holds (D-220, a removal names the last event of a machine that counts). A
+// machine or cloud key may remove only itself, of any version, and only once
+// certified, which is also what leaves a session key, which has no machine
+// certificate, unable to remove anything.
 func (s *UserState) mayRemove(r Removal) error {
 	switch r.SignerLevel {
 	case LevelMaster:
@@ -245,6 +248,10 @@ func (s *UserState) mayRemove(r Removal) error {
 		if key, ok := s.SharedKeys[r.SignerVersion]; !ok || key != r.Signer {
 			return fmt.Errorf("removal at the shared level is not signed by the winning shared key of version %d",
 				r.SignerVersion)
+		}
+		if r.SignerVersion != s.Current {
+			return fmt.Errorf("removal is signed by the shared key of version %d, and only the current version %d may remove",
+				r.SignerVersion, s.Current)
 		}
 	case LevelMachine:
 		if r.Signer != r.Machine {
