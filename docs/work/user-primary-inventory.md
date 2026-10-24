@@ -108,8 +108,11 @@ Answered by the maintainer:
   unreachable, with for how long, only when none can. The user's own machines are listed one
   by one, by name, with whether this machine can reach each: those that joined the room in
   the room status, and all of them in `/cogmer:self-status`.
+- R7, on 2026-10-24: a room's name is unique among one user's rooms. A machine minting a name
+  avoids every name in the user's shared room list, and two machines minting the same name
+  while out of contact are reported as ambiguous, with both identifiers (D-161, an ambiguous
+  room name is reported with both identities).
 
 Open:
 
-- R7. Whether a room's name is unique among one machine's rooms or one user's.
 - R8. Which keys the two pairing words are derived from.
