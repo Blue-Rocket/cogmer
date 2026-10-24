@@ -137,8 +137,8 @@ state every receiver holding the same records computes, with no clock and no ser
    and of several under one version, the one with the lowest hash.
 3. Each removal is checked against its signer. The master may remove any machine. The shared
    key of the current version may remove any machine, and a removal signed by an older shared
-   key does not count, so the machine that certifies a new shared key signs its removals again
-   under it (D-220). A machine or
+   key does not count, so the machine that certifies a new shared key signs again under it the
+   removals the user confirms (D-220). A machine or
    cloud key may remove only itself, and only when it has a valid certificate. A session key
    may remove nothing.
 4. A machine with at least one valid removal is removed. In each room its cutoff is the
@@ -351,8 +351,9 @@ Every slice that serves a room copies the two-room tests in `roomscope_test.go`.
    means by an unknown machine that stops counting.
 5. Decided on 2026-10-24 and written into D-220: a removal signed by an older shared key does
    not count, and certifying a new shared key signs the valid removals again under it.
-6. Which of a user's machines hold the shared key. The design gives it to the first machine
-   and to every machine added from a machine that holds it, and never to a cloud key.
+6. Decided on 2026-10-24 and written into D-219: every machine the user adds holds the shared
+   key, and a cloud key never does. Certifying a new shared key signs again only the removals
+   the user confirms (D-220).
 7. Whether an event's author must be a guest of its room. The lean in the brief is to
    refuse an author who never was one, which needs a record of past guests. It belongs to
    the trust slice.
