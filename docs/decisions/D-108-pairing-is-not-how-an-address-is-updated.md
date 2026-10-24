@@ -3,7 +3,9 @@
 **Date:** 2026-09-21 · **Status:** active · **Areas:** pairing, transport
 
 **Decision.** Neither pairing nor any dedicated command updates a machine's stored address. The
-machine's next synchronization repairs it.
+machine's next synchronization of a room repairs it, and so does its next exchange of machine
+lists with another machine of its user, since a user's machines may share no room (D-229, a
+machine is added from another of the user's machines, with the two-word check).
 
 **Support.**
 - Pairing is a security act, and one that silently writes network state is a quiet mutation, and
@@ -20,5 +22,6 @@ machine's next synchronization repairs it.
 - *A command that sets an address.* It is a mechanism for a problem that resolves itself, and one
   more thing to explain.
 
-**Revisit when** a machine can move while sharing no room with anybody and still need to be reached,
-which would mean something other than an invitation had come to depend on a stored address.
+**Revisit when** a colleague's machine can move while sharing no room with this user and still
+need to be reached, which would mean something other than an invitation had come to depend on a
+stored address.

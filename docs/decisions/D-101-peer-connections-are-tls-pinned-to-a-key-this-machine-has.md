@@ -29,9 +29,8 @@ counts, room by room). No setting turns the encryption off.
   unreachable. D-054 (verification gates synchronization and injection) stops an unverified
   peer's events a layer up. `cmd/cogmer/peertls_test.go`, `TestARecordedButUnverifiedPeerCanConnect`.
 - When verifying, the named peer's master key is demanded, since an address can change hands and
-  without the demand a ceremony could begin with a stranger. When syncing, a room stores
-  addresses and not a map from member to address, so a machine of any recorded peer is accepted,
-  and the signature inside the request says which one. D-044 (sync requests are signed),
+  without the demand a ceremony could begin with a stranger. When syncing, a machine of any
+  recorded peer is accepted, and the signature inside the request says which one. D-044 (sync requests are signed),
   `cmd/cogmer/peertls_test.go`, `TestAnAddressAnsweringForAnotherKeyIsRefused`.
 - Go decides whether to encrypt by the URL scheme and not by the TLS config, so the URLs that
   `peerURL` builds are `https://peer/...`, with a placeholder host that is never resolved, since a change to

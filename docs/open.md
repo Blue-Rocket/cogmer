@@ -72,7 +72,7 @@ has an address used as one of several candidates tried together, demoted by
 silence, invalidated by a wrong key, aged at a rate set by what it names, and
 restored by evidence. `known_peers` holds one endpoint per peer with the time it was
 recorded, replaced when the peer advertises another (read on 2026-09-28). D-103 (an
-address belongs to a peer, and is stored in one place) gave each address the owner
+address belongs to a machine, and is stored in one place) gave each address the owner
 the lifecycle needs, and nothing past that is built.
 
 **Re-pick the overlay relay when it cannot be reached.** D-187 pins it so the
@@ -271,16 +271,15 @@ D-225 (a machine sends each removal and new shared key to every colleague it kno
 acknowledges), D-226 (a cloud session takes the highest valid snapshot of its user's colleagues
 and rooms from any source), D-227 (the daemon pushes a new snapshot to the user's repo when the
 user's list changes, once the user has opted in) and D-216 (a cloud session signs with a key of
-its own that the user's shared key vouches for). Nothing of it is built. D-044 (sync requests are
-signed), D-101 (peer connections are TLS pinned to a key this machine has recorded), D-141 (a
-machine's key is created once and never leaves the machine), D-143 (admission is proved by
-signing a fresh challenge) and D-152 (events are signed at origin) state the design, and the code
-still gives each machine an identity that colleagues verify, so they differ from the code until
-the build. Two changes wait for it:
-
-- §6 gains the requirement that a user is a master key that certifies machines, with its
-  benefit to the user, in the same commit as the code (W-85).
-- D-216 and D-219 to D-227 become active.
+its own that the user's shared key vouches for). D-228 to D-233 add that a user's lists are
+copied between the user's machines, that a machine is added from another of the user's machines,
+that the user identity is made in the daemon's page, that one command manages the user's
+machines, that a user's own turn from another session is marked as theirs, and that every turn
+carries its machine's name. Nothing of it is built. The specification (§6, identity) and the
+decisions that make the user the peer state the design, and the code gives each machine an
+identity that colleagues verify, so they differ from the code until the build;
+`docs/work/user-primary-inventory.md` lists those decisions. D-216 and D-219 to D-233 become active
+when their behavior is built.
 
 Not decided: what the room view shows for a user to choose a cutoff across rooms, how a user who
 has lost every machine reaches colleagues, since the user could reach each colleague only by
@@ -310,7 +309,30 @@ changes it:
 - Which of a user's machines hold the shared key. The build gives it to every machine added
   from one that holds it, and never to a cloud key.
 - Whether an event's author must have been a guest of its room. The lean is to refuse an
-  author who never was one, which needs a record of past guests.
+  author who never was one, which needs a record of past guests. A guest list is now the
+  user's, copied between the user's machines that joined the room (D-228, a user's lists are
+  copied between the user's machines), and colleagues' guest lists can still differ.
+
+**The decisions that make the user the peer leave details undecided.** Each is needed by a
+slice of the second run, and none has a choice taken yet:
+
+- How concurrent changes to a user's copied lists merge, such as an invitation on one machine
+  and a revocation on another (D-228).
+- When a machine is first named and what it is called by default, and whether the identity
+  page offers a guessed display name (D-230, the user identity is made in the daemon's page).
+- Whether one acknowledging machine of a colleague counts as the colleague for a removal or a
+  new shared key (D-225, a machine sends each removal to every colleague until each
+  acknowledges).
+- Which of a guest's machines an offer goes to, and whether an offered room enters the guest's
+  shared room list before they join (D-105, an invitation is delivered as an offer).
+- Whether a user's own turn from another machine that no session here holds is marked as not
+  given to the assistant (D-204, the view says what the model holds).
+- Which turns a removal marks when the user names no cutoff, outside a theft (D-220).
+- Whether recovery can remove every machine the user no longer holds in one act (D-222).
+- Whether a sync connection demands the machine an address was recorded for, or accepts any
+  machine of a recorded peer as now (D-101, connections are TLS pinned).
+- Whether adding a machine or pairing can finish on a machine with no browser (D-223, the
+  phrase is typed only into the daemon's browser page).
 
 **A user has no way to set up a cloud session's key, snapshot and repo, and three facts the setup
 depends on are unknown.** D-226 and D-227 need a cloud key, a first snapshot and a private repo
