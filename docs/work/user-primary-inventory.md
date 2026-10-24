@@ -112,7 +112,11 @@ Answered by the maintainer:
   avoids every name in the user's shared room list, and two machines minting the same name
   while out of contact are reported as ambiguous, with both identifiers (D-161, an ambiguous
   room name is reported with both identities).
+- R8, on 2026-10-24: the two words of a pairing between colleagues are derived from the two
+  users' identifiers, which are their master public keys, and the two fresh nonces, as the
+  derivation is now. Each machine proves its presence with its own key over the pinned
+  connection, and its certificate chain ties it to the identifier the words name. Adding one
+  of the user's own machines derives the words from the two machine keys under a purpose tag
+  of its own, so that neither exchange can pass for the other.
 
-Open:
-
-- R8. Which keys the two pairing words are derived from.
+No root question is open.
