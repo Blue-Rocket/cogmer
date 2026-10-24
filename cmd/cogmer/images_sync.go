@@ -46,6 +46,8 @@ type blobRequest struct {
 	Nonce     string `json:"nonce"`
 	Signature string `json:"signature"`
 	Endpoint  string `json:"endpoint,omitempty"`
+	Signer    string `json:"signer,omitempty"`
+	Chain     *Chain `json:"chain,omitempty"`
 }
 
 // handleBlob serves the bytes of an image to a peer that is a verified guest of the room, and
@@ -66,7 +68,7 @@ func (d *Daemon) handleBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cred := syncRequest{PeerID: req.PeerID, RoomID: req.RoomID, Timestamp: req.Timestamp,
-		Nonce: req.Nonce, Signature: req.Signature, Endpoint: req.Endpoint}
+		Nonce: req.Nonce, Signature: req.Signature, Endpoint: req.Endpoint, Signer: req.Signer, Chain: req.Chain}
 	if err := d.verifyRequest(cred, room.RoomID); err != nil {
 		log.Printf("image: refused a request for %s: %v", room.RoomName, err)
 		http.Error(w, "unauthenticated", http.StatusUnauthorized)
@@ -247,12 +249,13 @@ func (d *Daemon) requestBlob(addr string, room Room, row imageRow, part string, 
 	if err != nil {
 		return err
 	}
-	ts, nonce, sig, err := signRequest(d.id, room.RoomID, AdvertisedEndpoint())
+	cred, err := signRequestAs(d.id, room.RoomID, AdvertisedEndpoint())
 	if err != nil {
 		return err
 	}
 	body, _ := json.Marshal(blobRequest{Protocol: wireVersion, RoomID: room.RoomID, SHA256: row.SHA256, Offset: offset,
-		PeerID: d.id.PeerID, Timestamp: ts, Nonce: nonce, Signature: sig, Endpoint: AdvertisedEndpoint()})
+		PeerID: cred.PeerID, Timestamp: cred.Timestamp, Nonce: cred.Nonce, Signature: cred.Signature,
+		Endpoint: cred.Endpoint, Signer: cred.Signer, Chain: cred.Chain})
 	resp, err := client.Post(peerURL("/blob"), "application/json", bytes.NewReader(body))
 	if err != nil {
 		return err

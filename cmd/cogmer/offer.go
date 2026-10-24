@@ -40,6 +40,11 @@ type offerRequest struct {
 	Timestamp string `json:"timestamp"`
 	Nonce     string `json:"nonce"`
 	Signature string `json:"signature"`
+	// Present from a host machine that speaks for a user: PeerID is the user, the
+	// machine key signs, and the chain ties the one to the other (D-219, a user is a
+	// master key that certifies machines through a shared key).
+	Signer string `json:"signer,omitempty"`
+	Chain  *Chain `json:"chain,omitempty"`
 }
 
 // offerBytes is a signing scheme of its own rather than a reuse of the sync one.
@@ -74,13 +79,18 @@ func (d *Daemon) signOffer(r Room, endpoint string) (offerRequest, error) {
 	}
 	nonce := base64.RawURLEncoding.EncodeToString(raw)
 	ts := time.Now().UTC().Format(time.RFC3339Nano)
-	return offerRequest{
-		Protocol: wireVersion, PeerID: d.id.PeerID,
+	o := offerRequest{
+		Protocol: wireVersion, PeerID: d.id.Peer(),
 		RoomID: r.RoomID, RoomName: r.RoomName, Endpoint: endpoint,
 		Timestamp: ts, Nonce: nonce,
 		Signature: base64.RawURLEncoding.EncodeToString(
-			ed25519.Sign(d.id.private, offerBytes(d.id.PeerID, r.RoomID, r.RoomName, endpoint, ts, nonce))),
-	}, nil
+			ed25519.Sign(d.id.private, offerBytes(d.id.Peer(), r.RoomID, r.RoomName, endpoint, ts, nonce))),
+	}
+	if d.id.HasUser() {
+		c := *d.id.Chain
+		o.Signer, o.Chain = d.id.PeerID, &c
+	}
+	return o, nil
 }
 
 // handleOffer receives an invitation. It stores it and does nothing else: the room
@@ -96,7 +106,18 @@ func (d *Daemon) handleOffer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unsupported protocol", http.StatusBadRequest)
 		return
 	}
-	pub, err := PublicFromPeerID(req.PeerID)
+	// The key that signed is the host's own, or under a chain the host machine's,
+	// which must speak for the user the offer names and be neither removed nor
+	// suspended (D-220, a removal names the last event of a machine that counts).
+	signer := req.PeerID
+	if req.Chain != nil {
+		signer = req.Signer
+		if _, err := d.members.checkLiveChain(req.PeerID, req.Signer, *req.Chain, time.Now()); err != nil {
+			http.Error(w, "unauthenticated", http.StatusUnauthorized)
+			return
+		}
+	}
+	pub, err := PublicFromPeerID(signer)
 	if err != nil {
 		http.Error(w, "unauthenticated", http.StatusUnauthorized)
 		return
@@ -143,11 +164,32 @@ func (d *Daemon) handleOffer(w http.ResponseWriter, r *http.Request) {
 // deliverOffer tells one peer about one room. Returns an error the caller can act
 // on, because a host that cannot reach a guest must be told at the time and handed
 // the string instead.
+//
+// A guest is a user, and the offer goes to every machine of theirs this machine has
+// an address for (D-105, an invitation is delivered to a paired guest as an offer). It
+// is delivered when one of them takes it, and the error of the last that did not is
+// returned when none did.
 func (d *Daemon) deliverOffer(peerID string, r Room) error {
-	addr := d.members.PeerEndpoint(peerID)
-	if addr == "" {
+	addrs := d.members.PeerEndpointsOf(peerID)
+	if len(addrs) == 0 {
 		return fmt.Errorf("no address recorded for %s", PeerName(peerID))
 	}
+	delivered := false
+	var lastErr error
+	for _, addr := range addrs {
+		if err := d.deliverOfferTo(peerID, addr, r); err != nil {
+			lastErr = err
+			continue
+		}
+		delivered = true
+	}
+	if delivered {
+		return nil
+	}
+	return lastErr
+}
+
+func (d *Daemon) deliverOfferTo(peerID, addr string, r Room) error {
 	req, err := d.signOffer(r, AdvertisedEndpoint())
 	if err != nil {
 		return err

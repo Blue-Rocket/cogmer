@@ -237,11 +237,11 @@ func TestEveryFetchInThePluginScriptsIsAccountedFor(t *testing.T) {
 // about this one, so it has to be looked at.
 func TestWhatAPeerReceivesIsTheseFieldsAndNoOthers(t *testing.T) {
 	want := map[string][]string{
-		"syncRequest":   {"Protocol", "RoomID", "Have", "PeerID", "Timestamp", "Nonce", "Signature", "Endpoint"},
+		"syncRequest":   {"Protocol", "RoomID", "Have", "PeerID", "Timestamp", "Nonce", "Signature", "Endpoint", "Signer", "Chain"},
 		"syncResponse":  {"Protocol", "RoomID", "Events"},
-		"wireEvent":     {"EventID", "PeerID", "PeerSequence", "RoomID", "Timestamp", "UserID", "UserDisplayName", "MachineID", "OriginSessionID", "EventType", "Content", "Metadata", "Signature", "SigVersion"},
-		"offerRequest":  {"Protocol", "PeerID", "RoomID", "RoomName", "Endpoint", "Timestamp", "Nonce", "Signature"},
-		"verifyMessage": {"Step", "PeerID", "Payload", "Signature"},
+		"wireEvent":     {"EventID", "PeerID", "PeerSequence", "RoomID", "Timestamp", "UserID", "UserDisplayName", "MachineID", "OriginSessionID", "EventType", "Content", "Metadata", "Signature", "SigVersion", "Signer", "IdentityVersion", "RemovalsSeen", "Chain"},
+		"offerRequest":  {"Protocol", "PeerID", "RoomID", "RoomName", "Endpoint", "Timestamp", "Nonce", "Signature", "Signer", "Chain"},
+		"verifyMessage": {"Step", "PeerID", "Payload", "Signature", "Signer", "Chain"},
 	}
 	fields := map[string][]string{}
 	for _, f := range parseSources(t) {

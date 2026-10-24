@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -201,6 +202,8 @@ func (e *Event) signingBytes(version int) ([]byte, error) {
 	switch version {
 	case 3:
 		return e.signingBytesV3(), nil
+	case 4:
+		return e.signingBytesV4(), nil
 	default:
 		return nil, fmt.Errorf("event %.12s is signed under scheme v%d, which this build does not know; upgrade rather than discard it",
 			e.EventID, version)
@@ -233,10 +236,61 @@ func (e *Event) eventBytes(tag string) []byte {
 	return b.Bytes()
 }
 
-// Sign attaches a signature made by the event's originating peer.
+// signingBytesV4 is v3's field list under a tag of its own, followed by the key
+// that signed, the shared-key version that key's machine holds and the hashes of
+// the removals it has seen, each a signed field (D-239, an event a machine signs for
+// its user names the user, the signing key, the shared-key version and the removals
+// seen, all as signed fields). A number is 8 bytes big-endian, as in the identity
+// records (D-238, identity records are signed over length-prefixed fields), and the count of removals comes before them so that no boundary
+// between the hashes can move.
+func (e *Event) signingBytesV4() []byte {
+	b := e.eventBytes(protocolNamespace + "/event/v4")
+	put := func(s string) {
+		b = binary.BigEndian.AppendUint32(b, uint32(len(s)))
+		b = append(b, s...)
+	}
+	put(e.Signer)
+	b = binary.BigEndian.AppendUint64(b, e.IdentityVersion)
+	b = binary.BigEndian.AppendUint64(b, uint64(len(e.RemovalsSeen)))
+	for _, h := range e.RemovalsSeen {
+		put(h)
+	}
+	return b
+}
+
+// Sign attaches a signature made by the event's originating peer, under v3, where
+// the peer's own key signs.
 func (e *Event) Sign(priv ed25519.PrivateKey) {
 	e.SigVersion = currentSigVersion
 	e.Signature = base64.RawURLEncoding.EncodeToString(ed25519.Sign(priv, e.signingBytesV3()))
+}
+
+// SignV4 signs the event under v4 with a machine's key on behalf of the user its
+// chain ends at. PeerID must already name that user. The removals seen are sorted,
+// so that two machines that have seen the same removals sign the same field.
+func (e *Event) SignV4(priv ed25519.PrivateKey, chain Chain, removalsSeen []string) {
+	e.SigVersion = 4
+	e.Signer = PeerIDFromPublic(priv.Public().(ed25519.PublicKey))
+	e.IdentityVersion = chain.Shared.Version
+	e.RemovalsSeen = nil
+	if len(removalsSeen) > 0 {
+		e.RemovalsSeen = append([]string(nil), removalsSeen...)
+		sort.Strings(e.RemovalsSeen)
+	}
+	c := chain
+	e.Chain = &c
+	e.Signature = base64.RawURLEncoding.EncodeToString(ed25519.Sign(priv, e.signingBytesV4()))
+}
+
+// SignAs signs an event this machine writes: under v4 when the machine speaks for a
+// user, and under v3 otherwise, so that a machine without a user identity signs
+// as it always has.
+func (e *Event) SignAs(id *Identity, removalsSeen []string) {
+	if id.HasUser() {
+		e.SignV4(id.private, *id.Chain, removalsSeen)
+		return
+	}
+	e.Sign(id.private)
 }
 
 var errUnsigned = errors.New("event carries no signature")
@@ -250,6 +304,9 @@ var errUnsigned = errors.New("event carries no signature")
 func (e *Event) Verify() error {
 	if e.Signature == "" {
 		return errUnsigned
+	}
+	if e.SigVersion == 4 {
+		return e.verifyV4()
 	}
 	pub, err := PublicFromPeerID(e.PeerID)
 	if err != nil {
@@ -265,6 +322,36 @@ func (e *Event) Verify() error {
 	}
 	if !ed25519.Verify(pub, msg, sig) {
 		return errors.New("signature does not match the peer id that claims to have made it")
+	}
+	return nil
+}
+
+// verifyV4 checks the signature against the key the event names as its signer,
+// then that the event's chain ties that key to the user its peer names (D-152,
+// events are signed at origin over length-prefixed fields; D-219, a user is a master key that certifies machines through a shared key). Whether the
+// user's other records remove or suspend the machine is the receiver's question,
+// since it needs those records.
+func (e *Event) verifyV4() error {
+	pub, err := PublicFromPeerID(e.Signer)
+	if err != nil {
+		return fmt.Errorf("signer: %w", err)
+	}
+	sig, err := base64.RawURLEncoding.DecodeString(e.Signature)
+	if err != nil {
+		return fmt.Errorf("signature is not valid base64url: %w", err)
+	}
+	msg, err := e.signingBytes(e.SigVersion)
+	if err != nil {
+		return err
+	}
+	if !ed25519.Verify(pub, msg, sig) {
+		return errors.New("signature does not match the signer that claims to have made it")
+	}
+	if e.Chain == nil {
+		return errors.New("an event signed for a user carries no chain to that user")
+	}
+	if _, err := e.Chain.Verify(e.PeerID, e.Signer); err != nil {
+		return fmt.Errorf("chain: %w", err)
 	}
 	return nil
 }

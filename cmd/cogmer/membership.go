@@ -250,7 +250,7 @@ func migrateMembership(db *sql.DB) error {
 	if err := dropColumnIfPresent(db, "session_rooms", "injected"); err != nil {
 		return err
 	}
-	// An address belongs to a machine (D-103). This table held addresses with no peer
+	// An address belongs to a machine (D-103, an address belongs to a machine). This table held addresses with no peer
 	// column, so nothing can be carried out of it -- which is the defect, not a
 	// migration difficulty. Peers re-advertise on their next synchronization and
 	// the rows rebuild themselves, in the place that names whose they are.
@@ -314,14 +314,41 @@ func (e *NameTakenError) Error() string {
 // SetPeerEndpoint records where a peer was last known to listen. It is a hint and
 // is allowed to be wrong: §12 requires only that it be correct once, since a peer
 // that has joined a room learns how to reach the others.
+//
+// The address is for a machine whose key this machine does not know apart from the
+// peer's identifier: a pairing string or an invitation names a user and one address
+// (D-053, `pair` records a bootstrap address for one of the colleague's machines).
+// It is stored in machines under the peer's identifier as the machine key, which is
+// what every address copied from known_peers has, and for a peer that is one machine
+// it is true. The real key replaces it once the machine signs a request from there
+// (RecordMachineAddress).
 func (m *Membership) SetPeerEndpoint(peerID, endpoint string) error {
 	if endpoint == "" {
 		return nil
 	}
+	if !m.Knows(peerID) {
+		// An address for a peer not recorded is not kept, as before machines
+		// existed, since nothing could say whose it is.
+		return nil
+	}
+	if err := m.setKnownPeerEndpoint(peerID, endpoint); err != nil {
+		return err
+	}
+	return m.setMachineEndpointIfOwned(peerID, peerID, endpoint)
+}
+
+// setKnownPeerEndpoint writes known_peers.endpoint. Every reader has moved to
+// machines (D-103, an address belongs to a machine and is stored in one place), and
+// the column is still written in this build so that a downgrade to a build that
+// reads it finds an address there. It goes once a release has shipped that reads
+// machines alone.
+func (m *Membership) setKnownPeerEndpoint(peerID, endpoint string) error {
 	// Written on every synchronization a peer performs, which is often and almost
 	// always the same value. Comparing first keeps that from being a database
 	// write per poll, and the timestamp is only interesting when it moved.
-	if cur, at := m.peerEndpointAt(peerID); cur == endpoint && at != "" {
+	var cur, at sql.NullString
+	if err := m.db.QueryRow(`SELECT endpoint, endpoint_at FROM known_peers WHERE peer_id = ?`,
+		peerID).Scan(&cur, &at); err == nil && cur.String == endpoint && at.String != "" {
 		return nil
 	}
 	_, err := m.db.Exec(`UPDATE known_peers SET endpoint = ?, endpoint_at = ? WHERE peer_id = ?`,
@@ -329,29 +356,83 @@ func (m *Membership) SetPeerEndpoint(peerID, endpoint string) error {
 	return err
 }
 
-// PeerEndpoint is the address recorded for one peer.
+// setMachineEndpointIfOwned is SetMachineEndpoint that leaves a machine recorded for
+// another user alone and says nothing, for a write that is a hint: a bootstrap row
+// whose key has since been given to a user by AssignMachineUser is not moved back.
+func (m *Membership) setMachineEndpointIfOwned(machineKey, user, endpoint string) error {
+	if cur, at := m.MachineEndpoint(machineKey); cur == endpoint && at != "" {
+		return nil
+	}
+	_, err := m.db.Exec(`
+		INSERT INTO machines (machine_key, user, endpoint, endpoint_at) VALUES (?,?,?,?)
+		ON CONFLICT(machine_key) DO UPDATE SET endpoint = excluded.endpoint, endpoint_at = excluded.endpoint_at
+		WHERE machines.user = excluded.user`,
+		machineKey, user, endpoint, time.Now().UTC().Format(time.RFC3339))
+	return err
+}
+
+// RecordMachineAddress records where one machine of user listens, as its signed
+// sync request says (D-160, the address in a sync request is signed). The machine is
+// given to user first when it was recorded under its own key, which is what an
+// address copied from known_peers or a bootstrap address has, and a bootstrap row of
+// the user at the same address is dropped, since the machine there is now known. The
+// address is still written to known_peers as well (setKnownPeerEndpoint says why).
+func (m *Membership) RecordMachineAddress(machineKey, user, endpoint string) error {
+	if endpoint == "" {
+		return nil
+	}
+	if machineKey != user {
+		if err := m.AssignMachineUser(machineKey, user); err != nil {
+			return err
+		}
+		if _, err := m.db.Exec(`DELETE FROM machines WHERE machine_key = ? AND user = ? AND endpoint = ?`,
+			user, user, endpoint); err != nil {
+			return err
+		}
+	}
+	if cur, at := m.MachineEndpoint(machineKey); cur != endpoint || at == "" {
+		if err := m.SetMachineEndpoint(machineKey, user, endpoint); err != nil {
+			return err
+		}
+	}
+	return m.setKnownPeerEndpoint(user, endpoint)
+}
+
+// AssignMachineUser gives a machine recorded under its own key to the user a chain
+// has shown it speaks for. Every address copied from known_peers was recorded with
+// the machine key as its user, since a peer was one machine then, and that row moves
+// to its user once the user's master key is known (D-219, a user is a master key
+// that certifies machines through a shared key). SetMachineEndpoint refuses to move
+// a machine between users, and so does this: only a row whose user is its own key
+// changes, and a machine already given to a user stays with that user.
+func (m *Membership) AssignMachineUser(machineKey, user string) error {
+	if machineKey == "" || user == "" {
+		return errors.New("a machine to assign needs the machine and its user")
+	}
+	_, err := m.db.Exec(`UPDATE machines SET user = ? WHERE machine_key = ? AND user = machine_key`,
+		user, machineKey)
+	return err
+}
+
+// PeerEndpoint is the address recorded most recently for any machine of one peer.
 //
 // The query that should always have been here. Its absence is why verification
 // dialled every address this machine knew: there was no way to ask which one was a
-// particular peer's, so it asked for all of them (D-103).
+// particular peer's, so it asked for all of them (D-103, an address belongs to a machine).
 func (m *Membership) PeerEndpoint(peerID string) string {
-	e, _ := m.peerEndpointAt(peerID)
-	return e
-}
-
-func (m *Membership) peerEndpointAt(peerID string) (endpoint, at string) {
-	var e, a sql.NullString
-	if err := m.db.QueryRow(`SELECT endpoint, endpoint_at FROM known_peers WHERE peer_id = ?`,
-		peerID).Scan(&e, &a); err != nil {
-		return "", ""
+	if all := m.PeerEndpointsOf(peerID); len(all) > 0 {
+		return all[0]
 	}
-	return e.String, a.String
+	return ""
 }
 
-// PeerEndpoints is every machine-scope address worth trying. Room membership
-// supplies others; these are the ones that exist before any room does.
-func (m *Membership) PeerEndpoints() []string {
-	rows, err := m.db.Query(`SELECT endpoint FROM known_peers WHERE endpoint IS NOT NULL AND endpoint <> ''`)
+// PeerEndpointsOf is the address of every machine recorded for one peer, the most
+// recently advertised first, since an address is a snapshot of where a machine was
+// and age is what tells one worth trying first (§4).
+func (m *Membership) PeerEndpointsOf(peerID string) []string {
+	rows, err := m.db.Query(`SELECT DISTINCT endpoint FROM machines
+		WHERE user = ? AND endpoint IS NOT NULL AND endpoint <> ''
+		ORDER BY endpoint_at DESC, machine_key`, peerID)
 	if err != nil {
 		return nil
 	}
@@ -366,10 +447,28 @@ func (m *Membership) PeerEndpoints() []string {
 	return out
 }
 
-// EndpointOwners maps each recorded address to the peer it was recorded for, so that
-// a state kept per address can be reported per person.
+// PeerEndpoints is every machine-scope address worth trying. Room membership
+// supplies others; these are the ones that exist before any room does.
+func (m *Membership) PeerEndpoints() []string {
+	rows, err := m.db.Query(`SELECT DISTINCT endpoint FROM machines WHERE endpoint IS NOT NULL AND endpoint <> ''`)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var e string
+		if rows.Scan(&e) == nil {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+// EndpointOwners maps each recorded address to the peer whose machine it was
+// recorded for, so that a state kept per address can be reported per person.
 func (m *Membership) EndpointOwners() map[string]string {
-	rows, err := m.db.Query(`SELECT endpoint, peer_id FROM known_peers WHERE endpoint IS NOT NULL AND endpoint <> ''`)
+	rows, err := m.db.Query(`SELECT endpoint, user FROM machines WHERE endpoint IS NOT NULL AND endpoint <> ''`)
 	if err != nil {
 		return nil
 	}
@@ -531,7 +630,9 @@ func (m *Membership) IsVerified(peerID string) bool {
 }
 
 func (m *Membership) KnownPeers() ([]KnownPeer, error) {
-	rows, err := m.db.Query(`SELECT peer_id, name, added_at, COALESCE(verified_at,''), COALESCE(endpoint,'')
+	rows, err := m.db.Query(`SELECT peer_id, name, added_at, COALESCE(verified_at,''),
+		COALESCE((SELECT mc.endpoint FROM machines mc WHERE mc.user = known_peers.peer_id
+			AND mc.endpoint IS NOT NULL AND mc.endpoint <> '' ORDER BY mc.endpoint_at DESC LIMIT 1), '')
 		FROM known_peers ORDER BY name`)
 	if err != nil {
 		return nil, err
@@ -758,7 +859,7 @@ func (m *Membership) IssuedSequence(roomID string) int64 {
 // RoomPeers is where to reach the other members of a room.
 //
 // A join rather than a list of its own: a room's members are its guests, and an
-// address belongs to a machine (D-103). Asking the question this way returns the
+// address belongs to a machine (D-103, an address belongs to a machine). Asking the question this way returns the
 // identity alongside each address, which is what lets a failure be attributed and
 // a peer that moves overwrite one row instead of adding another.
 //
@@ -766,11 +867,16 @@ func (m *Membership) IssuedSequence(roomID string) int64 {
 // your own known-peers list, so the join would drop you anyway -- by the absence of
 // a row, which is the right answer for the wrong reason and stops being right the
 // moment somebody adds one.
+//
+// A guest is a user, and each machine of a guest's is a target, this user's own
+// other machines included, joined on the user each machine belongs to (D-103, an address belongs to a machine; D-222,
+// any two of a user's machines exchange the events of each room both have joined).
+// self is this machine's own key, and the only machine left out.
 func (m *Membership) RoomPeers(roomID, self string) []string {
 	rows, err := m.db.Query(`
-		SELECT k.endpoint FROM room_guests g
-		JOIN known_peers k ON k.peer_id = g.peer_id
-		WHERE g.room_id = ? AND g.peer_id <> ? AND k.endpoint IS NOT NULL AND k.endpoint <> ''`,
+		SELECT DISTINCT mc.endpoint FROM room_guests g
+		JOIN machines mc ON mc.user = g.peer_id
+		WHERE g.room_id = ? AND mc.machine_key <> ? AND mc.endpoint IS NOT NULL AND mc.endpoint <> ''`,
 		roomID, self)
 	if err != nil {
 		return nil
@@ -903,7 +1009,7 @@ func (m *Membership) SessionIDsInRoom(roomID string) []string {
 }
 
 // IsGuest is the admission decision. Authentication established who is asking;
-// this establishes whether they may (D-044).
+// this establishes whether they may (D-044, sync requests are signed).
 func (m *Membership) IsGuest(roomID, peerID string) bool {
 	var n int
 	err := m.db.QueryRow(`SELECT COUNT(*) FROM room_guests WHERE room_id = ? AND peer_id = ?`,

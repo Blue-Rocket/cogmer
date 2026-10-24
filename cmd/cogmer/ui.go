@@ -138,7 +138,7 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 	if cur.RoomID == "" {
 		// No room. Showing an empty feed would imply a quiet room rather than no
 		// room, which are different things to a person looking at it.
-		return uiState{SelfPeerID: d.id.PeerID}, nil
+		return uiState{SelfPeerID: d.id.Peer()}, nil
 	}
 	store, err := d.storeFor(cur.RoomID)
 	if err != nil {
@@ -156,7 +156,7 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 	}
 	now := time.Now()
 	lastTurn := map[string]string{}
-	st := uiState{Room: cur.RoomID, RoomName: cur.RoomName, SelfPeerID: d.id.PeerID, Peers: d.roomPeerStatus(cur.RoomID),
+	st := uiState{Room: cur.RoomID, RoomName: cur.RoomName, SelfPeerID: d.id.Peer(), Peers: d.roomPeerStatus(cur.RoomID),
 		SessionsInRoom: len(d.members.SessionIDsInRoom(cur.RoomID))}
 	labels := d.members.Labels()
 	var imageEvents []Event

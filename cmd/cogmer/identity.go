@@ -50,6 +50,24 @@ type Identity struct {
 	Chain *Chain `json:"chain,omitempty"`
 }
 
+// HasUser reports whether this machine speaks for a user: identity.json holds the
+// user and the chain that ties this machine's key to the user's master key (D-219,
+// a user is a master key that certifies machines through a shared key). Every path
+// the user identity adds is taken only when this is true, so a machine without one
+// behaves as it did before the user identity existed.
+func (id *Identity) HasUser() bool { return id != nil && id.User != "" && id.Chain != nil }
+
+// Peer is the identifier this machine is known by to colleagues: its user's when it
+// has one, and otherwise its own key's, which is what PeerID always holds. PeerID
+// stays the machine key, since the key is what signs (D-239, an event a machine
+// signs for its user names the user and the signing key).
+func (id *Identity) Peer() string {
+	if id.HasUser() {
+		return id.User
+	}
+	return id.PeerID
+}
+
 // Config separates room membership (shareable) from identity (personal), per §28.
 type Config struct {
 	Room string `json:"room"`

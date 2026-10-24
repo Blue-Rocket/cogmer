@@ -1009,7 +1009,7 @@ func runCreateRoom(args []string) {
 	}
 	refuseWhenTheHostIsUnclear()
 	withMembership(func(m *Membership, id *Identity) {
-		r, err := m.CreateRoom(id.PeerID, showOnly)
+		r, err := m.CreateRoom(id.Peer(), showOnly)
 		if err != nil {
 			log.Fatalf("create: %v", err)
 		}
@@ -1134,7 +1134,7 @@ func runJoin(args []string) {
 				return
 			}
 			log.Fatalf("no room named %q. Ask its host for an invitation; yours to give them is:\n  %s",
-				name, id.PeerID)
+				name, id.Peer())
 		}
 		if err != nil {
 			log.Fatal(err)
@@ -1212,7 +1212,7 @@ func runGuests() {
 		reach, self, up := fetchPeers()
 		var rows []guestRow
 		for _, p := range g {
-			rows = append(rows, guestRow{Name: firstNonEmpty(m.Label(p), PeerName(p)), ID: p, Self: p == id.PeerID})
+			rows = append(rows, guestRow{Name: firstNonEmpty(m.Label(p), PeerName(p)), ID: p, Self: p == id.Peer()})
 		}
 		renderGuests(os.Stdout, r.RoomName, rows, reach, self, up)
 		if line := coworkLine(m.SessionIDsInRoom(r.RoomID), fetchHostCalls(), up); line != "" {
@@ -1432,7 +1432,7 @@ func runInvite(args []string) {
 		}
 		// The fallback carries the same four facts by hand. The address in it is
 		// the HOST's, so it is unaffected by whatever made the guest unreachable.
-		fmt.Printf(commandText("  /cogmer:room-join %s\n"), invitation(r, AdvertisedEndpoint(), self.PeerID))
+		fmt.Printf(commandText("  /cogmer:room-join %s\n"), invitation(r, AdvertisedEndpoint(), self.Peer()))
 	})
 }
 
@@ -2249,7 +2249,7 @@ func writePairingInvitation(w io.Writer, id *Identity, endpoint string) {
 		return
 	}
 	fmt.Fprintf(w, "\nSend your colleague this — any channel will do, it is not a secret:\n\n  %s\n",
-		pairingString(id.PeerID, endpoint, chosenName(id)))
+		pairingString(id.Peer(), endpoint, chosenName(id)))
 	if note != "" {
 		fmt.Fprintf(w, "\n%s\n", note)
 	}

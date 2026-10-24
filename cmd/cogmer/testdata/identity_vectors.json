@@ -124,5 +124,91 @@
       "signature": "Ub8GgIspx0WH5BJwh7kbhBTA8HOgWXEBQ-8xzASk2h5YIWrEe8k-cGBqwP8OSTcroaDuFbHylnrmJ8OmnNN7DA"
     },
     "hash": "536f81b32b13052b76c34f84eb70ff093567f270dea0fd9f14b619d64596f9a4"
-  }
+  },
+  "eventsV4": [
+    {
+      "eventId": "0001790000000-v4-machine",
+      "peerId": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "peerSequence": 1,
+      "roomId": "room-a",
+      "timestamp": "2026-10-24T12:00:00Z",
+      "userId": "ana",
+      "userDisplayName": "Ana Ünïcode",
+      "machineId": "laptop",
+      "originSessionId": "session-1",
+      "eventType": "USER_PROMPT",
+      "content": "a turn signed for a user",
+      "metadata": {"n":1},
+      "signature": "5MQdL4W9RKSEs4BvRe8_E5kNJbSqGdImEl1iBBfrvo-C7BE_mKPHTmMQIlzmJVsme4PpMf870TYCA5qExGNgDw",
+      "sigVersion": 4,
+      "signer": "ed25519:1AS8RFZa7buJkVDlsLOzK5RBvwy3iEwzEw2o28J90s8",
+      "identityVersion": 3,
+      "removalsSeen": [
+        "28ae7a933d53ffb32f481403d4d9f28eea2c1db418f9d8e5cd07419f0a7c66c5"
+      ],
+      "chain": {
+        "shared": {
+          "scheme": 1,
+          "user": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+          "version": 3,
+          "sharedKey": "ed25519:VRVPQgZepaG-oFRjgmviaE65LfksEAAnqrquV8pVQgc",
+          "signature": "uY1adP2WvaCsxTAkP3M5iNw3nZFSV7vxf7oH5L611XNmEYWi5Css2ciQ7vQiQR0s3MuRzkbE8ptAqULsUTtPDQ"
+        },
+        "machine": {
+          "scheme": 1,
+          "user": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+          "sharedVersion": 3,
+          "machine": "ed25519:1AS8RFZa7buJkVDlsLOzK5RBvwy3iEwzEw2o28J90s8",
+          "kind": "machine",
+          "name": "laptop Ünïcode",
+          "serial": 7,
+          "signature": "i3n6JejSsIjRZ_Tzk3f3j21JjMU2rJcyX79Ve1mtWOskwOzw0rX7XdlUuAmmJddK824AWP3n6nOXcao-O6dfDQ"
+        }
+      }
+    },
+    {
+      "eventId": "0001790000001-v4-session",
+      "peerId": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "peerSequence": 1,
+      "roomId": "room-a",
+      "timestamp": "2026-10-24T12:00:01Z",
+      "userId": "ana",
+      "userDisplayName": "Ana Ünïcode",
+      "machineId": "cloud",
+      "originSessionId": "session-2",
+      "eventType": "ASSISTANT_MESSAGE",
+      "content": "and one from a cloud session",
+      "signature": "GBtmkRMq_X5LdJg6H1mhb5N8Ow8Kz9de2OdN_TxkmxkOPOPhoftxcyqkWCLmrps7b-7FZEFctCgQ3wfPAlA3CA",
+      "sigVersion": 4,
+      "signer": "ed25519:TmAIsBt05J442LETkr-szHtb_4bKIEjLsPeDYzph4t0",
+      "identityVersion": 3,
+      "chain": {
+        "shared": {
+          "scheme": 1,
+          "user": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+          "version": 3,
+          "sharedKey": "ed25519:VRVPQgZepaG-oFRjgmviaE65LfksEAAnqrquV8pVQgc",
+          "signature": "uY1adP2WvaCsxTAkP3M5iNw3nZFSV7vxf7oH5L611XNmEYWi5Css2ciQ7vQiQR0s3MuRzkbE8ptAqULsUTtPDQ"
+        },
+        "machine": {
+          "scheme": 1,
+          "user": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+          "sharedVersion": 3,
+          "machine": "ed25519:7TI0snbUztpX1ZutFPuvWnc8DzGMmZ3jpg1TxaWzTAU",
+          "kind": "cloud",
+          "name": "cloud",
+          "serial": 8,
+          "signature": "VFAZYBe2k1tOOTpjzlO_Cl5ygxijjcv0a3wYBlr06ypeZ8xb612h6A6hs2bDJjfm6MjzL-htZpZalle0xjBLCw"
+        },
+        "session": {
+          "scheme": 1,
+          "user": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+          "cloudKey": "ed25519:7TI0snbUztpX1ZutFPuvWnc8DzGMmZ3jpg1TxaWzTAU",
+          "session": "ed25519:TmAIsBt05J442LETkr-szHtb_4bKIEjLsPeDYzph4t0",
+          "expires": "2026-11-01T00:00:00Z",
+          "signature": "HYkUP700-XVS4MEC03i2wmPoiUtVJBTPZmSfmXjp_9pWT50l8TohFYetQb9FlCqhdV2vIRe8X6ooJdgsLBMtDA"
+        }
+      }
+    }
+  ]
 }

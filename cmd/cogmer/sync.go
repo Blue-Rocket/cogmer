@@ -37,6 +37,11 @@ type syncRequest struct {
 	// Endpoint is where the caller listens. Synchronization is a pull, so a peer
 	// that never says where it is can be read from and never read.
 	Endpoint string `json:"endpoint,omitempty"`
+	// Signer and Chain are present under the v5 scheme, from a machine that speaks
+	// for the user PeerID names: the machine's key, which signed, and the chain from
+	// it to the user, which is not signed and proves itself (D-044, sync requests are signed; D-219, a user is a master key that certifies machines through a shared key).
+	Signer string `json:"signer,omitempty"`
+	Chain  *Chain `json:"chain,omitempty"`
 }
 
 type syncResponse struct {
@@ -81,9 +86,14 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 	// Recorded against the peer, not the room. verifyRequest has just established
 	// req.PeerID cryptographically and the signature covers the endpoint, so this
 	// is an authenticated claim by the only party entitled to make it — and it is
-	// the sole way a peer that moved teaches anybody where it went (D-103).
+	// the sole way a peer that moved teaches anybody where it went (D-103, an address belongs to a machine).
+	//
+	// The address is the machine's that signed, stored against that machine and
+	// its user, since a user with several machines has several (D-103, an address belongs to a machine).
 	if req.Endpoint != "" {
-		_ = d.members.SetPeerEndpoint(req.PeerID, req.Endpoint)
+		if err := d.members.RecordMachineAddress(req.requestMachine(), req.PeerID, req.Endpoint); err != nil {
+			log.Printf("sync: could not record where %s listens: %v", PeerName(req.requestMachine()), err)
+		}
 	}
 	d.markPeerHeardFrom(req.PeerID)
 
@@ -198,7 +208,7 @@ func (d *Daemon) pullFrom(addr string) (int, error) {
 	// bounds the first attempt rather than the ordinary one.
 	// A room records where its members listen, not which member listens where, so
 	// there is no single key to expect here. Any known peer is accepted, and the
-	// signed request inside binds identity exactly (D-044).
+	// signed request inside binds identity exactly (D-044, sync requests are signed).
 	conf, cerr := d.clientConfig("")
 	if cerr != nil {
 		return 0, cerr
@@ -237,7 +247,7 @@ func (d *Daemon) pullFrom(addr string) (int, error) {
 }
 
 // syncTargets is every address worth asking: those configured for this machine,
-// and the guests of each room, at the address recorded for each (D-103). A room
+// and the guests of each room, at the address recorded for each (D-103, an address belongs to a machine). A room
 // carries its own peers because reachability is a property of a room's membership,
 // not of the daemon.
 //
@@ -324,14 +334,14 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 	if err != nil {
 		return 0, err
 	}
-	ts, nonce, sig, err := signRequest(d.id, room.RoomID, AdvertisedEndpoint())
+	cred, err := signRequestAs(d.id, room.RoomID, AdvertisedEndpoint())
 	if err != nil {
 		return 0, err
 	}
 	body, _ := json.Marshal(syncRequest{
 		Protocol: wireVersion, RoomID: room.RoomID, Have: have,
-		PeerID: d.id.PeerID, Timestamp: ts, Nonce: nonce, Signature: sig,
-		Endpoint: AdvertisedEndpoint(),
+		PeerID: cred.PeerID, Timestamp: cred.Timestamp, Nonce: cred.Nonce, Signature: cred.Signature,
+		Endpoint: cred.Endpoint, Signer: cred.Signer, Chain: cred.Chain,
 	})
 	resp, err := client.Post(peerURL("/sync"), "application/json", bytes.NewReader(body))
 	if err != nil {
@@ -361,7 +371,7 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	stored, rejected, unverified := 0, 0, 0
+	stored, rejected, unverified, notCounting := 0, 0, 0, 0
 	for i := range out.Events {
 		ev := fromWire(out.Events[i])
 
@@ -388,9 +398,33 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 		// Not stored, not quarantined, and not counted as seen: sync is a pull
 		// against a watermark, so refusing simply leaves the events on offer. When
 		// the two people verify, the next poll brings the whole backlog.
-		if ev.PeerID != d.id.PeerID && !d.members.IsVerified(ev.PeerID) {
+		//
+		// The gate is by user: an event a machine signed for its user names the
+		// user as its peer, so a colleague verified once is verified for every
+		// machine of theirs, and the user's own events from another of the user's
+		// machines pass as the user's own (D-054, verification gates synchronization and
+		// injection; D-219, a user is a master key
+		// that certifies machines through a shared key).
+		if !d.authorVerified(ev.PeerID) {
 			unverified++
 			continue
+		}
+
+		// An event signed for a user is checked against what this machine holds
+		// for that user: a chain whose shared-key certificate lost is refused, and
+		// a removed machine's events past its cutoff and a suspended machine's
+		// events are not stored (D-220, a removal names the last event of a machine
+		// that counts; D-234, a machine not certified under the current shared key
+		// is suspended). Neither is quarantined, and both stay on offer.
+		if ev.SigVersion == 4 {
+			if err := d.judgeEvent(&ev); errors.Is(err, errNotCounting) {
+				notCounting++
+				continue
+			} else if err != nil {
+				log.Printf("sync: REJECTED event %.12s from %s — %v", ev.EventID, addr, err)
+				rejected++
+				continue
+			}
 		}
 
 		// Nothing below rewrites peerId, peerSequence, or eventId; doing so would
@@ -404,8 +438,8 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 			stored++
 			registerImages(store, &ev)
 		case InsertConflict:
-			log.Printf("sync: CONFLICT from %s — peer %s sequence %d is already held by a different event; run `cogmer conflicts`",
-				addr, PeerName(ev.PeerID), ev.PeerSequence)
+			log.Printf("sync: CONFLICT from %s — %s sequence %d is already held by a different event; run `cogmer conflicts`",
+				addr, PeerName(ev.signerKey()), ev.PeerSequence)
 		}
 	}
 	if unverified > 0 {
@@ -418,6 +452,10 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 	}
 	if rejected > 0 {
 		log.Printf("sync: %d event(s) from %s failed verification and were not stored", rejected, addr)
+	}
+	if notCounting > 0 {
+		log.Printf("sync: %d event(s) from %s were not stored — the machine that signed them is removed past its cutoff or suspended",
+			notCounting, addr)
 	}
 	if stored > 0 {
 		d.notify()

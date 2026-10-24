@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -46,6 +47,54 @@ type verifyMessage struct {
 	PeerID    string `json:"peerId"`
 	Payload   string `json:"payload"` // base64url: the commitment, or the nonce
 	Signature string `json:"signature"`
+	// Signer and Chain are present from a machine that speaks for a user: PeerID
+	// names the user, whose identifier the two words are computed over, and the
+	// machine's own key signs, with the chain tying that key to the user (D-048,
+	// each machine proves its presence with its own key and its chain ties the key
+	// to the identifier the words name).
+	Signer string `json:"signer,omitempty"`
+	Chain  *Chain `json:"chain,omitempty"`
+}
+
+// signedVerifyMessage is this machine's step: as the user it speaks for, signed by
+// its own key with its chain beside, or as its own key when it has no user.
+func (d *Daemon) signedVerifyMessage(step string, payload []byte) verifyMessage {
+	msg := verifyMessage{
+		Step: step, PeerID: d.id.Peer(),
+		Payload:   base64.RawURLEncoding.EncodeToString(payload),
+		Signature: base64.RawURLEncoding.EncodeToString(signVerify(d.id.private, step, d.id.Peer(), payload)),
+	}
+	if d.id.HasUser() {
+		c := *d.id.Chain
+		msg.Signer, msg.Chain = d.id.PeerID, &c
+	}
+	return msg
+}
+
+// checkVerifyMessage checks a step's signature. Without a chain it is the peer's own
+// key that signs, as it always was. With one, the machine key signs over the user's
+// identifier, and the chain must tie that key to the user and the machine must be
+// neither removed nor suspended (D-220, a removal names the last event of a machine
+// that counts; D-234, a suspended machine is refused). The verification is the
+// user's, so whichever machine of theirs answers, it is the user who is verified.
+func (d *Daemon) checkVerifyMessage(msg verifyMessage, payload, sig []byte) error {
+	if msg.Chain == nil {
+		if !checkVerify(msg.PeerID, msg.Step, payload, sig) {
+			return errors.New("signature does not match the peer id presenting it")
+		}
+		return nil
+	}
+	pub, err := PublicFromPeerID(msg.Signer)
+	if err != nil {
+		return err
+	}
+	if !ed25519.Verify(pub, verifyBytes(msg.Step, msg.PeerID, payload), sig) {
+		return errors.New("signature does not match the machine presenting it")
+	}
+	if _, err := d.members.checkLiveChain(msg.PeerID, msg.Signer, *msg.Chain, time.Now()); err != nil {
+		return fmt.Errorf("%s does not speak for %s: %w", PeerName(msg.Signer), PeerName(msg.PeerID), err)
+	}
+	return nil
 }
 
 // startVerify opens a session for a peer, replacing any earlier one. A second
@@ -58,7 +107,7 @@ func (d *Daemon) startVerify(peerID string) (*verifySession, error) {
 	}
 	s := &verifySession{
 		peerID: peerID, nonce: nonce,
-		commit: sasCommitment(d.id.PeerID, nonce), created: time.Now(),
+		commit: sasCommitment(d.id.Peer(), nonce), created: time.Now(),
 	}
 	d.verifyMu.Lock()
 	if d.verifying == nil {
@@ -109,9 +158,18 @@ func (d *Daemon) handleVerify(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	if !checkVerify(msg.PeerID, msg.Step, payload, sig) {
-		http.Error(w, "signature does not match the peer id presenting it", http.StatusUnauthorized)
+	if err := d.checkVerifyMessage(msg, payload, sig); err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
+	}
+	// The machine that signed is the machine on the other end of this pinned
+	// connection, so a step cannot be relayed from another connection (D-048, each
+	// machine proves its presence over a connection pinned to its key).
+	if msg.Chain != nil && r.TLS != nil && len(r.TLS.PeerCertificates) > 0 {
+		if pub, ok := r.TLS.PeerCertificates[0].PublicKey.(ed25519.PublicKey); !ok || PeerIDFromPublic(pub) != msg.Signer {
+			http.Error(w, "the step is signed by a machine other than the one connected", http.StatusUnauthorized)
+			return
+		}
 	}
 	// Two ways of not being ready, and both are ordinary rather than wrong.
 	//
@@ -159,11 +217,7 @@ func (d *Daemon) handleVerify(w http.ResponseWriter, r *http.Request) {
 }
 
 func reply(w http.ResponseWriter, d *Daemon, s *verifySession, step string, payload []byte) {
-	writeJSON(w, verifyMessage{
-		Step: step, PeerID: d.id.PeerID,
-		Payload:   base64.RawURLEncoding.EncodeToString(payload),
-		Signature: base64.RawURLEncoding.EncodeToString(signVerify(d.id.private, step, d.id.PeerID, payload)),
-	})
+	writeJSON(w, d.signedVerifyMessage(step, payload))
 }
 
 // verifyTargets is where to look for ONE named peer, and deliberately not
@@ -188,13 +242,16 @@ func reply(w http.ResponseWriter, d *Daemon, s *verifySession, step string, payl
 // COGMER_PEERS stays in the list because those addresses name no peer: they
 // are configured for this machine, so one of them may be the peer we want and
 // nothing but dialling can tell. Everything else is somebody else's address.
+//
+// A colleague is a user who may have several machines, each with an address, and
+// the exchange runs with whichever of them answers, since each is certified to the
+// user asked for (D-052, verifying a peer is its own act, run by both users at once).
 func (d *Daemon) verifyTargets(peerID string) []string {
+	seen := map[string]bool{}
 	var out []string
-	if own := d.members.PeerEndpoint(peerID); own != "" {
-		out = append(out, own)
-	}
-	for _, a := range peerList() {
-		if a != "" && (len(out) == 0 || a != out[0]) {
+	for _, a := range append(d.members.PeerEndpointsOf(peerID), peerList()...) {
+		if a != "" && !seen[a] {
+			seen[a] = true
 			out = append(out, a)
 		}
 	}
@@ -236,7 +293,7 @@ func (d *Daemon) RunVerification(peerID string, addrs []string) (string, error) 
 		theirs := s.theirNonce
 		s.mu.Unlock()
 		if theirs != nil {
-			return SAS(d.id.PeerID, s.nonce, peerID, theirs), nil
+			return SAS(d.id.Peer(), s.nonce, peerID, theirs), nil
 		}
 
 		// Outbound: one round against each address we know of, keeping the one that
@@ -280,7 +337,7 @@ func (d *Daemon) RunVerification(peerID string, addrs []string) (string, error) 
 				return "", errors.New("the peer's revealed nonce does not match what it committed to; " +
 					"this is not a network fault and must not be retried")
 			}
-			return SAS(d.id.PeerID, s.nonce, peerID, theirNonce), nil
+			return SAS(d.id.Peer(), s.nonce, peerID, theirNonce), nil
 		}
 		if lastErr != nil && !errors.Is(lastErr, errPeerNotReady) && !isReachErr(lastErr) {
 			return "", lastErr
@@ -303,11 +360,7 @@ func isReachErr(err error) bool {
 }
 
 func (d *Daemon) verifyStep(client *http.Client, addr, expect, step string, payload []byte) ([]byte, error) {
-	body, _ := json.Marshal(verifyMessage{
-		Step: step, PeerID: d.id.PeerID,
-		Payload:   base64.RawURLEncoding.EncodeToString(payload),
-		Signature: base64.RawURLEncoding.EncodeToString(signVerify(d.id.private, step, d.id.PeerID, payload)),
-	})
+	body, _ := json.Marshal(d.signedVerifyMessage(step, payload))
 	resp, err := client.Post(peerURL("/verify"), "application/json", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
@@ -334,8 +387,8 @@ func (d *Daemon) verifyStep(client *http.Client, addr, expect, step string, payl
 	if msg.PeerID != expect {
 		return nil, fmt.Errorf("that address answered as %s, not %s", PeerName(msg.PeerID), PeerName(expect))
 	}
-	if !checkVerify(msg.PeerID, msg.Step, out, sig) {
-		return nil, errors.New("the peer's reply is not signed by the key it claims")
+	if err := d.checkVerifyMessage(msg, out, sig); err != nil {
+		return nil, fmt.Errorf("the peer's reply is not signed by the key it claims: %w", err)
 	}
 	return out, nil
 }

@@ -140,7 +140,7 @@ type Daemon struct {
 	watch selfWatch
 
 	// The certificate this daemon presents to peers, derived from the identity
-	// key and cached because that key never changes (D-101).
+	// key and cached because that key never changes (D-101, peer connections are TLS pinned).
 	tls peerTLS
 
 	// When each peer last made an authenticated request of this daemon, by peer.
@@ -386,7 +386,7 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 	// Filtered again here, not only at the door. An event stored while its peer
 	// was verified outlives a later `forget`, and injection is the step that
 	// cannot be undone -- a context window has no delete.
-	pending = onlyVerified(pending, d.id.PeerID, d.members.IsVerified)
+	pending = onlyVerified(pending, d.id.Peer(), d.authorVerified)
 	text := FormatTeamContext(pending, d.members)
 	if err := store.RecordPending(req.PromptID, req.SessionID, pending, text); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -741,7 +741,15 @@ func (d *Daemon) appendLocal(store *Store, room Room, sessionID, kind, content s
 	if err != nil {
 		return nil, err
 	}
-	return store.Append(seq, d.id, room.RoomID, sessionID, kind, content, meta)
+	// A machine that speaks for a user names the removals it holds for the user, so
+	// that a colleague lacking one fetches it before giving the turn to an assistant
+	// (D-221, an event whose identity version the receiver lacks is withheld until
+	// fetched). A machine with no user identity names none and signs as it always has.
+	var removals []string
+	if d.id.HasUser() {
+		removals = d.members.RemovalsSeen(d.id.User)
+	}
+	return store.AppendAs(seq, d.id, removals, room.RoomID, sessionID, kind, content, meta)
 }
 
 // reportLostState compares what a room holds against what this peer recorded
