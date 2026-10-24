@@ -7,7 +7,9 @@ leaves a tool list the reader opened and text the reader selected as they were. 
 turns that arrive while the reader is away from the newest turn or the tab is hidden, shows the count on a
 button that jumps to them and in the tab's title, and clears it on reaching the bottom. It marks a
 colleague's turn that no session on this machine is confirmed to hold, except in a show-only room. It shows
-when each colleague last wrote a turn. It offers the room as a Markdown download.
+when each colleague last wrote a turn. It offers the room as a Markdown download. A turn written on another
+of this user's machines is the user's own (D-198, the view shows the derived name and the unverified marker
+only on other people's turns), so it is neither counted nor marked as a colleague's turn.
 
 **Support.**
 - The view is the only way a user sees a colleague's turns, so a turn the reader did not notice arrived
@@ -22,7 +24,7 @@ when each colleague last wrote a turn. It offers the room as a Markdown download
   `cmd/cogmer/store.go`, `DeliveredEventIDs`, `cmd/cogmer/viewaffordances_test.go`,
   `TestTheViewSaysWhichColleagueTurnsNoSessionHolds`.
 - A show-only room gives nothing to a session, so every turn in it would carry the marker, which would
-  say nothing. D-200 (a room can be show-only), `TestAShowOnlyRoomMarksNoTurnAsNotInASession`.
+  say nothing. D-200 (each machine joins a room show-only or not), `TestAShowOnlyRoomMarksNoTurnAsNotInASession`.
 - The export is written by the daemon and not by the page, so a test reads it, it carries the date a
   turn's clock leaves out, and the response is a download with `nosniff`, so a colleague's text is never
   rendered as a page. `cmd/cogmer/ui.go`, `exportMarkdown`, `cmd/cogmer/viewaffordances_test.go`,

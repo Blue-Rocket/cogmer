@@ -825,7 +825,7 @@ func TestEverySlashCommandNamesARealSubcommand(t *testing.T) {
 	}
 }
 
-// An address belongs to a peer and is recorded once (D-103). The table it used to
+// An address belongs to a machine and is recorded once (D-103). The table it used to
 // share with rooms had no peer column, so none of this could be asked.
 func TestAnAddressBelongsToAPeer(t *testing.T) {
 	m := testMembership(t)

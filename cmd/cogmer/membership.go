@@ -193,7 +193,7 @@ func migrateMembership(db *sql.DB) error {
 	if err := dropColumnIfPresent(db, "session_rooms", "injected"); err != nil {
 		return err
 	}
-	// An address belongs to a peer (D-103). This table held addresses with no peer
+	// An address belongs to a machine (D-103). This table held addresses with no peer
 	// column, so nothing can be carried out of it -- which is the defect, not a
 	// migration difficulty. Peers re-advertise on their next synchronization and
 	// the rows rebuild themselves, in the place that names whose they are.
@@ -698,7 +698,7 @@ func (m *Membership) IssuedSequence(roomID string) int64 {
 // RoomPeers is where to reach the other members of a room.
 //
 // A join rather than a list of its own: a room's members are its guests, and an
-// address belongs to a peer (D-103). Asking the question this way returns the
+// address belongs to a machine (D-103). Asking the question this way returns the
 // identity alongside each address, which is what lets a failure be attributed and
 // a peer that moves overwrite one row instead of adding another.
 //

@@ -12,7 +12,7 @@ name, events do not carry it, and unrelated rooms may share it.
 - A synchronization request addresses a room by its identifier. D-049 (the sync request
   addresses a room by id).
 - Names are generated independently on each machine, so unrelated rooms can share one.
-  D-135 (a room name is unique only among one peer's rooms).
+  D-135 (a room name is unique only among one user's rooms).
 
 **Rejected.**
 - *A single identifier.* A UUID cannot be read aloud on a call, and a name cannot be a

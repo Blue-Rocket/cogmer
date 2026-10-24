@@ -1,11 +1,14 @@
-# D-200 — A room is created or joined show-only or not, and the choice never changes for that room
+# D-200 — Each machine joins a room show-only or not, and its choice never changes for that room
 
 **Date:** 2026-10-12 · **Status:** active · **Areas:** rooms, commands, trust
 
-**Decision.** `create` and `join` take `--show-only`. A room created or first joined with it gives none of
-its conversation to this machine's Claude sessions: the prompt hook captures the session's prompt and
-offers nothing. The setting is stored with the room on this machine. A request for the other setting for a
-room recorded earlier is refused, and the store refuses any change to it.
+**Decision.** `create` and `join` take `--show-only`. The choice belongs to each machine and is
+made when a session there first joins the room, by creating it or by joining it, and another of
+the same user's machines makes its own choice when a session there first joins. A room created
+or first joined on this machine with it gives none of its conversation to this machine's Claude
+sessions: the prompt hook captures the session's prompt and offers nothing. The setting is stored
+with the room on this machine. A request for the other setting for a room recorded earlier is
+refused, and the store refuses any change to it.
 
 **Support.**
 - Injection carries a colleague's conversation into a user's session, and so to that user's model provider
@@ -30,10 +33,13 @@ room recorded earlier is refused, and the store refuses any change to it.
   something, and a session that had received something could not be made not to have.
 - *A room-level setting carried in the invitation and applied to every member.* Only a member's own
   machine decides what its sessions receive, so a host could request it and could not guarantee it.
+- *One setting for all of a user's machines in the room, copied between them.* A machine whose sessions had
+  joined under one setting would have it changed by a choice made on another machine, which is the change
+  the store refuses.
 
-**Limits.** The setting protects the person who makes it. A colleague's machine gives their sessions this
-user's turns unless they chose show-only too, and the command says so when the user chooses it. The user's own
-turns are shared with the room as in any other.
+**Limits.** The setting protects the user on the machine where it is made. A colleague's machine gives their
+sessions this user's turns unless they chose show-only too, and the command says so when the user chooses it.
+The user's own turns are shared with the room as in any other.
 
 **Revisit when** somebody needs a room that shares nothing of their own either, or a host needs to ask members
 for show-only.

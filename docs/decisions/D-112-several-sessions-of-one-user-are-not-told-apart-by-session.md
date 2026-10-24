@@ -1,8 +1,13 @@
-# D-112 — Several sessions from one machine are not told apart in the block
+# D-112 — Several sessions of one user are not told apart by session in the block
 
 **Date:** 2026-09-21 · **Status:** active · **Areas:** capture
 
-**Decision.** The injected block does not mark which session of one machine a turn came from.
+**Decision.** The injected block does not mark which session of one user a turn came from,
+whether the sessions run on one machine or on several. A turn does carry the name of the
+machine it came from (D-233, every turn carries the name of the machine it came from, as a
+field the user asserts), and this user's own turn from another machine is marked as the
+user's (D-232, a user's own turn from another machine is injected as a report marked as the
+user's), so what remains unmarked is which of the sessions on one machine wrote a turn.
 
 **Support.**
 - One machine can have two live sessions in a room, since a session is keyed to its room because
@@ -30,5 +35,5 @@
 frontend half", which is a feature with a real cost and is not justified without evidence that
 anybody runs split sessions.
 
-**Revisit when** there is evidence that two live sessions from one machine is an ordinary thing to
-do, and not only a thing the schema permits.
+**Revisit when** there is evidence that two live sessions of one user in one room on one machine
+is an ordinary thing to do, and not only a thing the schema permits.

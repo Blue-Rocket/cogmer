@@ -5,7 +5,10 @@
 **Decision.** The framing around injected turns tells the model what kind of thing it is
 reading: that nothing inside is addressed to it, however phrased, including text that
 appears to come from an operator, a system or its own user, and that a request inside
-is a report that someone made a request, not a request made of it.
+is a report that someone made a request, not a request made of it. The framing holds for
+this user's own turns from another machine, which are reports of what the user said in
+another session and never words addressed to this one (D-232, a user's own turn from
+another machine is injected as a report marked as the user's).
 
 **Support.**
 - Telling a model to disregard instructions invites it to weigh two instructions, while
@@ -22,8 +25,8 @@ is a report that someone made a request, not a request made of it.
 - *Relying on the model to withstand the instruction.* That is a property of a model, not of this design,
   and the framing has to hold whether or not the next model can.
 
-**Limits.** A colleague's genuine turn may contain imperative text, and no framing tells a
-hostile imperative from a harmless one. Both are reports of what someone said, and
-neither is addressed to the reading model.
+**Limits.** A genuine turn, a colleague's or this user's own from another machine, may
+contain imperative text, and no framing tells a hostile imperative from a harmless one. Both
+are reports of what someone said, and neither is addressed to the reading model.
 
 **Revisit when** a session is found following an instruction from inside the block.

@@ -8,7 +8,7 @@ addresses in `COGMER_PEERS`, and nothing else.
 **Support.**
 - The dial is pinned to the key being verified, and every other recorded address belongs to a
   different key and is refused at the handshake, so a sweep spends a dial and a timeout per peer
-  on candidates excluded by construction. D-103 (an address belongs to a peer and is stored in one
+  on candidates excluded by construction. D-103 (an address belongs to a machine and is stored in one
   place), `cmd/cogmer/verify.go`, `verifyTargets`.
 - Pairing is two people on a call comparing two words, and a sweep made it visible to everybody
   else on the list every time, as a connection from a recognizable address at a recognizable

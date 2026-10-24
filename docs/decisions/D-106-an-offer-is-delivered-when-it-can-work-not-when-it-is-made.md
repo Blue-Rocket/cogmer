@@ -22,7 +22,7 @@ delivered. The invite reads as admitted and queued and never as a refusal.
   get the same dead room. `cmd/cogmer/offer.go`.
 - This peer is a guest of its own rooms and is never in its own peer list, so a check that a
   guest is verified excludes this peer and does not conclude that the creator is unverified.
-  D-103 (an address belongs to a peer and is stored in one place).
+  D-103 (an address belongs to a machine and is stored in one place).
 
 **Rejected.**
 - *Refusing to invite an unverified peer.* It is simpler, with one fewer state, and it blocks a

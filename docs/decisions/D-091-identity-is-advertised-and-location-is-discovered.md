@@ -14,7 +14,7 @@ string, an invitation or a durable record.
   (ICE), https://www.rfc-editor.org/rfc/rfc8445.
 - An advertisement outlives the fact it asserts. That is tolerable for what identifies a
   machine, which does not change when a laptop changes network, and not for an address,
-  which is true of one position at one moment. D-103 (an address belongs to a peer, and is
+  which is true of one position at one moment. D-103 (an address belongs to a machine and is
   stored in one place).
 - An overlay address holds three public keys and the node's home relay, a hostname with its
   addresses. The keys are durable, and the relay is a rendezvous that can go stale when the

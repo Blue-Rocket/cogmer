@@ -13,7 +13,7 @@ with the constraint.
   `cmd/cogmer/membership.go`, `RecordRoom`.
 - The table holds every room ever recorded and not only those in use, and names are
   drawn from 7,656 combinations, so about a hundred rooms make a clash as likely as
-  not. D-135 (a room's name is unique only among one peer's rooms).
+  not. D-135 (a room's name is unique only among one user's rooms).
 - A name this peer mints can be minted differently, so `CreateRoom` can avoid a local
   clash at no cost, which a name arriving with a room cannot. `cmd/cogmer/membership.go`,
   `CreateRoom`.
