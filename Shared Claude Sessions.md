@@ -1205,6 +1205,10 @@ room's page, in the room status and in each of their sessions in the room, so th
 they were taken out of never looks like a room that went quiet. The room up to their last
 counting turn stays readable on their machines.
 
+A removed user's sessions keep their own turns, and the room's page marks plainly that the
+user was removed, so that if the removal was a mistake and they are invited back, nothing
+they wrote in the meantime is lost.
+
 Forgetting a colleague is the forgetting user's act alone. It discards the colleague on
 every one of that user's machines, and the colleague's turns stop reaching that user,
 because a colleague the user does not know is unverified to them. It changes no room's

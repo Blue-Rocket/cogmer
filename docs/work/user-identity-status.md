@@ -31,8 +31,11 @@ Slice 2b, the guest list as room events, is merged: founding, inviting and revok
 guest events, a founded room's list is computed by `ResolveGuests` and cached, an event is
 stored only if its author counts on the list, a room's sync targets are the admitted users'
 machines that joined it (`room_machines`), and forgetting leaves every room's list alone. A
-room without a founding event behaves as before. Slice 3, a user's own machines, and slice 4,
-propagation, are next, and can run side by side.
+room without a founding event behaves as before. Slice 4, propagation, is merged:
+the identity fetch route, the withhold rule (D-221), pushing removals and new shared keys with
+acknowledgement (D-225), refusals that stop a cut-off machine's events being offered again,
+and the refusal that carries the revocation (D-241), with `d.Expulsion(roomID)` for slice 5.
+Slice 3, a user's own machines, is running.
 
 What the later slices need to know from slice 2b:
 
