@@ -307,3 +307,82 @@ func TestResolveGuestsLeavesTheCallersEventsAsTheyWere(t *testing.T) {
 		t.Fatal("the list shares a cutoff map with the caller's event")
 	}
 }
+
+func TestAnExpelledGuestsLateInvitationGivesTheirAccompliceNoStanding(t *testing.T) {
+	g := newGuestRoom("alice")
+	g.invite("alice", 2, "bob")
+	g.revoke("alice", 3, "bob", map[string]int64{"bob/laptop": 5})
+	late := g.invite("bob", 6, "mallory")
+	byMallory := g.invite("mallory", 1, "eve")
+	expel := g.revoke("mallory", 2, "alice", nil)
+	l := g.resolve()
+	if _, ever := l.Admitted["mallory"]; ever {
+		t.Fatal("an invitation past its author's cutoff made its subject ever invited")
+	}
+	if _, ever := l.Admitted["eve"]; ever {
+		t.Fatal("the accomplice's invitation counted")
+	}
+	wantOnList(t, l, map[string]bool{"alice": true, "bob": false})
+	wantGuestDiscarded(t, l, late, "after the cutoff")
+	wantGuestDiscarded(t, l, byMallory, "never invited")
+	wantGuestDiscarded(t, l, expel, "never invited")
+	if _, ok := l.Cutoffs["alice"]; ok {
+		t.Fatal("the accomplice's revocation of the creator set a cutoff")
+	}
+}
+
+func TestAReadmittedUserCanInviteAfterTheirOldCutoff(t *testing.T) {
+	g := newGuestRoom("alice")
+	g.invite("alice", 2, "bob")
+	r := g.revoke("alice", 3, "bob", map[string]int64{"bob/laptop": 5})
+	g.invite("alice", 4, "bob", r)
+	g.invite("bob", 9, "carol")
+	l := g.resolve()
+	wantOnList(t, l, map[string]bool{"alice": true, "bob": true, "carol": true})
+	if !l.Counts("bob", "bob/laptop", 9) {
+		t.Fatal("a readmitted user's event past the old cutoff does not count")
+	}
+}
+
+// guestCycle builds a record that never settles. Carol, whom Bob invited, revokes
+// Bob with a cutoff before that invitation, which takes away the invitation that
+// gave her the standing to revoke; Dave, whom Carol invited, stands only while
+// she does.
+func guestCycle() *guestRoom {
+	g := newGuestRoom("alice")
+	g.invite("alice", 2, "bob")
+	g.invite("bob", 2, "carol")
+	g.revoke("carol", 1, "bob", map[string]int64{"bob/laptop": 1})
+	g.invite("carol", 2, "dave")
+	return g
+}
+
+func TestARecordThatNeverSettlesKeepsOutEveryoneNotAdmittedInEveryState(t *testing.T) {
+	g := guestCycle()
+	l := g.resolve()
+	// The two states are {alice, carol} on the list with Bob revoked, and
+	// {alice, bob, dave} with Carol's standing gone; only Alice is in both.
+	wantOnList(t, l, map[string]bool{"alice": true, "bob": false, "carol": false, "dave": false})
+	for _, user := range []string{"bob", "carol", "dave"} {
+		if _, ever := l.Admitted[user]; !ever {
+			t.Errorf("%s, invited in some state of the cycle, is absent from the list", user)
+		}
+	}
+	// The state with fewer admitted users gives the cutoffs: Bob's revocation.
+	if got := l.Cutoffs["bob"]; !reflect.DeepEqual(got, map[string]int64{"bob/laptop": 1}) {
+		t.Fatalf("Bob's cutoffs = %v, want those of the state that revokes him", got)
+	}
+	if !l.Counts("bob", "bob/laptop", 1) || l.Counts("bob", "bob/laptop", 2) || l.Counts("dave", "dave/laptop", 1) {
+		t.Fatal("Counts does not follow the state the cycle rule chose")
+	}
+
+	want := l
+	rng := rand.New(rand.NewSource(2))
+	for i := 0; i < 50; i++ {
+		shuffled := append([]GuestEvent{}, g.events...)
+		rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
+		if got := ResolveGuests(g.room, shuffled); !reflect.DeepEqual(got, want) {
+			t.Fatalf("order %d resolved the cycle differently:\n got %+v\nwant %+v", i, got, want)
+		}
+	}
+}

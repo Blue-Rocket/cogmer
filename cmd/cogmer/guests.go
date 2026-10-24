@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
+	"slices"
 	"sort"
 )
 
@@ -84,15 +85,174 @@ func normalGuestEvent(e GuestEvent) GuestEvent {
 	return e
 }
 
-// ResolveGuests computes room's guest list from its guest events. The steps run
-// in an order in which none needs a later one's result, so the list has one
-// answer and no circle: who was ever invited, then which revocations count,
-// then the cutoffs, then which invitations count, then who is on the list.
+// guestState is what one set of counted invitations implies about the room.
+type guestState struct {
+	counted  []bool                      // by index into the room's invitations
+	ever     map[string]bool             // the founder and every subject of a counted invitation
+	revokes  []GuestEvent                // the counted revocations
+	revsOf   map[string]map[string]bool  // revoked user to counted revocations' identifiers
+	cutoffs  map[string]map[string]int64 // revoked user to machine key to last counting sequence
+	admitted map[string]bool             // each user ever invited to whether on the list
+}
+
+func newGuestState(founding, invites, revokes []GuestEvent, counted []bool) *guestState {
+	s := &guestState{
+		counted:  counted,
+		ever:     map[string]bool{},
+		revsOf:   map[string]map[string]bool{},
+		cutoffs:  map[string]map[string]int64{},
+		admitted: map[string]bool{},
+	}
+	var in []GuestEvent // the counted invitations, the founding ones among them
+	in = append(in, founding...)
+	for i, e := range invites {
+		if counted[i] {
+			in = append(in, e)
+		}
+	}
+	for _, e := range in {
+		s.ever[e.Subject] = true
+	}
+
+	// c. Every revocation by a user ever invited counts, whatever has become of
+	// its author since, so two guests who revoke each other are both out, and
+	// neither revocation depends on the other (D-235, a room's one guest list).
+	for _, e := range revokes {
+		if !s.ever[e.Author] {
+			continue
+		}
+		s.revokes = append(s.revokes, e)
+		if s.revsOf[e.Subject] == nil {
+			s.revsOf[e.Subject] = map[string]bool{}
+		}
+		s.revsOf[e.Subject][e.EventID] = true
+	}
+
+	// d. Each revoked user's machines take the lowest cutoff any counted
+	// revocation gives them, a machine a revocation leaves out getting 0 from
+	// it, so a cutoff only moves earlier (D-236, a revocation names the last
+	// turn of each of the revoked user's machines that counts), as a removal's
+	// does (D-220). A machine whose lowest is 0 is left out, which reads the
+	// same.
+	for user := range s.revsOf {
+		var mine []GuestEvent
+		machines := map[string]bool{}
+		for _, e := range s.revokes {
+			if e.Subject == user {
+				mine = append(mine, e)
+				for m := range e.Cutoffs {
+					machines[m] = true
+				}
+			}
+		}
+		cut := map[string]int64{}
+		for m := range machines {
+			low := mine[0].Cutoffs[m]
+			for _, e := range mine[1:] {
+				low = min(low, e.Cutoffs[m])
+			}
+			if low > 0 {
+				cut[m] = low
+			}
+		}
+		s.cutoffs[user] = cut
+	}
+
+	// f. A user is on the list when one counted invitation lifts every counted
+	// revocation of them, so a revocation expels the user from every invitation
+	// that did not see it (D-235). A founding self-invitation lifts nothing, so
+	// it admits its creator only until a revocation of them counts.
+	for user := range s.ever {
+		s.admitted[user] = false
+	}
+	for _, e := range in {
+		lifted := map[string]bool{}
+		for _, id := range e.Lifts {
+			lifted[id] = true
+		}
+		all := true
+		for id := range s.revsOf[e.Subject] {
+			if !lifted[id] {
+				all = false
+				break
+			}
+		}
+		if all {
+			s.admitted[e.Subject] = true
+		}
+	}
+	return s
+}
+
+// next gives the invitations this state counts: an invitation counts when its
+// author was ever invited and is on the list, or made it within their own
+// cutoff, so that an expelled user cannot let in an accomplice after the cutoff
+// while a readmitted user invites as any guest does (D-236, a later invitation
+// that lifts the revocation lets turns after the cutoff count again).
+func (s *guestState) next(invites []GuestEvent) []bool {
+	out := make([]bool, len(invites))
+	for i, e := range invites {
+		switch {
+		case !s.ever[e.Author]:
+		case s.admitted[e.Author]:
+			out[i] = true
+		default:
+			cut, revoked := s.cutoffs[e.Author]
+			last, ok := cut[e.Machine]
+			out[i] = !revoked || (ok && e.Sequence <= last)
+		}
+	}
+	return out
+}
+
+// onList is the sorted list of users this state admits.
+func (s *guestState) onList() []string {
+	var out []string
+	for u, on := range s.admitted {
+		if on {
+			out = append(out, u)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+func countedKey(counted []bool) string {
+	b := make([]byte, len(counted))
+	for i, c := range counted {
+		b[i] = '0'
+		if c {
+			b[i] = '1'
+		}
+	}
+	return string(b)
+}
+
+// ResolveGuests computes room's guest list from its guest events.
+//
+// It works in rounds because the rules depend on one another in a circle:
+// whether an invitation counts depends on its author's cutoff, a cutoff on
+// which revocations count, and those on who was ever invited, which depends on
+// which invitations count (D-235, a room's one guest list; D-236, a revocation
+// names the last turn that counts). A single pass has to break the circle
+// somewhere, and breaking it by ignoring cutoffs when deciding who was ever
+// invited lets an expelled guest invite an accomplice after the cutoff, whose
+// own invitations and revocations would then count. So each round starts from a
+// set of counted invitations, beginning with the founding one alone, derives
+// who was ever invited, the revocations, the cutoffs and the list from it, and
+// takes the invitations that state counts as the next set, until a set repeats.
+//
+// A set that repeats at once is the answer. A record can also loop, such as a
+// guest revoking, with a cutoff before it, the invitation that let them in. Then
+// a user is on the list only when every state of the loop admits them, and the
+// cutoffs and counted changes are those of the state admitting fewest, then
+// the one whose sorted list comes first, so that a record in conflict keeps
+// people out rather than letting them in, and every machine holding the same
+// events settles on the same answer. The sets are finite, so a repeat comes.
 func ResolveGuests(room string, events []GuestEvent) *GuestList {
 	g := &GuestList{
 		Room:     room,
 		Admitted: map[string]bool{},
-		Cutoffs:  map[string]map[string]int64{},
 	}
 	discard := func(e GuestEvent, reason string) {
 		g.Discarded = append(g.Discarded, Discarded{
@@ -149,121 +309,75 @@ func ResolveGuests(room string, events []GuestEvent) *GuestList {
 		}
 	}
 
-	// b. Ever invited, ignoring cutoffs, since they come from revocations,
-	// which count by this set. It only grows, so the loop ends.
-	ever := map[string]bool{}
-	for _, e := range founding {
-		ever[e.Subject] = true
-	}
-	for grew := true; grew; {
-		grew = false
-		for _, e := range invites {
-			if ever[e.Author] && !ever[e.Subject] {
-				ever[e.Subject] = true
-				grew = true
-			}
+	// The rounds, remembering each set to find the one that repeats.
+	var states []*guestState
+	seen := map[string]int{}
+	counted := make([]bool, len(invites))
+	var loop []*guestState
+	for {
+		k := countedKey(counted)
+		if j, ok := seen[k]; ok {
+			loop = states[j:]
+			break
 		}
-	}
-
-	// c. Every revocation by a user ever invited counts, whatever has become of
-	// its author since, so two guests who revoke each other are both out, and
-	// neither revocation depends on the other (D-235).
-	revsOf := map[string]map[string]bool{} // revoked user to counted revocations' identifiers
-	var counted []GuestEvent
-	for _, e := range revokes {
-		if !ever[e.Author] {
-			discard(e, "a revocation by a user who was never invited to the room")
-			continue
-		}
-		counted = append(counted, e)
-		if revsOf[e.Subject] == nil {
-			revsOf[e.Subject] = map[string]bool{}
-		}
-		revsOf[e.Subject][e.EventID] = true
+		seen[k] = len(states)
+		s := newGuestState(founding, invites, revokes, counted)
+		states = append(states, s)
+		counted = s.next(invites)
 	}
 
-	// d. Each revoked user's machines take the lowest cutoff any counted
-	// revocation gives them, a machine a revocation leaves out getting 0 from
-	// it, so a cutoff only moves earlier (D-236, a revocation names the last
-	// turn of each of the revoked user's machines that counts), as a removal's
-	// does (D-220). A machine whose lowest is 0 is left out, which reads the
-	// same.
-	for user := range revsOf {
-		var mine []GuestEvent
-		machines := map[string]bool{}
-		for _, e := range counted {
-			if e.Subject == user {
-				mine = append(mine, e)
-				for m := range e.Cutoffs {
-					machines[m] = true
-				}
-			}
+	kept := loop[0]
+	for _, s := range loop[1:] {
+		a, b := s.onList(), kept.onList()
+		if len(a) < len(b) || (len(a) == len(b) && slices.Compare(a, b) < 0) {
+			kept = s
 		}
-		cut := map[string]int64{}
-		for m := range machines {
-			low := mine[0].Cutoffs[m]
-			for _, e := range mine[1:] {
-				low = min(low, e.Cutoffs[m])
-			}
-			if low > 0 {
-				cut[m] = low
-			}
-		}
-		g.Cutoffs[user] = cut
 	}
-
-	// e. An invitation counts when its author was ever invited and made it
-	// within the author's own cutoff, if the author has been revoked, so that
-	// an expelled user cannot let in an accomplice after the cutoff.
-	for _, e := range invites {
-		if !ever[e.Author] {
-			discard(e, "an invitation by a user who was never invited to the room")
-			continue
+	for _, s := range loop {
+		for u := range s.ever {
+			g.Admitted[u] = true
 		}
-		if cut, revoked := g.Cutoffs[e.Author]; revoked {
-			if last, ok := cut[e.Machine]; !ok || e.Sequence > last {
-				discard(e, "an invitation its author made after the cutoff of a revocation of them (D-236)")
-				continue
-			}
-		}
-		counted = append(counted, e)
 	}
-	counted = append(counted, founding...)
-
-	// f. A user is on the list when one counted invitation lifts every counted
-	// revocation of them, so a revocation expels the user from every invitation
-	// that did not see it (D-235). A founding self-invitation lifts nothing, so
-	// it admits its creator only until a revocation of them counts.
-	for user := range ever {
-		g.Admitted[user] = false
-	}
-	for _, e := range counted {
-		if e.Kind != GuestInvite {
-			continue
-		}
-		lifted := map[string]bool{}
-		for _, id := range e.Lifts {
-			lifted[id] = true
-		}
-		all := true
-		for id := range revsOf[e.Subject] {
-			if !lifted[id] {
-				all = false
+	for u := range g.Admitted {
+		for _, s := range loop {
+			if !s.admitted[u] {
+				g.Admitted[u] = false
 				break
 			}
 		}
-		if all {
-			g.Admitted[e.Subject] = true
+	}
+	g.Cutoffs = kept.cutoffs
+
+	settled := len(loop) == 1
+	changes := append([]GuestEvent{}, founding...)
+	for i, e := range invites {
+		switch {
+		case kept.counted[i]:
+			changes = append(changes, e)
+		case !kept.ever[e.Author]:
+			discard(e, "an invitation by a user who was never invited to the room")
+		case !settled:
+			discard(e, "an invitation outside the state kept of a record that does not settle, which keeps out whom it cannot place")
+		default:
+			discard(e, "an invitation its author made after the cutoff of a revocation of them (D-236)")
+		}
+	}
+	for _, e := range revokes {
+		if kept.ever[e.Author] { // c., as newGuestState counted it
+
+			changes = append(changes, e)
+		} else {
+			discard(e, "a revocation by a user who was never invited to the room")
 		}
 	}
 
-	sort.Slice(counted, func(i, j int) bool {
-		if counted[i].EventID != counted[j].EventID {
-			return counted[i].EventID < counted[j].EventID
+	sort.Slice(changes, func(i, j int) bool {
+		if changes[i].EventID != changes[j].EventID {
+			return changes[i].EventID < changes[j].EventID
 		}
-		return guestKey(counted[i]) < guestKey(counted[j])
+		return guestKey(changes[i]) < guestKey(changes[j])
 	})
-	g.Changes = counted
+	g.Changes = changes
 	sort.Slice(g.Discarded, func(i, j int) bool {
 		a, b := g.Discarded[i], g.Discarded[j]
 		if c := bytes.Compare(a.Hash[:], b.Hash[:]); c != 0 {
