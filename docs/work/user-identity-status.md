@@ -62,9 +62,11 @@ identity needs answers that no decision gives", and the reasoning for each choic
 section 7 of the design. The first of them, that D-224 read literally voids D-220's
 self-removal, needs the maintainer's answer before the removal slice.
 
-Tests: `go test ./... -skip TestTheRealOverlayCheckPassesForALiveServerAndFailsForADeadOne`
-passes on the last commit of the first run, in 107s. The skipped test reaches the public
-relay, and timed out after 10s in this cloud container on 2026-10-23 on `beabb2a`, which
-changes only documents, so it fails the same way on `main`. Its guard dials
-`tailcat.dev:443` over TCP, which the container's proxy answers, while the relay's own
-protocol gets no answer here.
+Tests: run `go test -tags ts_debug_websockets ./...` in a cloud session. It passed with no
+test skipped, in 139s on 2026-10-24. In a cloud session cogmer asks the relay client to carry
+its connection as a WebSocket (D-217, a cloud session's daemon carries its relay connection as
+a WebSocket), which only a build with that tag can do, and `scripts/release.sh` sets it. Plain
+`go test ./...` builds without the tag, so
+`TestTheRealOverlayCheckPassesForALiveServerAndFailsForADeadOne` speaks the relay's own
+protocol, which the session's proxy breaks, and it times out after 10s. The test runs the
+daemon's own reachability check in the test process, and passed in 23s with the tag.
