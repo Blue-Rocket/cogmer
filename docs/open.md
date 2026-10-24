@@ -304,16 +304,15 @@ the choice is the maintainer's.
 
 **A user has no way to set up a cloud session's key, snapshot and repo, and two facts the setup
 depends on are unknown.** D-226 and D-227 need a cloud key, a first snapshot and a private repo
-added to the cloud environment. The setup would be one command that creates the repo with the
-`gh` command when it is installed and signed in, makes and certifies the cloud key, writes and
-pushes the first snapshot, and prints the value to paste into the environment. The unknown facts
-are where a cloud session places a repo added to it and whether the repo is on disk when the
+added to the cloud environment. The setup would be one command that creates the repo with the `gh`
+command when it is installed and signed in, makes and certifies the cloud key, writes and pushes
+the first snapshot, and prints the value to paste into the environment. The unknown facts are
+where a cloud session places a repo added to it and whether the repo is on disk when the
 session-start hook runs, and whether a cloud environment hides the value of an environment
 variable from other people who can edit the environment, which matters only for an environment
-shared with others, since the maintainer creates theirs at a personal level, said on 2026-10-24.
-A cloud session's clone of this repo was shallow,
-with 50 commits, on 2026-10-19, which limits the history check in D-226 to the commits a clone
-holds.
+shared with others, since the maintainer creates theirs at a personal level, said on 2026-10-24. A
+cloud session's clone of this repo was shallow, with 50 commits, on 2026-10-19, which limits the
+history check in D-226 to the commits a clone holds.
 
 `docs/work/cloud-network-probe.sh` tests, from a cloud session, whether cogmer's transport
 opens a tunnel through the public relay and whether SSH over port 443 reaches GitHub. It writes
