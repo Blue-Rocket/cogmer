@@ -302,6 +302,14 @@ slice of the second run, and none has a choice taken yet:
   machine cannot reach is named, with how long), and can never join another room (D-016, a
   session never joins a second room).
 
+**D-143 (admission is proved by signing a fresh challenge) describes a challenge exchange the
+code has never had.** What proves a machine may enter a room is its signed sync or blob request,
+with a timestamp and a nonce (D-044, sync requests are signed), and the guest check (D-045,
+rooms are records with a guest list); `git log -S` finds no challenge exchange ever written,
+read on 2026-10-24. The second run's slice 2a carries the certificate chain in that request.
+Either D-143 is rewritten to describe the signed request, or a challenge exchange is built, and
+the choice is the maintainer's.
+
 **A user has no way to set up a cloud session's key, snapshot and repo, and three facts the setup
 depends on are unknown.** D-226 and D-227 need a cloud key, a first snapshot and a private repo
 added to the cloud environment. The setup would be one command that creates the repo with the

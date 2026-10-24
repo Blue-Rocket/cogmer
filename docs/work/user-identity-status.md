@@ -23,7 +23,24 @@ additions, which are `CheckEvent`, the signed `ListChange` record and `MergeList
 that an expelled guest cannot admit an accomplice (D-235); and slice 1, storage, which adds
 `identity_records` keyed on each record's own hash, `machines` with an address per machine,
 the guest-list cache, `signer` on `events`, `shared.key`, and the user and chain in
-`identity.json`. Slice 2, trust, is next.
+`identity.json`. Slice 2a, the transport and signing half of trust, is merged: event scheme v4, sync
+requests under v5 with the chain, the chain in the TLS certificate (OID `2.25.2060991052`),
+pairing over users' identifiers, and addresses per machine. Slice 2b, the guest list as room
+events, is next.
+
+What the later slices need to know from slice 2a:
+
+- A room's sync targets are every machine of each guest, which the brief for slice 2a got
+  wrong: D-103 makes them the machines from which a session has joined the room. Slice 2b
+  fixes it, since it records which machines joined a room.
+- The events table's uniqueness is on the signer and sequence, migrated by
+  `rekeyEventsOnSigner`, since two machines of one user both write sequence 1.
+- `Sign` stays v3; `SignAs` and `Store.AppendAs` sign v4 when the machine has a user identity.
+- Requests, events, offers, verification steps and the certificate carry the chain, which
+  shows the user's identifier, the shared-key version and the machine's name and serial to
+  whoever the machine connects to. `plugin/README.md`, under "What leaves your machine", says
+  so in the slice that makes a user identity reachable, slice 3.
+- `known_peers.endpoint` is written beside `machines` until a later slice drops it.
 
 What the later slices need to know from slice 1:
 
