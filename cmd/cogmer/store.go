@@ -196,6 +196,9 @@ func OpenStore(room string) (*Store, error) {
 	if err := migrate(db); err != nil {
 		return nil, err
 	}
+	if _, err := db.Exec(refusalSchema); err != nil {
+		return nil, fmt.Errorf("init refusals: %w", err)
+	}
 	return &Store{db: db, imageDir: filepath.Join(dir, room+".images")}, nil
 }
 
@@ -748,9 +751,17 @@ func (s *Store) commitPendingRow(sessionID, promptID, idsJSON string) (int, erro
 //
 // It is keyed by signer, the key whose sequence it is (D-239, an event a machine signs for its user names the signing key). For a v3 event the
 // signer is the peer, so a peer on an older build reads the same map it always did.
+//
+// A sequence this machine refused because its machine was past a cutoff or suspended
+// counts as held, so that it is not asked for again on every poll and a cut-off
+// machine's later events do not leave a gap that keeps everything after it on offer
+// (D-236, a revocation names the last turn that counts). A refusal is cleared when the
+// event would count, and the sequence is then asked for again.
 func (s *Store) SyncState(room string) (map[string]int64, error) {
-	rows, err := s.db.Query(`SELECT COALESCE(signer, peer_id), peer_sequence FROM events
-		WHERE room_id = ? ORDER BY COALESCE(signer, peer_id), peer_sequence`, room)
+	rows, err := s.db.Query(`SELECT k, seq FROM (
+		  SELECT COALESCE(signer, peer_id) AS k, peer_sequence AS seq FROM events WHERE room_id = ?
+		  UNION SELECT signer, peer_sequence FROM refused_events)
+		ORDER BY k, seq`, room)
 	if err != nil {
 		return nil, err
 	}

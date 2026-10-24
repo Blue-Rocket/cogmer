@@ -236,6 +236,9 @@ func (d *Daemon) PeerRoutes() *http.ServeMux {
 	mux.HandleFunc("/blob", d.handleBlob)
 	mux.HandleFunc("/verify", d.handleVerify)
 	mux.HandleFunc("/offer", d.handleOffer)
+	// Identity records, fetched by hash and pushed until acknowledged (D-221, D-225).
+	mux.HandleFunc("/identity/fetch", d.handleIdentityFetch)
+	mux.HandleFunc("/identity/push", d.handleIdentityPush)
 	return mux
 }
 
@@ -405,6 +408,11 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 	// before a revocation reached this machine, past the cutoff it names, is never
 	// given to an assistant (D-236, a revocation names the last turn that counts).
 	pending = onlyCounting(pending, d.guestList(room.RoomID))
+	// And by what this machine holds of each author's identity: an event naming a
+	// shared-key version or a removal not yet fetched waits, shown in the view as not
+	// yet given to the assistant, and so does one a fetched removal has cut off (D-221,
+	// an event whose identity version the receiver lacks is withheld until fetched).
+	pending = d.onlyIdentityKnown(pending, room.RoomID)
 	text := FormatTeamContext(pending, d.members)
 	if err := store.RecordPending(req.PromptID, req.SessionID, pending, text); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

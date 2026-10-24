@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -76,8 +77,20 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthenticated", http.StatusUnauthorized)
 		return
 	}
+	// A machine whose user was expelled from the room serves it to nobody, since the
+	// room's other guests hold its history (D-241, an expelled user's machines stop
+	// serving the room).
+	if d.expelledFrom(room.RoomID) {
+		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		return
+	}
 	if err := d.verifyRequest(req, room.RoomID); err != nil {
 		log.Printf("sync: refused a request for %s — %v", room.RoomName, err)
+		var notGuest *notGuestError
+		if errors.As(err, &notGuest) {
+			d.refuseNonGuest(w, room, req.PeerID)
+			return
+		}
 		http.Error(w, "unauthenticated", http.StatusUnauthorized)
 		return
 	}
@@ -241,6 +254,9 @@ func (d *Daemon) pullFrom(addr string) (int, error) {
 		ask = d.askRooms
 	}
 	for _, r := range ask(addr, rooms) {
+		if d.expelledFrom(r.RoomID) {
+			continue // D-241: an expelled user's machine asks nobody for the room
+		}
 		n, err := d.pullRoom(client, addr, r)
 		if err != nil {
 			failed = append(failed, fmt.Sprintf("%s: %v", r.RoomName, err))
@@ -278,6 +294,11 @@ func (d *Daemon) syncTargets() []string {
 	}
 	if rooms, err := d.members.Rooms(); err == nil {
 		for _, r := range rooms {
+			// A room this machine's user was expelled from is dropped from the
+			// targets (D-241, an expelled user's machines stop asking for the room).
+			if d.expelledFrom(r.RoomID) {
+				continue
+			}
 			for _, a := range d.members.RoomPeers(r.RoomID, d.id.PeerID) {
 				add(a)
 			}
@@ -297,6 +318,9 @@ func (d *Daemon) roomTargets(roomID string) []string {
 			seen[a] = true
 			out = append(out, a)
 		}
+	}
+	if d.expelledFrom(roomID) {
+		return nil
 	}
 	for _, a := range peerList() {
 		add(a)
@@ -319,6 +343,9 @@ func (d *Daemon) roomsToAsk(addr string, rooms []Room) []Room {
 	}
 	var out []Room
 	for _, r := range rooms {
+		if d.expelledFrom(r.RoomID) {
+			continue
+		}
 		for _, a := range d.members.RoomPeers(r.RoomID, d.id.PeerID) {
 			if a == addr {
 				out = append(out, r)
@@ -337,6 +364,7 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 		return 0, err
 	}
 	d.mu.Lock()
+	d.reviewRefusals(store, room.RoomID)
 	have, err := store.SyncState(room.RoomID)
 	d.mu.Unlock()
 	if err != nil {
@@ -356,6 +384,19 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 		return 0, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusForbidden {
+		// The room's guests revoked this machine's user, and the refusal carries the
+		// revocations that did (D-241, an expelled user is told, through the refusal
+		// that carries the revocation).
+		var refusal revocationRefusal
+		if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&refusal); err != nil || refusal.RoomID != room.RoomID {
+			return 0, nil
+		}
+		d.mu.Lock()
+		defer d.mu.Unlock()
+		d.keepRevocations(store, room, addr, refusal.Revocations)
+		return 0, nil
+	}
 	if resp.StatusCode == http.StatusUnauthorized {
 		// Not a guest there, or no such room. Both are ordinary when a peer hosts
 		// rooms we are not in, so this is not an error worth repeating every second.
@@ -402,6 +443,10 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 			if _, err := d.refreshGuestList(store, room.RoomID); err != nil {
 				log.Printf("sync: could not compute the guest list of %s: %v", room.RoomName, err)
 			}
+			// An invitation that lifts a revocation lets the events refused past its
+			// cutoff count, so they are asked for at the next poll of any machine
+			// (D-236).
+			d.reviewRefusals(store, room.RoomID)
 		}
 		list = d.guestList(room.RoomID)
 	}
@@ -441,6 +486,7 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 			}
 			if err := d.judgeEvent(&ev); errors.Is(err, errNotCounting) {
 				notCounting++
+				d.refuse(store, &ev)
 				continue
 			} else if err != nil {
 				log.Printf("sync: REJECTED event %.12s from %s — %v", ev.EventID, addr, err)
@@ -492,6 +538,7 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 		if ev.SigVersion == 4 {
 			if err := d.judgeEvent(&ev); errors.Is(err, errNotCounting) {
 				notCounting++
+				d.refuse(store, &ev)
 				continue
 			} else if err != nil {
 				log.Printf("sync: REJECTED event %.12s from %s — %v", ev.EventID, addr, err)
@@ -509,6 +556,7 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 		// list is room_guests has no such check, as before.
 		if list != nil && !list.Counts(ev.PeerID, ev.signerKey(), ev.PeerSequence) {
 			notGuest++
+			d.refuse(store, &ev)
 			continue
 		}
 
@@ -522,6 +570,10 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 		case InsertStored:
 			stored++
 			registerImages(store, &ev)
+			// Stored and shown, and withheld from every assistant until the records it
+			// names are fetched, which is off this path (D-221, an event whose identity
+			// version the receiver lacks is withheld from the assistant until fetched).
+			d.noteLacking(ev, addr)
 		case InsertConflict:
 			log.Printf("sync: CONFLICT from %s — %s sequence %d is already held by a different event; run `cogmer conflicts`",
 				addr, PeerName(ev.signerKey()), ev.PeerSequence)
@@ -551,4 +603,14 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 		d.notify()
 	}
 	return stored, nil
+}
+
+// refuse records that this machine refused an event whose machine is past a cutoff
+// or suspended, or whose author is past a revocation's cutoff, so that the sequence is
+// not offered again on every poll (D-236, a revocation names the last turn that
+// counts). Called with d.mu held.
+func (d *Daemon) refuse(store *Store, ev *Event) {
+	if err := store.RecordRefusal(ev); err != nil {
+		log.Printf("sync: could not record that %.12s was refused: %v", ev.EventID, err)
+	}
 }

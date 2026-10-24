@@ -225,8 +225,7 @@ func (d *Daemon) verifyRequest(req syncRequest, roomID string) error {
 	// only the first is what let a stranger with a freshly generated key read a
 	// private room (D-044, sync requests are signed).
 	if roomID != "" && !d.members.IsGuest(roomID, req.PeerID) {
-		return fmt.Errorf("%s (%s) is authenticated but is not a guest of this room",
-			PeerName(req.PeerID), req.PeerID[:24])
+		return &notGuestError{peer: req.PeerID}
 	}
 
 	// Authentication says WHO holds the key. Admission says WHETHER that key may
@@ -245,4 +244,16 @@ func (d *Daemon) verifyRequest(req syncRequest, roomID string) error {
 			"both of you run `"+invocation()+" verify`", PeerName(req.PeerID))
 	}
 	return nil
+}
+
+// notGuestError is a request whose asker is established and is not on the room's
+// list. It is a type of its own because the one refusal that says more than
+// "unauthenticated" is to a user the room revoked, who is sent the revocations that
+// expelled them (D-241, an expelled user is told, through the refusal that carries the
+// revocation), and that is known only once the asker is.
+type notGuestError struct{ peer string }
+
+func (e *notGuestError) Error() string {
+	return fmt.Sprintf("%s (%s) is authenticated but is not a guest of this room",
+		PeerName(e.peer), e.peer[:24])
 }

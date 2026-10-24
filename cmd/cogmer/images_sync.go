@@ -63,7 +63,8 @@ func (d *Daemon) handleBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	room, ok := d.members.RoomByID(req.RoomID)
-	if !ok {
+	// An expelled user's machine serves the room to nobody (D-241).
+	if !ok || d.expelledFrom(room.RoomID) {
 		http.Error(w, "unauthenticated", http.StatusUnauthorized)
 		return
 	}

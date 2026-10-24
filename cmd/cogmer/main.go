@@ -549,6 +549,7 @@ func runDaemon() {
 
 	go d.RunSync(peerList(), syncInterval())
 	go d.RunImages(2 * time.Second)
+	go d.RunIdentity(5 * time.Second)
 	// One set of routes over both listeners. Every check a request passes is the
 	// same whichever carried it, which is the point of the listener interface
 	// rather than a happy accident.

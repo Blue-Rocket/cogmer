@@ -215,6 +215,9 @@ func OpenMembership() (*Membership, error) {
 	if err := migrateMembership(db); err != nil {
 		return nil, fmt.Errorf("migrate membership: %w", err)
 	}
+	if _, err := db.Exec(propagationSchema); err != nil {
+		return nil, fmt.Errorf("init propagation: %w", err)
+	}
 	return &Membership{db: db}, nil
 }
 
