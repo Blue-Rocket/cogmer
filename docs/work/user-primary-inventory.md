@@ -62,8 +62,10 @@ Answered by the maintainer:
 
 - R1, on 2026-10-24: a user's sessions in one room share context with one another as they do
   with a colleague's, whichever of the user's machines they are on. A room's sync targets are
-  every machine of every guest, the user's own included, excluding only this machine, and
-  D-222 loses "for nothing else". This also settles R4 except for how such a turn is
+  the machines from which a session has joined the room, the user's own included, excluding
+  only this machine, and D-222 loses "for nothing else". A machine where no session has
+  joined a room holds nothing of it. A colleague's machine learns the address of a newly
+  joined machine from the signed address in that machine's sync requests. This also settles R4 except for how such a turn is
   labeled: it is injected, as a colleague's is.
 
 Open:
