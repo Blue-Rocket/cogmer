@@ -39,6 +39,15 @@ type Identity struct {
 	// name (D-095).
 	NameChosen bool   `json:"nameChosen"`
 	MachineID  string `json:"machineId"`
+	// User is the identifier of this machine's user, the master public key, and
+	// Chain the certificates by which this machine speaks for the user (D-219, a
+	// user is a master key that certifies machines through a shared key). Both are
+	// empty until the user identity is made on this machine. Every part of them is
+	// public, so they belong in this file, which whoami prints; the shared key's
+	// private half is in shared.key and never here (D-153, the private key is kept
+	// in a file of its own).
+	User  string `json:"user,omitempty"`
+	Chain *Chain `json:"chain,omitempty"`
 }
 
 // Config separates room membership (shareable) from identity (personal), per §28.

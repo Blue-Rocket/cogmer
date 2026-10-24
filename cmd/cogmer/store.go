@@ -42,6 +42,13 @@ type Event struct {
 	// causes verification to fail, and every scheme is Ed25519 over length-prefixed
 	// fields, so there is no weaker one to be downgraded to.
 	SigVersion int `json:"sigVersion,omitempty"`
+	// Signer is the key that signed the event. Under v3 it is always the peer's own
+	// key, PeerID, and it is not among v3's signed fields, which never change (D-058,
+	// signature schemes are kept, never replaced). It is stored so that a machine
+	// signing for its user, whose events name the user as their peer, can be told
+	// apart from the user's other machines (D-239, an event a machine signs for its
+	// user names the user and the signing key as signed fields).
+	Signer string `json:"signer,omitempty"`
 }
 
 const (
@@ -80,6 +87,12 @@ CREATE TABLE IF NOT EXISTS events (
   -- never be re-signed, so this is what lets a field be added later without
   -- invalidating every event already written (D-058).
   sig_version       INTEGER,
+  -- The key that signed the event. For a v3 event it is peer_id, and an event a
+  -- machine signs for its user names the user as peer_id and the machine here
+  -- (D-239, an event a machine signs for its user names the signing key). Its index
+  -- is made in migrate, since a table made before the column cannot be indexed on
+  -- it until the column is added.
+  signer            TEXT,
   UNIQUE(peer_id, peer_sequence)
 );
 CREATE INDEX IF NOT EXISTS idx_events_room ON events(room_id, rowid_alias);
@@ -211,6 +224,21 @@ func migrate(db *sql.DB) error {
 			if _, err := db.Exec(add.ddl); err != nil {
 				return fmt.Errorf("migrate %s: %w", add.name, err)
 			}
+		}
+	}
+	if err := addColumnIfMissing(db, "events", "signer", "TEXT"); err != nil {
+		return fmt.Errorf("migrate signer: %w", err)
+	}
+	// Every event stored before the column was signed under v3 or earlier, by its
+	// peer's own key, so its signer is its peer. Run on every open, and cheap once
+	// done since the index finds the rows with no signer, so an event an older build
+	// wrote after a downgrade gains its signer too.
+	for _, stmt := range []string{
+		`CREATE INDEX IF NOT EXISTS idx_events_signer ON events(signer, peer_sequence)`,
+		`UPDATE events SET signer = peer_id WHERE signer IS NULL`,
+	} {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("migrate signer: %w", err)
 		}
 	}
 	return nil
@@ -354,15 +382,19 @@ func (s *Store) Insert(ev *Event) (InsertResult, error) {
 		return InsertDuplicate, nil
 	}
 
+	// The signer is the peer for now, whatever the event claims, because every
+	// scheme this build verifies is signed by the peer's own key (D-239, an event a
+	// machine signs for its user names the signing key as a signed field). A claim
+	// in the unsigned Signer field is not stored, since nothing checked it.
 	if _, err := tx.Exec(`
 		INSERT INTO events
 		  (event_id, peer_id, peer_sequence, room_id, timestamp, user_id,
 		   user_display_name, machine_id, origin_session_id, event_type, content, metadata,
-		   signature, sig_version)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		   signature, sig_version, signer)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		ev.EventID, ev.PeerID, ev.PeerSequence, ev.RoomID, ev.Timestamp, ev.UserID,
 		ev.UserDisplayName, ev.MachineID, ev.OriginSessionID, ev.EventType, ev.Content,
-		string(ev.Metadata), ev.Signature, ev.SigVersion); err != nil {
+		string(ev.Metadata), ev.Signature, ev.SigVersion, ev.PeerID); err != nil {
 		return InsertStored, err
 	}
 	return InsertStored, tx.Commit()
@@ -406,7 +438,7 @@ func scanEvents(rows *sql.Rows) ([]Event, error) {
 		var rowid int64
 		if err := rows.Scan(&rowid, &e.EventID, &e.PeerID, &e.PeerSequence, &e.RoomID, &e.Timestamp,
 			&e.UserID, &e.UserDisplayName, &e.MachineID, &e.OriginSessionID, &e.EventType, &e.Content,
-			&meta, &sig, &e.SigVersion); err != nil {
+			&meta, &sig, &e.SigVersion, &e.Signer); err != nil {
 			return nil, err
 		}
 		e.Signature = sig.String
@@ -420,7 +452,7 @@ func scanEvents(rows *sql.Rows) ([]Event, error) {
 
 const selectCols = `rowid_alias, event_id, peer_id, peer_sequence, room_id, timestamp,
 	user_id, user_display_name, machine_id, origin_session_id, event_type, content, metadata,
-	signature, COALESCE(sig_version, 0)`
+	signature, COALESCE(sig_version, 0), COALESCE(signer, peer_id)`
 
 // orderBy is the deterministic total order every peer must agree on (review B1).
 //

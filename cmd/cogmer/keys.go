@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -79,6 +80,79 @@ func loadOrCreateKey() (ed25519.PrivateKey, error) {
 		return nil, err
 	}
 	return priv, nil
+}
+
+func sharedKeyPath() string { return filepath.Join(homeDir(), "shared.key") }
+
+// sharedKeyFile is the form of shared.key: the private half of the user's shared
+// key and the version the master key certified it under.
+type sharedKeyFile struct {
+	Version    uint64 `json:"version"`
+	PrivateKey string `json:"privateKey"`
+}
+
+// loadSharedKey reads the user's shared key, reporting false when this machine
+// holds none. The shared key certifies the user's machines (D-219, a user is a
+// master key that certifies machines through a shared key), so it is kept in a
+// file of its own, apart from identity.json, which whoami prints and a user may
+// hand to a colleague (D-153, the private key is kept in a file of its own).
+func loadSharedKey() (ed25519.PrivateKey, uint64, bool, error) {
+	path := sharedKeyPath()
+	raw, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil, 0, false, nil
+	}
+	if err != nil {
+		return nil, 0, false, err
+	}
+	var f sharedKeyFile
+	if err := json.Unmarshal(raw, &f); err != nil {
+		return nil, 0, false, fmt.Errorf("%s is not a usable shared key", path)
+	}
+	key, err := base64.RawURLEncoding.DecodeString(f.PrivateKey)
+	if err != nil || len(key) != ed25519.PrivateKeySize {
+		return nil, 0, false, fmt.Errorf("%s is not a usable shared key", path)
+	}
+	if f.Version == 0 {
+		return nil, 0, false, fmt.Errorf("%s names shared key version 0; versions start at 1", path)
+	}
+	return ed25519.PrivateKey(key), f.Version, true, nil
+}
+
+// saveSharedKey writes the user's shared key, readable by this account alone. It
+// writes a temporary file and renames it over the old one, so that a crash leaves
+// either the old key or the new one and never half of either.
+func saveSharedKey(priv ed25519.PrivateKey, version uint64) error {
+	if len(priv) != ed25519.PrivateKeySize {
+		return errors.New("a shared key to save is not an Ed25519 private key")
+	}
+	if version == 0 {
+		return errors.New("shared key version is 0; versions start at 1")
+	}
+	if err := os.MkdirAll(homeDir(), 0o700); err != nil {
+		return err
+	}
+	buf, err := json.Marshal(sharedKeyFile{Version: version, PrivateKey: base64.RawURLEncoding.EncodeToString(priv)})
+	if err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(homeDir(), "shared.key.*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	if err := tmp.Chmod(0o600); err != nil {
+		tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(append(buf, '\n')); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), sharedKeyPath())
 }
 
 // signingBytes is the exact sequence an event's signature covers.

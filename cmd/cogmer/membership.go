@@ -2,6 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -42,6 +44,60 @@ CREATE TABLE IF NOT EXISTS known_peers (
   -- address is a snapshot of where a machine was, so age is the only thing that
   -- distinguishes one worth trying from one worth trying last (§4).
   endpoint_at TEXT
+);
+-- endpoint and endpoint_at above stay while code still reads and writes them.
+-- Every reader moves to machines below, in the slice that makes a user rather than
+-- a machine the peer, and then they are dropped, so that an address is stored in
+-- one place (D-103, an address belongs to a machine and is stored in one place).
+
+-- Every identity record of any user this machine knows: shared-key, machine and
+-- session certificates, removals, and changes to a user's copied lists (D-219, a
+-- user is a master key that certifies machines through a shared key; D-228, a
+-- user's lists are copied between the user's machines). body is the record's JSON,
+-- as it travels (D-238, identity records are signed over length-prefixed fields and
+-- carried as JSON), and hash is the hex of the SHA-256 of its signing bytes, which
+-- names it whoever holds it. Nothing here decides whether a record is valid: a
+-- record that does not verify now may verify once another arrives, so every record
+-- is kept and Resolve decides each time it runs.
+CREATE TABLE IF NOT EXISTS identity_records (
+  hash        TEXT PRIMARY KEY,
+  user        TEXT NOT NULL,
+  kind        TEXT NOT NULL,
+  body        TEXT NOT NULL,
+  received_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_identity_records_user ON identity_records(user);
+
+-- Each machine of any user, keyed on its key, which never changes, with the user it
+-- belongs to and its name as fields (D-103, an address belongs to a machine and is
+-- stored in one place). A user with several machines has several addresses, which
+-- known_peers, one row per user, cannot hold.
+CREATE TABLE IF NOT EXISTS machines (
+  machine_key TEXT PRIMARY KEY,
+  user        TEXT NOT NULL,
+  name        TEXT,
+  endpoint    TEXT,
+  endpoint_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_machines_user ON machines(user);
+
+-- A cache of each room's guest list, as ResolveGuests computes it from the room's
+-- invitation and revocation events (D-235, a room's one guest list decides whose
+-- events count). It is never authoritative: it is rebuilt from the room's events
+-- whenever they change, and a cache lost or wrong is repaired by computing the list
+-- again, since every machine holding the same events computes the same list.
+CREATE TABLE IF NOT EXISTS room_guests_cache (
+  room_id  TEXT NOT NULL,
+  user     TEXT NOT NULL,
+  admitted INTEGER NOT NULL,
+  PRIMARY KEY (room_id, user)
+);
+CREATE TABLE IF NOT EXISTS room_guest_cutoffs (
+  room_id     TEXT NOT NULL,
+  user        TEXT NOT NULL,
+  machine_key TEXT NOT NULL,
+  sequence    INTEGER NOT NULL,
+  PRIMARY KEY (room_id, user, machine_key)
 );
 -- An invitation that has arrived and has not been accepted. Held apart from the
 -- rooms table deliberately: a room recorded there would be synchronized and shown
@@ -198,6 +254,9 @@ func migrateMembership(db *sql.DB) error {
 	// migration difficulty. Peers re-advertise on their next synchronization and
 	// the rows rebuild themselves, in the place that names whose they are.
 	if _, err := db.Exec(`DROP TABLE IF EXISTS room_peers`); err != nil {
+		return err
+	}
+	if err := copyPeerEndpointsToMachines(db); err != nil {
 		return err
 	}
 	if unique == "" {
@@ -1005,4 +1064,270 @@ func (m *Membership) WithheldFor(peerID string) int {
 		return 0
 	}
 	return n
+}
+
+// --- the user identity's records, machines and cached guest lists ---
+
+// copyPeerEndpointsToMachines gives every known peer with an address a machine row
+// holding it, so that an address recorded before machines existed is not lost when
+// its readers move there (D-103, an address belongs to a machine and is
+// stored in one place). Today each peer is one machine whose key is its identifier,
+// so the peer's identifier is both the machine key and the user. A machine already
+// recorded is left alone, so running this on every open never overwrites an address
+// written to machines itself.
+func copyPeerEndpointsToMachines(db *sql.DB) error {
+	_, err := db.Exec(`
+		INSERT OR IGNORE INTO machines (machine_key, user, endpoint, endpoint_at)
+		SELECT peer_id, peer_id, endpoint, endpoint_at FROM known_peers
+		WHERE endpoint IS NOT NULL AND endpoint <> ''`)
+	return err
+}
+
+// Identity record kinds, as stored in identity_records.kind.
+const (
+	RecordShared  = "shared"
+	RecordMachine = "machine"
+	RecordSession = "session"
+	RecordRemoval = "removal"
+	RecordList    = "list"
+)
+
+// PutIdentityRecord stores one identity record of user, reporting whether it was
+// new. A record already held under its hash is left as it was, since a hash names
+// one set of signed fields whoever sends it (D-238, identity records are signed over
+// length-prefixed fields and carried as JSON). The record is not checked here:
+// whether it is valid depends on the user's other records, which Resolve decides.
+func (m *Membership) PutIdentityRecord(kind string, user string, body []byte, hash [32]byte) (bool, error) {
+	switch kind {
+	case RecordShared, RecordMachine, RecordSession, RecordRemoval, RecordList:
+	default:
+		return false, fmt.Errorf("%q is not a kind of identity record", kind)
+	}
+	if user == "" {
+		return false, errors.New("an identity record names no user")
+	}
+	res, err := m.db.Exec(`INSERT OR IGNORE INTO identity_records (hash, user, kind, body, received_at)
+		VALUES (?,?,?,?,?)`,
+		hex.EncodeToString(hash[:]), user, kind, string(body), time.Now().UTC().Format(time.RFC3339))
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n == 1, err
+}
+
+// IdentityRecords decodes every record held for user into the forms Resolve and
+// MergeListChanges take. A row whose body does not decode is left out rather than
+// failing the rest, because storage never decides validity and one bad record must
+// not hide a user's good ones. Session certificates are kept in the table and not
+// returned here, since a RecordSet has no place for them: a session certificate
+// travels in the chain of the event it came with (D-216, a cloud session signs with
+// a key of its own that the user's shared key vouches for).
+func (m *Membership) IdentityRecords(user string) (RecordSet, []ListChange, error) {
+	var rs RecordSet
+	var changes []ListChange
+	rows, err := m.db.Query(`SELECT kind, body FROM identity_records WHERE user = ? ORDER BY hash`, user)
+	if err != nil {
+		return rs, nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var kind, body string
+		if err := rows.Scan(&kind, &body); err != nil {
+			return rs, nil, err
+		}
+		raw := []byte(body)
+		switch kind {
+		case RecordShared:
+			var c SharedKeyCert
+			if json.Unmarshal(raw, &c) == nil {
+				rs.Shared = append(rs.Shared, c)
+			}
+		case RecordMachine:
+			var c MachineCert
+			if json.Unmarshal(raw, &c) == nil {
+				rs.Machines = append(rs.Machines, c)
+			}
+		case RecordRemoval:
+			var r Removal
+			if json.Unmarshal(raw, &r) == nil {
+				rs.Removals = append(rs.Removals, r)
+			}
+		case RecordList:
+			var c ListChange
+			if json.Unmarshal(raw, &c) == nil {
+				changes = append(changes, c)
+			}
+		}
+	}
+	return rs, changes, rows.Err()
+}
+
+// IdentityUsers lists every user this machine holds an identity record for.
+func (m *Membership) IdentityUsers() ([]string, error) {
+	rows, err := m.db.Query(`SELECT DISTINCT user FROM identity_records ORDER BY user`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var u string
+		if err := rows.Scan(&u); err != nil {
+			return nil, err
+		}
+		out = append(out, u)
+	}
+	return out, rows.Err()
+}
+
+// KnownMachine is one machine of a user, with where it was last known to listen.
+type KnownMachine struct {
+	MachineKey string `json:"machineKey"`
+	User       string `json:"user"`
+	Name       string `json:"name,omitempty"`
+	Endpoint   string `json:"endpoint,omitempty"`
+	EndpointAt string `json:"endpointAt,omitempty"`
+}
+
+// SetMachineEndpoint records where one machine of user was last known to listen,
+// recording the machine if it is new. A machine belongs to one user for good, since
+// its key is what its user's certificate names, so an address offered for it under
+// another user is refused rather than moving the machine.
+func (m *Membership) SetMachineEndpoint(machineKey, user, endpoint string) error {
+	if machineKey == "" || user == "" {
+		return errors.New("a machine's address needs the machine and its user")
+	}
+	if endpoint == "" {
+		return nil
+	}
+	res, err := m.db.Exec(`
+		INSERT INTO machines (machine_key, user, endpoint, endpoint_at) VALUES (?,?,?,?)
+		ON CONFLICT(machine_key) DO UPDATE SET endpoint = excluded.endpoint, endpoint_at = excluded.endpoint_at
+		WHERE machines.user = excluded.user`,
+		machineKey, user, endpoint, time.Now().UTC().Format(time.RFC3339))
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return fmt.Errorf("machine %.24s is recorded for another user", machineKey)
+	}
+	return nil
+}
+
+// MachineEndpoint is the address recorded for one machine and when it was
+// recorded, or empty strings when there is none.
+func (m *Membership) MachineEndpoint(machineKey string) (endpoint, at string) {
+	var e, a sql.NullString
+	if err := m.db.QueryRow(`SELECT endpoint, endpoint_at FROM machines WHERE machine_key = ?`,
+		machineKey).Scan(&e, &a); err != nil {
+		return "", ""
+	}
+	return e.String, a.String
+}
+
+// UserMachines lists the machines recorded for user, by key.
+func (m *Membership) UserMachines(user string) ([]KnownMachine, error) {
+	rows, err := m.db.Query(`SELECT machine_key, user, COALESCE(name,''), COALESCE(endpoint,''), COALESCE(endpoint_at,'')
+		FROM machines WHERE user = ? ORDER BY machine_key`, user)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []KnownMachine
+	for rows.Next() {
+		var k KnownMachine
+		if err := rows.Scan(&k.MachineKey, &k.User, &k.Name, &k.Endpoint, &k.EndpointAt); err != nil {
+			return nil, err
+		}
+		out = append(out, k)
+	}
+	return out, rows.Err()
+}
+
+// CacheGuestList replaces the cached guest list of g's room with g, in one
+// transaction so that a reader never sees half of one list and half of another. Only
+// who is admitted and the cutoffs are kept: the changes and discarded events are for
+// the view, which computes them from the room's events. The cache is never
+// authoritative and is rebuilt from the room's events whenever they change.
+func (m *Membership) CacheGuestList(g *GuestList) error {
+	if g == nil || g.Room == "" {
+		return errors.New("a guest list to cache names no room")
+	}
+	tx, err := m.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for _, stmt := range []string{
+		`DELETE FROM room_guests_cache WHERE room_id = ?`,
+		`DELETE FROM room_guest_cutoffs WHERE room_id = ?`,
+	} {
+		if _, err := tx.Exec(stmt, g.Room); err != nil {
+			return err
+		}
+	}
+	for user, admitted := range g.Admitted {
+		if _, err := tx.Exec(`INSERT INTO room_guests_cache (room_id, user, admitted) VALUES (?,?,?)`,
+			g.Room, user, boolInt(admitted)); err != nil {
+			return err
+		}
+	}
+	for user, machines := range g.Cutoffs {
+		for machine, seq := range machines {
+			if _, err := tx.Exec(`INSERT INTO room_guest_cutoffs (room_id, user, machine_key, sequence) VALUES (?,?,?,?)`,
+				g.Room, user, machine, seq); err != nil {
+				return err
+			}
+		}
+	}
+	return tx.Commit()
+}
+
+// CachedGuestList is the cached guest list of room, or nil when none is cached,
+// which a caller answers by computing the list from the room's events. A revoked
+// user whose cutoffs are all 0 has no cutoff rows and comes back with no entry in
+// Cutoffs, which Counts reads the same way as an empty one.
+func (m *Membership) CachedGuestList(room string) (*GuestList, error) {
+	g := &GuestList{Room: room, Admitted: map[string]bool{}, Cutoffs: map[string]map[string]int64{}}
+	rows, err := m.db.Query(`SELECT user, admitted FROM room_guests_cache WHERE room_id = ?`, room)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var user string
+		var admitted int
+		if err := rows.Scan(&user, &admitted); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		g.Admitted[user] = admitted != 0
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows, err = m.db.Query(`SELECT user, machine_key, sequence FROM room_guest_cutoffs WHERE room_id = ?`, room)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var user, machine string
+		var seq int64
+		if err := rows.Scan(&user, &machine, &seq); err != nil {
+			return nil, err
+		}
+		if g.Cutoffs[user] == nil {
+			g.Cutoffs[user] = map[string]int64{}
+		}
+		g.Cutoffs[user][machine] = seq
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(g.Admitted) == 0 && len(g.Cutoffs) == 0 {
+		return nil, nil
+	}
+	return g, nil
 }
