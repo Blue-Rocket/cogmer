@@ -18,8 +18,10 @@ in a sync request is signed).
   moves overwrites one row, and expiry has something to attach to. `cmd/cogmer/sync.go`,
   `syncTargets`, `cmd/cogmer/membership_test.go`, `TestRoomPeersAreItsGuests`.
 - No room holds an address for a non-guest, since `verifyRequest` refuses a request from anybody
-  who is not a guest before an address is recorded, and joining admits the host as it records
-  them. `cmd/cogmer/auth.go`, `verifyRequest`.
+  who is not a guest before an address is recorded, and joining receives the room's guest list
+  from the inviting machine as it records that machine's address (D-159, an invitation carries
+  the room and the inviter, and joining receives the room's guest list from the inviting
+  machine). `cmd/cogmer/auth.go`, `verifyRequest`.
 - A machine that is known and is in no room is not asked, and a guest's machine is asked only
   about the rooms its user is a guest of, so a stranger is not sent a room's identifier. `cmd/cogmer/sync.go`,
   `syncTargets`, `roomsToAsk`, `cmd/cogmer/syncscope_test.go`,

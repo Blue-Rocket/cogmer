@@ -23,6 +23,7 @@ may rejoin the room it was in and no other, so its `session_rooms` row is marked
 **Rejected.**
 - *Deleting the row when a session leaves.* It reopens the move §12a forbids.
 
-**Limits.** Leaving does not touch the guest list, since withdrawing admission is the
-host's act with `revoke`, and it does not stop synchronization. Whether a machine should stop
+**Limits.** Leaving does not touch the guest list, since withdrawing admission is a
+guest's revocation with `revoke` (D-235, a room's one guest list, changed by any guest through
+events in the room, decides whose events count), and it does not stop synchronization. Whether a machine should stop
 serving a room its sessions have left is not decided here.
