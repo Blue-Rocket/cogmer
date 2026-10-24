@@ -6,7 +6,7 @@
 telling the guest that they have been admitted to a room, over the connection pairing set up.
 The offer is addressed to the guest, a user, and is received by the guest's machine that the
 host's daemon reaches. A session on another of the guest's machines joins a room the user is a
-guest of by name, from the list of those rooms that the user's machines share. The host is given a
+guest of by name, from the list of those rooms that the user's machines share (D-228, a user's colleagues, verifications, labels and rooms belong to the user and are copied between the user's machines). The host is given a
 string to send by hand only when the daemon cannot reach the guest.
 
 **Support.**

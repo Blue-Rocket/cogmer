@@ -7,7 +7,7 @@ where the inviting machine can be reached, and the inviting user's identifier, a
 public. Joining records the room, admits the inviting user to its guest list, and stores
 the address against the inviting machine. A session on another of the guest's machines
 joins the room by name, from the list of rooms the user is a guest of that the user's
-machines share, and needs no invitation.
+machines share (D-228, a user's colleagues, verifications, labels and rooms belong to the user and are copied between the user's machines), and needs no invitation.
 
 **Support.**
 - A guest did not create the room and cannot invent its identity, so the identity comes

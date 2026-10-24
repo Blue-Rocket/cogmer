@@ -4,7 +4,7 @@
 
 **Decision.** A user's live rooms have distinct names, and no name is unique beyond one
 user. A machine minting a name avoids every name in the list of rooms the user is a guest
-of, which the user's machines share, and generates another on a collision. Two of the
+of, which the user's machines share (D-228, a user's colleagues, verifications, labels and rooms belong to the user and are copied between the user's machines), and generates another on a collision. Two of the
 user's machines that mint the same name while out of contact leave a name that is
 reported as ambiguous, with both identifiers (D-161, an ambiguous room name is reported
 with both identities and never guessed).
