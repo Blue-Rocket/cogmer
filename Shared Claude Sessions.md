@@ -128,13 +128,13 @@ a key would eventually merge two unrelated conversations.
 Neither identifier is named after, derived from or bound to a project, a repository
 or a working directory, and nothing resolves a room from a directory.
 
-Every peer in a room converges on the same history. David may hold:
+Every machine in a room converges on the same history. David's machine may hold:
 
 ```
 A B C D E
 ```
 
-while Alice, disconnected for a while, holds:
+while Alice's, disconnected for a while, holds:
 
 ```
 A B C D F
@@ -150,8 +150,8 @@ A B C D E F
 
 ## 3.3 No authoritative peer
 
-No user's machine is a room's permanent host. Any peer in a room can create events,
-receive them, go offline, return later and fetch what it missed, and no peer needs
+No user's machine is a room's permanent host. Any machine in a room can create events,
+receive them, go offline, return later and fetch what it missed, and no machine needs
 another to be online in order to keep working.
 
 ---
@@ -178,7 +178,7 @@ nothing inside an agent session is shared between machines.
 A room lasts as long as the sessions that joined it. There is no standing room that
 people drift into and out of over weeks.
 
-Membership is held by an agent session, identified by its session ID. One peer
+Membership is held by an agent session, identified by its session ID. One user
 creates a room at the moment they invite someone into it, others join through that
 invitation, and the room closes when its members have left it.
 
@@ -217,7 +217,8 @@ something in front of a user's assistant, and only that user can cause it to be 
 
 A remote event never prompts, resumes or otherwise drives an interactive session,
 never makes it consume queued context ahead of a turn the user starts, and any
-scheduled or triggered work that affects it originates on the user's own machine.
+scheduled or triggered work that affects it originates on the machine the session
+runs on.
 The host offers ways to start an agent session, so a daemon could drive a session, and this
 rule forbids it.
 
@@ -229,7 +230,7 @@ what their own session has seen and when.
 Section 3.1 requires a user's session to survive every peer disappearing, and this
 section is its converse: a user's session is undisturbed by every peer arriving.
 
-Any agent run a peer event causes outside the interactive session neither borrows
+Any agent run a remote event causes outside the interactive session neither borrows
 that session's context nor interrupts it.
 
 ---
@@ -298,11 +299,11 @@ No network provider is part of a room's identity, its membership or the replicat
 protocol. A room is a set of linked sessions and an event stream, and how bytes
 reach another machine sits beneath that and is interchangeable.
 
-cogmer works with no virtual private network of any kind when peers can already
+cogmer works with no virtual private network of any kind when machines can already
 reach one another. Two users on the same network are the simplest case, and need no
 account, no external service and no configuration.
 
-A private network such as Tailscale can connect peers that could not otherwise reach
+A private network such as Tailscale can connect machines that could not otherwise reach
 each other. It is one provider among several, and never a prerequisite.
 
 Anything that makes a particular provider necessary, in identity, in discovery, in
@@ -333,7 +334,7 @@ What synchronization means is independent of the transport that carries it.
 
 A daemon discovers the address it is reachable at, and never derives one from its
 own hostname. A hostname is often not a routable address: it may be a purely local
-name, may resolve only by mDNS, may resolve to a private address no remote peer can
+name, may resolve only by mDNS, may resolve to a private address no other machine can
 reach, and is often not the name the transport knows the machine by.
 
 A daemon that cannot determine a reachable address says so, rather than offering an
@@ -379,23 +380,31 @@ against a stranger.
 A loopback address names a place reachable only from the machine that holds it. In
 anything offered to a colleague, it means no address was learned.
 
-## The lifecycle of a peer address
+## The lifecycle of a machine's address
 
-An address belongs to a peer and is recorded once, against that peer's identity and
+An address belongs to a machine and is recorded once, against that machine and
 nowhere else, so that it is always known whose address to try, to replace and to
-blame. Where a room needs to know whom to poll, the answer is its guest list and the
-address recorded for each guest.
+blame. A user with several machines has an address for each.
 
-An address enters in one of four ways, and each says something different about how
+The machines a room polls are those from which a session has joined the room, the
+user's own other machines included, and the address recorded for each, so that a
+machine holding none of the room is never asked for it.
+
+An address enters in one of five ways, and each says something different about how
 far it can be trusted:
 
 - from a pairing string a user typed in, which is a colleague's claim about where
-  they listened when they sent it;
-- from an invitation, which carries the room and where its host can be reached;
-- from a synchronization request, which carries the address the caller advertises,
-  so a member that has moved says so by continuing to poll;
-- from discovery on the network in use, the only source that reports where a peer is
-  rather than where it was.
+  their machine listened when they sent it;
+- from an invitation, which carries the room and where the inviting machine can be
+  reached;
+- from a synchronization request, which carries the address the calling machine
+  advertises, so a machine that has moved says so by continuing to poll, and a
+  colleague's newly joined machine becomes known by polling;
+- from another of the user's own machines, which passes on the addresses of all the
+  user's machines whenever the two exchange what they know, since a user's machines
+  may share no room;
+- from discovery on the network in use, the only source that reports where a machine
+  is rather than where it was.
 
 Only an address that identifies a machine is advertised. An overlay address may
 appear in a pairing string, an invitation or a stored record. A private address may
@@ -425,40 +434,42 @@ candidates, and never removes it.
 
 A wrong key is strong evidence. Every connection is pinned to a key already verified
 (section 25), so an address that answers with a different key is no longer that
-peer's, and it is invalidated at once.
+machine's, and it is invalidated at once.
 
 An address that is not refreshed grows less likely to be true, at a rate that depends
 on what it names. A private address does not outlive the network it was learned on.
 A public address may be tried for longer. The keys in an overlay address do not age,
 and the relay network keeps its rendezvous current.
 
-A peer that advertises a different address has moved, and the new address replaces
-the old one. The old one is superseded rather than disproved, since the peer may
-return to it, but keeping both would grow a peer's addresses with every network
-they visit.
+A machine that advertises a different address has moved, and the new address replaces
+the old one. The old one is superseded rather than disproved, since the machine may
+return to it, but keeping both would grow a machine's addresses with every network
+it visits.
 
-Forgetting a peer removes every address recorded for them, as it removes their
-admissions (section 12), so a later meeting is a first meeting.
+Forgetting a colleague removes every address recorded for any of their machines, as
+it removes their admissions (section 12), so a later meeting is a first meeting.
 
 ### What a failed key check means
 
 Pairing is pinned to the key the pairing string carries, so a stale address makes a
 pairing fail and never connects it to the wrong machine.
 
-Verifying a peer again uses the address on file, which may be months old, and is
-pinned just as strictly.
+Verifying a colleague again uses the addresses on file for their machines, which may
+be months old, and is pinned just as strictly.
 
-Synchronization accepts any peer this machine knows at the connection, and the signed
-request inside the connection says which peer it is, because a room records where its
-members listen rather than which member listens where.
+Synchronization accepts at the connection any machine vouched for by a user this
+machine knows, its own user included, and the signed request inside the connection
+says which machine it is, because a room records where its members' machines listen
+rather than which machine listens where.
 
 During synchronization, an address that answers with an unexpected key has changed
-hands, which is routine. While verifying a named peer, the same event is what
+hands, which is routine. While verifying a named colleague, the same event is what
 substitution looks like, and the user is told rather than the attempt being retried.
 
-A connection is abandoned when the key on the other side is not one this machine
-knows, before this machine presents anything of its own, so whoever holds a
-reassigned address learns that something tried to connect and nothing about who.
+A connection is abandoned when the key on the other side belongs to no machine a
+known user vouches for, before this machine presents anything of its own, so whoever
+holds a reassigned address learns that something tried to connect and nothing about
+who.
 
 ### Whether an address is ever rehabilitated
 
@@ -467,7 +478,7 @@ an address, but cannot restore confidence in one, because nothing has happened.
 
 An address demoted for silence returns to ordinary standing the moment it answers,
 which is why silence demotes rather than removes. An address set aside for age is
-current again when the peer advertises it afresh, or when it answers.
+current again when the machine advertises it afresh, or when it answers.
 
 An address invalidated by a wrong key returns only by presenting the right key. A
 reassigned address can be reassigned back, and a connection that succeeds against
@@ -479,7 +490,7 @@ the expected identity is proof of that.
 
 The daemon is one lightweight process, `cogmer`. It serves an interface for the collaboration
 hooks and the local view on the machine's loopback address, such as
-`127.0.0.1:4782`, and a separate interface for synchronizing with peers.
+`127.0.0.1:4782`, and a separate interface for synchronizing with other machines.
 
 ```
                     cogmer
@@ -489,7 +500,7 @@ hooks and the local view on the machine's loopback address, such as
    Hook API          Local UI API       Peer API
  localhost only      localhost           P2P
         │                │                 │
-   Agent session      Browser          colleagues
+   Agent session      Browser        other machines
 ```
 
 The session-start hook starts the daemon, not the user, and the daemon outlives any
@@ -500,7 +511,7 @@ The daemon:
 - captures local events;
 - stores events;
 - sends events to the local view;
-- connects to the peers an invitation names;
+- connects to the machines an invitation names;
 - exchanges the events each side lacks, without duplicates;
 - supplies each session with the colleagues' turns it has not seen;
 - creates, joins and closes rooms;
@@ -516,10 +527,37 @@ one.
 
 # 6\. Identity
 
-Every peer has a stable identity: a key pair, whose public key is the peer's
-identifier; a name derived from that key; the name its user goes by; an identifier
-for the user; and a label for the machine. Every agent session also has its own
-identifier.
+Every user has a stable identity: a key, whose public half is the user's identifier; a
+name derived from that key; the name the user goes by; and a recovery phrase from which
+the identity can be made again. Each of the user's machines has a key of its own, which
+the user's identity vouches for, and a name the user gave it. Every agent session also
+has its own identifier.
+
+## A user is one peer, whatever machines they use
+
+An identity belongs to a user, not to a machine. A user who works from a laptop and a
+desktop is one peer, and appears as one wherever peers are listed, verified, labeled
+or admitted, so that a colleague verifies the user once and knows them by one name.
+
+Each of a user's machines speaks as the user. A turn, a proof of admission or a
+synchronization request from any of them is the user's, so that a user can move to
+another machine without asking anything of a colleague.
+
+Each machine signs with a key of its own, never a copy of another machine's, so that
+losing one machine loses no other machine's key, and removing one leaves the rest
+speaking as the user.
+
+Whoever holds the recovery phrase is the user. The phrase is the only way back to an
+identity once every machine is gone, so a user who keeps it can always be recognized
+again, and anyone who obtains it can speak as the user.
+
+The recovery phrase is typed only into the daemon's page, never into an assistant, a
+command or a terminal, because anything typed into an assistant reaches the model and
+the service that runs it, and a phrase held there is the user's identity held by
+others.
+
+A session in a cloud environment speaks as its user as a machine does, and never asks
+for the recovery phrase, because its container is not a place the user controls.
 
 ## Peer names
 
@@ -560,36 +598,48 @@ it separates two peers asserting the same display name, and gives a changed key
 something to be noticed against. A word pair computed from a key means nothing to a
 user weeks later, so it is never relied on as a way to recognize a colleague.
 
-The display name is asserted by the peer. Until a user chooses one it is inferred
-from their operating-system account, which is David on a laptop and Ec2-user in a
-container, so two peers asserting the same display name is ordinary, not an attack.
+The display name is asserted by the peer, so two peers asserting the same display
+name is ordinary, not an attack.
 
-The label is the name this machine's user gave the peer when they paired, and it is
-bound to one key, and only one, from then on. It is the only one of the three that is both
+The label is the name a user gave the peer when they paired, and it is bound to one
+key, and only one, from then on. It is the only one of the three that is both
 memorable and unforgeable, because a user chose it about somebody they had just
 verified. Interfaces lead with the label where there is one, with the derived name
 beside it.
 
 A label means one key. Recording a second key under a label already in use is
 refused, and the refusal says so in full, because it is the one moment at which a
-changed key and a substituted key look the same.
+changed key and a substituted key look the same. A machine the peer adds is not a
+second key, and is covered by the label already given.
 
 ## Choosing the name others see
 
-A user may set the display name other people see for them. Until they do, it is
-inferred, and a name that was inferred never travels as though somebody chose it,
-because a guess presented as a choice is a claim about a user that nobody made.
+A user chooses the display name other people see for them when their identity is made,
+before the name first leaves any machine. Only other people see the name, so its owner
+has no later moment at which they would notice it is wrong.
 
-Whether a name was chosen is recorded, not inferred. Keeping the inferred name counts
-as choosing it.
+The daemon's page offers a name inferred from the operating-system account, which is
+David on a laptop and Ec2-user in a container, and keeping it counts as choosing it.
 
-A user is offered the choice the first time their name is about to leave the machine,
-which is when they hand a colleague a pairing string. Only other people see the name,
-so its owner has no other moment at which to notice it is wrong.
+A user's display name is the same from every one of their machines, because colleagues
+know one user, and two names for one user would read as two users.
 
 Changing the name later is safe. Turns already sent keep the name they carried,
 because events are immutable (section 7), and a label a colleague chose is theirs,
 so a rename cannot change what anybody else calls you.
+
+## Machine names
+
+Each of a user's machines has a name the user gives it, such as laptop, so that the
+user and their colleagues can tell which machine a turn came from.
+
+A machine's name is asserted by its user and is a claim, like a display name. It is
+always shown as a name of its own, never joined to the user's name, so that a crafted
+machine name cannot pass for part of a name that was checked.
+
+A machine's name is for attribution and display. It is never an address, and nothing
+routes by it, because where a machine can be reached is a property of the transport
+and changes independently of what the machine is called.
 
 ## Naming people
 
@@ -600,32 +650,103 @@ grow, because the combinations are generated and nobody approves them one by one
 
 ## When an identity is created
 
-A peer identity is created once, on a machine's first use of cogmer, and persists
-from then on. It is not created per room, per session or per invitation, and it
-outlives all of them, so a peer can be recognized on a later occasion rather than met
-afresh each time.
+A machine's key is made on the machine's first use of cogmer, and persists from then
+on.
 
-An identity belongs to a machine, not to a person. A user who works from a laptop and
-a desktop is two peers, and appears as two wherever peers are listed or admitted, so
-that losing one machine never loses the key the other holds.
+A user's identity is made the first time the user does something that needs it:
+printing a first pairing string, pairing, creating or joining a room, or adding a
+machine. It is not created per room, per session or per invitation, and it outlives
+all of them, so a colleague recognizes the user on a later occasion rather than
+meeting them afresh.
+
+Until the user's identity exists, a command that needs it points the user to the
+daemon's page and does nothing else, so that no identity is made without the user
+taking part.
+
+The page first asks whether the user has used cogmer on another machine, so that a
+user who has is never made into a second peer by accident.
+
+A user who has not is given a new identity. The page shows the recovery phrase, has
+the user confirm words from it, and takes the name colleagues will see, so that the
+phrase is known to be kept before anything depends on it.
+
+A user who has another machine at hand adds this machine from it. A user who has no
+machine left recovers from the phrase.
+
+## Adding a machine
+
+A machine is added from a machine the user already has, and never by typing the
+recovery phrase into it, so that the phrase is typed only to recover.
+
+The new machine's page shows its pairing string, the user enters it in the page of
+the machine they already have, and both pages show two words, which the user compares
+and confirms, so that a string replaced on the way never adds someone else's machine
+as the user's.
+
+The words for adding a machine can never be mistaken for the words of a pairing with a
+colleague, so that neither exchange can pass for the other.
+
+A machine that has been added receives from the machine that added it the user's
+machines and how to reach them, the user's colleagues, their verifications and labels,
+and the user's room list, so that it works as the user from its first session.
+
+## What a user's machines share
+
+A user's colleagues, their verifications, the labels the user gave them and the
+user's room list are the same on every one of the user's machines, so that a colleague
+paired, verified or labeled from one machine is known the same way on all of them.
+
+Forgetting a colleague on one machine forgets them on every machine of the user, so
+that a colleague the user meant to drop is not still trusted on a machine they forgot
+about.
+
+A user's room list holds each room the user is a guest of, with its name, its
+identifier and which of the user's machines have joined it, and holds none of its
+guests or turns, so that a session on any of the user's machines can join the room by
+name while its conversation stays on the machines that joined it.
+
+A machine on which no session has joined a room holds none of the room's guests or
+turns, so that a room's conversation is on no machine the user has not brought into it.
+
+A room's guest list is the same on every one of the user's machines that has joined the
+room, so that who may enter does not depend on which machine a colleague reaches.
+
+A change made on one of a user's machines reaches the others when they next reach one
+another, with nothing for the user to do, so that a user never keeps their machines in
+step by hand.
+
+## Removing a machine, and recovering
+
+A user can remove any of their machines from the daemon's page on another one, and a
+machine can remove itself, so that a lost or stolen machine stops speaking as the
+user.
+
+Removing a machine marks every turn it sent after the last turn the user names as
+counting. A marked turn is shown in the room view as from a removed machine and is
+never given to an assistant, so that a thief's turns never reach a model as the user's.
+
+The last turn a removal lets count can only move earlier, so that whoever holds a
+removed machine, or later obtains the phrase, cannot make its marked turns count.
+
+A user who has no machine left recovers by typing the recovery phrase into the daemon's
+page on a new machine. Colleagues recognize the recovered user with no new comparison,
+so that losing every machine does not cost a user their colleagues.
 
 ## An identifier must be safe to know
 
-A peer's identifier is its Ed25519 public key, and knowing it grants nothing. An
-identifier appears in every event its peer creates, in every interface, and in every
-exchange by which peers recognize one another, so an identifier that gave its holder
-any power could not be protected.
+A user's identifier is the public half of the user's key, and a machine's key is
+public in the same way, and knowing either grants nothing. An identifier appears in
+every event the user's machines create, in every interface, and in every exchange by
+which peers recognize one another, so an identifier that gave its holder any power
+could not be protected.
 
 An identifier is safe to know only because signatures are checked. Every event is
-signed by the peer that created it, and an event whose signature does not verify is
-rejected on receipt, so attribution is enforced rather than trusted.
+signed by the machine that created it, with a key the user's identity vouches for,
+and an event whose signature or vouching does not verify is rejected on receipt, so
+attribution is enforced rather than trusted.
 
 An identifier says nothing about whose key it is. Section 25's verification is what
 establishes that.
-
-The machine label is for attribution and display. It is never an address, and nothing
-routes by it, because where a peer can be reached is a property of the transport and
-changes independently of who the peer is.
 
 An assistant response is always attributable to the user and the session it came from,
 and is shown as
@@ -648,10 +769,11 @@ Events are immutable once created, and a room's store only appends.
 
 A room records two kinds of event: a user's prompt, and the assistant's response to it.
 
-Each event carries its own identifier, the peer that created it and that peer's
-sequence number, the room, the time it was created, the user who wrote it and the
-name they went by, the machine it came from, the session it came from, its kind, its
-content, and the signature of the peer that created it.
+Each event carries its own identifier, the user it belongs to and the name they went
+by, the machine that created it, the name of that machine and that machine's sequence
+number, the room, the time it was created, the session it came from, its kind, its
+content, the signature of the machine that created it, and what ties that machine to
+the user.
 
 ---
 
@@ -659,10 +781,10 @@ content, and the signature of the peer that created it.
 
 Neither the identity of an event nor synchronization rests on wall-clock time alone.
 
-Each peer numbers the events it creates with a sequence that only increases:
+Each machine numbers the events it creates with a sequence that only increases:
 
 ```
-David:
+David's laptop:
 
 1825
 1826
@@ -670,80 +792,85 @@ David:
 1828
 ```
 
-So an event has both a globally unique identifier and a position, its peer and that
-peer's sequence number. The position lets peers work out cheaply which events they
-are missing. Timestamps are for showing the conversation and for approximate
-ordering between peers.
+So an event has both a globally unique identifier and a position, its machine and that
+machine's sequence number. The position lets machines work out cheaply which events
+they are missing. Timestamps are for showing the conversation and for approximate
+ordering between machines.
 
 ## The lifecycle of a sequence
 
-A sequence belongs to a peer within a room. A peer in two rooms keeps two independent
-sequences, because rooms synchronize independently, and a shared counter would leave
-each room gaps that could never be closed.
+A sequence belongs to a machine, never to a user, so that two of a user's machines
+writing into one room at the same moment never claim the same number.
 
-Within a room, a peer's sequence begins at its first event, advances by one for each
-event that peer creates, and is never reset, reused or rewritten. It is frozen when
-the room is archived.
+A machine in two rooms keeps two independent sequences, because rooms synchronize
+independently, and a shared counter would leave each room gaps that could never be
+closed.
 
-A peer that cannot establish where its sequence had reached publishes nothing into
+Within a room, a machine's sequence begins at its first event, advances by one for
+each event that machine creates, and is never reset, reused or rewritten. It is frozen
+when the room is archived.
+
+A machine that cannot establish where its sequence had reached publishes nothing into
 that room until it can, because resuming at a lower number reissues numbers other
-peers already hold against different events.
+machines already hold against different events.
 
 ## Losing a room's local state
 
-Losing a room's local database does not end a peer's membership in that room. The
-user's own turns, and the colleagues' turns injected into their session, are already
-in that session's context, and a session's room is fixed for its lifetime, so ending
-membership would cost the user the session in exchange for a record that other
-members can supply again.
+Losing a room's local database on a machine does not end the membership of that
+machine's sessions in that room. The user's own turns, and the turns injected into
+their session, are already in that session's context, and a session's room is fixed
+for its lifetime, so ending membership would cost the user the session in exchange for
+a record that other machines can supply again.
 
-A peer's highest issued sequence for each room is stored outside that room's
-database, with the peer's identity. Everything else can be fetched again from another
-member, because events are immutable and replicated. So a peer that loses a room's
-events keeps its identity and its sequence, resumes above the recorded number, fetches
-the events again and stays a member, and a peer that loses everything, identity
-included, is a new peer with a new sequence space and nothing to collide with.
+A machine's highest issued sequence for each room is stored outside that room's
+database, with the machine's key. Everything else can be fetched again from another
+machine in the room, because events are immutable and replicated. So a machine that
+loses a room's events keeps its key and its sequence, resumes above the recorded
+number, fetches the events again and its sessions stay members, and a machine that
+loses everything, its key included, is added again as a new machine, with a new
+sequence space and nothing to collide with.
 
-A sequence number is reserved before the event that uses it is published. A peer that
-fails between the two has recorded a number it did not use, which is harmless, while
-publishing first would issue a number the peer has no record of.
+A sequence number is reserved before the event that uses it is published. A machine
+that fails between the two has recorded a number it did not use, which is harmless,
+while publishing first would issue a number the machine has no record of.
 
 ## Noticing that state is gone
 
-A peer consults its record of membership every time it opens a room. State has been
+A machine consults its record of membership every time it opens a room. State has been
 lost if that record names a room whose database is absent, or if the database's
-highest sequence for this peer is below the number the record holds. A peer does not
-know it has lost state, so the check runs on every open, not only when a fault is
-suspected.
+highest sequence for this machine is below the number the record holds. A machine
+does not know it has lost state, so the check runs on every open, not only when a
+fault is suspected.
 
 ## Saying so
 
-A peer that has lost a room's state tells its user, in terms they can act on: that
+A machine that has lost a room's state tells its user, in terms they can act on: that
 local state for the room was lost, that membership and sequence position are intact,
-that the room's history is being fetched again from other members and depends on one
-being reachable, and that some colleagues' turns may be injected a second time. A
+that the room's history is being fetched again from other machines in the room and
+depends on one being reachable, and that some turns may be injected a second time. A
 recovery nobody is told about looks the same as nothing having gone wrong.
 
-A room's events return only from peers that still hold them. A member that recovers
-while alone holds a correct sequence position and an empty history, publishes safely,
-and receives the history as others reconnect.
+A room's events return only from machines that still hold them. A machine that
+recovers while no other machine in the room can be reached holds a correct sequence
+position and an empty history, publishes safely, and receives the history as others
+reconnect.
 
-Delivery state is lost with the database, so colleagues' turns a session has already
+Delivery state is lost with the database, so turns a session has already
 seen may be injected again. That is redundant rather than harmful, since the session
 holds them already, and it is the direction to err in, because the alternative is
 silence about turns never delivered at all.
 
 ## Redelivery and conflict are not the same thing
 
-A receiving peer tells redelivery from conflict, because the obvious implementation
+A receiving machine tells redelivery from conflict, because the obvious implementation
 treats them alike and only one of them is harmless.
 
-An event whose peer and sequence number the receiver already holds, with the same
+An event whose machine and sequence number the receiver already holds, with the same
 event identifier, is ordinary redelivery and is ignored. That is what makes
 anti-entropy and relaying safe to repeat.
 
-The same peer and sequence number with a different event identifier is not a
-duplicate. It means a peer has lost its state or an event has been forged, and it is
+The same machine and sequence number with a different event identifier is not a
+duplicate. It means a machine has lost its state or an event has been forged, and it is
 reported and kept. Absorbing it would lose it for good, since the sender believes it
 shared the event and the receiver reports holding a higher sequence than the sender
 has. The rejected event is kept, because without it nobody can later tell lost state
@@ -753,55 +880,59 @@ from forgery.
 
 # 9\. Synchronization State
 
-Each daemon knows, for every peer in a room, the highest contiguous sequence number it
-has received from that peer:
+Each daemon knows, for every machine that has written into a room, the highest
+contiguous sequence number it has received from that machine:
 
 ```
 Room: misty-canyon  (0f7a4e6c-2b91-4d0a-9c3e-7f1d8a5b2c44)
 
 Known state:
 
-David     1827
-Alice      943
-Carlos     611
+David, laptop     1827
+David, desktop     212
+Alice, desktop     943
+Carlos, laptop     611
 ```
 
-When Alice reconnects to David, she says what she holds:
+When Alice's desktop reconnects to David's laptop, it says what it holds:
 
 ```
 I have:
 
-David  1802
-Alice   943
-Carlos  611
+David, laptop    1802
+David, desktop    212
+Alice, desktop    943
+Carlos, laptop    611
 ```
 
-and David sends what she lacks:
+and David's laptop sends what it lacks:
 
 ```
-David events 1803–1827
+David, laptop: events 1803–1827
 ```
 
-Alice stores them. No transcript is compared.
+Alice's desktop stores them. No transcript is compared.
 
 ---
 
 # 10\. Anti-Entropy Synchronization
 
-Peers exchange what they hold periodically. Alice sends David what she holds:
+Machines exchange what they hold periodically. Alice's desktop sends David's laptop
+what it holds:
 
 ```
-Alice → David
+Alice, desktop → David, laptop
 
 {
-  david: 1802,
-  alice: 943,
-  carlos: 611
+  david/laptop: 1802,
+  david/desktop: 212,
+  alice/desktop: 943,
+  carlos/laptop: 611
 }
 ```
 
-David works out which events Alice lacks and sends them, and Alice does the same for
-David.
+David's laptop works out which events Alice's desktop lacks and sends them, and
+Alice's desktop does the same for David's laptop.
 
 So a room converges by itself after a temporary network loss, a laptop sleeping, a
 daemon restarting, a machine switching networks, or a member's session being
@@ -817,15 +948,15 @@ divergence.
 
 The conversation is an append-only collection of immutable events, so cogmer uses no
 CRDT library. Synchronization rests on immutable events, unique identifiers, a
-sequence per peer, anti-entropy synchronization and a deterministic order for
+sequence per machine, anti-entropy synchronization and a deterministic order for
 display.
 
 ---
 
 # 12\. Forming a Room
 
-A room is formed by invitation, not by configuration. One peer creates a room and
-invites the others, and each of them joins by accepting.
+A room is formed by invitation, not by configuration. One user creates a room and
+invites colleagues, and each of them joins by accepting.
 
 Colleagues usually already know one another, so an invitation names a guest rather
 than issuing a token:
@@ -838,10 +969,11 @@ Alice:   → misty-canyon is offered to you by david
          /cogmer:room-join misty-canyon
 ```
 
-David's daemon records that the peer he knows as alice may enter misty-canyon, and
-tells her daemon so over the channel they established when they paired. Her daemon
-holds the offer until she accepts it. Nothing secret is typed, spoken or sent, and
-the room's name, which is guessable, grants nothing to whoever guesses it.
+David's machine records that the colleague he knows as alice may enter misty-canyon,
+and tells her machines so over the channel they established when they paired. The
+offer waits until she accepts it, from a session on any of her machines. Nothing
+secret is typed, spoken or sent, and the room's name, which is guessable, grants
+nothing to whoever guesses it.
 
 Delivering an offer admits nobody. The admission is the entry on the host's guest
 list, which is the host's judgment. The offer says only that the entry exists,
@@ -857,41 +989,43 @@ because a guest who joined before verification would find the room silent
 when they do. The output presents this as one step remaining, never as a refusal,
 because trying to start a room is the moment a user is willing to verify.
 
-A name locates a room, and a guest list admits a peer.
+A name locates a room, and a guest list admits a user.
 
-A peer that joins receives the room's identifier on admission, and uses it from then
-on.
+A session that joins receives the room's identifier on admission, and its machine uses
+it from then on.
 
 ## Two acts, at two scopes, with two names
 
-Pairing is between two machines. It happens once with each colleague, outlasts every
-room the two will ever share, and is where a key is recorded and confirmed.
+Pairing is between two users. It happens once with each colleague, from any of each
+user's machines, outlasts every room the two will ever share, and is where a
+user's key is recorded and confirmed.
+
+A pairing covers every machine either user has or adds later, so that a user who
+works from several machines, or replaces one, pairs with each colleague only once.
 
 Inviting is into one room. It happens as often as rooms do, means nothing outside the
 room it names, and is withdrawn by revoking, without touching the pairing.
 
-Known peers belong to a machine and a room's guests belong to the room, and the
-commands say which they act on: `pair` names the lasting act, and `invite` the one
-scoped to a room.
+Known peers belong to the user, on all of the user's machines, and a room's guests
+belong to the room. The commands say which they act on: `pair` names the lasting act,
+and `invite` the one scoped to a room.
 
 Pairing is interactive, waits on another user, and ends with two words that must
 reach the user's eyes unaltered, so it happens in the view the daemon serves and never
 by way of the model (section 29). Inviting is a single act whose output only informs,
 so it is a command inside an agent session like any other.
 
-A pairing string carries an address as well as the identifier, so that verification
-can happen before any room exists. The address need only be correct once
-(section 4).
+A pairing string carries the address of the machine it was printed on as well as the
+user's identifier, so that verification can happen before any room exists. The
+address need only be correct once (section 4).
 
-A pairing string may also carry the name its sender goes by, so that the user who
-receives it has a sensible default for the name they must supply. It carries the name
-only when somebody chose it, because a name inferred from an operating-system account
-traveling as though a user picked it is worse than carrying nothing. The name is a
-claim by whoever sent the string, so it is recorded only after the two words match.
+A pairing string also carries the name its sender chose, so that the user who receives
+it has a sensible default for the name they must supply. The name is a claim by
+whoever sent the string, so it is recorded only after the two words match.
 
 No part of a pairing string is a secret. An identifier is a public key, an address is
 where a daemon listens, and a name is what somebody calls themselves, so an
-interceptor learns that a peer exists and gains no way in. What interception
+interceptor learns that a user exists and gains no way in. What interception
 threatens is substitution, which the two-word comparison is for.
 
 ## Pairing, which happens once
@@ -958,9 +1092,10 @@ carries no address still lets its sender pair, and is never treated as a dead en
 Knowing someone and admitting them to a particular conversation are different
 decisions, so they are two lists, at different scopes.
 
-A machine's known peers are the identifiers it has learned and the names it knows
-them by. The list is durable and outlasts every room, which is why a colleague is
-recognized on a later occasion rather than met afresh.
+A user's known peers are the colleagues the user has paired with and the names the
+user knows them by. The list is durable, outlasts every room and is the same on every
+one of the user's machines, which is why a colleague is recognized on a later
+occasion, from any machine, rather than met afresh.
 
 A room's guests are the known peers who may enter it. The list is created with the
 room and archived with it. A user may know six colleagues and admit two of them to a
@@ -978,9 +1113,15 @@ Both lists can be inspected and changed:
 /cogmer:room-revoke <peer>           withdraw admission
 ```
 
-A room's status says, for each colleague, whether this machine can reach them, and for
-one it cannot, for how long it has been trying. A colleague who cannot be reached looks
-the same as a quiet room, and without being told, nobody knows to look.
+A room's status shows each colleague as one line. A colleague is reachable when this
+machine can reach any of their machines that have joined the room, and is named as
+unreachable, with for how long this machine has been trying, only when it can reach
+none of them. A colleague who cannot be reached looks the same as a quiet room, and
+without being told, nobody knows to look.
+
+A room's status lists the user's own machines that have joined the room one by one, by
+name, with whether this machine can reach each, so that a user can tell which of their
+own machines is out of step with the room.
 
 When a room has a Claude Cowork session, its status also says how long ago a Cowork session
 last reached this machine, or that none has yet, since a Cowork session whose hooks do not
@@ -989,16 +1130,17 @@ reach cogmer captures and receives nothing and shows nothing.
 A peer can be recorded without being verified, for scripts and tests, and such a peer
 cannot collaborate until the comparison happens.
 
-A room's creator is its first guest.
+A room's creator is its first guest, so every machine of the creating user may join
+the room.
 
-Revoking withdraws admission to one room. Forgetting discards the identity itself, so
-a later meeting is a first meeting again.
+Revoking withdraws admission to one room. Forgetting discards the colleague, on every
+one of the user's machines, so a later meeting is a first meeting again.
 
 ## Proving admission
 
-A peer that joins presents its identifier. The host finds that identifier among the
-room's guests, then issues a fresh, unpredictable challenge, which the peer signs with
-the private key its identifier corresponds to.
+A machine that joins presents its key and what ties that key to its user. The machine
+it asks finds that user among the room's guests, then issues a fresh, unpredictable
+challenge, which the joining machine signs with its own private key.
 
 The challenge is new every time, because an exchange that can be replayed is a bearer
 credential.
@@ -1006,24 +1148,24 @@ credential.
 Nothing secret passes in either direction, so the exchange needs integrity, which the
 signature supplies, and no confidential channel.
 
-Proving possession of a key establishes who is asking, and never whether they may. A
-peer can generate a key pair as easily as anyone, so admission begins at the guest
+Proving possession of a key establishes who is asking, and never whether they may.
+Anyone can generate a key pair, so admission begins at the guest
 list, not at the signature.
 
 ## When someone not on the list asks to join
 
-A peer that is not a guest is refused, and the refusal is more than silence.
+A user who is not a guest is refused, and the refusal is more than silence.
 
-The host is told that a peer asked to enter, and shown the identifier and derived name
-it presented. The host may admit it, which makes that peer known and a guest in one
-act. The case this serves is two colleagues whose machines have not met, which is an
-absence of a recorded key, not of trust.
+The host is told that a user asked to enter, and shown the identifier and derived name
+presented. The host may admit them, which makes that user known and a guest in one
+act. The case this serves is two colleagues who have not paired, which is an absence
+of a recorded key, not of trust.
 
 Approval is a person's act. What a host approves is an identifier, and the name beside
 it is a claim made by whoever sent the request.
 
-The refused peer is told it was refused, and shown its own identifier, so its user can
-tell the host what to admit.
+The refused user is told they were refused, and shown their own identifier, so they
+can tell the host what to admit.
 
 A request is not a queue. If the host is absent the request fails, and it never grants
 entry later without the host's attention.
@@ -1053,8 +1195,8 @@ token that admits its holder has to be kept secret while it is sent, cannot be
 checked afterwards, and enrolls whoever intercepts it under a name the room's members
 will treat as familiar.
 
-Inviting someone in advance needs no token either. A host may admit a peer it knows
-and then leave, and the guest joins whenever it likes. Only a host that is absent and
+Inviting someone in advance needs no token either. A host may admit a colleague they
+know and then leave, and the guest joins whenever they like. Only a host that is absent and
 has never recorded the guest would need a token, and such a host has to act before
 that guest can enter under any scheme.
 
@@ -1067,12 +1209,13 @@ An endpoint is opaque to the collaboration protocol. It is whatever the transpor
 use can reach, such as a direct address or an overlay address (section 4), and
 synchronization never depends on its form.
 
-An endpoint needs to be correct only once. Having joined, a peer learns the room's
-members and how to reach them, so the inviting peer's endpoint stops being special at
-once, just as the inviting peer is not authoritative.
+An endpoint needs to be correct only once. Having joined, a machine learns the
+machines of the room's members and how to reach them, so the inviting machine's
+endpoint stops being special at once, just as the inviting machine is not
+authoritative.
 
 An invitation may carry more than one endpoint, because which one works depends on
-where the joining peer is: a colleague on the same network and one across the internet
+where the joining machine is: a colleague on the same network and one across the internet
 do not reach the same address. Endpoints change when a machine moves between networks,
 so an invitation may be stale, and joining with a stale one fails clearly rather than
 hanging.
@@ -1098,14 +1241,14 @@ spoken aloud. A few thousand combinations are enough to avoid confusion and usel
 against a guess.
 
 Authorization is never the name. It is an entry on a guest list, proved by possession
-of a key, or a host's explicit approval of a request, and no peer admits a session to a
-room on the strength of a name. On a shared network, such as an office, a conference
+of a key, or a host's explicit approval of a request, and no machine admits a session
+to a room on the strength of a name. On a shared network, such as an office, a conference
 or a cafe, any listener can list the advertised room names, and a room holds source
 code, customer information and whatever a user has pasted into a prompt.
 
-The guest list also tells rooms apart. Names are unique only among the rooms one peer
-hosts, so local discovery may find two unrelated rooms with the same name, and a
-joining peer is a guest of at most one of them.
+The guest list also tells rooms apart. Names are unique only among one user's rooms,
+so local discovery may find two unrelated rooms with the same name, and the guest
+lists say which of them, if either, admits the joining user.
 
 ## Room names
 
@@ -1131,17 +1274,23 @@ A room name is:
 - drawn from a narrow, neutral domain, so that no combination is offensive or
   misleading.
 
-Each list is large enough that the live rooms one peer hosts rarely collide.
+Each list is large enough that one user's rooms rarely collide.
 
 Names are not globally unique and cannot be, since rooms are created independently on
-machines that do not coordinate. A peer keeps only the live rooms it hosts distinctly
-named, generating again on a collision, which is enough because a name is only ever
-resolved against one peer.
+machines that do not coordinate. A room's name is unique among one user's rooms: a
+machine creating a room avoids every name in the user's room list, generating again on
+a collision, so that a name a user types means one room on every one of their
+machines.
+
+Two of a user's machines that create rooms with the same name while out of contact
+leave that name ambiguous, and a name that means two of the user's rooms is reported
+with both rooms' identifiers and never resolved by a guess, so that a user never
+enters the wrong room.
 
 A room's name is fixed for the life of the room, because renaming would invalidate
 the invitations already sent and make an archived room harder to recognize.
 
-The peer that issued an invitation does not become authoritative by doing so. It is
+The machine that issued an invitation does not become authoritative by doing so. It is
 only the first member that can be reached, and it may leave while the room continues.
 
 ---
@@ -1187,14 +1336,29 @@ are immutable, and a user who leaves does not unsay what they said.
 
 ## Joining and rejoining
 
-A session joins a room by accepting an invitation. A session that joins a room already
-in progress receives the room from its beginning.
+A session joins a room by accepting an invitation, or, when the room is already in the
+user's room list (section 6), by naming it. A session that joins a room already in
+progress receives the room from its beginning.
 
 A session may rejoin a room it left, for as long as that room is live. It receives what
 it missed, and only that, because delivery is recorded per event rather than as a
 position in a stream.
 
 A closed room is never rejoined, by a former member or by anyone else.
+
+## One user, several machines
+
+A user may be in one room from sessions on several of their machines, and each of
+those sessions is a member in its own right, so that a user can move between machines
+and keep working in the room.
+
+A user's sessions in one room share context with one another as they do with a
+colleague's, whichever machine each is on, so that work begun on one machine carries
+on in a session on another.
+
+A session on another of the user's machines joins a room the user is a guest of by the
+room's name, with no new invitation, because a colleague who admitted the user
+admitted every machine of theirs.
 
 ## Joining a different room
 
@@ -1251,31 +1415,37 @@ Closing ends the room, not the conversation: the room's events are archived.
 
 # 13\. Transitive Synchronization
 
-Synchronization does not need every peer connected at once.
+Synchronization does not need every machine connected at once.
 
 ```
-David ↔ Alice ↔ Carlos
+David's laptop ↔ Alice's desktop ↔ Carlos's laptop
 ```
 
-If David and Carlos cannot reach each other, David gives Alice his event 1827, Alice
-stores it, and when Alice next connects to Carlos she passes it on:
+If David's laptop and Carlos's cannot reach each other, David's laptop gives Alice's
+desktop its event 1827, Alice's desktop stores it, and when it next connects to
+Carlos's laptop it passes the event on:
 
 ```
-David → Alice → Carlos
+David's laptop → Alice's desktop → Carlos's laptop
 ```
 
-An event belongs to the peer that created it, whichever peer relays it, and a relaying
-peer never changes an event's originating peer, its sequence number or its identifier.
+An event belongs to the user whose machine created it, whichever machine relays it,
+and a relaying machine never changes an event's user, the machine that created it, its
+sequence number or its identifier.
 
-Every event is signed by the peer that created it, over the event's own content, so a
-relaying peer can carry an event and cannot author one: an event from Alice that claims
-to come from David is distinguishable from one Alice composed, because Alice cannot
-produce David's signature.
+Every event is signed by the machine that created it, over the event's own content,
+with a key the user's identity vouches for, so a relaying machine can carry an event
+and cannot author one: an event relayed by Alice's desktop that claims to come from
+David is distinguishable from one Alice composed, because no machine of Alice's can
+produce a signature David's identity vouches for.
 
-A receiving peer checks every event against the key its originating peer's identifier
-names, and rejects any that does not verify. It rejects rather than keeps it aside,
-because a failed signature has no harmless reading, unlike a sequence conflict, which
-may be a peer that lost its state.
+A relaying machine of the event's own user cannot author an event for another of that
+user's machines either, so that a turn always shows the machine that wrote it.
+
+A receiving machine checks every event against the key of the machine that signed it,
+and that key against the user it claims, and rejects any event that does not verify.
+It rejects rather than keeps it aside, because a failed signature has no harmless
+reading, unlike a sequence conflict, which may be a machine that lost its state.
 
 Signatures give integrity and attribution: nothing can be forged, altered on the way
 or falsely attributed. They do not decide who may connect or read a room, which is
@@ -1292,9 +1462,9 @@ the same machine. When David submits
 Why is SessionLambda returning a timeout here?
 ```
 
-the daemon at once gives the event its identifier, advances David's sequence, stores
-the event, and shows it in the local view. The event reaches peers when they next
-synchronize.
+the daemon at once gives the event its identifier, advances the sequence of David's
+machine, stores the event, and shows it in the local view. The event reaches other
+machines when they next synchronize.
 
 A command that David types to cogmer, such as `/cogmer:room-status`, is not a turn of the
 room. The daemon does not store it, offers no colleague's turn with it, and does not store
@@ -1309,7 +1479,7 @@ colleague's disk or hold up the room.
 A colleague's daemon fetches an image from any machine that holds it, so the image is available while its
 author is offline.
 
-The agent session never waits for synchronization with peers before answering a prompt.
+The agent session never waits for synchronization with other machines before answering a prompt.
 
 ---
 
@@ -1394,28 +1564,34 @@ Three paths carry an event, with different requirements and different limits, an
 description of propagation that treats them as one promises real-time collaboration
 and delivers something else.
 
-## Peer to peer
+## Machine to machine
 
 ```
-David generates event E
+David's laptop generates event E
         │
-        ├────────► Alice
+        ├────────► Alice's desktop
         │
-        └────────► Carlos
+        ├────────► Carlos's laptop
+        │
+        └────────► David's desktop
 ```
 
-Peers converge promptly, and a peer recovers what it missed without any other peer
-having tracked what it was owed.
+Machines converge promptly, and a machine recovers what it missed without any other
+machine having tracked what it was owed.
 
-Peers poll. A peer asks for what it lacks, and a peer that was absent recovers by
-asking again, while pushing would need each sender to know who is connected and what
-each holds, state that can be wrong, to improve half a second nobody is waiting on.
+A user's own machines in a room synchronize with one another as they do with a
+colleague's, so that a turn from one reaches the user's sessions on the others.
 
-On a healthy network, an event typically reaches the other peers in under a second,
-which a poll every second achieves.
+Machines poll. A machine asks for what it lacks, and a machine that was absent
+recovers by asking again, while pushing would need each sender to know who is
+connected and what each holds, state that can be wrong, to improve half a second
+nobody is waiting on.
 
-A peer that receives an event checks it, tells redelivery from conflict, stores it,
-tells the local view, and passes it on to any peer that asks.
+On a healthy network, an event typically reaches the other machines in under a
+second, which a poll every second achieves.
+
+A machine that receives an event checks it, tells redelivery from conflict, stores it,
+tells the local view, and passes it on to any machine that asks.
 
 Anti-entropy is not a fallback here. It is how events propagate.
 
@@ -1431,7 +1607,7 @@ it missed.
 
 There is no path from the daemon into an agent session, and there is never one.
 Nothing can place context into a session already underway, which is a property of
-the host. That a peer event never makes such a session take a turn is a rule of
+the host. That a remote event never makes such a session take a turn is a rule of
 cogmer (section 3.7).
 
 Context reaches an agent session when a prompt is submitted, and at no other
@@ -1439,7 +1615,7 @@ moment. A session part-way through a turn cannot be told anything, so a turn tha
 runs for minutes does not learn of a colleague's message until it ends and the next
 prompt begins.
 
-This bounds everything above it: taking propagation between peers from five hundred
+This bounds everything above it: taking propagation between machines from five hundred
 milliseconds to fifty changes nothing a user experiences, because what they are
 waiting on is the turn. Wherever propagation is described, the two figures are given
 separately.
@@ -1489,31 +1665,31 @@ Each room has its own address:
 http://127.0.0.1:4782/room/misty-canyon
 ```
 
-Peers synchronize their event stores, so every user sees roughly the same room:
+Machines synchronize their event stores, so every user sees roughly the same room:
 
 ```
 MISTY CANYON
 ──────────────────────────────────────
 
-David                         11:42
+David · laptop                11:42
 
 Why is SessionLambda returning a
 timeout here?
 
 
-Assistant — David                11:43
+Assistant — David · laptop       11:43
 
 I traced the timeout to the OkHttp
 connection pool...
 
 
-Alice                         11:44
+Alice · desktop               11:44
 
 That assumption may be wrong.
 Check the retry path.
 
 
-Assistant — Alice                11:45
+Assistant — Alice · desktop      11:45
 
 You're right. The retry path shows...
 ```
@@ -1522,6 +1698,12 @@ The view:
 
 - updates live;
 - shows who wrote each turn, and whose assistant wrote each response;
+- shows the name of the machine each turn came from, apart from the user's name and as
+  a name the user asserts, so a reader can tell which of a user's machines a turn came
+  from;
+- shows a turn from any of the user's own machines as the user's own, so the user's
+  work elsewhere never reads as a colleague's;
+- shows a turn its removal marks as from a removed machine;
 - shows when each turn was written;
 - renders the Markdown in a turn, because rendered Markdown is much easier to understand than the characters typed;
 - shows an image pasted into a turn once its bytes reach this machine, and says when one is on its way or was not sent;
@@ -1529,12 +1711,15 @@ The view:
   shown as typed, a link is followable only when it is a web address, and an image is shown as its
   address and never loaded;
 - shows whether it is connected;
-- shows which of the room's colleagues are offline, by name, and for how long, and says nothing of a
-  colleague who is not in the room;
+- shows each of the room's colleagues as one line, offline only when none of their machines that
+  joined the room can be reached, by name, and for how long, and says nothing of a colleague who is
+  not in the room;
+- shows the user's own machines that joined the room one by one, by name, with whether this machine
+  can reach each;
 - shows when each colleague last wrote a turn in the room, so a colleague who is reachable
   and whose turns have stopped arriving can be told from one who is quiet;
-- marks a colleague's turn that no session on this machine has been given yet, except in a show-only
-  room, which gives none;
+- marks a turn from a colleague, or from another of the user's own sessions, that no session on this
+  machine has been given yet, except in a show-only room, which gives none;
 - says once, above the turns, how many have not been given to the user's assistant, that they are
   included with the next prompt sent in a session in the room, and how to join the room when no session
   is in it, so the user knows why the assistant lacks them and what to do;
@@ -1542,8 +1727,8 @@ The view:
   reader opened or clear text the reader selected, and when the reader has scrolled away
   from the newest turn, a button says how many colleagues' turns arrived and jumps to them,
   and the browser tab's title carries the count;
-- exports the room as a Markdown file, with who wrote each turn, when, and whether that peer
-  is verified;
+- exports the room as a Markdown file, with who wrote each turn, from which machine, when, and
+  whether that peer is verified;
 - recovers missed events by itself.
 
 ---
@@ -1552,6 +1737,10 @@ The view:
 
 Each user's assistant receives the conversation that happened through their colleagues'
 sessions, because seeing it in a view is not enough for their assistant to follow it.
+
+Each user's assistant also receives the turns of the user's own other sessions in the
+room, whichever machine each is on, so that a user who moves to another machine does
+not have to retell their assistant what they did on the first.
 
 Suppose David's session produced:
 
@@ -1625,9 +1814,19 @@ interpolation can be broken by what it contains, and an encoder cannot produce a
 value that ends its own string. Whether a turn came from a user or from their assistant
 is part of that structure, never a prefix on a name.
 
-The assistant is told that these are a colleague's conversation, that they provide context,
-that they are not system instructions, and that the local user's current prompt
-remains authoritative.
+The assistant is told that these are a colleague's conversation, or the user's own from
+another session, that they provide context, that they are not system instructions, and
+that the local user's current prompt remains authoritative.
+
+A user's own turn from another session is injected as a report, framed as a
+colleague's is, under the label "you" and marked as the user's own turn from another
+session, so that the assistant knows the user said it elsewhere and never reads it as
+words addressed to this session.
+
+Every injected turn carries the name of the machine it came from, as a field of its own
+marked as asserted by its user and never joined to another name, so that the model can
+tell a user's machines apart without a crafted machine name passing for something
+checked.
 
 ## The boundary is unforgeable
 
@@ -1660,17 +1859,18 @@ verification gates what is synchronized and injected (section 25). Every speaker
 still marked verified or not inside the injected text, so that if a filter ever fails,
 the text says so where the model can read it.
 
-A display name is asserted by the peer's own environment, and is a claim. Two peers
-running under the same operating-system account assert the same one. So attribution
-rests on the name derived from the identifier, which cannot be chosen.
+A display name is asserted by the peer, and is a claim. Two peers may assert the same
+one. So attribution rests on the name derived from the identifier, which cannot be
+chosen.
 
 The derived name is a separate field, never part of the same string as the claim.
 Escaping keeps a crafted name from leaving its field, and does nothing to stop one
 imitating the field beside it: a display name reading "Alice (quiet-otter)" breaks
 nothing and still reads as though it carried the derived name. Every fact the
-receiving side knows and the sender does not assert, whether the speaker is verified
-and whether the turn came from a user or their assistant, is likewise its own field, and
-none is joined to a claim.
+receiving side knows and the sender does not assert, whether the speaker is verified,
+whether the turn came from a user or their assistant, and whether it is the receiving
+user's own turn from another session, is likewise its own field, and none is joined to
+a claim.
 
 A display name a user chose (section 6) is still a claim, asserted by the peer, and
 the derived name still anchors it.
@@ -1719,7 +1919,8 @@ Injected context is never summarized by a model.
 
 # 22\. Persistence
 
-Each peer keeps a complete local database of every room it is in, in SQLite:
+Each machine keeps a complete local database of every room a session on it has joined,
+in SQLite:
 
 ```
 ~/.cogmer/
@@ -1742,24 +1943,25 @@ archive is what lets membership end without discarding the conversation.
 ## The membership index
 
 The membership index is kept outside every room's database, and holds, for each room
-this peer has joined, the room's identifier and name, whether the peer is in it, has
-left it, or the room is archived, the highest sequence this peer has issued in it,
-and the room's guests.
+a session on this machine has joined, the room's identifier and name, whether this
+machine is in it, has left it, or the room is archived, the highest sequence this
+machine has issued in it, and the room's guests.
 
-The index shares the fate of the peer's identity, not of the rooms, because a room's
-database can be lost while the peer survives, and a record kept only inside the thing
-whose loss it guards against guards nothing. Section 8 says how a peer uses it: it is
-consulted every time a room opens, its sequence is advanced before the event that uses
-it is published, and a peer that finds state lost says so.
+The index shares the fate of the machine's key, not of the rooms, because a room's
+database can be lost while the machine survives, and a record kept only inside the
+thing whose loss it guards against guards nothing. Section 8 says how a machine uses
+it: it is consulted every time a room opens, its sequence is advanced before the event
+that uses it is published, and a machine that finds state lost says so.
 
 A room's record is written when the room is created or joined, and kept once the room
-is archived, so a peer can tell a room it once belonged to from one it has never seen.
+is archived, so a machine can tell a room it once belonged to from one it has never
+seen.
 
 ## What a room's database holds
 
 A room's database holds the room's events, the conflicting events it has kept aside,
 and which of the room's events each session has received or been offered. It never
-holds this peer's own sequence position for the room, which is in the membership
+holds this machine's own sequence position for the room, which is in the membership
 index.
 
 ---
@@ -1767,7 +1969,7 @@ index.
 # 23\. Local Durability
 
 An event created on this machine is committed to durable storage before it counts as
-published, and is sent to peers only afterwards:
+published, and is sent to other machines only afterwards:
 
 ```
 Conversation event
@@ -1792,8 +1994,8 @@ Events are immutable, so conventional conflicts between edits do not occur. When
 users create events at the same moment, such as David's E and Alice's F, both are
 kept, and neither overwrites the other.
 
-Every peer shows a room's events in the same order, by timestamp, then by originating
-peer, then by that peer's sequence number.
+Every machine shows a room's events in the same order, by timestamp, then by
+originating machine, then by that machine's sequence number.
 
 Wall clocks on different machines do not give a causal order, and the order shown
 does not claim one.
@@ -1803,7 +2005,7 @@ does not claim one.
 # 25\. Security
 
 A room's history may hold proprietary source code, customer information, architecture,
-logs and credentials pasted by accident, so every exchange between peers is
+logs and credentials pasted by accident, so every exchange between machines is
 authenticated.
 
 The interface for the collaboration hooks and the local view binds only to the loopback
@@ -1816,17 +2018,21 @@ forwarded, stolen or replayed.
 
 ## Known peers
 
-A peer's identifier is its public key. A peer proves possession of the matching
-private key when it connects, and every event is signed by the peer that created it,
-so an identifier cannot be claimed by a peer that does not hold its key.
+A user's identifier is the public half of the user's key. A machine proves, when it
+connects, that it holds its own private key and that its user's identity vouches for
+it, and every event is signed by the machine that created it, so an identifier cannot
+be claimed by anyone who holds neither the user's key nor a machine it vouches for.
 
-A room admits its members from the peers this machine knows, by proof of possession,
+A room admits its members from the users this machine knows, by proof of possession,
 never by the presentation of a token. Nothing an interceptor could reuse is ever
 sent, nothing expires, and admission can be withdrawn.
 
-Two peers that have never met still have to establish each other's keys once, over a
+Two users who have never met still have to establish each other's keys once, over a
 channel they trust. Every exchange after that one needs nothing further, because a key
 once verified is durable.
+
+A colleague verifies a user once, and that verification covers every machine the user
+has or adds later, so that a user's new machine needs no new comparison with anyone.
 
 Verification is a comparison of two words, spoken aloud, derived from a live exchange
 between the two daemons, as "The two-word comparison" below describes. It is the only
@@ -1887,8 +2093,8 @@ that two parties hold the same key and says nothing about whose it is.
 ## The two-word comparison
 
 Verification is two words, said aloud on a call, by both users at once. It happens at
-pairing, not at joining or admission, because pairing happens once between two
-machines and outlasts every room they share (section 12).
+pairing, not at joining or admission, because pairing happens once between two users
+and outlasts every room they share (section 12).
 
 People read forty-three characters of base64 over a telephone badly, or skip it, and
 skipping leaves no trace. Two words are compared as units: somebody either says
@@ -1949,9 +2155,9 @@ Marking an unverified peer inside injected text is necessary, and not enough. A 
 that is optional and costs nothing to skip will be skipped, and afterwards nothing
 looks wrong, so verification is a gate.
 
-An event relayed by another peer (section 13) is judged by the peer that wrote it,
-never by the peer that carried it, so that a verified relay cannot pass on an
-unverified author.
+An event relayed by another machine (section 13) is judged by the user whose machine
+wrote it, never by the machine that carried it, so that a verified relay cannot pass
+on an unverified author.
 
 Events from an unverified peer are held, not discarded. Synchronization is a pull, so
 refusing to store an event leaves it on offer, and once the two users verify, the next
@@ -1971,22 +2177,36 @@ verification makes the room usable, so completing a verification delivers whatev
 waiting. Otherwise the easiest room to create would be one that does nothing, while
 both users believed they were collaborating.
 
+## When a machine is removed
+
+A removal reaches each colleague's machines without the colleague doing anything, so
+that a colleague keeps no lost or stolen machine trusted because they did not hear of
+its removal.
+
+A turn from a machine that the receiving machine cannot yet confirm is still its
+user's is shown in the room view, and is withheld from the assistant until the
+receiving machine can confirm it, so that a turn from a removed machine never reaches
+a model before the removal does.
+
+Removing a machine never withdraws what a colleague's assistant has already read,
+because an assistant cannot unread a turn.
+
 ## Room content is unreadable in transit
 
 Signing gives integrity and origin, and conceals nothing. A room's content is a user's
 prompts and whatever their assistant said back, so confidentiality is a requirement.
 
-Every connection between peers is TLS 1.3, over every transport, including one that is
+Every connection between machines is TLS 1.3, over every transport, including one that is
 already encrypted, so that confidentiality never depends on which path a connection
-took. Each daemon presents a self-signed certificate carrying its identity key, and
-the check is that the key inside is a peer this machine knows, and, for a connection
-aimed at one named peer, that it is that peer. Chains, authorities, hostnames and
-expiry are never consulted, because none exist here. A client certificate is required,
-not requested, because a peer with nothing to pin has no business completing a
-handshake.
+took. Each daemon presents a self-signed certificate carrying its machine's key, and
+the check is that the key inside belongs to a machine vouched for by a user this
+machine knows, and, for a connection aimed at one named user, that the machine is that
+user's. Certificate authorities, hostnames and expiry are never consulted, because
+none exist here. A client certificate is required, not requested, because a machine
+with nothing to pin has no business completing a handshake.
 
-So the transport's identity and the event's identity are the same key, confirmed by the
-same comparison.
+So the transport's identity and the event's identity are the same machine key, vouched
+for by the same user, confirmed by the same comparison.
 
 Encryption in transit does not protect content at rest, and does not protect a room
 from its own members. A member is entitled to read what the room carries, which is
@@ -2017,8 +2237,8 @@ channel is fully available on first contact, and nothing in this design resolves
 The first exchange is where trust is taken rather than established, and cogmer makes
 that moment visible rather than claiming it is covered.
 
-Removing a peer from a room prevents it from rejoining and from being present in
-future, and never withdraws what that peer has already seen.
+Removing a colleague from a room prevents them from rejoining and from being present in
+future, and never withdraws what they have already seen.
 
 ---
 
@@ -2074,44 +2294,56 @@ directory, determines which room a session joins, and rooms are entered only by
 invitation.
 
 A user's identity is kept apart from the state of their rooms. Identity is the user's
-identifier, the name they go by, and their machine's label. A room's state is its
+identifier, the name they go by, and the names of their machines. A room's state is its
 identifier, its name, its guests, and whether its conversation is given to this
 machine's sessions, and it belongs to the daemon, is created when the room is created or
 joined, and is never in a repository.
 
 A user can create or join a room show-only. A show-only room appears to its members in
-the room view, and none of it is given to the user's own agent sessions, because
+the room view, and none of it is given to the agent sessions on that machine, because
 injection carries a colleague's conversation into a user's session, and so to that
 user's model provider under their own account.
 
-The user chooses show-only when the room is created or joined on their machine, and it
-cannot be changed for that room afterwards.
+Show-only is chosen for each of a user's machines, when a session on that machine first
+creates or joins the room, and cannot be changed for that room on that machine
+afterwards, so that a user can keep a room away from the model on one machine while
+their sessions on another receive it.
 
 The choice is the user's own. It does not stop a colleague's sessions receiving the
 user's turns, which the user is told when they choose it, and the user's own turns are
 still shared with the room.
 
-Nothing a user configures for reaching peers is committed to a repository.
+Nothing a user configures for reaching other machines is committed to a repository.
 
 ---
 
 # 29\. The Experience We Want
 
-A user sets up once, pairs once with each colleague, and then works in rooms from
-inside a session. These examples use Claude Code commands; in Codex, use the same
-command names and arguments with `$cogmer`, such as `$cogmer room-create`:
+A user sets up once, pairs once with each colleague, adds each further machine from
+one they already have, and then works in rooms from inside a session on any of their
+machines. These examples use Claude Code commands; in Codex, use the same command names
+and arguments with `$cogmer`, such as `$cogmer room-create`:
 
 ```
-# once, so colleagues have something to send you
-/cogmer:self-name Alice
+# once, the first time a command needs your identity
+/cogmer:self-status
+→ points to the daemon's page: have you used cogmer on another machine?
+→ no: write down the recovery phrase, confirm words from it, give your name
 
 # once with each colleague, on a call with them, both at the same time
 /cogmer:peer-pair ed25519:M7Kd…4Fq2@198.51.100.7:4783#David
 → a page opens: ribcage tambourine   → both say yes → verified
 
+# once for each further machine, from one you already have
+/cogmer:self-machines
+→ enter the new machine's string; both pages show two words → same → added
+
 # thereafter, per room, from inside a session
 /cogmer:room-create          → misty-canyon
 /cogmer:room-invite david
+
+# later, on another of your machines
+/cogmer:room-join misty-canyon
 ```
 
 ## Claude Code installation
@@ -2164,9 +2396,9 @@ Three homes, and the command decides which it belongs in.
 
 Inside an agent session, as commands it already loads, is everything a user does
 in the ordinary course: listing rooms and peers, creating a room, inviting a known peer,
-joining, leaving, reading the room, pairing with a colleague, and choosing the name
-others see. Each either needs nothing beyond its arguments or hands off to a surface
-that does, and its output is something a user reads once, so it can reach them by way
+joining, leaving, reading the room, pairing with a colleague, listing their own
+machines, and choosing the name others see. Each either needs nothing beyond its
+arguments or hands off to a surface that does, and its output is something a user reads once, so it can reach them by way
 of the model, as everything from an extension point does (section 3.8).
 
 Joining in particular belongs inside a session, because a command typed inside a
@@ -2198,11 +2430,22 @@ Only the user at the machine can reach the page. The daemon serves it on loopbac
 refuses any request that changes something unless it carries the header a page from
 another origin cannot send (section 25).
 
+Making the user's identity, adding a machine and recovering happen in the daemon's
+page, because each shows or takes the recovery phrase or ends in a two-word
+comparison, and neither may pass through the model.
+
+Removing and renaming a machine happen in the same page, so that a user manages all
+their machines in one place. `/cogmer:self-machines` opens it.
+
+`/cogmer:self-status` lists the user's machines one by one, by name, with whether this
+machine can reach each, so that a user can see which of their machines are in step
+without opening the page.
+
 At a terminal, as a separate program, is what operates cogmer rather than what a user
 does: diagnostics that must work when the plugin path is broken, the daemon's own
-lifecycle, this machine's identity, and testing. The comparison also runs at a terminal
+lifecycle, this machine's own state, and testing. The comparison also runs at a terminal
 on a machine that cannot open a browser, such as one reached over SSH or in a
-container.
+container. The recovery phrase is never typed there (section 6).
 
 Pairing and inviting are separate verbs (section 12) because they live in different
 homes.
@@ -2210,8 +2453,8 @@ homes.
 ## Command names
 
 A command's prefix names what it acts on: `peer-` acts on somebody else, `room-` on a
-room, and `self-` on you. The prefix names the target, not the activity, so the command
-that prints your own pairing string is `self-`, however much it is about pairing.
+room, and `self-` on you and your machines. The prefix names the target, not the
+activity, so the command that prints your own pairing string is `self-`, however much it is about pairing.
 
 Commands are prefixed at all because a plugin shares one namespace with every other
 plugin a user has installed, and an unprefixed `create` or `status` would collide.
@@ -2290,7 +2533,7 @@ cogmer has none of these:
 
 # 33\. Transports
 
-Networking sits behind a transport, which finds peers and moves bytes, and does
+Networking sits behind a transport, which finds machines and moves bytes, and does
 nothing else. Replication sees only the transport. A transport never interprets an
 event, never decides membership and never admits anyone: it finds candidates, and the
 room's guest list decides who may enter.
