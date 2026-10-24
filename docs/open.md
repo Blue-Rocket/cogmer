@@ -290,8 +290,6 @@ examined.
 **The decisions that make the user the peer leave details undecided.** Each is needed by a
 slice of the second run, and none has a choice taken yet:
 
-- When a machine is first named and what it is called by default, and whether the identity
-  page offers a guessed display name (D-230, the user identity is made in the daemon's page).
 - Whether one acknowledging machine of a colleague counts as the colleague for a removal or a
   new shared key (D-225, a machine sends each removal to every colleague until each
   acknowledges).
