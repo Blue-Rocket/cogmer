@@ -20,8 +20,22 @@ leave open, for the maintainer to confirm before the slice that needs it.
 The second run started on 2026-10-24. Merged in it so far: slice 0, the foundation
 additions, which are `CheckEvent`, the signed `ListChange` record and `MergeListChanges`,
 `RoomIDFor`, and `ResolveGuests` in `guests.go`, which computes a room's list in rounds so
-that an expelled guest cannot admit an accomplice (D-235). Slice 1, storage, needs no detail
-left open and is next.
+that an expelled guest cannot admit an accomplice (D-235); and slice 1, storage, which adds
+`identity_records` keyed on each record's own hash, `machines` with an address per machine,
+the guest-list cache, `signer` on `events`, `shared.key`, and the user and chain in
+`identity.json`. Slice 2, trust, is next.
+
+What the later slices need to know from slice 1:
+
+- Every existing `known_peers` address was copied into `machines` with the machine key and
+  the user both set to the peer's identifier. Once a colleague's master key is known, slice 2
+  rewrites `user` on those rows, which `SetMachineEndpoint` refuses to do, so it needs a
+  function of its own.
+- `SetPeerEndpoint` still writes only `known_peers.endpoint`, and nothing reads `machines`
+  yet. Slice 2 moves the readers and writers to `machines`, then drops the old column.
+- Room databases store `signer = peer_id` for every event until v4 events exist.
+- `IdentityRecordByHash` reads any stored record, session certificates included, for the
+  fetch route in slice 4.
 
 Merged in the first run:
 
