@@ -456,7 +456,7 @@ slice that needs it. Each is put to the maintainer before that slice starts.
 5. The user's own turn that no session here holds (slice 5), confirmed on 2026-10-24 and
    written into D-204. It is marked as not given to an
    assistant, as a colleague's is, since it is injected like one.
-6. A removal outside a theft (slice 5). The page proposes, for each room, the removed
+6. A removal outside a theft (slice 5), confirmed on 2026-10-24 and written into D-220. The page proposes, for each room, the removed
    machine's last turn this machine has seen, and the user confirms it or chooses to mark all.
 7. Recovery and machines the user no longer holds (slice 5). Certifying a new shared key
    suspends every machine not certified again (D-234), so no separate removal is needed.
