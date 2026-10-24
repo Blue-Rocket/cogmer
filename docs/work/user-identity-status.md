@@ -35,7 +35,25 @@ room without a founding event behaves as before. Slice 4, propagation, is merged
 the identity fetch route, the withhold rule (D-221), pushing removals and new shared keys with
 acknowledgement (D-225), refusals that stop a cut-off machine's events being offered again,
 and the refusal that carries the revocation (D-241), with `d.Expulsion(roomID)` for slice 5.
-Slice 3, a user's own machines, is running.
+Slice 3, a user's own machines, is merged: the identity page (D-230) with the phrase and
+its confirmation, adding a machine with the machine words (D-229), recovery, `self-machines`
+(D-231) and machines in `self-status`, copying a user's lists between their machines (D-228),
+joining a room by name from another machine, and each machine storing its own chain. A user
+identity can now be made, so `plugin/README.md` says what it sends. Slices 5 and 6 are next.
+
+What slice 3 leaves open:
+
+- `Resolve` picks among one machine's certificates under one version by lowest hash, so a
+  rename wins only about half the time there; names are read through `displayCerts`, by
+  highest version and then highest serial, and a rename takes a new serial.
+- A `ListChange` holds a colleague's whole entry, so a label changed on one machine and a
+  verification made on another at the same time can lose the verification.
+- Recovery takes the highest version this machine holds plus one, or 2, since slice 4's fetch
+  route was not on its base; it should ask colleagues for the user's versions.
+- `COGMER_IDENTITY_PAGE=off` turns off the page's gate, for tests that create and join with no
+  daemon, and ships in the binary as `COGMER_PREFLIGHT=off` does.
+- A machine with rooms from before it made a user identity is not migrated: its colleagues'
+  guest lists hold its machine key, and under D-240 those rooms are created again.
 
 What the later slices need to know from slice 2b:
 

@@ -15,6 +15,7 @@ commands and ask which the user wants.
 | Command | Binary arguments |
 |---|---|
 | `self-status` | `whoami` |
+| `self-machines` | `machines` |
 | `self-name` | `name [name]` |
 | `self-stop` | `stop` |
 | `self-restart` | `restart` |

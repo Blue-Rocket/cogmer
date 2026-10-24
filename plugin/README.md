@@ -61,13 +61,24 @@ every room, and `self-` commands act on you.
 | `room-conflicts` | events set aside because a peer's sequence counter went backwards |
 | `room-list` | the rooms on this machine, and any waiting for you to accept |
 | `peer-list` | the peers this machine knows, and whether each is verified |
-| `peer-forget <peer>` | discard a peer and every room admission it held |
+| `peer-forget <peer>` | stop recognizing a colleague on all your machines; their place in rooms is unchanged |
 | `peer-pair [their pairing string] [what you call them]` | pair with a colleague by comparing two words in your browser |
 | `self-status` | who you are, what you send colleagues, whether they can reach you, and which versions are running |
+| `self-machines` | open the page where you add, rename and remove your machines, or recover with your phrase |
 | `self-name [what people should call you]` | show or set the name other people see for you |
 | `self-stop` | stop the daemon on this machine; nothing is captured or shared until a new session starts one |
 | `self-restart` | stop the daemon and start it again, without a new session |
 | `self-cowork` | add the bridge to Claude Desktop and write the plugin to upload in Cowork |
+
+## Your identity and your machines
+
+The first time you pair, create or join a room, cogmer opens a page in your browser to make
+your identity. It shows a recovery phrase of 18 words, which you write down and keep, and
+asks for the name colleagues will see. The phrase is the only way to recover if you lose
+every machine, and anyone who has it can speak as you, so it is typed only into that page,
+never into a session. A second machine is added from one you already have, by comparing two
+words on both screens, and colleagues who verified you once see your turns from every one of
+your machines, each with the machine's name.
 
 ## Pairing happens in your browser, not through the model
 
@@ -104,6 +115,10 @@ it can say so when a command does not work.
 - An image you paste into a prompt goes to the colleagues in the room, with whatever it shows. An image
   over 5 MB is not sent, and a colleague's view says so. Each colleague's machine keeps a copy as a file in
   `~/.cogmer`, and cogmer gives their model the turn's text and not the image.
+- Everything your machine sends carries the certificates that tie it to you: your identifier, the
+  version of your machines' shared key, and this machine's name and number. Your own machines
+  also send each other the shared key, your list of colleagues with their labels and whether you
+  verified them, and your list of rooms.
 - A relay introduces two machines on different networks. cogmer uses the free relays that
   Tailscale runs for its tailcat library. The conversation is encrypted between the two machines
   and the relay cannot read it. The daemon holds a connection to the relay for as long as it

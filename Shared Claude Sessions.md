@@ -618,8 +618,9 @@ A user chooses the display name other people see for them when their identity is
 before the name first leaves any machine. Only other people see the name, so its owner
 has no later moment at which they would notice it is wrong.
 
-The daemon's page offers a name inferred from the operating-system account, which is
-David on a laptop and Ec2-user in a container, and keeping it counts as choosing it.
+The daemon's page asks for the name with an empty field and offers no guess, because a
+name inferred from the operating-system account, which is David on a laptop and Ec2-user
+in a container, would travel as though the user had chosen it.
 
 A user's display name is the same from every one of their machines, because colleagues
 know one user, and two names for one user would read as two users.
