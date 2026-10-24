@@ -89,7 +89,9 @@ room, and "maintainer" for someone changing cogmer. Say "person" only where what
 matters is a human as distinct from the model or a program: "a person sees only
 what the model says". Never say "developer", since a user may not write code. Where
 "user" could be read as the role of a message in an agent conversation, as in
-a user turn, say which is meant.
+a user turn, say which is meant. Say "peer" for a user as cogmer knows them, identified by
+the user's key, and "machine" for one of a user's devices, which signs, listens and syncs
+for its user. Never say "peer" for a machine.
 
 ## Rules
 
