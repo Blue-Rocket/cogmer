@@ -290,8 +290,6 @@ examined.
 **The decisions that make the user the peer leave details undecided.** Each is needed by a
 slice of the second run, and none has a choice taken yet:
 
-- How concurrent changes to a user's copied lists of colleagues, verifications, labels and
-  rooms merge, such as a label set on one machine and a colleague forgotten on another (D-228).
 - When a machine is first named and what it is called by default, and whether the identity
   page offers a guessed display name (D-230, the user identity is made in the daemon's page).
 - Whether one acknowledging machine of a colleague counts as the colleague for a removal or a

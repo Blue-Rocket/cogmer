@@ -154,7 +154,7 @@ between the user's machines (D-222).
 | counter | one more than the highest counter the machine has seen for that entry |
 | signer, chain, signature | as for any identity record (D-238) |
 
-How two changes to one entry merge is detail 1 in section 8.
+Of two changes to one entry, the higher counter wins, then the lower hash (D-228).
 
 ### 3.5 The two words when adding a machine
 
@@ -436,7 +436,8 @@ user adds holds the shared key (D-219); and a room has one guest list that any g
 These are the details in `docs/open.md`, each with the choice this design proposes and the
 slice that needs it. Each is put to the maintainer before that slice starts.
 
-1. Merging changes to a user's copied lists (slice 0). The change with the highest counter
+1. Merging changes to a user's copied lists (slice 0), confirmed on 2026-10-24 and written into
+   D-228. The change with the highest counter
    for an entry wins, and the lowest hash between two with one counter, so every machine
    computes the same value with no clock.
 2. Naming a machine and the display name (slice 3). The page asks for a machine's name when
