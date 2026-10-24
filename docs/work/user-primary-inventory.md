@@ -65,28 +65,33 @@ Answered by the maintainer:
   the machines from which a session has joined the room, the user's own included, excluding
   only this machine, and D-222 loses "for nothing else". A machine where no session has
   joined a room holds nothing of it. A colleague's machine learns the address of a newly
-  joined machine from the signed address in that machine's sync requests. This also settles R4 except for how such a turn is
-  labeled: it is injected, as a colleague's is.
+  joined machine from the signed address in that machine's sync requests. This also settles
+  most of R4: such a turn is injected, as a colleague's is.
+- R2, on 2026-10-24: the colleague list, verification and labels belong to the user and are
+  copied to every machine of the user. A room's guest list belongs to the user and is copied
+  between the user's machines that have joined that room. Forgetting a colleague on one
+  machine forgets them on all of them. The show-only choice belongs to each machine, made
+  when a session there first joins the room.
+- R6 in part, on 2026-10-24: a machine is added from a machine the user already has. The new
+  machine's page shows its pairing string, the user enters it on the existing machine, both
+  pages show the two words, and the existing machine certifies the new one and sends it the
+  user's machine list with addresses, and the user's colleagues and labels. Typing the
+  recovery phrase into a new machine's page is for recovery only. Each exchange of machine
+  lists also repairs the addresses it carries, since a user's machines may share no room.
 
 Open:
 
-
 - R0. Whether "peer" comes to mean a user as cogmer knows them, with "machine" for a device,
   or "peer" stays a machine and "colleague" and "user" carry the person.
-- R1. Whether a user's own machines exchange a room's events with each other. D-222 says
-  they are peers "for identity records and for nothing else", and D-103 leaves this user out
-  of a room's sync targets, so a room's events reach the user's second machine only through
-  a colleague.
-- R2. Whether the colleague list, verification, labels, guest lists and the show-only choice
-  belong to the user, carried between the user's machines, or to each machine.
 - R3. How the view and the room status show a colleague with two machines when one of them
   cannot be reached.
-- R4. How a user's own turn from another machine is shown in the view and framed in injected
-  context, since the block says its content is other people's.
+- R4, the rest. How a user's own turn from another machine is labeled in the view and in
+  injected context, since the block says its content is other people's.
 - R5. Whether a machine's name, which its user chose, is shown to colleagues, and if so as a
   field of its own marked as asserted.
-- R6. When a user identity is created relative to a machine's first use and its first
-  pairing string, and how a user's second machine learns the user's rooms.
+- R6, the rest. When a user identity is created relative to a machine's first use and its
+  first pairing string, and how a session on a user's second machine joins a room the user is
+  already a guest of.
 - R7. Whether a room's name is unique among one machine's rooms or one user's.
 - R8. Which keys the two pairing words are derived from.
 - R9. Which command prefix holds the commands for a user's own machines.
