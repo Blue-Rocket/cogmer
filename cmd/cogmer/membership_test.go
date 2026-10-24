@@ -564,15 +564,19 @@ func TestARefusedJoinCanBeExplained(t *testing.T) {
 	}
 }
 
-// §12: "Forgetting discards the identity itself, so a later meeting is a first
-// meeting again." That was not true — forget deleted the peer and left their room
-// admissions behind, so meeting them again readmitted them to every room they had
-// ever been in, without the host inviting them to any of it (D-073).
-func TestForgettingDiscardsAdmissionToo(t *testing.T) {
+// Forgetting a colleague is the forgetting user's act alone and leaves every room's
+// guest list as it is, since a room's list belongs to the room (D-073, forgetting a
+// peer changes no room's guest list). The colleague's turns stop reaching this user
+// because the colleague is unknown here, and so unverified (D-054, verification gates
+// synchronization and injection), and meeting them again is a first meeting: known
+// again and unverified again.
+func TestForgettingLeavesEveryRoomsGuestListAloneAndStopsTheColleaguesTurns(t *testing.T) {
 	m := testMembership(t)
 	self, peer := testIdentity(t), testIdentity(t)
 	a, _ := m.CreateRoom(self.PeerID, false)
 	b, _ := m.CreateRoom(self.PeerID, false)
+	d := &Daemon{id: self, members: m}
+	t.Cleanup(d.closeStores)
 
 	if err := m.Allow(peer.PeerID, "colleague"); err != nil {
 		t.Fatal(err)
@@ -590,23 +594,25 @@ func TestForgettingDiscardsAdmissionToo(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, r := range []Room{a, b} {
-		if m.IsGuest(r.RoomID, peer.PeerID) {
-			t.Errorf("a forgotten peer is still a guest of %s", r.RoomName)
+		if !m.IsGuest(r.RoomID, peer.PeerID) {
+			t.Errorf("forgetting a colleague took them off the guest list of %s", r.RoomName)
 		}
 	}
+	if m.Knows(peer.PeerID) || d.authorVerified(peer.PeerID) {
+		t.Error("a forgotten colleague is still known or verified here")
+	}
+	turn := Event{PeerID: peer.PeerID, EventType: EventUserPrompt, Content: "after forgetting"}
+	if got := onlyVerified([]Event{turn}, self.PeerID, d.authorVerified); len(got) != 0 {
+		t.Error("a forgotten colleague's turn would still be given to an assistant")
+	}
 
-	// A later meeting is a first meeting: known again, unverified again, and
-	// admitted to nothing until a host says so.
+	// A later meeting is a first meeting: known again and unverified again, so
+	// nothing of theirs passes until the two verify.
 	if err := m.Allow(peer.PeerID, "colleague"); err != nil {
 		t.Fatal(err)
 	}
 	if m.IsVerified(peer.PeerID) {
 		t.Error("meeting again carried the old verification forward")
-	}
-	for _, r := range []Room{a, b} {
-		if m.IsGuest(r.RoomID, peer.PeerID) {
-			t.Errorf("meeting again readmitted them to %s without an invitation", r.RoomName)
-		}
 	}
 }
 

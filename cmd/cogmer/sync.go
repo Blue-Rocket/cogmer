@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"time"
 )
@@ -96,6 +97,13 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	d.markPeerHeardFrom(req.PeerID)
+	// A machine that asked for the room and was admitted has joined it, so it is a
+	// sync target from now on, and a machine of a guest that never asked is not
+	// (D-103, a room's sync targets are the machines from which a session has joined
+	// it).
+	if err := d.members.RecordRoomMachine(room.RoomID, req.requestMachine(), req.PeerID); err != nil {
+		log.Printf("sync: could not record that %s joined %s: %v", PeerName(req.requestMachine()), room.RoomName, err)
+	}
 
 	store, err := d.storeFor(room.RoomID)
 	if err != nil {
@@ -371,9 +379,39 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	stored, rejected, unverified, notCounting := 0, 0, 0, 0
+	stored, rejected, unverified, notCounting, notGuest := 0, 0, 0, 0, 0
+	// Changes to the guest list are taken first and the list computed again from
+	// them before any other event is judged, so that a turn arriving with the
+	// invitation that admits its author is stored in the same poll (D-235, a room's
+	// one guest list decides whose events count).
+	events := make([]Event, 0, len(out.Events))
 	for i := range out.Events {
-		ev := fromWire(out.Events[i])
+		events = append(events, fromWire(out.Events[i]))
+	}
+	sort.SliceStable(events, func(i, j int) bool {
+		return isGuestEventType(events[i].EventType) && !isGuestEventType(events[j].EventType)
+	})
+	guestStored, listRead := false, false
+	var list *GuestList
+	readList := func() {
+		if listRead {
+			return
+		}
+		listRead = true
+		if guestStored {
+			if _, err := d.refreshGuestList(store, room.RoomID); err != nil {
+				log.Printf("sync: could not compute the guest list of %s: %v", room.RoomName, err)
+			}
+		}
+		list = d.guestList(room.RoomID)
+	}
+	defer readList()
+	for i := range events {
+		ev := events[i]
+		guestChange := isGuestEventType(ev.EventType)
+		if !guestChange {
+			readList()
+		}
 
 		// §13 says events keep their origin through a relay, and until now that
 		// was a rule with nothing enforcing it: an event arriving from one peer
@@ -386,6 +424,41 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 		if err := ev.Verify(); err != nil {
 			log.Printf("sync: REJECTED event %.12s from %s — %v", ev.EventID, addr, err)
 			rejected++
+			continue
+		}
+
+		// A change to the guest list holds no conversation, so it is stored whenever it
+		// verifies and its machine counts for its user, whoever its author is to this
+		// machine: every guest computes the list from the same events, and
+		// ResolveGuests decides which of them count (D-235, a room's one guest list).
+		// Only a machine that speaks for a user writes one, so one under an older
+		// scheme, or whose content does not read as its kind, is refused.
+		if guestChange {
+			if _, ok := guestEventFrom(ev); !ok {
+				log.Printf("sync: REJECTED event %.12s from %s — a guest-list change that is not one signed for a user", ev.EventID, addr)
+				rejected++
+				continue
+			}
+			if err := d.judgeEvent(&ev); errors.Is(err, errNotCounting) {
+				notCounting++
+				continue
+			} else if err != nil {
+				log.Printf("sync: REJECTED event %.12s from %s — %v", ev.EventID, addr, err)
+				rejected++
+				continue
+			}
+			res, err := store.Insert(&ev)
+			if err != nil {
+				return stored, err
+			}
+			switch res {
+			case InsertStored:
+				stored++
+				guestStored = true
+			case InsertConflict:
+				log.Printf("sync: CONFLICT from %s — %s sequence %d is already held by a different event; run `cogmer conflicts`",
+					addr, PeerName(ev.signerKey()), ev.PeerSequence)
+			}
 			continue
 		}
 
@@ -427,6 +500,18 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 			}
 		}
 
+		// In a room that keeps its guest list as events, an event counts only when
+		// its author is on the list, or was revoked and wrote it within the cutoff of
+		// the machine that signed it (D-235, a room's one guest list decides whose
+		// events count; D-236, a revocation names the last turn that counts). One that
+		// does not is left on offer, as an unverified author's is, so that an
+		// invitation lifting the revocation brings it by ordinary sync. A room whose
+		// list is room_guests has no such check, as before.
+		if list != nil && !list.Counts(ev.PeerID, ev.signerKey(), ev.PeerSequence) {
+			notGuest++
+			continue
+		}
+
 		// Nothing below rewrites peerId, peerSequence, or eventId; doing so would
 		// invalidate the signature, which is now how that rule is enforced.
 		res, err := store.Insert(&ev)
@@ -457,6 +542,11 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 		log.Printf("sync: %d event(s) from %s were not stored — the machine that signed them is removed past its cutoff or suspended",
 			notCounting, addr)
 	}
+	if notGuest > 0 {
+		log.Printf("sync: %d event(s) from %s were not stored — their author is not on %s's guest list, or wrote them past a revocation's cutoff",
+			notGuest, addr, room.RoomName)
+	}
+	readList()
 	if stored > 0 {
 		d.notify()
 	}

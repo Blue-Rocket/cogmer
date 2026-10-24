@@ -1009,7 +1009,7 @@ func runCreateRoom(args []string) {
 	}
 	refuseWhenTheHostIsUnclear()
 	withMembership(func(m *Membership, id *Identity) {
-		r, err := m.CreateRoom(id.Peer(), showOnly)
+		r, err := createRoom(m, id, showOnly)
 		if err != nil {
 			log.Fatalf("create: %v", err)
 		}
@@ -1022,6 +1022,43 @@ func runCreateRoom(args []string) {
 		fmt.Println("\ninvite someone you have paired with:")
 		fmt.Println(commandText("  /cogmer:room-invite <name>"))
 	})
+}
+
+// createRoom makes a room here. A machine that speaks for a user has the daemon found
+// it, since its first event is the user's invitation of themselves and every write to
+// a room's database is the daemon's (D-240, a room's identifier is the hash of its
+// creator and a random value). A machine with no user identity records the room and
+// its creator in room_guests, as it always has.
+func createRoom(m *Membership, id *Identity, showOnly bool) (Room, error) {
+	if !id.HasUser() {
+		r, err := m.CreateRoom(id.Peer(), showOnly)
+		if err != nil {
+			return Room{}, err
+		}
+		return r, m.RecordRoomMachine(r.RoomID, id.PeerID, id.Peer())
+	}
+	var res guestChangeResponse
+	if err := postLocal("/room/guests", guestChangeRequest{Op: "found", ShowOnly: showOnly}, &res); err != nil {
+		return Room{}, fmt.Errorf("the daemon did not answer, so no room was created: %w", err)
+	}
+	if res.Error != "" || res.Room == nil {
+		return Room{}, errors.New(firstNonEmpty(res.Error, "the daemon created no room"))
+	}
+	return *res.Room, nil
+}
+
+// changeGuestList asks the daemon to write an invitation or a revocation into a room
+// whose guest list is kept as events (D-235, a room's one guest list, changed by any
+// guest through events in the room).
+func changeGuestList(op, roomID, user string) error {
+	var res guestChangeResponse
+	if err := postLocal("/room/guests", guestChangeRequest{Op: op, RoomID: roomID, User: user}, &res); err != nil {
+		return fmt.Errorf("the daemon did not answer, so nothing was changed: %w", err)
+	}
+	if res.Error != "" {
+		return errors.New(res.Error)
+	}
+	return nil
 }
 
 // refuseWhenTheHostIsUnclear stops a command that is about to write a room, a peer
@@ -1121,6 +1158,14 @@ func runJoin(args []string) {
 				if err := m.Invite(roomID, host); err != nil {
 					log.Fatalf("join: %v", err)
 				}
+				// The inviting machine has joined the room, and is where this machine
+				// first asks for it. Its key is not in the invitation, so it is recorded
+				// under the identifier its address was recorded under, until its own
+				// sync request names the machine (D-103, a room's sync targets are the
+				// machines from which a session has joined it).
+				if err := m.RecordRoomMachine(roomID, host, host); err != nil {
+					log.Fatalf("join: %v", err)
+				}
 			}
 		}
 		r, err := m.FindRoom(name)
@@ -1151,6 +1196,10 @@ func runJoin(args []string) {
 		// in another room cannot be moved (§12a), and printing "joined" and then
 		// refusing reads as a half-completed join rather than a refused one.
 		bindInvokingSession(m, r)
+		// A session here has joined the room, so this machine is one of its machines.
+		if err := m.RecordRoomMachine(r.RoomID, id.PeerID, id.Peer()); err != nil {
+			log.Fatalf("join: %v", err)
+		}
 		fmt.Printf("joined %s. %s\n", r.RoomName, watchLine(r.RoomName))
 		if r.ShowOnly {
 			fmt.Print(showOnlyNote(r))
@@ -1401,7 +1450,11 @@ func runInvite(args []string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := m.Invite(r.RoomID, pid); err != nil {
+		if m.EventListed(r.RoomID) {
+			if err := changeGuestList("invite", r.RoomID, pid); err != nil {
+				log.Fatalf("invite: %v", err)
+			}
+		} else if err := m.Invite(r.RoomID, pid); err != nil {
 			log.Fatalf("invite: %v", err)
 		}
 		// The label, not the derived name. Switching between the two inside one
@@ -1446,7 +1499,11 @@ func runRevoke(args []string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := m.Revoke(r.RoomID, pid); err != nil {
+		if m.EventListed(r.RoomID) {
+			if err := changeGuestList("revoke", r.RoomID, pid); err != nil {
+				log.Fatalf("revoke: %v", err)
+			}
+		} else if err := m.Revoke(r.RoomID, pid); err != nil {
 			log.Fatalf("revoke: %v", err)
 		}
 		fmt.Printf("%s may no longer enter %s. What they already hold remains theirs.\n",

@@ -100,6 +100,18 @@ CREATE TABLE IF NOT EXISTS room_guest_cutoffs (
   sequence    INTEGER NOT NULL,
   PRIMARY KEY (room_id, user, machine_key)
 );
+-- The machines from which a session has joined each room, with the user each speaks
+-- for: this machine when a session here creates or joins the room, a machine whose
+-- sync request for the room passed admission, and the inviting machine when this
+-- machine joins. A room's sync targets are these machines and no other machine of a
+-- guest, since a machine that never joined holds nothing of the room (D-103, a room's
+-- sync targets are the machines from which a session has joined it).
+CREATE TABLE IF NOT EXISTS room_machines (
+  room_id     TEXT NOT NULL,
+  machine_key TEXT NOT NULL,
+  user        TEXT NOT NULL,
+  PRIMARY KEY (room_id, machine_key)
+);
 -- An invitation that has arrived and has not been accepted. Held apart from the
 -- rooms table deliberately: a room recorded there would be synchronized and shown
 -- before anybody agreed to join it, and an offer is a thing to accept rather than
@@ -563,24 +575,16 @@ func (m *Membership) Allow(peerID, name string) error {
 
 // Forget discards an identity entirely, so a later meeting is a first meeting
 // again. Distinct from revoking, which withdraws admission to one room (§12).
+//
+// It leaves every room's guest list as it is, room_guests included, since a room's
+// list belongs to the room and not to the user who forgets (D-073, forgetting a peer
+// changes no room's guest list). The forgotten colleague's turns stop reaching this
+// user because the colleague is unknown here and so unverified (D-054, verification
+// gates synchronization and injection), while the room's other guests keep working
+// with them.
 func (m *Membership) Forget(peerID string) error {
-	// Admission goes with the identity, or "a later meeting is a first meeting"
-	// (§12) is not true. Without this, forgetting a peer and later meeting them
-	// again would readmit them to every room they had ever been in, without the
-	// host inviting them to any of it — and the host would not be asked, because
-	// from the code's point of view they were never un-invited (D-073).
-	tx, err := m.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	if _, err := tx.Exec(`DELETE FROM room_guests WHERE peer_id = ?`, peerID); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(`DELETE FROM known_peers WHERE peer_id = ?`, peerID); err != nil {
-		return err
-	}
-	return tx.Commit()
+	_, err := m.db.Exec(`DELETE FROM known_peers WHERE peer_id = ?`, peerID)
+	return err
 }
 
 // Knows reports whether this machine holds a key for a peer. Verification
@@ -654,10 +658,27 @@ func (m *Membership) KnownPeers() ([]KnownPeer, error) {
 // Names need be unique only among the rooms this peer hosts, since a name is only
 // ever resolved against a specific peer (§12) -- so a collision is regenerated
 // locally rather than coordinated globally.
+//
+// This is the room of a machine with no user identity, whose guest list is
+// room_guests. A machine with one founds its room with an invitation of itself in
+// the room's events instead (Daemon.FoundRoom).
 func (m *Membership) CreateRoom(selfPeerID string, showOnly bool) (Room, error) {
+	r, err := m.recordNewRoom(uuidV4(), showOnly)
+	if err != nil {
+		return Room{}, err
+	}
+	if err := m.Invite(r.RoomID, selfPeerID); err != nil {
+		return Room{}, err
+	}
+	return r, nil
+}
+
+// recordNewRoom records a room created here under roomID, with a name no other room
+// here has.
+func (m *Membership) recordNewRoom(roomID string, showOnly bool) (Room, error) {
 	for attempt := 0; attempt < 20; attempt++ {
 		r := Room{
-			RoomID: uuidV4(), RoomName: NewRoomName(), State: "joined",
+			RoomID: roomID, RoomName: NewRoomName(), State: "joined",
 			CreatedAt: time.Now().UTC().Format(time.RFC3339), ShowOnly: showOnly,
 		}
 		// Asked rather than caught. A name this peer mints is one it is free to
@@ -674,12 +695,16 @@ func (m *Membership) CreateRoom(selfPeerID string, showOnly bool) (Room, error) 
 			r.RoomID, r.RoomName, r.State, r.CreatedAt, boolInt(showOnly)); err != nil {
 			return Room{}, err
 		}
-		if err := m.Invite(r.RoomID, selfPeerID); err != nil {
-			return Room{}, err
-		}
 		return r, nil
 	}
 	return Room{}, fmt.Errorf("could not find an unused room name after 20 attempts")
+}
+
+// dropRoomRecord removes the record of a room whose founding failed before its first
+// event was written, so that no room is left here with no guest list at all.
+func (m *Membership) dropRoomRecord(roomID string) error {
+	_, err := m.db.Exec(`DELETE FROM rooms WHERE room_id = ?`, roomID)
+	return err
 }
 
 func (m *Membership) Rooms() ([]Room, error) {
@@ -757,8 +782,15 @@ func (m *Membership) Revoke(roomID, peerID string) error {
 	return err
 }
 
+// Guests is the users on a room's guest list: for a room whose events found it, the
+// users its cached list admits (D-235, a room's one guest list decides whose events
+// count), and otherwise the rows of room_guests.
 func (m *Membership) Guests(roomID string) ([]string, error) {
-	rows, err := m.db.Query(`SELECT peer_id FROM room_guests WHERE room_id = ? ORDER BY peer_id`, roomID)
+	q := `SELECT peer_id FROM room_guests WHERE room_id = ? ORDER BY peer_id`
+	if m.EventListed(roomID) {
+		q = `SELECT user FROM room_guests_cache WHERE room_id = ? AND admitted = 1 ORDER BY user`
+	}
+	rows, err := m.db.Query(q, roomID)
 	if err != nil {
 		return nil, err
 	}
@@ -772,6 +804,48 @@ func (m *Membership) Guests(roomID string) ([]string, error) {
 		out = append(out, p)
 	}
 	return out, rows.Err()
+}
+
+// EventListed reports whether a room's guest list is computed from its events,
+// which is so when the room's events hold a valid founding self-invitation (D-240, a
+// room's identifier is the hash of its creator and a random value). Such a list
+// always holds its founder, so a room with a cached list is one and a room with none
+// is not. A room made by a machine with no user identity never has one, and keeps
+// room_guests as its list.
+func (m *Membership) EventListed(roomID string) bool {
+	var n int
+	err := m.db.QueryRow(`SELECT COUNT(*) FROM room_guests_cache WHERE room_id = ?`, roomID).Scan(&n)
+	return err == nil && n > 0
+}
+
+// RecordRoomMachine records that machine, which speaks for user, has joined a room:
+// a session there created or joined it, or it asked for the room and was admitted
+// (D-103, a room's sync targets are the machines from which a session has joined
+// it). A machine recorded once keeps its row, and its user is refreshed.
+func (m *Membership) RecordRoomMachine(roomID, machine, user string) error {
+	if roomID == "" || machine == "" || user == "" {
+		return errors.New("a room's machine needs the room, the machine and its user")
+	}
+	_, err := m.db.Exec(`INSERT INTO room_machines (room_id, machine_key, user) VALUES (?,?,?)
+		ON CONFLICT(room_id, machine_key) DO UPDATE SET user = excluded.user`, roomID, machine, user)
+	return err
+}
+
+// RoomMachines lists the machines recorded as having joined a room, by key.
+func (m *Membership) RoomMachines(roomID string) []string {
+	rows, err := m.db.Query(`SELECT machine_key FROM room_machines WHERE room_id = ? ORDER BY machine_key`, roomID)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var k string
+		if rows.Scan(&k) == nil {
+			out = append(out, k)
+		}
+	}
+	return out
 }
 
 // RecordRoom stores a room learned from an invitation. The guest did not create it
@@ -868,16 +942,31 @@ func (m *Membership) IssuedSequence(roomID string) int64 {
 // a row, which is the right answer for the wrong reason and stops being right the
 // moment somebody adds one.
 //
-// A guest is a user, and each machine of a guest's is a target, this user's own
+// In a room whose list is room_guests, which is a room made by a machine with no
+// user identity, a guest is a user, and each machine of a guest's is a target, this user's own
 // other machines included, joined on the user each machine belongs to (D-103, an address belongs to a machine; D-222,
 // any two of a user's machines exchange the events of each room both have joined).
 // self is this machine's own key, and the only machine left out.
+//
+// A room whose guest list is computed from its events has its sync targets in
+// room_machines instead: the machines from which a session has joined it, of users
+// the list admits, and never another machine of a guest, which holds nothing of the
+// room (D-103, a room's sync targets are the machines from which a session has joined
+// it). A machine of a user the list has expelled is not asked, so the room's
+// identifier is not sent to them.
 func (m *Membership) RoomPeers(roomID, self string) []string {
-	rows, err := m.db.Query(`
+	q := `
 		SELECT DISTINCT mc.endpoint FROM room_guests g
 		JOIN machines mc ON mc.user = g.peer_id
-		WHERE g.room_id = ? AND mc.machine_key <> ? AND mc.endpoint IS NOT NULL AND mc.endpoint <> ''`,
-		roomID, self)
+		WHERE g.room_id = ? AND mc.machine_key <> ? AND mc.endpoint IS NOT NULL AND mc.endpoint <> ''`
+	if m.EventListed(roomID) {
+		q = `
+		SELECT DISTINCT mc.endpoint FROM room_machines rm
+		JOIN machines mc ON mc.machine_key = rm.machine_key
+		JOIN room_guests_cache gc ON gc.room_id = rm.room_id AND gc.user = rm.user AND gc.admitted = 1
+		WHERE rm.room_id = ? AND rm.machine_key <> ? AND mc.endpoint IS NOT NULL AND mc.endpoint <> ''`
+	}
+	rows, err := m.db.Query(q, roomID, self)
 	if err != nil {
 		return nil
 	}
@@ -1010,7 +1099,17 @@ func (m *Membership) SessionIDsInRoom(roomID string) []string {
 
 // IsGuest is the admission decision. Authentication established who is asking;
 // this establishes whether they may (D-044, sync requests are signed).
+//
+// A room whose guest list is computed from its events asks that list, by user, and
+// nothing else: room_guests holds no admission to it (D-235, a room's one guest list
+// decides whose events count; D-045, admission is enforced).
 func (m *Membership) IsGuest(roomID, peerID string) bool {
+	if m.EventListed(roomID) {
+		var admitted int
+		err := m.db.QueryRow(`SELECT admitted FROM room_guests_cache WHERE room_id = ? AND user = ?`,
+			roomID, peerID).Scan(&admitted)
+		return err == nil && admitted == 1
+	}
 	var n int
 	err := m.db.QueryRow(`SELECT COUNT(*) FROM room_guests WHERE room_id = ? AND peer_id = ?`,
 		roomID, peerID).Scan(&n)
@@ -1143,9 +1242,8 @@ func (m *Membership) DropOffer(roomID string) error {
 // verification completes (D-106).
 func (m *Membership) RoomsAdmitting(peerID string) []Room {
 	rows, err := m.db.Query(`
-		SELECT r.room_id, r.room_name, r.state, r.created_at, r.show_only FROM room_guests g
-		JOIN rooms r ON r.room_id = g.room_id
-		WHERE g.peer_id = ?`, peerID)
+		SELECT r.room_id, r.room_name, r.state, r.created_at, r.show_only FROM rooms r
+		WHERE r.room_id IN (`+admittingRooms+`)`, peerID, peerID)
 	if err != nil {
 		return nil
 	}
@@ -1159,6 +1257,15 @@ func (m *Membership) RoomsAdmitting(peerID string) []Room {
 	return out
 }
 
+// admittingRooms selects the rooms that admit the peer given twice as parameters: a
+// room whose events found it by its cached list, and any other by room_guests, as
+// IsGuest decides.
+const admittingRooms = `
+	SELECT room_id FROM room_guests_cache WHERE user = ? AND admitted = 1
+	UNION
+	SELECT g.room_id FROM room_guests g WHERE g.peer_id = ?
+	  AND NOT EXISTS (SELECT 1 FROM room_guests_cache c WHERE c.room_id = g.room_id)`
+
 // WithheldFor counts the rooms a peer has been admitted to but cannot be told
 // about, because the two have not verified each other (D-188). It is what turns
 // "unverified" from a state into a reason.
@@ -1167,7 +1274,7 @@ func (m *Membership) WithheldFor(peerID string) int {
 		return 0
 	}
 	var n int
-	if err := m.db.QueryRow(`SELECT COUNT(*) FROM room_guests WHERE peer_id = ?`, peerID).Scan(&n); err != nil {
+	if err := m.db.QueryRow(`SELECT COUNT(*) FROM rooms WHERE room_id IN (`+admittingRooms+`)`, peerID, peerID).Scan(&n); err != nil {
 		return 0
 	}
 	return n

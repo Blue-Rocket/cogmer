@@ -597,12 +597,14 @@ func (s *Store) ListRoom(room string) ([]Event, error) {
 
 // UndeliveredFor returns room events this agent session has not been confirmed
 // to have received, excluding events the session itself produced -- those are
-// already in its own context window (§19).
+// already in its own context window (§19). Changes to the room's guest list are
+// never given to an assistant, since they are no turn of the room (D-235, a room's
+// one guest list, changed by any guest through events in the room).
 func (s *Store) UndeliveredFor(room, sessionID string) ([]Event, error) {
 	rows, err := s.db.Query(`SELECT `+selectCols+` FROM events
-		WHERE room_id = ? AND origin_session_id != ? AND event_type != ?
+		WHERE room_id = ? AND origin_session_id != ? AND event_type NOT IN (?, ?, ?)
 		  AND event_id NOT IN (SELECT event_id FROM session_delivered WHERE origin_session_id = ?)
-		`+orderBy, room, sessionID, EventUserImage, sessionID)
+		`+orderBy, room, sessionID, EventUserImage, GuestInvite, GuestRevoke, sessionID)
 	if err != nil {
 		return nil, err
 	}

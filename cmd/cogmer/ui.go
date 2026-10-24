@@ -184,6 +184,12 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 			Mine: e.PeerID == d.id.PeerID, At: at,
 		}
 		ue.NotInSession = !ue.Mine && !cur.ShowOnly && !delivered[e.EventID]
+		// A change to the guest list is shown as the membership change it is, and is
+		// never given to an assistant, so it is never waiting for one (D-235).
+		if isGuestEventType(e.EventType) {
+			ue.Content = guestChangeText(e, labels)
+			ue.NotInSession = false
+		}
 		ue.Images = imageRefs(e.Metadata)
 		if len(e.Metadata) > 0 {
 			var m struct {

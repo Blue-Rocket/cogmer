@@ -206,6 +206,9 @@ func (d *Daemon) LocalRoutes() *http.ServeMux {
 	mux.HandleFunc("/image/", d.handleImage)
 	mux.HandleFunc("/pair/new", guardLocal(d.handlePairNew))
 	mux.HandleFunc("/offer/send", guardLocal(d.handleSendOffer))
+	// Guarded: it writes a change to a room's guest list into the room (D-235, a
+	// room's one guest list, changed by any guest through events in the room).
+	mux.HandleFunc("/room/guests", guardLocal(d.handleGuestChange))
 	// The ceremony page itself is a GET somebody navigated to.
 	mux.HandleFunc("/pair/", d.handlePairPage)
 	mux.HandleFunc("/verify/start", guardLocal(d.handleVerifyStart))
@@ -268,6 +271,17 @@ func (d *Daemon) storeFor(roomID string) (*Store, error) {
 	// invisible until a restart that may be hours away (review C-1).
 	if r, ok := d.members.RoomByID(roomID); ok {
 		d.reportLostState(r, s)
+	}
+	// The cached guest list is never authoritative, so a membership.db that lost it,
+	// or a room database opened before its cache was written, has it computed again
+	// from the room's events here, before anything asks it (D-235, a room's one guest
+	// list decides whose events count).
+	if !d.members.EventListed(roomID) {
+		if evs, err := s.GuestEvents(roomID); err == nil && len(evs) > 0 {
+			if err := d.members.CacheGuestList(ResolveGuests(roomID, evs)); err != nil {
+				log.Printf("guests: could not cache the list of %s: %v", roomID, err)
+			}
+		}
 	}
 	return s, nil
 }
@@ -387,6 +401,10 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 	// was verified outlives a later `forget`, and injection is the step that
 	// cannot be undone -- a context window has no delete.
 	pending = onlyVerified(pending, d.id.Peer(), d.authorVerified)
+	// And by the room's list, for a room that keeps one as events: an event stored
+	// before a revocation reached this machine, past the cutoff it names, is never
+	// given to an assistant (D-236, a revocation names the last turn that counts).
+	pending = onlyCounting(pending, d.guestList(room.RoomID))
 	text := FormatTeamContext(pending, d.members)
 	if err := store.RecordPending(req.PromptID, req.SessionID, pending, text); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -729,6 +747,24 @@ func onlyVerified(evs []Event, self string, verified func(string) bool) []Event 
 		if e.PeerID == self || verified(e.PeerID) {
 			out = append(out, e)
 		}
+	}
+	return out
+}
+
+// onlyCounting drops events whose author does not count on a room's guest list at
+// their machine's sequence, and changes to the list itself, which are never a turn
+// given to an assistant (D-235, a room's one guest list decides whose events count).
+// A nil list is a room whose list is room_guests, and drops only the changes.
+func onlyCounting(evs []Event, g *GuestList) []Event {
+	out := evs[:0:0]
+	for _, e := range evs {
+		if isGuestEventType(e.EventType) {
+			continue
+		}
+		if g != nil && !g.Counts(e.PeerID, e.signerKey(), e.PeerSequence) {
+			continue
+		}
+		out = append(out, e)
 	}
 	return out
 }
