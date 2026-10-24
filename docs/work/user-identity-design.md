@@ -461,7 +461,7 @@ slice that needs it. Each is put to the maintainer before that slice starts.
 8. Which machine a sync connection reaches (slice 2), confirmed on 2026-10-24, as D-101
    states. Any machine of a guest is accepted, and
    the request's signature says which.
-9. A machine with no browser (slice 3). Out of scope for the second run, since a cloud
+9. A machine with no browser (slice 3), confirmed on 2026-10-24: out of scope for the second run, since a cloud
    session needs no phrase (D-223) and every other machine a user adds has a browser.
 10. Guests revoking each other at the same time (slice 0), confirmed on 2026-10-24 and written
     into D-235, with invitations counting only within their author's cutoff and the list
