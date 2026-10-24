@@ -2,9 +2,10 @@
 
 **Date:** 2026-09-16 · **Status:** active · **Areas:** admission, pairing
 
-**Decision.** There are two lists at two scopes, and both belong to the user, who holds a
-copy on each of their machines (D-228, a user's colleagues, verifications, labels and rooms
-belong to the user and are copied between the user's machines). A user's known peers are
+**Decision.** There are two lists at two scopes, and both belong to the user (D-228, a
+user's colleagues, verifications, labels and rooms belong to the user and are copied between
+the user's machines). Each of the user's machines holds the known peers, and a room's guests
+are held by the user's machines that have joined the room. A user's known peers are
 the identifiers the user has learned and the names the user knows them by, durable and
 outlasting every room. A room's guests are the known peers who may enter it, created with
 the room and archived with it. Revoking withdraws a peer's admission to one room, and
