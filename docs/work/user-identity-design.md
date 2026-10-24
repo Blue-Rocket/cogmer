@@ -151,8 +151,8 @@ between the user's machines (D-222).
 | field | meaning |
 |---|---|
 | user | the user whose list this is |
-| entry | what the change is about: `colleague:<identifier>` or `room:<identifier>` |
-| value | the entry as the change leaves it: a colleague's label, whether and when they were verified, or forgotten; a room's name and the user's machines that joined it |
+| entry | the one field the change is about, as the value row says |
+| value | the field as the change leaves it; an entry is one field, `colleague:<id>:label`, `:verified` or `:forgotten`, or `room:<id>:name`, `:offer` or `:machine:<key>` (D-228) |
 | counter | one more than the highest counter the machine has seen for that entry |
 | signer, chain, signature | as for any identity record (D-238) |
 
@@ -177,7 +177,7 @@ state every receiver holding the same records computes, with no clock and no ser
 2. Each machine certificate is checked against the winning shared key of its version, and
    one signed by a shared key that lost in step 1 is discarded. Of several valid
    certificates for one machine key, the one under the highest version is the machine's,
-   and of several under one version, the one with the lowest hash.
+   and of several under one version, the one with the highest serial, then the lowest hash (D-224).
 3. Each removal is checked against its signer. The master may remove any machine. The shared
    key of the current version may remove any machine, and a removal signed by an older shared
    key does not count, so the machine that certifies a new shared key signs again under it the
