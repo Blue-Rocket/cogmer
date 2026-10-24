@@ -39,7 +39,13 @@ Slice 3, a user's own machines, is merged: the identity page (D-230) with the ph
 its confirmation, adding a machine with the machine words (D-229), recovery, `self-machines`
 (D-231) and machines in `self-status`, copying a user's lists between their machines (D-228),
 joining a room by name from another machine, and each machine storing its own chain. A user
-identity can now be made, so `plugin/README.md` says what it sends. Slices 5 and 6 are next.
+identity can now be made, so `plugin/README.md` says what it sends. Slice 5, removal, recovery and what the user sees, is merged: the removal page with its
+lost-or-stolen question (D-220), certifying a new shared key with the removals and machines
+the user confirms (D-220, D-234), suspended machines' turns hidden from the view, export and
+injection, marked turns past a cutoff, machine names and the user's own turns in the view and
+the injected block (D-232, D-233), reachability per colleague and per own machine (D-194), and
+the notice of an expulsion (D-241). Slice 6, cloud sessions, is next, and the open item for
+setting up a cloud session holds the three facts it depends on.
 
 What slice 3 leaves open:
 
