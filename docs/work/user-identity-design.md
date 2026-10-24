@@ -458,7 +458,8 @@ slice that needs it. Each is put to the maintainer before that slice starts.
    assistant, as a colleague's is, since it is injected like one.
 6. A removal outside a theft (slice 5), confirmed on 2026-10-24 and written into D-220. The page proposes, for each room, the removed
    machine's last turn this machine has seen, and the user confirms it or chooses to mark all.
-7. Recovery and machines the user no longer holds (slice 5). Certifying a new shared key
+7. Recovery and machines the user no longer holds (slice 5), confirmed on 2026-10-24 and
+   written into D-234. Certifying a new shared key
    suspends every machine not certified again (D-234), so no separate removal is needed.
 8. Which machine a sync connection reaches (slice 2), confirmed on 2026-10-24, as D-101
    states. Any machine of a guest is accepted, and

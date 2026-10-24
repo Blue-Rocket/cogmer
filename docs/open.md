@@ -290,7 +290,6 @@ examined.
 **The decisions that make the user the peer leave details undecided.** Each is needed by a
 slice of the second run, and none has a choice taken yet:
 
-- Whether recovery can remove every machine the user no longer holds in one act (D-222).
 - Adding a machine or pairing on a machine with no browser, which the second run leaves out,
   since every machine a user adds has had a browser and a cloud session needs no phrase
   (D-223, the recovery phrase is typed only into the daemon's browser page).
