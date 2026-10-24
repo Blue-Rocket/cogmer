@@ -59,8 +59,7 @@ commit of `user-identity` before editing.
 
 The questions recorded are in `docs/open.md`, in the item that opens "Building the user
 identity needs answers that no decision gives", and the reasoning for each choice is in
-section 7 of the design. The first of them, that D-224 read literally voids D-220's
-self-removal, needs the maintainer's answer before the removal slice.
+section 7 of the design.
 
 Tests: run `go test -tags ts_debug_websockets ./...` in a cloud session. It passed with no
 test skipped, in 139s on 2026-10-24. In a cloud session cogmer asks the relay client to carry
