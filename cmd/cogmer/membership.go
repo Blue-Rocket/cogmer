@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
@@ -1092,28 +1093,111 @@ const (
 	RecordList    = "list"
 )
 
-// PutIdentityRecord stores one identity record of user, reporting whether it was
-// new. A record already held under its hash is left as it was, since a hash names
-// one set of signed fields whoever sends it (D-238, identity records are signed over
-// length-prefixed fields and carried as JSON). The record is not checked here:
-// whether it is valid depends on the user's other records, which Resolve decides.
-func (m *Membership) PutIdentityRecord(kind string, user string, body []byte, hash [32]byte) (bool, error) {
-	switch kind {
-	case RecordShared, RecordMachine, RecordSession, RecordRemoval, RecordList:
-	default:
-		return false, fmt.Errorf("%q is not a kind of identity record", kind)
+// decodeExactly decodes body into v, refusing a field v does not have, so that a
+// record of one kind cannot be stored as another kind whose fields it lacks.
+func decodeExactly(body []byte, v any) error {
+	dec := json.NewDecoder(bytes.NewReader(body))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(v); err != nil {
+		return err
 	}
-	if user == "" {
-		return false, errors.New("an identity record names no user")
+	if dec.More() {
+		return errors.New("trailing data after the record")
+	}
+	return nil
+}
+
+// identityRecordHash decodes body as the record kind names and returns the user
+// it names and its hash, computed by the record itself. The hash is never taken
+// from whoever sent the record, since a hash given for another body would hold
+// the right record's key and keep it out under insert-or-ignore. A record under a
+// scheme this build does not know is refused, because it hashes to zero, the
+// lowest hash, which would win every tie it entered (D-238, identity records are
+// signed over length-prefixed fields and carried as JSON).
+func identityRecordHash(kind string, body []byte) (user string, hash [32]byte, err error) {
+	var schemeErr error
+	switch kind {
+	case RecordShared:
+		var c SharedKeyCert
+		if err = decodeExactly(body, &c); err == nil {
+			_, schemeErr = c.signingBytes()
+			user, hash = c.User, c.Hash()
+		}
+	case RecordMachine:
+		var c MachineCert
+		if err = decodeExactly(body, &c); err == nil {
+			_, schemeErr = c.signingBytes()
+			user, hash = c.User, c.Hash()
+		}
+	case RecordSession:
+		var c SessionCert
+		if err = decodeExactly(body, &c); err == nil {
+			_, schemeErr = c.signingBytes()
+			user, hash = c.User, c.Hash()
+		}
+	case RecordRemoval:
+		var r Removal
+		if err = decodeExactly(body, &r); err == nil {
+			_, schemeErr = r.signingBytes()
+			user, hash = r.User, r.Hash()
+		}
+	case RecordList:
+		var c ListChange
+		if err = decodeExactly(body, &c); err == nil {
+			_, schemeErr = c.signingBytes()
+			user, hash = c.User, c.Hash()
+		}
+	default:
+		return "", [32]byte{}, fmt.Errorf("%q is not a kind of identity record", kind)
+	}
+	if err != nil {
+		return "", [32]byte{}, fmt.Errorf("not a %s record: %w", kind, err)
+	}
+	if schemeErr != nil {
+		return "", [32]byte{}, schemeErr
+	}
+	return user, hash, nil
+}
+
+// PutIdentityRecord stores one identity record of user under the hash the record
+// itself gives, reporting the hash and whether the record was new. A record already
+// held under its hash is left as it was, since a hash names one set of signed fields
+// whoever sends it (D-238, identity records are signed over length-prefixed fields
+// and carried as JSON). A body that does not decode as kind, or that names another
+// user, is refused. Signatures are not checked here: whether a record is valid
+// depends on the user's other records, which Resolve decides.
+func (m *Membership) PutIdentityRecord(kind, user string, body []byte) (hash [32]byte, isNew bool, err error) {
+	named, hash, err := identityRecordHash(kind, body)
+	if err != nil {
+		return [32]byte{}, false, err
+	}
+	if user == "" || named != user {
+		return [32]byte{}, false, errors.New("the identity record names a user other than the one it is stored for")
 	}
 	res, err := m.db.Exec(`INSERT OR IGNORE INTO identity_records (hash, user, kind, body, received_at)
 		VALUES (?,?,?,?,?)`,
 		hex.EncodeToString(hash[:]), user, kind, string(body), time.Now().UTC().Format(time.RFC3339))
 	if err != nil {
-		return false, err
+		return [32]byte{}, false, err
 	}
 	n, err := res.RowsAffected()
-	return n == 1, err
+	return hash, n == 1, err
+}
+
+// IdentityRecordByHash is one stored record as it arrived, for a machine that
+// asks for a record by its hash. Unlike IdentityRecords it returns any kind,
+// session certificates among them, which a RecordSet has no place for.
+func (m *Membership) IdentityRecordByHash(hash [32]byte) (kind string, body []byte, ok bool, err error) {
+	var b string
+	err = m.db.QueryRow(`SELECT kind, body FROM identity_records WHERE hash = ?`,
+		hex.EncodeToString(hash[:])).Scan(&kind, &b)
+	if err == sql.ErrNoRows {
+		return "", nil, false, nil
+	}
+	if err != nil {
+		return "", nil, false, err
+	}
+	return kind, []byte(b), true, nil
 }
 
 // IdentityRecords decodes every record held for user into the forms Resolve and

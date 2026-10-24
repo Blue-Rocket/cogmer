@@ -195,11 +195,75 @@ func putRecord(t *testing.T, m *Membership, kind, user string, rec any, hash [32
 	if err != nil {
 		t.Fatal(err)
 	}
-	isNew, err := m.PutIdentityRecord(kind, user, body, hash)
+	got, isNew, err := m.PutIdentityRecord(kind, user, body)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if got != hash {
+		t.Errorf("a %s record was stored under %x, not its own hash %x", kind, got[:8], hash[:8])
+	}
 	return isNew
+}
+
+// A record is stored under the hash it gives itself, whatever its sender might
+// claim, and storage refuses a body that names another user, one that is not the
+// kind it is stored as, and one under a scheme this build does not know, whose hash
+// would be zero and win every tie.
+func TestAnIdentityRecordIsKeyedByItsOwnHash(t *testing.T) {
+	m := testMembership(t)
+	f := newIdentityFixture(t)
+	for _, c := range []struct {
+		kind string
+		rec  any
+		hash [32]byte
+	}{
+		{RecordShared, f.sharedCert, f.sharedCert.Hash()},
+		{RecordMachine, f.machineCert, f.machineCert.Hash()},
+		{RecordSession, f.sessionCert, f.sessionCert.Hash()},
+		{RecordRemoval, f.removal, f.removal.Hash()},
+		{RecordList, f.change, f.change.Hash()},
+	} {
+		body, _ := json.Marshal(c.rec)
+		hash, isNew, err := m.PutIdentityRecord(c.kind, f.user, body)
+		if err != nil || !isNew || hash != c.hash {
+			t.Errorf("%s: stored under %x, new %v, err %v; want its own hash %x", c.kind, hash[:8], isNew, err, c.hash[:8])
+			continue
+		}
+		kind, got, ok, err := m.IdentityRecordByHash(c.hash)
+		if err != nil || !ok || kind != c.kind || string(got) != string(body) {
+			t.Errorf("%s: fetched by its hash as %q %q, ok %v, err %v", c.kind, kind, got, ok, err)
+		}
+	}
+	if _, _, ok, err := m.IdentityRecordByHash([32]byte{9}); ok || err != nil {
+		t.Errorf("a hash never stored was found: %v %v", ok, err)
+	}
+
+	other := newIdentityFixture(t)
+	shared, _ := json.Marshal(f.sharedCert)
+	session, _ := json.Marshal(f.sessionCert)
+	unknown := f.machineCert
+	unknown.Scheme = 99
+	unknownBody, _ := json.Marshal(unknown)
+	for name, c := range map[string]struct {
+		kind, user string
+		body       []byte
+	}{
+		"a record for another user":          {RecordShared, other.user, shared},
+		"a session certificate for another":  {RecordSession, other.user, session},
+		"a shared certificate as a machine":  {RecordMachine, f.user, shared},
+		"a session certificate as a removal": {RecordRemoval, f.user, session},
+		"a record under an unknown scheme":   {RecordMachine, f.user, unknownBody},
+		"a body that is not JSON":            {RecordMachine, f.user, []byte("{not json")},
+		"a record of no known kind":          {"certificate", f.user, shared},
+	} {
+		if _, _, err := m.PutIdentityRecord(c.kind, c.user, c.body); err == nil {
+			t.Errorf("%s was stored", name)
+		}
+	}
+	var n int
+	if err := m.db.QueryRow(`SELECT COUNT(*) FROM identity_records`).Scan(&n); err != nil || n != 5 {
+		t.Errorf("the store holds %d records, want the 5 accepted", n)
+	}
 }
 
 // Every kind of record stored comes back decoded into the form Resolve takes, so
@@ -221,11 +285,11 @@ func TestIdentityRecordsComeBackAsTheRecordsThatWereStored(t *testing.T) {
 	putRecord(t, m, RecordSession, f.user, f.sessionCert, f.sessionCert.Hash())
 	putRecord(t, m, RecordRemoval, f.user, f.removal, f.removal.Hash())
 	putRecord(t, m, RecordList, f.user, f.change, f.change.Hash())
-	if _, err := m.PutIdentityRecord(RecordMachine, f.user, []byte("{not json"), [32]byte{1}); err != nil {
+	// A row written by something other than PutIdentityRecord, which refuses a body
+	// that does not decode, is still left out rather than failing the read.
+	if _, err := m.db.Exec(`INSERT INTO identity_records (hash, user, kind, body, received_at)
+		VALUES ('01', ?, 'machine', '{not json', '2026-10-24T00:00:00Z')`, f.user); err != nil {
 		t.Fatal(err)
-	}
-	if _, err := m.PutIdentityRecord("certificate", f.user, []byte("{}"), [32]byte{2}); err == nil {
-		t.Error("a record of no known kind was stored")
 	}
 
 	other := newIdentityFixture(t)
