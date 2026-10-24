@@ -726,3 +726,152 @@ func TestAMachineNotUnderTheCurrentKeyIsSuspendedUntilCertifiedAgain(t *testing.
 		t.Fatal("certifying a suspended machine under the current key did not restore it")
 	}
 }
+
+func TestARemovedMachinesEventChainPassesCheckEventAndFailsCheck(t *testing.T) {
+	u := newStateUser("event")
+	m := stateKeyFrom("event/m")
+	cert := u.certify(1, m, KindMachine, "laptop", 1)
+	s := Resolve(u.id(), RecordSet{
+		Shared:   []SharedKeyCert{u.share(1)},
+		Machines: []MachineCert{cert},
+		Removals: []Removal{mustRemove(t, u.master, LevelMaster, 0, u.id(), m.id, RoomCutoff{"room-a", 4})},
+	})
+	chain := Chain{Shared: u.share(1), Machine: cert}
+	link, err := s.CheckEvent(chain, m.id)
+	if err != nil {
+		t.Fatalf("a removed machine's event was refused, so its events within the cutoff would be lost: %v", err)
+	}
+	if link.Machine != m.id || !s.Counts(link.Machine, "room-a", 4) || s.Counts(link.Machine, "room-a", 5) {
+		t.Fatal("the removed machine's event is not judged by its cutoff")
+	}
+	if _, err := s.Check(chain, m.id); err == nil || !strings.Contains(err.Error(), "removed") {
+		t.Fatalf("a removed machine's live act was not refused: %v", err)
+	}
+}
+
+func TestASuspendedMachinesEventChainPassesCheckEventAndCountsForNothing(t *testing.T) {
+	u := newStateUser("eventsusp")
+	m := stateKeyFrom("eventsusp/m")
+	cert := u.certify(1, m, KindMachine, "laptop", 1)
+	s := Resolve(u.id(), RecordSet{Shared: []SharedKeyCert{u.share(1), u.share(2)}, Machines: []MachineCert{cert}})
+	chain := Chain{Shared: u.share(1), Machine: cert}
+	if _, err := s.CheckEvent(chain, m.id); err != nil {
+		t.Fatalf("a suspended machine's event chain was refused: %v", err)
+	}
+	if s.Counts(m.id, "room-a", 1) {
+		t.Fatal("a suspended machine's event counted")
+	}
+	if _, err := s.Check(chain, m.id); err == nil {
+		t.Fatal("a suspended machine's live act was accepted")
+	}
+}
+
+func TestAChainWhoseSharedCertificateLostFailsCheckEventAndCheck(t *testing.T) {
+	u := newStateUser("eventlost")
+	m := stateKeyFrom("eventlost/m")
+	a := u.share(1)
+	rival := stateKeyFrom("eventlost/shared/rival")
+	b := CertifySharedKey(u.master.priv, 1, rival.pub)
+	loser, loseKey := b, rival
+	if hashLess(b.Hash(), a.Hash()) {
+		loser, loseKey = a, u.sharedKey(1)
+	}
+	s := Resolve(u.id(), RecordSet{Shared: []SharedKeyCert{a, b}})
+	chain := Chain{Shared: loser, Machine: CertifyMachine(loseKey.priv, u.id(), 1, m.pub, KindMachine, "laptop", 1)}
+	if _, err := s.CheckEvent(chain, m.id); err == nil || !strings.Contains(err.Error(), "lost") {
+		t.Errorf("CheckEvent accepted a chain under a losing shared key: %v", err)
+	}
+	if _, err := s.Check(chain, m.id); err == nil || !strings.Contains(err.Error(), "lost") {
+		t.Errorf("Check accepted a chain under a losing shared key: %v", err)
+	}
+	if _, err := s.CheckEvent(chain, stateKeyFrom("eventlost/other").id); err == nil {
+		t.Error("CheckEvent accepted a chain that does not end at the signer")
+	}
+}
+
+func TestMergeListChangesTakesTheHighestCounterThenTheLowestHash(t *testing.T) {
+	u := newStateUser("lists")
+	m1, m2 := stateKeyFrom("lists/m1"), stateKeyFrom("lists/m2")
+	entry := "colleague:" + stateKeyFrom("lists/ana").id
+	low := SignListChange(m1.priv, u.id(), entry, `{"label":"Ana"}`, 3)
+	high := SignListChange(m2.priv, u.id(), entry, `{"label":"Ana B"}`, 4)
+	got := MergeListChanges(u.id(), []ListChange{high, low})
+	if got[entry] != high {
+		t.Fatalf("entry settled on counter %d, want the higher counter 4", got[entry].Counter)
+	}
+
+	a := SignListChange(m1.priv, u.id(), entry, `{"label":"one"}`, 4)
+	b := SignListChange(m2.priv, u.id(), entry, `{"label":"two"}`, 4)
+	want := a
+	if hashLess(b.Hash(), a.Hash()) {
+		want = b
+	}
+	for _, order := range [][]ListChange{{a, b}, {b, a}} {
+		if got := MergeListChanges(u.id(), order)[entry]; got != want {
+			t.Fatalf("of two changes with one counter, %q won, want the lower hash %q", got.Value, want.Value)
+		}
+	}
+	// Neither change with counter 4 lost to the other's counter, so the
+	// higher-counter change is one of them or the 4 above.
+	if got := MergeListChanges(u.id(), []ListChange{a, high, b})[entry]; got.Counter != 4 {
+		t.Fatalf("counter %d won among three with counter 4", got.Counter)
+	}
+}
+
+func TestMergeListChangesIgnoresAnotherUsersAndUnverifiedChanges(t *testing.T) {
+	u, v := newStateUser("listsme"), newStateUser("liststhem")
+	m := stateKeyFrom("listsme/m")
+	entry := "room:abc"
+	mine := SignListChange(m.priv, u.id(), entry, `{"name":"mine"}`, 1)
+	theirs := SignListChange(m.priv, v.id(), entry, `{"name":"theirs"}`, 9)
+	forged := SignListChange(m.priv, u.id(), entry, `{"name":"forged"}`, 8)
+	forged.Value = `{"name":"altered"}`
+	badSigner := SignListChange(m.priv, u.id(), entry, `{"name":"bad"}`, 7)
+	badSigner.Signer = "not a key"
+	zero := SignListChange(m.priv, u.id(), entry, `{"name":"zero"}`, 0)
+	got := MergeListChanges(u.id(), []ListChange{theirs, forged, badSigner, zero, mine})
+	if len(got) != 1 || got[entry] != mine {
+		t.Fatalf("merge = %+v, want only the user's own verified change", got)
+	}
+}
+
+func TestMergeListChangesKeepsEachEntryAndCountsADuplicateOnce(t *testing.T) {
+	u := newStateUser("listsdup")
+	m := stateKeyFrom("listsdup/m")
+	a := SignListChange(m.priv, u.id(), "room:a", `{"name":"a"}`, 2)
+	b := SignListChange(m.priv, u.id(), "room:b", `{"name":"b"}`, 1)
+	got := MergeListChanges(u.id(), []ListChange{a, b, a, b, a})
+	if len(got) != 2 || got["room:a"] != a || got["room:b"] != b {
+		t.Fatalf("merge = %+v, want one change for each entry", got)
+	}
+	if len(MergeListChanges(u.id(), nil)) != 0 {
+		t.Fatal("merging nothing gave entries")
+	}
+}
+
+func TestMergeListChangesDoesNotDependOnTheOrderOfChanges(t *testing.T) {
+	u := newStateUser("listsorder")
+	ms := []stateKey{stateKeyFrom("listsorder/m1"), stateKeyFrom("listsorder/m2"), stateKeyFrom("listsorder/m3")}
+	var changes []ListChange
+	for i, entry := range []string{"room:a", "room:b", "colleague:c"} {
+		for j, m := range ms {
+			for counter := uint64(1); counter <= 3; counter++ {
+				changes = append(changes, SignListChange(m.priv, u.id(), entry,
+					fmt.Sprintf(`{"v":"%d-%d-%d"}`, i, j, counter), counter))
+			}
+		}
+	}
+	changes = append(changes, changes[4], SignListChange(ms[0].priv, newStateUser("x").id(), "room:a", "x", 99))
+	want := MergeListChanges(u.id(), changes)
+	if len(want) != 3 {
+		t.Fatalf("merge gave %d entries, want 3", len(want))
+	}
+	rng := rand.New(rand.NewSource(1))
+	for i := 0; i < 50; i++ {
+		shuffled := append([]ListChange{}, changes...)
+		rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
+		if got := MergeListChanges(u.id(), shuffled); !reflect.DeepEqual(got, want) {
+			t.Fatalf("order %d merged differently:\n got %+v\nwant %+v", i, got, want)
+		}
+	}
+}

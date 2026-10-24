@@ -492,3 +492,93 @@ func (l ChainLink) LiveAt(now time.Time) error {
 	}
 	return nil
 }
+
+// ListChange is one change to an entry of a user's copied lists: a colleague's
+// label or verification, or a room on the user's room list (D-228, a user's
+// colleagues, verifications, labels and rooms belong to the user and are copied
+// between the user's machines). Value is opaque here, since what an entry holds
+// is the caller's to define and only its bytes need to be signed. The machine
+// that made the change signs it, and the caller checks that machine's chain:
+// this record says which key signed it, not whether that key speaks for the user.
+type ListChange struct {
+	Scheme    int    `json:"scheme"`
+	User      string `json:"user"`
+	Entry     string `json:"entry"`
+	Value     string `json:"value"`
+	Counter   uint64 `json:"counter"`
+	Signer    string `json:"signer"`
+	Signature string `json:"signature"`
+}
+
+// SignListChange signs a change to entry. The counter is one more than the
+// highest the machine has seen for the entry, which the caller knows and this
+// does not.
+func SignListChange(machine ed25519.PrivateKey, user, entry, value string, counter uint64) ListChange {
+	c := ListChange{
+		Scheme:  idRecordScheme,
+		User:    user,
+		Entry:   entry,
+		Value:   value,
+		Counter: counter,
+		Signer:  PeerIDFromPublic(machine.Public().(ed25519.PublicKey)),
+	}
+	msg, _ := c.signingBytes()
+	c.Signature = signID(machine, msg)
+	return c
+}
+
+func (c ListChange) signingBytes() ([]byte, error) {
+	switch c.Scheme {
+	case 1:
+		var b idBytes
+		b.str(protocolNamespace + "/list-change/v1")
+		b.str(c.User)
+		b.str(c.Entry)
+		b.str(c.Value)
+		b.num(c.Counter)
+		b.str(c.Signer)
+		return b, nil
+	default:
+		return nil, unknownScheme("list change", c.Scheme)
+	}
+}
+
+func (c ListChange) Hash() [32]byte { return recordHash(c.signingBytes()) }
+
+// VerifyBy checks that pub, the key the change names as its signer, made it. A
+// counter of 0 is refused because every counter is one more than one already
+// seen, so 0 comes only from a change that skipped that rule.
+func (c ListChange) VerifyBy(pub ed25519.PublicKey) error {
+	msg, err := c.signingBytes()
+	if err != nil {
+		return err
+	}
+	if c.Entry == "" {
+		return errors.New("list change names no entry")
+	}
+	if c.Counter == 0 {
+		return errors.New("list change has counter 0; counters start at 1")
+	}
+	if c.Signer != PeerIDFromPublic(pub) {
+		return errors.New("list change names a signer other than the key checking it")
+	}
+	return checkID(pub, msg, c.Signature, "the signer the list change names")
+}
+
+// RoomIDFor is the identifier of the room creator founds with nonce. It is a
+// hash of the two, so only the creator's self-invitation carrying that nonce
+// hashes to it, and nobody who learns the identifier can admit themselves by
+// inviting themselves (D-240, a room's identifier is the hash of its creator
+// and a random value). The fields are length-prefixed behind a tag, as a
+// record's are, so no other creator and nonce run together into the same bytes.
+// The tag is peer-room/room-id/v1, written in two pieces only because the check
+// for slash commands named without the plugin's namespace would read it whole as
+// one.
+func RoomIDFor(creator string, nonce []byte) string {
+	var b idBytes
+	b.str(protocolNamespace + "/" + "room-id/v1")
+	b.str(creator)
+	b.str(string(nonce))
+	h := sha256.Sum256(b)
+	return base64.RawURLEncoding.EncodeToString(h[:])
+}

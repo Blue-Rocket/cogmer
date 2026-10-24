@@ -388,9 +388,9 @@ func (s *UserState) List() []MachineCert {
 // such a removal, as it needs the certificate to be valid at all.
 //
 // Check is for a live act: a connection, a sync request or an admission proof.
-// An event of a removed machine still counts up to its cutoff, so an event is
-// judged by Counts after its chain verifies, and never refused by Check for a
-// removal (D-220, a removal names the last event of a machine that counts).
+// An event's chain goes to CheckEvent instead, since an event of a removed
+// machine still counts up to its cutoff (D-220, a removal names the last event
+// of a machine that counts).
 //
 // A machine certified only under an older version than this state's current
 // one is suspended and refused, whatever chain it presents, until the user
@@ -399,13 +399,9 @@ func (s *UserState) List() []MachineCert {
 //
 // Check reads no clock: a live act also calls LiveAt on the link.
 func (s *UserState) Check(c Chain, signer string) (ChainLink, error) {
-	link, err := c.Verify(s.User, signer)
+	link, err := s.CheckEvent(c, signer)
 	if err != nil {
 		return ChainLink{}, err
-	}
-	if key, ok := s.SharedKeys[c.Shared.Version]; ok && key != c.Shared.SharedKey {
-		return ChainLink{}, fmt.Errorf("the chain's shared-key certificate for version %d lost to another under D-224 (a conflict goes to the higher level, then a removal, then the lowest hash)",
-			c.Shared.Version)
 	}
 	if link.SharedVersion < s.Current {
 		if m, ok := s.Machines[link.Machine]; !ok || !m.Current {
@@ -421,6 +417,74 @@ func (s *UserState) Check(c Chain, signer string) (ChainLink, error) {
 		}
 	}
 	return link, nil
+}
+
+// CheckEvent verifies the chain that came with an event signer signed, and
+// refuses it when its shared-key certificate lost its version, as Check does.
+// It does not refuse a removed or suspended machine, because whether such a
+// machine's event counts is Counts's question: a removed machine's events count
+// up to its cutoff (D-220, a removal names the last event of a machine that
+// counts), and a suspended machine's count for nothing until the user certifies
+// it again (D-234, a machine not certified under the current shared key is
+// suspended until it is certified again). Refusing either here would leave the
+// event with no verdict to give once the user's records change.
+func (s *UserState) CheckEvent(c Chain, signer string) (ChainLink, error) {
+	link, err := c.Verify(s.User, signer)
+	if err != nil {
+		return ChainLink{}, err
+	}
+	if key, ok := s.SharedKeys[c.Shared.Version]; ok && key != c.Shared.SharedKey {
+		return ChainLink{}, fmt.Errorf("the chain's shared-key certificate for version %d lost to another under D-224 (a conflict goes to the higher level, then a removal, then the lowest hash)",
+			c.Shared.Version)
+	}
+	return link, nil
+}
+
+// MergeListChanges settles each entry of user's copied lists on one change:
+// the highest counter, then the lowest hash, so every machine holding the same
+// changes settles on the same value with no clock (D-228, a user's colleagues,
+// verifications, labels and rooms belong to the user and are copied between the
+// user's machines). A change for another user or one that does not verify
+// against the key it names is ignored. Whether that key speaks for the user is
+// its chain's question, which the caller has answered for each change it passes.
+func MergeListChanges(user string, changes []ListChange) map[string]ListChange {
+	out := map[string]ListChange{}
+	hashes := map[string][32]byte{}
+	for _, c := range changes {
+		if c.User != user {
+			continue
+		}
+		pub, err := PublicFromPeerID(c.Signer)
+		if err != nil || c.VerifyBy(pub) != nil {
+			continue
+		}
+		h := c.Hash()
+		old, ok := out[c.Entry]
+		if ok {
+			oh := hashes[c.Entry]
+			switch {
+			case c.Counter != old.Counter:
+				if c.Counter < old.Counter {
+					continue
+				}
+			case h != oh:
+				if bytes.Compare(h[:], oh[:]) > 0 {
+					continue
+				}
+			default:
+				// One change twice. Its signed fields are the same, so only a
+				// differing encoding of the signature could tell the copies
+				// apart, and the lesser is kept so the order they came in does
+				// not show.
+				if old.Signature <= c.Signature {
+					continue
+				}
+			}
+		}
+		out[c.Entry] = c
+		hashes[c.Entry] = h
+	}
+	return out
 }
 
 // Lacks reports whether an event naming this shared version and these removals

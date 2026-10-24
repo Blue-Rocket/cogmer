@@ -81,6 +81,10 @@ func (k idKeys) removal(t *testing.T) Removal {
 	return r
 }
 
+func (k idKeys) listChange() ListChange {
+	return SignListChange(k.machine.priv, k.master.id, "colleague:"+k.other.id, `{"label":"Ana Ünïcode","verified":true}`, 4)
+}
+
 func (k idKeys) machineChain() Chain { return Chain{Shared: k.sharedCert(), Machine: k.machineCert()} }
 
 func (k idKeys) cloudChain() Chain {
@@ -271,13 +275,14 @@ func TestARecordCheckedAgainstTheWrongKeyFails(t *testing.T) {
 func TestAnIdentityRecordUnderAnUnknownSchemeIsRefusedAsAVersionProblem(t *testing.T) {
 	k := testIDKeys(t)
 	for _, scheme := range []int{0, 2} {
-		sc, mc, ss, r := k.sharedCert(), k.machineCert(), k.sessionCert(), k.removal(t)
-		sc.Scheme, mc.Scheme, ss.Scheme, r.Scheme = scheme, scheme, scheme, scheme
+		sc, mc, ss, r, lc := k.sharedCert(), k.machineCert(), k.sessionCert(), k.removal(t), k.listChange()
+		sc.Scheme, mc.Scheme, ss.Scheme, r.Scheme, lc.Scheme = scheme, scheme, scheme, scheme, scheme
 		for name, err := range map[string]error{
 			"shared-key certificate": sc.Verify(),
 			"machine certificate":    mc.VerifyBy(k.shared.pub),
 			"session certificate":    ss.VerifyBy(k.cloud.pub),
 			"removal":                r.VerifyBy(k.shared.pub),
+			"list change":            lc.VerifyBy(k.machine.pub),
 		} {
 			if err == nil || !strings.Contains(err.Error(), "upgrade") || strings.Contains(err.Error(), "does not match") {
 				t.Errorf("a %s under scheme %d: got %v, want a refusal that says to upgrade", name, scheme, err)
@@ -509,6 +514,10 @@ type frozenIdentity struct {
 	MachineChain Chain             `json:"machineChain"`
 	CloudChain   Chain             `json:"cloudChain"`
 	Hashes       map[string]string `json:"hashes"`
+	ListChange   struct {
+		Record ListChange `json:"record"`
+		Hash   string     `json:"hash"`
+	} `json:"listChange"`
 }
 
 func loadIdentityVectors(t *testing.T) frozenIdentity {
@@ -599,5 +608,110 @@ func TestAChangeToAFrozenIdentityRecordFailsVerification(t *testing.T) {
 	v.Machine.Name += "x"
 	if v.Machine.VerifyBy(k.shared.pub) == nil {
 		t.Error("an altered frozen machine certificate verified")
+	}
+	v.ListChange.Record.Value += "x"
+	if v.ListChange.Record.VerifyBy(k.machine.pub) == nil {
+		t.Error("an altered frozen list change verified")
+	}
+}
+
+func TestFrozenListChangeStillVerifiesAndHashesAsItDid(t *testing.T) {
+	k := testIDKeys(t)
+	v := loadIdentityVectors(t)
+	lc := v.ListChange.Record
+	if err := lc.VerifyBy(k.machine.pub); err != nil {
+		t.Errorf("frozen list change no longer verifies: %v; the bytes scheme v1 signs have changed; add a scheme and leave v1 as it was (D-058, signature schemes are kept, never replaced)", err)
+	}
+	h := lc.Hash()
+	if got := hex.EncodeToString(h[:]); got != v.ListChange.Hash {
+		t.Errorf("frozen list change hashes to %s, was %s; a hash is how machines name a record to one another", got, v.ListChange.Hash)
+	}
+	if lc != k.listChange() {
+		t.Error("signing the frozen list change's fields again gives another record")
+	}
+
+	// The encoding the design states, written out without the code's helpers.
+	var b []byte
+	str := func(s string) { b = append(binary.BigEndian.AppendUint32(b, uint32(len(s))), s...) }
+	str("peer-room/list-change/v1")
+	str(v.Keys.Master)
+	str("colleague:" + k.other.id)
+	str(`{"label":"Ana Ünïcode","verified":true}`)
+	b = binary.BigEndian.AppendUint64(b, 4)
+	str(v.Keys.Machine)
+	if h := sha256.Sum256(b); hex.EncodeToString(h[:]) != v.ListChange.Hash {
+		t.Error("the frozen list change is not a hash of user, entry, value, counter and signer under its tag")
+	}
+}
+
+func TestAListChangeVerifiesAfterAJSONRoundTrip(t *testing.T) {
+	k := testIDKeys(t)
+	lc := k.listChange()
+	if lc.Scheme != 1 {
+		t.Errorf("a list change is signed under scheme %d, want 1", lc.Scheme)
+	}
+	if got := roundTrip(t, lc); got.VerifyBy(k.machine.pub) != nil || got.Hash() != lc.Hash() {
+		t.Errorf("list change after JSON: verify %v, hash changed %v", got.VerifyBy(k.machine.pub), got.Hash() != lc.Hash())
+	}
+}
+
+func TestATamperedFieldOfAListChangeFailsVerification(t *testing.T) {
+	k := testIDKeys(t)
+	for name, change := range map[string]func(*ListChange){
+		"user":    func(c *ListChange) { c.User = k.other.id },
+		"entry":   func(c *ListChange) { c.Entry = "room:" + k.other.id },
+		"value":   func(c *ListChange) { c.Value = `{"label":"Ana Ünïcodf","verified":true}` },
+		"counter": func(c *ListChange) { c.Counter = 5 },
+	} {
+		c := k.listChange()
+		change(&c)
+		wantSignatureRefusal(t, name, c.VerifyBy(k.machine.pub))
+	}
+}
+
+func TestAListChangeIsRefusedForAnotherSignerNoEntryOrACounterOfZero(t *testing.T) {
+	k := testIDKeys(t)
+	for name, tc := range map[string]struct {
+		change func(*ListChange)
+		by     ed25519.PublicKey
+		want   string
+	}{
+		"checked by another key": {func(*ListChange) {}, k.other.pub, "signer other than"},
+		"signer renamed":         {func(c *ListChange) { c.Signer = k.other.id }, k.other.pub, "does not match"},
+		"no entry":               {func(c *ListChange) { c.Entry = "" }, k.machine.pub, "no entry"},
+		"counter 0":              {func(c *ListChange) { c.Counter = 0 }, k.machine.pub, "counter 0"},
+	} {
+		c := k.listChange()
+		tc.change(&c)
+		if err := c.VerifyBy(tc.by); err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: got %v, want an error saying %q", name, err, tc.want)
+		}
+	}
+	signed := SignListChange(k.machine.priv, k.master.id, "", "v", 1)
+	if signed.VerifyBy(k.machine.pub) == nil {
+		t.Error("a list change signed with no entry verified")
+	}
+}
+
+// A room's identifier is computed by every guest's machine from the founding
+// self-invitation, so a change to how it is computed founds every existing room
+// anew and admits nobody. Never regenerate this value to make the test pass; a
+// failure means the computation changed, and the fix is a new version beside it.
+func TestARoomIdentifierIsTheFrozenHashOfItsCreatorAndNonce(t *testing.T) {
+	k := testIDKeys(t)
+	const frozen = "aNpd4CVD4nmqnuipDPasfnGeIEMRLLWm0-2C_Gsi-kg"
+	nonce := []byte("founding-nonce-0123456789abcdef")
+	if got := RoomIDFor(k.master.id, nonce); got != frozen {
+		t.Fatalf("RoomIDFor gives %s, was %s", got, frozen)
+	}
+	if RoomIDFor(k.other.id, nonce) == frozen {
+		t.Error("another creator with the same nonce gives the same room")
+	}
+	if RoomIDFor(k.master.id, append(nonce, 0)) == frozen {
+		t.Error("another nonce gives the same room")
+	}
+	// Length prefixes keep a creator and a nonce from running together.
+	if RoomIDFor("ab", []byte("c")) == RoomIDFor("a", []byte("bc")) {
+		t.Error("two splits of one string give one room")
 	}
 }

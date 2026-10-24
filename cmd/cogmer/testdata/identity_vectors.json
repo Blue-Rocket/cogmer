@@ -112,5 +112,17 @@
     "removal": "28ae7a933d53ffb32f481403d4d9f28eea2c1db418f9d8e5cd07419f0a7c66c5",
     "session": "5eba4a6aec0ff61d6863b727ee3c4d4353b4fa5bcb56d38f2f606db69b8aea3c",
     "shared": "fe6ce075b743b8cb91e27a3401a8a5b2a519f88870b900c4e2a2dcd520dc870f"
+  },
+  "listChange": {
+    "record": {
+      "scheme": 1,
+      "user": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "entry": "colleague:ed25519:yQd1GM-kOHZ-1oxxgXjPGpI0PTxf_IVPImWLZcuiYvA",
+      "value": "{\"label\":\"Ana Ünïcode\",\"verified\":true}",
+      "counter": 4,
+      "signer": "ed25519:1AS8RFZa7buJkVDlsLOzK5RBvwy3iEwzEw2o28J90s8",
+      "signature": "Ub8GgIspx0WH5BJwh7kbhBTA8HOgWXEBQ-8xzASk2h5YIWrEe8k-cGBqwP8OSTcroaDuFbHylnrmJ8OmnNN7DA"
+    },
+    "hash": "536f81b32b13052b76c34f84eb70ff093567f270dea0fd9f14b619d64596f9a4"
   }
 }
