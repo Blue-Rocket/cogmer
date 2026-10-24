@@ -78,6 +78,18 @@ Answered by the maintainer:
   user's machine list with addresses, and the user's colleagues and labels. Typing the
   recovery phrase into a new machine's page is for recovery only. Each exchange of machine
   lists also repairs the addresses it carries, since a user's machines may share no room.
+- R6, the rest, on 2026-10-24: a machine's key is made at its first use, as now, and the user
+  identity is made in the daemon's page the first time the user does something that needs
+  it: a first pairing string, pairing, creating or joining a room, or adding a machine. The
+  page asks first whether the user has used cogmer on another machine. Without one, it
+  creates the user: it shows the phrase, has the user confirm words from it, takes the name
+  colleagues will see, certifies the shared key and this machine, and drops the master. With
+  one at hand, it adds this machine from that one, and with none left, it recovers from the
+  phrase. Until then, a command that needs the identity points to the page and does nothing
+  else. A user's machines share the list of rooms the user is a guest of, each with its
+  identifier, its name and the user's machines that have joined it, and not its guest list or
+  events. A session on another of the user's machines joins such a room by name, and its
+  machine then fetches the guest list and the events from a machine that has joined.
 
 Open:
 
@@ -89,9 +101,6 @@ Open:
   injected context, since the block says its content is other people's.
 - R5. Whether a machine's name, which its user chose, is shown to colleagues, and if so as a
   field of its own marked as asserted.
-- R6, the rest. When a user identity is created relative to a machine's first use and its
-  first pairing string, and how a session on a user's second machine joins a room the user is
-  already a guest of.
 - R7. Whether a room's name is unique among one machine's rooms or one user's.
 - R8. Which keys the two pairing words are derived from.
 - R9. Which command prefix holds the commands for a user's own machines.
