@@ -315,9 +315,6 @@ slice of the second run, and none has a choice taken yet:
   session never joins a second room).
 - Whether a revoked guest's turns after the cutoff are fetched again when a new invitation
   lifts the revocation (D-236, a revocation names the last turn that counts).
-- How a room's guest list shows a guest the viewing user has forgotten (D-073, forgetting a
-  peer changes no room's guest list), and whether `membership.db` keeps a copy of a room's
-  list computed from its events.
 
 **A user has no way to set up a cloud session's key, snapshot and repo, and three facts the setup
 depends on are unknown.** D-226 and D-227 need a cloud key, a first snapshot and a private repo

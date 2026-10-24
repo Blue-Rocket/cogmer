@@ -15,7 +15,7 @@ with again is known again and unverified again, as at a first meeting, and is a 
 every room they were never revoked from. Forgetting acts on the colleague as a user and
 covers every machine of theirs, and it never stands for removing one machine, which only
 the user whose machine it is can do (D-220, a removal names the last event of a machine
-that counts).
+that counts). A room's list shows a guest the user has forgotten by the name derived from their identifier, marked unverified (D-139, a name is shown as itself only for a verified peer).
 
 **Support.**
 - Forgetting discards the identity itself, so a later meeting is a first meeting again,
