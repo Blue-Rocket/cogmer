@@ -103,10 +103,13 @@ Answered by the maintainer:
 - R9, on 2026-10-24: one command, `/cogmer:self-machines`, opens the daemon's page, where the
   user adds, removes and renames machines and recovers, and `/cogmer:self-status` also lists
   the user's machines and whether each can be reached.
+- R3, on 2026-10-24: a colleague is one line in the room status and the view, reachable when
+  any of their machines that joined the room can be reached from this machine, and named as
+  unreachable, with for how long, only when none can. The user's own machines are listed one
+  by one, by name, with whether this machine can reach each: those that joined the room in
+  the room status, and all of them in `/cogmer:self-status`.
 
 Open:
 
-- R3. How the view and the room status show a colleague with two machines when one of them
-  cannot be reached.
 - R7. Whether a room's name is unique among one machine's rooms or one user's.
 - R8. Which keys the two pairing words are derived from.
