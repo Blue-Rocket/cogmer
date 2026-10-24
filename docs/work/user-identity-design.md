@@ -458,7 +458,8 @@ slice that needs it. Each is put to the maintainer before that slice starts.
    machine's last turn this machine has seen, and the user confirms it or chooses to mark all.
 7. Recovery and machines the user no longer holds (slice 5). Certifying a new shared key
    suspends every machine not certified again (D-234), so no separate removal is needed.
-8. Which machine a sync connection reaches (slice 2). Any machine of a guest is accepted, and
+8. Which machine a sync connection reaches (slice 2), confirmed on 2026-10-24, as D-101
+   states. Any machine of a guest is accepted, and
    the request's signature says which.
 9. A machine with no browser (slice 3). Out of scope for the second run, since a cloud
    session needs no phrase (D-223) and every other machine a user adds has a browser.

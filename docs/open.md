@@ -301,8 +301,6 @@ slice of the second run, and none has a choice taken yet:
   given to the assistant (D-204, the view says what the model holds).
 - Which turns a removal marks when the user names no cutoff, outside a theft (D-220).
 - Whether recovery can remove every machine the user no longer holds in one act (D-222).
-- Whether a sync connection demands the machine an address was recorded for, or accepts any
-  machine of a recorded peer as now (D-101, connections are TLS pinned).
 - Whether adding a machine or pairing can finish on a machine with no browser (D-223, the
   phrase is typed only into the daemon's browser page).
 - Whether an expelled user is told, and what their own view of the room shows (D-235).
