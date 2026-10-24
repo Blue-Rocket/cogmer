@@ -292,10 +292,6 @@ examined.
 section 7 holds the reasoning, and each choice stands until the maintainer confirms or
 changes it:
 
-- D-224 (a conflict between identity records goes to the higher level) read literally keeps
-  a machine that removed itself, since its removal is at a lower level than its certificate,
-  which voids the self-removal that D-220 allows (a removal names the last event of a
-  machine that counts). The build treats a removal and the certificate it removes as not in conflict.
 - The phrase's word list and key derivation. The build uses 18 words from the PGP word list
   that the pairing comparison uses, 16 bytes and two check bytes, and HKDF-SHA256. The
   BIP-39 list would give 12 words and keep the phrase apart from the comparison's words.

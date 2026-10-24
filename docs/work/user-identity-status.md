@@ -11,10 +11,10 @@ says so.
 
 Before the second run, the maintainer decided on 2026-10-23 that the user, and not the
 machine, is the primary entity, and answered ten questions it raised, recorded in
-`docs/work/user-primary-inventory.md`. The decisions and the specification are being
-rewritten to match, as `docs/work/user-primary-rewrite.md` plans. After that come the seven
-build questions in `docs/open.md`, then a revision of the design, which gains a slice for a
-user's own machines, and only then the second run.
+`docs/work/user-primary-inventory.md`. The decisions and the specification were rewritten to
+match on 2026-10-24. The build questions in `docs/open.md` come next, one of which, a
+self-removal, is decided, then a revision of the design, which gains a slice for a user's own
+machines, and only then the second run.
 
 Merged in the first run:
 

@@ -336,13 +336,8 @@ Every slice that serves a room copies the two-room tests in `roomscope_test.go`.
 
 ## 7. Choices this design makes where no decision settles the question
 
-1. D-224 read literally makes D-220's self-removal void. A self-removal is signed at the
-   machine level and the certificate it removes at the shared level, so "the higher level
-   wins" would keep every machine that removed itself. This design treats a removal and the
-   certificate it removes as not in conflict, so every valid removal takes effect, and
-   applies D-224 to two shared-key certificates for one version and to several certificates
-   for one machine. Under this reading a removal always beats an addition, which agrees with
-   D-224 for every pair except a self-removal and the certificate it removes.
+1. Decided on 2026-10-24 and written into D-224: a removal and the certificate it removes do
+   not conflict, so every valid removal takes effect, a self-removal included.
 2. The phrase is 18 words from the PGP word list, and the master key is HKDF-SHA256 of its
    16 bytes (section 2). The two words of the pairing comparison come from the same list,
    which a user might confuse with the phrase. The alternative is the BIP-39 English list of
