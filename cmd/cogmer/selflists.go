@@ -14,31 +14,49 @@ import (
 // A user's colleagues, their verifications and labels, and the user's room list
 // belong to the user, so every machine of the user holds a copy (D-228, a user's
 // colleagues, verifications, labels and rooms belong to the user and are copied
-// between the user's machines). Each change to an entry is a signed ListChange whose
-// value is the entry as the change leaves it, with a counter one more than the
-// highest this machine has seen for the entry; MergeListChanges settles each entry on
-// the highest counter, then the lowest hash, so every machine holding the same
-// changes reaches the same value with no clock.
+// between the user's machines). An entry is one field of a colleague or a room, such
+// as a colleague's label or whether one machine of the user has joined a room, so
+// that changes to different fields made on different machines at the same time all
+// survive, where an entry holding a whole colleague would let one change overwrite
+// the other. Each change to an entry is a signed ListChange whose value is the
+// field's new value, with a counter one more than the highest this machine has seen
+// for the entry; MergeListChanges settles each entry on the highest counter, then the
+// lowest hash, so every machine holding the same changes reaches the same value with
+// no clock. A colleague or a room is rebuilt from its fields when the lists are read.
 //
 // The changes are kept in identity_records with the user's other records, and the
 // tables a machine reads on its hot paths (known_peers, offers, room_machines) are
 // made to follow the merged lists whenever new changes arrive. A machine with no user
 // identity writes no change, and behaves as it did before lists were copied.
 
+// The entries of the user's lists. A colleague's are colleague:<id>:label,
+// colleague:<id>:verified, colleague:<id>:forgotten and colleague:<id>:endpoints; a
+// room's are room:<id>:name, room:<id>:offer and room:<id>:machine:<machine-key>.
+// A peer identifier holds a colon (ed25519:...) and a room identifier does not, so
+// a colleague's entry splits at its last colon, since no field of a colleague holds
+// one, and a room's at the first colon after room:, since a machine's field does.
 const (
 	entryColleague = "colleague:"
 	entryRoom      = "room:"
+
+	fieldLabel     = "label"
+	fieldVerified  = "verified"
+	fieldForgotten = "forgotten"
+	fieldEndpoints = "endpoints"
+	fieldName      = "name"
+	fieldOffer     = "offer"
+	fieldMachine   = "machine:"
 )
 
-// colleagueEntry is a colleague as a change leaves them: the label the user gave
+// colleagueEntry is a colleague as their fields leave them: the label the user gave
 // them, when the user verified them, whether the user forgot them, and the addresses
-// this machine had for them, so that another machine of the user can reach a
+// a machine of the user had for them, so that another machine of the user can reach a
 // colleague it never paired with.
 type colleagueEntry struct {
-	Label     string   `json:"label,omitempty"`
-	Verified  string   `json:"verified,omitempty"`
-	Forgotten bool     `json:"forgotten,omitempty"`
-	Endpoints []string `json:"endpoints,omitempty"`
+	Label     string
+	Verified  string
+	Forgotten bool
+	Endpoints []string
 }
 
 // roomEntry is a room on the user's room list: its name, the user's machines from
@@ -47,10 +65,89 @@ type colleagueEntry struct {
 // list as offered, so the user can join from any machine). It holds nothing of the
 // room's guests or turns, which stay on the machines that joined (D-228).
 type roomEntry struct {
-	Name      string   `json:"name"`
-	Machines  []string `json:"machines,omitempty"`
-	OfferedBy string   `json:"offeredBy,omitempty"`
-	Endpoint  string   `json:"endpoint,omitempty"`
+	Name      string
+	Machines  []string
+	OfferedBy string
+	Endpoint  string
+}
+
+// roomOffer is the value of a room's offer field; both empty is no offer.
+type roomOffer struct {
+	OfferedBy string `json:"offeredBy,omitempty"`
+	Endpoint  string `json:"endpoint,omitempty"`
+}
+
+// userLists is the user's lists rebuilt from their settled fields.
+type userLists struct {
+	colleagues map[string]colleagueEntry
+	rooms      map[string]roomEntry
+}
+
+// splitEntry parses an entry into its kind, the colleague or room it belongs to, and
+// the field. An entry in another form, such as one written by a build that held a
+// whole colleague in one entry, gives ok false and is ignored.
+func splitEntry(entry string) (kind, id, field string, ok bool) {
+	if rest, found := strings.CutPrefix(entry, entryColleague); found {
+		i := strings.LastIndex(rest, ":")
+		if i <= 0 || i == len(rest)-1 {
+			return "", "", "", false
+		}
+		return entryColleague, rest[:i], rest[i+1:], true
+	}
+	if rest, found := strings.CutPrefix(entry, entryRoom); found {
+		id, field, ok = strings.Cut(rest, ":")
+		return entryRoom, id, field, ok && id != "" && field != ""
+	}
+	return "", "", "", false
+}
+
+// rebuildLists makes each colleague and room from its settled fields. A value that
+// does not parse leaves its field as if it had never been written.
+func rebuildLists(merged map[string]ListChange) userLists {
+	l := userLists{colleagues: map[string]colleagueEntry{}, rooms: map[string]roomEntry{}}
+	for entry, c := range merged {
+		kind, id, field, ok := splitEntry(entry)
+		if !ok {
+			continue
+		}
+		switch kind {
+		case entryColleague:
+			v := l.colleagues[id]
+			switch field {
+			case fieldLabel:
+				json.Unmarshal([]byte(c.Value), &v.Label)
+			case fieldVerified:
+				json.Unmarshal([]byte(c.Value), &v.Verified)
+			case fieldForgotten:
+				json.Unmarshal([]byte(c.Value), &v.Forgotten)
+			case fieldEndpoints:
+				json.Unmarshal([]byte(c.Value), &v.Endpoints)
+			default:
+				continue
+			}
+			l.colleagues[id] = v
+		case entryRoom:
+			v := l.rooms[id]
+			switch {
+			case field == fieldName:
+				json.Unmarshal([]byte(c.Value), &v.Name)
+			case field == fieldOffer:
+				var o roomOffer
+				if json.Unmarshal([]byte(c.Value), &o) == nil {
+					v.OfferedBy, v.Endpoint = o.OfferedBy, o.Endpoint
+				}
+			case strings.HasPrefix(field, fieldMachine):
+				var joined bool
+				if json.Unmarshal([]byte(c.Value), &joined) == nil && joined {
+					v.Machines = uniqueSorted(append(v.Machines, strings.TrimPrefix(field, fieldMachine)))
+				}
+			default:
+				continue
+			}
+			l.rooms[id] = v
+		}
+	}
+	return l
 }
 
 // trustedListChanges is every change to user's lists signed by a machine the user's
@@ -75,6 +172,11 @@ func (m *Membership) trustedListChanges(user string) []ListChange {
 // them, by entry.
 func (m *Membership) UserLists(user string) map[string]ListChange {
 	return MergeListChanges(user, m.trustedListChanges(user))
+}
+
+// lists is the user's lists rebuilt into colleagues and rooms.
+func (m *Membership) lists(user string) userLists {
+	return rebuildLists(m.UserLists(user))
 }
 
 // listCounter is the highest counter this machine has seen for an entry, from any
@@ -114,46 +216,92 @@ func (m *Membership) writeListChange(id *Identity, entry string, v any) error {
 	return err
 }
 
-// RecordColleague writes the change that leaves a colleague as this machine now holds
-// them: labeled, verified, or forgotten. Called after pairing, labeling, verifying or
+// writeFieldIfChanged writes a change to one field only when the value differs from
+// what the settled lists hold for it, so that a machine recording a verification
+// leaves untouched a label another machine changed at the same time. A field the
+// lists do not hold reads as its zero value, which is what rebuildLists gives it.
+func (m *Membership) writeFieldIfChanged(id *Identity, entry string, was, now any) error {
+	a, err := json.Marshal(was)
+	if err != nil {
+		return err
+	}
+	b, err := json.Marshal(now)
+	if err != nil {
+		return err
+	}
+	if string(a) == string(b) {
+		return nil
+	}
+	return m.writeListChange(id, entry, now)
+}
+
+// RecordColleague writes a change for each field of a colleague that this machine now
+// holds differently from the user's lists: labeled, verified, forgotten, or paired
+// again, which writes forgotten false. Called after pairing, labeling, verifying or
 // forgetting, so that the user's other machines know the colleague the same way
 // (D-228; D-073, forgetting a peer on one machine forgets them on every machine).
+// Forgetting writes only the forgotten field, so a later pairing on any machine
+// undoes it under the counter.
 func (m *Membership) RecordColleague(id *Identity, peer string) error {
-	v := colleagueEntry{Forgotten: true}
-	if m.Knows(peer) {
-		v = colleagueEntry{Label: m.Label(peer), Verified: m.VerifiedAt(peer), Endpoints: m.PeerEndpointsOf(peer)}
+	if !id.HasUser() {
+		return nil
 	}
-	return m.writeListChange(id, entryColleague+peer, v)
+	was := m.lists(id.User).colleagues[peer]
+	pre := entryColleague + peer + ":"
+	if !m.Knows(peer) {
+		return m.writeFieldIfChanged(id, pre+fieldForgotten, was.Forgotten, true)
+	}
+	now := colleagueEntry{Label: m.Label(peer), Verified: m.VerifiedAt(peer), Endpoints: m.PeerEndpointsOf(peer)}
+	return errors.Join(
+		m.writeFieldIfChanged(id, pre+fieldForgotten, was.Forgotten, false),
+		m.writeFieldIfChanged(id, pre+fieldLabel, was.Label, now.Label),
+		m.writeFieldIfChanged(id, pre+fieldVerified, was.Verified, now.Verified),
+		m.writeFieldIfChanged(id, pre+fieldEndpoints, was.Endpoints, now.Endpoints),
+	)
 }
 
 // roomEntryOf is a room as the user's lists hold it, and whether they hold it.
 func (m *Membership) roomEntryOf(user, roomID string) (roomEntry, bool) {
-	c, ok := m.UserLists(user)[entryRoom+roomID]
-	if !ok {
-		return roomEntry{}, false
-	}
-	var v roomEntry
-	if json.Unmarshal([]byte(c.Value), &v) != nil {
-		return roomEntry{}, false
-	}
-	return v, true
+	v, ok := m.lists(user).rooms[roomID]
+	return v, ok
 }
 
-// RecordRoomOnList writes the change that puts a room on the user's room list, or
-// changes it there: change edits the entry as the lists hold it now.
+// RecordRoomOnList writes the changes that put a room on the user's room list, or
+// change it there: change edits the room as the lists hold it now, and one change is
+// written for each field it alters, a machine's joining or leaving being a field of
+// that machine's own (D-228, each room on the list carries the user's machines that
+// have joined it).
 func (m *Membership) RecordRoomOnList(id *Identity, roomID, name string, change func(*roomEntry)) error {
 	if !id.HasUser() {
 		return nil
 	}
-	v, _ := m.roomEntryOf(id.User, roomID)
+	was, _ := m.roomEntryOf(id.User, roomID)
+	now := was
+	now.Machines = append([]string(nil), was.Machines...)
 	if name != "" {
-		v.Name = name
+		now.Name = name
 	}
 	if change != nil {
-		change(&v)
+		change(&now)
 	}
-	v.Machines = uniqueSorted(v.Machines)
-	return m.writeListChange(id, entryRoom+roomID, v)
+	now.Machines = uniqueSorted(now.Machines)
+	pre := entryRoom + roomID + ":"
+	errs := []error{
+		m.writeFieldIfChanged(id, pre+fieldName, was.Name, now.Name),
+		m.writeFieldIfChanged(id, pre+fieldOffer, roomOffer{was.OfferedBy, was.Endpoint}, roomOffer{now.OfferedBy, now.Endpoint}),
+	}
+	joined := func(list []string) map[string]bool {
+		out := map[string]bool{}
+		for _, k := range list {
+			out[k] = true
+		}
+		return out
+	}
+	before, after := joined(was.Machines), joined(now.Machines)
+	for _, k := range uniqueSorted(append(append([]string(nil), was.Machines...), now.Machines...)) {
+		errs = append(errs, m.writeFieldIfChanged(id, pre+fieldMachine+k, before[k], after[k]))
+	}
+	return errors.Join(errs...)
 }
 
 // withMachine and withoutMachine are the changes for a machine joining and leaving.
@@ -195,15 +343,7 @@ func uniqueSorted(in []string) []string {
 func (m *Membership) RoomOnList(user, nameOrID string) (string, roomEntry, bool) {
 	var hits []string
 	var found roomEntry
-	for entry, c := range m.UserLists(user) {
-		if !strings.HasPrefix(entry, entryRoom) {
-			continue
-		}
-		var v roomEntry
-		if json.Unmarshal([]byte(c.Value), &v) != nil {
-			continue
-		}
-		id := strings.TrimPrefix(entry, entryRoom)
+	for id, v := range m.lists(user).rooms {
 		if id == nameOrID || v.Name == nameOrID {
 			hits = append(hits, id)
 			found = v
@@ -260,36 +400,25 @@ func (m *Membership) JoinFromList(id *Identity, roomID string, v roomEntry, show
 // ApplyUserLists makes this machine's tables follow the user's lists as they have
 // settled: each colleague known, labeled, verified or forgotten as the lists say, an
 // offered room waiting here as an offer, and each room joined here reaching the user's
-// machines that joined it. A machine that joined a room the settled list does not say
-// it joined, which happens when two machines joined at once and one change won, says
-// so again with a change of its own.
+// machines that joined it. Each machine's joining a room is its own entry, so two
+// machines joining at once both stand and nothing here has to say it again.
 func (m *Membership) ApplyUserLists(id *Identity) error {
 	if !id.HasUser() {
 		return nil
 	}
+	l := m.lists(id.User)
 	var errs []error
-	for entry, c := range m.UserLists(id.User) {
-		switch {
-		case strings.HasPrefix(entry, entryColleague):
-			peer := strings.TrimPrefix(entry, entryColleague)
-			if _, err := PublicFromPeerID(peer); err != nil || peer == id.User {
-				continue
-			}
-			var v colleagueEntry
-			if json.Unmarshal([]byte(c.Value), &v) != nil {
-				continue
-			}
-			if err := m.applyColleague(peer, v); err != nil {
-				errs = append(errs, err)
-			}
-		case strings.HasPrefix(entry, entryRoom):
-			var v roomEntry
-			if json.Unmarshal([]byte(c.Value), &v) != nil {
-				continue
-			}
-			if err := m.applyRoom(id, strings.TrimPrefix(entry, entryRoom), v); err != nil {
-				errs = append(errs, err)
-			}
+	for peer, v := range l.colleagues {
+		if _, err := PublicFromPeerID(peer); err != nil || peer == id.User {
+			continue
+		}
+		if err := m.applyColleague(peer, v); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	for roomID, v := range l.rooms {
+		if err := m.applyRoom(id, roomID, v); err != nil {
+			errs = append(errs, err)
 		}
 	}
 	return errors.Join(errs...)
@@ -342,18 +471,13 @@ func (m *Membership) applyRoom(id *Identity, roomID string, v roomEntry) error {
 		}
 		return nil
 	}
-	in := false
 	for _, k := range v.Machines {
 		if k == id.PeerID {
-			in = true
 			continue
 		}
 		if err := m.RecordRoomMachine(roomID, k, id.User); err != nil {
 			return err
 		}
-	}
-	if !in && m.SessionsInRoom(roomID) > 0 {
-		return m.RecordRoomOnList(id, roomID, v.Name, withMachine(id.PeerID))
 	}
 	return nil
 }

@@ -82,6 +82,13 @@ func shortHash(h [32]byte) string { return hex.EncodeToString(h[:8]) }
 // verify yet may verify once another arrives, such as a machine certificate
 // whose shared-key certificate is still in transit, so the caller reruns Resolve
 // over the whole set whenever it grows rather than carrying a verdict forward.
+//
+// Of several certificates for one machine, the one under the highest shared
+// version wins, then the one with the highest serial, then the lowest hash, so
+// that renaming a machine, which certifies it again under a new serial, always
+// changes its name everywhere (D-224, a conflict between identity records goes
+// to the higher level, then to a removal, then to the lowest hash, applied to
+// one machine's own certificates).
 func Resolve(user string, rs RecordSet) *UserState {
 	s := &UserState{
 		User:       user,
@@ -151,8 +158,11 @@ func Resolve(user string, rs RecordSet) *UserState {
 	}
 	for machine, certs := range certsByMachine {
 		// The highest version is the user's latest word on the machine. Under one
-		// version every certificate is a shared-level addition, so D-224 decides
-		// by hash alone.
+		// version every certificate is a shared-level addition of the same
+		// machine, so they are not rivals as D-224 means them but successive
+		// words on one machine: a rename certifies the machine again with a new,
+		// higher serial, and the highest serial wins so that a rename always takes
+		// effect. Only between equal serials does D-224's lowest hash decide.
 		var win [32]byte
 		found := false
 		for h, c := range certs {
@@ -160,9 +170,7 @@ func Resolve(user string, rs RecordSet) *UserState {
 				win, found = h, true
 				continue
 			}
-			w := certs[win]
-			if c.SharedVersion > w.SharedVersion ||
-				(c.SharedVersion == w.SharedVersion && Prevails(Claim{Level: LevelShared, Hash: h}, Claim{Level: LevelShared, Hash: win})) {
+			if certSupersedes(c, h, certs[win], win) {
 				win = h
 			}
 		}
@@ -302,6 +310,20 @@ func removalCutoffs(machine string, removals map[[32]byte]Removal) map[string]in
 		}
 	}
 	return out
+}
+
+// certSupersedes reports whether machine certificate a, with hash ha, is the
+// user's later word on its machine than b: the higher shared version, then the
+// higher serial, which a rename takes, then the lower hash. It is a total order
+// on distinct hashes, so Resolve's choice does not depend on map order.
+func certSupersedes(a MachineCert, ha [32]byte, b MachineCert, hb [32]byte) bool {
+	if a.SharedVersion != b.SharedVersion {
+		return a.SharedVersion > b.SharedVersion
+	}
+	if a.Serial != b.Serial {
+		return a.Serial > b.Serial
+	}
+	return Prevails(Claim{Level: LevelShared, Hash: ha}, Claim{Level: LevelShared, Hash: hb})
 }
 
 // keepLeastSigned stores a verified record under its hash. Two copies with one

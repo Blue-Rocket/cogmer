@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -400,6 +401,109 @@ func TestTwoConcurrentLabelChangesOnTwoMachinesSettleToTheSameValueOnBoth(t *tes
 	la, lb := a.d.members.Label(carol), b.d.members.Label(carol)
 	if la != lb || (la != "carol" && la != "caz") {
 		t.Errorf("the two machines settled on %q and %q", la, lb)
+	}
+}
+
+// A label is one entry and a verification another (D-228), so a label changed on one
+// machine and a verification made on another before either hears of the other both
+// stand on both machines, where one entry per colleague kept only one of them.
+func TestALabelOnOneMachineAndAVerificationOnAnotherBothSurvive(t *testing.T) {
+	a, b := twoMachines(t)
+	carol := testIdentity(t).PeerID
+	if err := a.d.members.Allow(carol, "carol"); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.d.members.RecordColleague(a.d.id, carol); err != nil {
+		t.Fatal(err)
+	}
+	a.d.exchangeSelfLists()
+	if b.d.members.Label(carol) != "carol" {
+		t.Fatalf("the second machine did not learn of carol: label %q", b.d.members.Label(carol))
+	}
+
+	if err := a.d.members.Allow(carol, "caz"); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.d.members.RecordColleague(a.d.id, carol); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.d.members.MarkVerified(carol); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.d.members.RecordColleague(b.d.id, carol); err != nil {
+		t.Fatal(err)
+	}
+	a.d.exchangeSelfLists()
+	b.d.exchangeSelfLists()
+	for name, m := range map[string]*machine{"first": a, "second": b} {
+		if m.d.members.Label(carol) != "caz" || !m.d.members.IsVerified(carol) {
+			t.Errorf("the %s machine has carol labeled %q, verified %v; want caz and verified",
+				name, m.d.members.Label(carol), m.d.members.IsVerified(carol))
+		}
+	}
+}
+
+// Each machine's joining a room is an entry of its own (D-228), so two machines that
+// join one room before either hears of the other both appear as joined on both.
+func TestTwoMachinesJoiningOneRoomAtOnceBothAppearJoinedOnBoth(t *testing.T) {
+	a, b := twoMachines(t)
+	room := foundAndSay(t, a, "SAID BEFORE THE SECOND JOIN")
+	a.d.exchangeSelfLists()
+	// The first machine leaves and joins again while the second joins, so both
+	// write their joining before either hears of the other's.
+	if err := a.d.members.RecordRoomOnList(a.d.id, room.RoomID, room.RoomName, withoutMachine(a.d.id.PeerID)); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.d.members.RecordRoomOnList(a.d.id, room.RoomID, room.RoomName, withMachine(a.d.id.PeerID)); err != nil {
+		t.Fatal(err)
+	}
+	joinByName(t, b, room.RoomName, "b-session")
+	a.d.exchangeSelfLists()
+	b.d.exchangeSelfLists()
+	want := uniqueSorted([]string{a.d.id.PeerID, b.d.id.PeerID})
+	for name, m := range map[string]*machine{"first": a, "second": b} {
+		_, v, ok := m.d.members.RoomOnList(m.d.id.User, room.RoomName)
+		if !ok || !reflect.DeepEqual(v.Machines, want) {
+			t.Errorf("the %s machine's room list holds the room as joined by %v, want both machines", name, v.Machines)
+		}
+	}
+}
+
+// Forgetting writes only the forgotten field, and pairing again writes it false, so a
+// colleague forgotten and then paired again is known on every machine (D-228,
+// forgetting a colleague does not win over a later change).
+func TestForgettingAndThenPairingAgainLeavesTheColleagueKnown(t *testing.T) {
+	a, b := twoMachines(t)
+	carol := testIdentity(t).PeerID
+	if err := a.d.members.Allow(carol, "carol"); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.d.members.RecordColleague(a.d.id, carol); err != nil {
+		t.Fatal(err)
+	}
+	a.d.exchangeSelfLists()
+	if err := b.d.members.Forget(carol); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.d.members.RecordColleague(b.d.id, carol); err != nil {
+		t.Fatal(err)
+	}
+	b.d.exchangeSelfLists()
+	if a.d.members.Knows(carol) {
+		t.Fatal("the forget did not reach the first machine")
+	}
+	if err := a.d.members.Allow(carol, "carol"); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.d.members.RecordColleague(a.d.id, carol); err != nil {
+		t.Fatal(err)
+	}
+	a.d.exchangeSelfLists()
+	b.d.exchangeSelfLists()
+	for name, m := range map[string]*machine{"first": a, "second": b} {
+		if !m.d.members.Knows(carol) || m.d.members.Label(carol) != "carol" {
+			t.Errorf("after pairing again the %s machine knows carol %v as %q", name, m.d.members.Knows(carol), m.d.members.Label(carol))
+		}
 	}
 }
 

@@ -123,6 +123,18 @@ CREATE TABLE IF NOT EXISTS pending_offers (
   endpoint     TEXT NOT NULL,
   offered_at   TEXT NOT NULL
 );
+-- A room this machine's user was expelled from, which an admitted guest has since
+-- offered again, so the machine syncs and serves it until the invitation that lifts
+-- the revocation arrives (D-241, an invitation that lifts the revocation lets the
+-- expelled user's turns reach the room by ordinary synchronization). revocations is
+-- the JSON list of the revocations of this machine's user held when the offer came,
+-- so that a revocation made after it ends the resumption.
+CREATE TABLE IF NOT EXISTS resumed_rooms (
+  room_id     TEXT PRIMARY KEY,
+  host        TEXT NOT NULL,
+  revocations TEXT NOT NULL,
+  resumed_at  TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS rooms (
   room_id         TEXT PRIMARY KEY,
   -- Not UNIQUE. Names collide by design (D-017) and this table holds rooms other

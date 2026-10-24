@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -429,11 +430,11 @@ func syncAs(t *testing.T, d *Daemon, id *Identity, roomID string) *httptest.Resp
 	return w
 }
 
-// A revoked user's sync request is refused with the revocation that expelled them and
-// nothing else of the room, their machine checks and stores it, and Expulsion reads it.
-// A user who was never invited is refused with nothing, and a refusal for one room
-// carries none of another room's revocations (D-241).
-func TestARevokedUsersRefusedRequestCarriesTheRevocationAndNothingElseOfTheRoom(t *testing.T) {
+// A revoked user's sync request is refused with the room's guest-list events and none
+// of its conversation, their machine checks and stores them, and Expulsion reads the
+// revocation. A user who was never invited is refused with nothing, and a refusal for
+// one room carries none of another room's events (D-241).
+func TestARevokedUsersRefusedRequestCarriesTheGuestListEventsAndNoConversation(t *testing.T) {
 	ana, ben, cal := newTestUser(t), newTestUser(t), newTestUser(t)
 	a, rooms := newFounder(t, ana.machine(t, "laptop"), ana, 2)
 	room, other := rooms[0], rooms[1]
@@ -466,12 +467,26 @@ func TestARevokedUsersRefusedRequestCarriesTheRevocationAndNothingElseOfTheRoom(
 	if err := json.Unmarshal(w.Body.Bytes(), &refusal); err != nil {
 		t.Fatal(err)
 	}
-	if len(refusal.Revocations) != 1 || refusal.Revocations[0].EventType != GuestRevoke || refusal.Revocations[0].RoomID != room.RoomID {
-		t.Fatalf("the refusal carries %+v; want the one revocation of this room", refusal.Revocations)
+	// The founding, the invitation of ben and his revocation, in that order, and no
+	// turn of the room.
+	kinds := func(evs []wireEvent, roomID string) []string {
+		var out []string
+		for _, e := range evs {
+			if e.RoomID != roomID {
+				out = append(out, "another room's "+e.EventType)
+				continue
+			}
+			out = append(out, e.EventType)
+		}
+		return out
+	}
+	want := []string{GuestInvite, GuestInvite, GuestRevoke}
+	if got := kinds(refusal.GuestEvents, room.RoomID); !reflect.DeepEqual(got, want) {
+		t.Fatalf("the refusal carries %v; want this room's guest-list events %v", got, want)
 	}
 	var elsewhere revocationRefusal
 	if w := syncAs(t, a.d, b.d.id, other.RoomID); w.Code != http.StatusForbidden || json.Unmarshal(w.Body.Bytes(), &elsewhere) != nil ||
-		len(elsewhere.Revocations) != 1 || elsewhere.Revocations[0].RoomID != other.RoomID {
+		!reflect.DeepEqual(kinds(elsewhere.GuestEvents, other.RoomID), want) {
 		t.Errorf("the refusal for the other room was %d %s", w.Code, w.Body.String())
 	}
 	for _, leak := range []string{"said before the revocation", "said after the revocation", `"events"`} {
@@ -494,6 +509,136 @@ func TestARevokedUsersRefusedRequestCarriesTheRevocationAndNothingElseOfTheRoom(
 	}
 	if _, ok := a.d.Expulsion(room.RoomID); ok {
 		t.Error("the revoking machine reads an expulsion of its own user")
+	}
+}
+
+// A revocation counts only when its author is on the list, so a refusal carries the
+// room's invitations with its revocations: an expelled machine that never held the
+// invitation of the guest who revoked it still learns that it was expelled (D-241).
+func TestAnExpelledMachineThatNeverHeldTheRevokersInvitationStillReadsItselfExpelled(t *testing.T) {
+	ana, ben, cal := newTestUser(t), newTestUser(t), newTestUser(t)
+	a, rooms := newFounder(t, ana.machine(t, "laptop"), ana, 1)
+	room := rooms[0]
+	b := newUserPeer(t, room.RoomID, room.RoomName, ben.machine(t, "desktop"), ben)
+	c := newUserPeer(t, room.RoomID, room.RoomName, cal.machine(t, "tablet"), cal)
+	introduceUsers(t, a, b, room.RoomID)
+	introduceUsers(t, a, c, room.RoomID)
+	introduceUsers(t, b, c, room.RoomID)
+	if err := a.d.InviteUser(room.RoomID, ben.id); err != nil {
+		t.Fatal(err)
+	}
+	pull(t, b, a) // ben's machine holds the founding and its own invitation
+	if err := a.d.InviteUser(room.RoomID, cal.id); err != nil {
+		t.Fatal(err)
+	}
+	pull(t, c, a)
+	if err := c.d.RevokeUser(room.RoomID, ben.id); err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range heldEvents(t, b, room.RoomID) {
+		if g, ok := guestEventFrom(e); ok && g.Subject == cal.id {
+			t.Fatal("the setup is wrong: ben's machine already holds cal's invitation")
+		}
+	}
+
+	pull(t, b, c) // refused, with the room's guest-list events
+	ex, ok := b.d.Expulsion(room.RoomID)
+	if !ok || !ex.Expelled || len(ex.Revocations) != 1 || ex.Revocations[0].Author != cal.id {
+		t.Errorf("the expelled machine reads %+v, %v; want expelled by cal", ex, ok)
+	}
+}
+
+// Inviting back an expelled user delivers an offer as any invitation does, and their
+// machine, on an offer from a guest still on the list, syncs and serves the room
+// again, so the turn their session captured while expelled reaches the room by
+// ordinary sync with no other step (D-105, an invitation is delivered as an offer;
+// D-241, an invitation that lifts the revocation lets those turns reach the room).
+func TestAnExpelledUsersTurnReachesTheRoomOnceTheyAreInvitedBack(t *testing.T) {
+	ana, ben := newTestUser(t), newTestUser(t)
+	a, rooms := newFounder(t, ana.machine(t, "laptop"), ana, 1)
+	room := rooms[0]
+	b := newUserPeer(t, room.RoomID, room.RoomName, ben.machine(t, "desktop"), ben)
+	introduceUsers(t, a, b, room.RoomID)
+	if err := a.d.InviteUser(room.RoomID, ben.id); err != nil {
+		t.Fatal(err)
+	}
+	pull(t, b, a)
+	if err := b.d.members.SetMachineEndpoint(a.d.id.PeerID, ana.id, a.addr); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.d.members.SetMachineEndpoint(b.d.id.PeerID, ben.id, b.addr); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.d.RevokeUser(room.RoomID, ben.id); err != nil {
+		t.Fatal(err)
+	}
+	pull(t, b, a) // refused, with the revocation
+	if !b.d.expelledFrom(room.RoomID) {
+		t.Fatal("ben's machine did not learn that he was expelled")
+	}
+	b.say(t, room.RoomID, "s", EventUserPrompt, "written while expelled")
+	pull(t, a, b)
+	if has(t, a, room.RoomID, "written while expelled") {
+		t.Fatal("a turn written while expelled reached the room before the invitation")
+	}
+
+	// The invitation, as /cogmer:room-invite makes it: the event, then the offer.
+	if err := a.d.InviteUser(room.RoomID, ben.id); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.d.deliverOffer(ben.id, room); err != nil {
+		t.Fatalf("the offer was not delivered: %v", err)
+	}
+	if b.d.expelledFrom(room.RoomID) {
+		t.Fatal("the offer did not resume the room on ben's machine")
+	}
+	if _, ok := b.d.members.FindOffer(room.RoomID); ok {
+		t.Error("a room ben's sessions are still in was recorded as an offer to accept")
+	}
+
+	pull(t, b, a)
+	pull(t, a, b)
+	if !has(t, a, room.RoomID, "written while expelled") {
+		t.Error("the turn written while expelled did not reach the room by ordinary sync")
+	}
+	if _, expelled := b.d.listExpels(room.RoomID); expelled {
+		t.Error("ben's machine did not receive the invitation that lifted the revocation")
+	}
+	if _, _, ok := b.d.members.Resumption(room.RoomID); ok {
+		t.Error("the resumption outlived the invitation it waited for")
+	}
+}
+
+// An offer resumes a room only from a guest the list admits, and a revocation made
+// after the offer ends the resumption (D-241).
+func TestAResumptionNeedsAnAdmittedGuestAndEndsAtANewRevocation(t *testing.T) {
+	ana, ben, cal := newTestUser(t), newTestUser(t), newTestUser(t)
+	a, rooms := newFounder(t, ana.machine(t, "laptop"), ana, 1)
+	room := rooms[0]
+	b := newUserPeer(t, room.RoomID, room.RoomName, ben.machine(t, "desktop"), ben)
+	introduceUsers(t, a, b, room.RoomID)
+	if err := a.d.InviteUser(room.RoomID, ben.id); err != nil {
+		t.Fatal(err)
+	}
+	pull(t, b, a)
+	if err := a.d.RevokeUser(room.RoomID, ben.id); err != nil {
+		t.Fatal(err)
+	}
+	pull(t, b, a)
+	if b.d.resumeOnOffer(offerRequest{RoomID: room.RoomID, PeerID: cal.id}) || !b.d.expelledFrom(room.RoomID) {
+		t.Fatal("an offer from a user not on the list resumed the room")
+	}
+	if !b.d.resumeOnOffer(offerRequest{RoomID: room.RoomID, PeerID: ana.id, Signer: a.d.id.PeerID, Endpoint: a.addr}) ||
+		b.d.expelledFrom(room.RoomID) {
+		t.Fatal("an offer from a guest on the list did not resume the room")
+	}
+	// A second revocation, made after the offer, arrives in the next refusal.
+	if err := a.d.RevokeUser(room.RoomID, ben.id); err != nil {
+		t.Fatal(err)
+	}
+	pull(t, b, a)
+	if !b.d.expelledFrom(room.RoomID) {
+		t.Error("a revocation made after the offer left the room resumed")
 	}
 }
 

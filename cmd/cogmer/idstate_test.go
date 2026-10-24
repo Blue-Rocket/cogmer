@@ -205,11 +205,35 @@ func TestAMachineRecertifiedUnderAHigherVersionTakesThatCert(t *testing.T) {
 	wantDiscarded(t, s, old.Hash(), "machine", "superseded")
 }
 
-func TestTwoCertsForOneMachineUnderOneVersionGoToTheLowestHash(t *testing.T) {
+// A rename certifies a machine again under a new serial, so the highest serial
+// wins whatever the hashes say. The pair below is chosen so that the renamed
+// certificate has the higher hash, which the old rule, the lowest hash alone,
+// would have given to the old name.
+func TestAMachinesHighestSerialWinsUnderOneVersion(t *testing.T) {
+	u := newStateUser("twin")
+	m := stateKeyFrom("twin/m")
+	old := u.certify(1, m, KindMachine, "old name", 4)
+	var renamed MachineCert
+	for i := 0; ; i++ {
+		renamed = u.certify(1, m, KindMachine, fmt.Sprintf("new name %d", i), 5)
+		if hashLess(old.Hash(), renamed.Hash()) {
+			break
+		}
+	}
+	for _, order := range [][]MachineCert{{old, renamed}, {renamed, old}} {
+		s := Resolve(u.id(), RecordSet{Shared: []SharedKeyCert{u.share(1)}, Machines: order})
+		if got := s.Machines[m.id].Cert; got != renamed {
+			t.Fatalf("machine took %q, want the rename %q", got.Name, renamed.Name)
+		}
+		wantDiscarded(t, s, old.Hash(), "machine", "superseded")
+	}
+}
+
+func TestTwoCertsForOneMachineWithOneSerialGoToTheLowestHash(t *testing.T) {
 	u := newStateUser("twin")
 	m := stateKeyFrom("twin/m")
 	a := u.certify(1, m, KindMachine, "one name", 4)
-	b := u.certify(1, m, KindMachine, "another name", 5)
+	b := u.certify(1, m, KindMachine, "another name", 4)
 	win, lose := a, b
 	if hashLess(b.Hash(), a.Hash()) {
 		win, lose = b, a
@@ -649,7 +673,7 @@ func TestResolveDoesNotDependOnTheOrderOfRecords(t *testing.T) {
 		Machines: []MachineCert{
 			u.certify(1, m1, KindMachine, "m1", 1), u.certify(2, m1, KindMachine, "m1", 4),
 			u.certify(2, m2, KindMachine, "m2", 2), u.certify(2, m2, KindMachine, "m2 again", 2),
-			u.certify(1, m3, KindMachine, "m3", 3),
+			u.certify(1, m3, KindMachine, "m3", 3), u.certify(1, m3, KindMachine, "m3 renamed", 6),
 			CertifyMachine(rivalKey.priv, u.id(), 2, cloud.pub, KindCloud, "cloud", 5),
 			u.certify(2, cloud, KindCloud, "cloud", 5),
 		},

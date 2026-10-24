@@ -190,40 +190,21 @@ func (d *Daemon) machineViews() []machineView {
 	return out
 }
 
-// displayCerts is, for each machine of user not removed, the certificate whose name
-// and serial are shown and carried: the valid one under the highest shared version,
-// and of those the highest serial, so that the latest renaming is the name (D-231,
-// renaming a machine certifies it again under its key with the new name). Resolve
-// settles a machine's certificate by the lowest hash under one version, which a
-// renaming wins only half the time, so the name is not taken from it. current says
-// which machines are certified under the user's current shared key.
+// displayCerts is, for each machine of user not removed, the certificate Resolve
+// settles on, whose name and serial are shown and carried; Resolve takes the
+// highest serial under a version, so the latest renaming is the name (D-231,
+// renaming a machine certifies it again under its key with the new name). current
+// says which machines are certified under the user's current shared key.
 func (m *Membership) displayCerts(user string) (map[string]MachineCert, map[string]bool) {
-	rs, _, err := m.IdentityRecords(user)
 	out, current := map[string]MachineCert{}, map[string]bool{}
+	rs, _, err := m.IdentityRecords(user)
 	if err != nil {
 		return out, current
 	}
-	st := Resolve(user, rs)
-	for _, c := range rs.Machines {
-		ms, ok := st.Machines[c.Machine]
-		if !ok || ms.Removed || c.User != user {
-			continue
+	for k, ms := range Resolve(user, rs).Machines {
+		if !ms.Removed {
+			out[k], current[k] = ms.Cert, ms.Current
 		}
-		key, ok := st.SharedKeys[c.SharedVersion]
-		if !ok {
-			continue
-		}
-		pub, _ := PublicFromPeerID(key)
-		if c.VerifyBy(pub) != nil {
-			continue
-		}
-		best, have := out[c.Machine]
-		if !have || c.SharedVersion > best.SharedVersion || (c.SharedVersion == best.SharedVersion && c.Serial > best.Serial) {
-			out[c.Machine] = c
-		}
-	}
-	for k, c := range out {
-		current[k] = c.SharedVersion == st.Current
 	}
 	return out, current
 }

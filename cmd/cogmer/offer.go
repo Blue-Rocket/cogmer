@@ -95,7 +95,9 @@ func (d *Daemon) signOffer(r Room, endpoint string) (offerRequest, error) {
 
 // handleOffer receives an invitation. It stores it and does nothing else: the room
 // is not recorded, not synchronized and not shown as joined, because none of that
-// has been agreed to yet.
+// has been agreed to yet. The exception is a room this machine's sessions are in and
+// its user was expelled from, which resumeOnOffer syncs again, since joining it was
+// agreed to before the revocation.
 func (d *Daemon) handleOffer(w http.ResponseWriter, r *http.Request) {
 	var req offerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -147,6 +149,16 @@ func (d *Daemon) handleOffer(w http.ResponseWriter, r *http.Request) {
 	// withholding exists to prevent.
 	if !d.members.IsVerified(req.PeerID) {
 		http.Error(w, "not verified", http.StatusForbidden)
+		return
+	}
+	// A room this machine's user was expelled from, offered again by a guest still on
+	// its list, is synced and served again rather than offered, since its sessions
+	// never left it and kept capturing (D-241).
+	if d.resumeOnOffer(req) {
+		log.Printf("OFFER %s from %s — you were invited back, and this machine syncs the room again",
+			req.RoomName, PeerName(req.PeerID))
+		d.notify()
+		writeJSON(w, map[string]string{"status": "resumed"})
 		return
 	}
 	if err := d.members.RecordOffer(Offer{

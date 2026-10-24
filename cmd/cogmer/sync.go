@@ -386,15 +386,15 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusForbidden {
 		// The room's guests revoked this machine's user, and the refusal carries the
-		// revocations that did (D-241, an expelled user is told, through the refusal
-		// that carries the revocation).
+		// room's guest-list events, the revocations that did among them (D-241, an
+		// expelled user is told, through the refusal that carries the revocation).
 		var refusal revocationRefusal
 		if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&refusal); err != nil || refusal.RoomID != room.RoomID {
 			return 0, nil
 		}
 		d.mu.Lock()
 		defer d.mu.Unlock()
-		d.keepRevocations(store, room, addr, refusal.Revocations)
+		d.keepGuestEvents(store, room, addr, refusal.GuestEvents)
 		return 0, nil
 	}
 	if resp.StatusCode == http.StatusUnauthorized {

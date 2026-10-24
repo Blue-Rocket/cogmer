@@ -161,6 +161,7 @@ func (d *Daemon) refreshGuestList(store *Store, roomID string) (*GuestList, erro
 	if err := d.members.CacheGuestList(g); err != nil {
 		return nil, err
 	}
+	d.settleResumption(g, evs)
 	return g, nil
 }
 
