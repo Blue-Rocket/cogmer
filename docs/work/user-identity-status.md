@@ -12,9 +12,9 @@ says so.
 Before the second run, the maintainer decided on 2026-10-23 that the user, and not the
 machine, is the primary entity, and answered ten questions it raised, recorded in
 `docs/work/user-primary-inventory.md`. The decisions and the specification were rewritten to
-match on 2026-10-24. The build questions in `docs/open.md` come next, of which all but the wire
-forms are decided, then a revision of the design, which gains a slice for a user's own
-machines, and only then the second run.
+match on 2026-10-24, and the seven build questions were decided the same day, in D-224 and
+D-234 to D-239 among others. Next is a revision of the design, which gains a slice for a
+user's own machines, and only then the second run.
 
 Merged in the first run:
 
@@ -42,8 +42,10 @@ What the second run's slices need to know from the first:
   removal of that machine is held.
 - `Resolve` is rerun over the whole record set whenever the set grows. A machine
   certificate whose shared-key certificate has not arrived is discarded until it has.
-- A machine certificate under an older shared version is kept with `Current` false. What it
-  may still do is question 4 in section 7 of the design.
+- A machine certificate under an older shared version is kept with `Current` false, and the
+  machine is suspended: `Counts` gives false for its events and `Check` refuses its chain
+  until it is certified under the current version (D-234). Only the current shared key may
+  remove a machine (D-220).
 
 Next, the slices in section 6 of the design, in order: storage, then trust, then
 propagation, then removal and recovery beside cloud.
@@ -56,9 +58,8 @@ started seconds after the file was created still branched from `main`, and one s
 minute later branched from `user-identity`. Each agent checks that its `HEAD` holds the last
 commit of `user-identity` before editing.
 
-The questions recorded are in `docs/open.md`, in the item that opens "Building the user
-identity needs answers that no decision gives", and the reasoning for each choice is in
-section 7 of the design.
+The details the decisions leave undecided are in `docs/open.md`, in the item that opens "The
+decisions that make the user the peer leave details undecided".
 
 Tests: run `go test -tags ts_debug_websockets ./...` in a cloud session. It passed with no
 test skipped, in 139s on 2026-10-24. In a cloud session cogmer asks the relay client to carry

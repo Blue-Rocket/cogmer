@@ -287,15 +287,6 @@ sending a new pairing string, how a cloud session's hooks load, and whether a co
 shares of the recovery phrase could recover a user who has lost it, which no decision has
 examined.
 
-**Building the user identity needs answers that no decision gives, and the build on the
-`user-identity` branch takes a choice for each.** `docs/work/user-identity-design.md`
-section 7 holds the reasoning, and each choice stands until the maintainer confirms or
-changes it:
-
-- The wire form of certificates and of an event a machine signs for its user. The build
-  signs length-prefixed fields as events are, carries JSON, and puts the user in an event's
-  peer identifier with the signing key beside it.
-
 **The decisions that make the user the peer leave details undecided.** Each is needed by a
 slice of the second run, and none has a choice taken yet:
 

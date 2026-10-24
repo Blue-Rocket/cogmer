@@ -116,9 +116,8 @@ This is the design for the trust and propagation slices, and no foundation code 
 An event under scheme v4 has the user's identifier in `PeerID`, a new field `Signer` naming
 the machine or session key that signed it, and a new field `Chain` that carries the chain
 and is not signed. The v4 signing bytes are the v3 fields under the tag
-`peer-room/event/v4`, followed by the signer. The identity version the sender holds and
-the hashes of the removals it has seen go in `Metadata`, which v3 already signs, under the
-keys `idv` and `idr`. `PeerSequence` is the signer's own sequence in the room, so an event
+`peer-room/event/v4`, followed by the signer, the shared-key version the sender holds and the
+hashes of the removals it has seen, each a signed field of its own (D-239). `PeerSequence` is the signer's own sequence in the room, so an event
 is identified by its signer, room and sequence, and a sequence conflict (D-027) is between
 two events of one signer. A v3 event verifies as it does now.
 
@@ -319,11 +318,11 @@ and the slices on one line can run at the same time.
    a machine's key. Adding a machine of one's own belongs here. Tests: frozen v4 vectors
    beside the v3 ones, a machine the user added later syncs with a colleague who verified
    only the first, and a chain to an unverified master is refused.
-3. Propagation, after trust. `idv` and `idr` in event metadata, a fetch route for identity
-   records like `/blob`, the withhold rule (D-221) under the existing notice of a turn not
-   yet given to the assistant, the list sync between a user's machines (D-222) and the push
-   with acknowledgement to colleagues (D-225). Tests: an event naming a version the
-   receiver lacks is shown and withheld until the record arrives from a third peer.
+3. Propagation, after trust. The shared-key version and removals an event names (D-239), a
+   fetch route for identity records like `/blob`, the withhold rule (D-221) under the existing
+   notice of a turn not yet given to the assistant, the list sync between a user's machines
+   (D-222) and the push with acknowledgement to colleagues (D-225). Tests: an event naming a
+   version the receiver lacks is shown and withheld until the record arrives from a third peer.
 4. Removal and recovery, after propagation, at the same time as 5. The browser pages that
    take the phrase (D-223), removing a machine with a cutoff, certifying a new shared key,
    and marking a removed machine's later events in the view and never giving them to an
@@ -342,7 +341,9 @@ Every slice that serves a room copies the two-room tests in `roomscope_test.go`.
    not conflict, so every valid removal takes effect, a self-removal included.
 2. Decided on 2026-10-24 and written into D-237: the phrase is 18 words of the PGP word list,
    and the master key is HKDF-SHA256 of its 16 bytes (section 2).
-3. Records are length-prefixed and signed as events are, and carried as JSON (section 3).
+3. Decided on 2026-10-24 and written into D-238 and D-239: records are signed over
+   length-prefixed fields and carried as JSON, and an event carries its certificates and names
+   its signing key, shared-key version and removals seen as signed fields.
 4. Decided on 2026-10-24 and written into D-234: a machine not certified under the current
    shared key is suspended, and its turns appear nowhere until it is certified again.
 5. Decided on 2026-10-24 and written into D-220: a removal signed by an older shared key does
