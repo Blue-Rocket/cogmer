@@ -1131,8 +1131,15 @@ out a colleague, and a room keeps working if its creator is away or stops using 
 The guest list shows who invited and who revoked each guest, so that a guest who
 questions a change knows which colleague made it.
 
-A revocation ends one invitation, and inviting the same colleague again lifts the
-revocation, so that a colleague revoked by mistake can be let back in.
+Revoking a colleague expels them from the room, whoever invited them and however many
+times, so that revoking means what a user expects it to.
+
+Inviting a revoked colleague again lets them back in only when it is done after the
+revocation was seen, so that a colleague revoked by mistake can be let back in, and an
+invitation made at the same moment as a revocation never quietly overrides it.
+
+When two guests revoke each other at the same time, both are out of the room, and either
+can be invited back, so that no rule has to pick one of them arbitrarily.
 
 Both lists can be inspected and changed:
 

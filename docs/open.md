@@ -305,10 +305,6 @@ slice of the second run, and none has a choice taken yet:
   machine of a recorded peer as now (D-101, connections are TLS pinned).
 - Whether adding a machine or pairing can finish on a machine with no browser (D-223, the
   phrase is typed only into the daemon's browser page).
-- Whether a change to a room's guest list counts when the guest who made it is revoked by a
-  change made at the same time, as when two guests revoke each other, and what a revocation
-  does when the same user holds two invitations and it names one (D-235, a room's one guest
-  list decides whose events count).
 - What names the creator's own admission, so that the creator can be revoked (D-235).
 - Whether a revoked guest's turns after the cutoff are fetched again when a new invitation
   lifts the revocation (D-236, a revocation names the last turn that counts).

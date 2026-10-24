@@ -133,8 +133,8 @@ never given to an assistant.
 
 | event type | content, as JSON |
 |---|---|
-| `GUEST_INVITE` | the invited user's identifier, and the hash of the revocation it lifts when it lifts one |
-| `GUEST_REVOKE` | the revoked user's identifier, the event identifier of the invitation it ends, and a cutoff for each of the revoked user's machines: the machine's key and the last sequence that counts (D-236) |
+| `GUEST_INVITE` | the invited user's identifier, and the event identifiers of every revocation of that user it lifts |
+| `GUEST_REVOKE` | the revoked user's identifier, and a cutoff for each of the revoked user's machines: the machine's key and the last sequence that counts (D-236) |
 
 The room's first event is the creator's invitation of themselves, so that the creator is on
 the list by the same rule as everyone else and can be revoked like anyone.
@@ -206,10 +206,9 @@ machine's event does not count.
 
 `ResolveGuests` turns a room's `GUEST_INVITE` and `GUEST_REVOKE` events into the room's
 list, with the same purity as `Resolve`: every machine holding the same events computes the
-same list. An invitation admits its user unless a revocation names it; a later invitation
-naming that revocation admits them again. A revoked user's machines carry the lowest cutoff
-any revocation gave them (D-236). Whose changes count when their makers are revoked by
-changes made at the same time is detail 10 in section 8.
+same list. A user is on the list when some invitation of them names, as lifted, every
+revocation of them, and every revocation by a user who was ever invited counts (D-235). A
+revoked user's machines carry the lowest cutoff any revocation gave them (D-236).
 
 An event reaches the store, the view and an assistant only when its author is on the list,
 or is past it but within a cutoff, and its machine counts under `Resolve` (D-234, D-235).
@@ -459,9 +458,10 @@ slice that needs it. Each is put to the maintainer before that slice starts.
    the request's signature says which.
 9. A machine with no browser (slice 3). Out of scope for the second run, since a cloud
    session needs no phrase (D-223) and every other machine a user adds has a browser.
-10. Guests revoking each other at the same time (slice 0). Every revocation by a user who was
-    ever invited counts, so two guests revoking each other are both revoked, and a revocation
-    names one invitation, leaving another invitation of the same user standing.
+10. Guests revoking each other at the same time (slice 0), confirmed on 2026-10-24 and written
+    into D-235. A revocation expels the user, an invitation counts only if it names every
+    revocation of that user as lifted, and every revocation by a user ever invited counts, so
+    two guests who revoke each other are both out.
 11. The creator's admission (slice 0). The room's first event is the creator's invitation of
     themselves (section 3.3).
 12. Turns past a lifted cutoff (slice 2). They are fetched again by ordinary sync, since a
