@@ -1170,8 +1170,12 @@ reach cogmer captures and receives nothing and shows nothing.
 A peer can be recorded without being verified, for scripts and tests, and such a peer
 cannot collaborate until the comparison happens.
 
-A room's creator is its first guest, so every machine of the creating user may join
-the room.
+A room's creator is its first guest, admitted by inviting themselves when the room is
+founded, so every machine of the creating user may join the room, and the creator can be
+expelled and invited back like any guest.
+
+Nobody can admit themselves to a room that exists, the creator included, so that an
+expelled guest cannot let themselves back in.
 
 A turn counts only if its author is on the room's guest list. A turn whose author is not
 is never stored, shown or given to an assistant, whichever machine carried it, so that

@@ -305,7 +305,14 @@ slice of the second run, and none has a choice taken yet:
   machine of a recorded peer as now (D-101, connections are TLS pinned).
 - Whether adding a machine or pairing can finish on a machine with no browser (D-223, the
   phrase is typed only into the daemon's browser page).
-- What names the creator's own admission, so that the creator can be revoked (D-235).
+- Whether an expelled user is told, and what their own view of the room shows (D-235).
+- Whether an expelled user's machines keep holding and serving the room's history up to the
+  cutoff, which D-071 (leaving is a pause) leaves open for a room a machine's sessions have
+  left.
+- Whether an expelled user's session is shown that it can no longer publish, since a session
+  that keeps capturing turns nobody receives looks like a quiet room (D-194, a colleague this
+  machine cannot reach is named, with how long), and can never join another room (D-016, a
+  session never joins a second room).
 - Whether a revoked guest's turns after the cutoff are fetched again when a new invitation
   lifts the revocation (D-236, a revocation names the last turn that counts).
 - How a room's guest list shows a guest the viewing user has forgotten (D-073, forgetting a

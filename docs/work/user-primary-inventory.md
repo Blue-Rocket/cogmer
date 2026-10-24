@@ -125,6 +125,6 @@ No root question is open.
 
 These keep their status as active and describe the design, while the code gives each machine an
 identity that colleagues verify. Each becomes true of the code when the slice that builds it
-lands: D-023, D-024, D-025, D-042, D-044, D-045, D-048, D-052, D-053, D-062, D-071, D-073,
-D-074, D-086, D-090, D-095, D-097, D-099, D-101, D-103, D-105, D-108, D-109, D-112, D-116,
-D-135, D-141, D-143, D-149, D-152, D-157, D-159, D-186, D-194, D-198 and D-204.
+lands: D-017, D-023, D-024, D-025, D-042, D-044, D-045, D-048, D-052, D-053, D-062, D-071,
+D-073, D-074, D-086, D-090, D-095, D-097, D-099, D-101, D-103, D-105, D-108, D-109, D-112,
+D-116, D-135, D-141, D-143, D-149, D-152, D-157, D-159, D-186, D-194, D-198 and D-204.

@@ -133,11 +133,13 @@ never given to an assistant.
 
 | event type | content, as JSON |
 |---|---|
-| `GUEST_INVITE` | the invited user's identifier, and the event identifiers of every revocation of that user it lifts |
+| `GUEST_INVITE` | the invited user's identifier, the event identifiers of every revocation of that user it lifts, and, for the founding self-invitation only, the random value the room's identifier hashes |
 | `GUEST_REVOKE` | the revoked user's identifier, and a cutoff for each of the revoked user's machines: the machine's key and the last sequence that counts (D-236) |
 
-The room's first event is the creator's invitation of themselves, so that the creator is on
-the list by the same rule as everyone else and can be revoked like anyone.
+The room's first event is the creator's invitation of themselves, carrying a random value,
+and the room's identifier is the SHA-256 of the creator's identifier and that value. A
+self-invitation counts only when it hashes to the room's identifier, and it lifts no
+revocation, so it works once, at founding (D-240).
 
 ### 3.4 Records a user's machines copy between them
 
@@ -462,8 +464,8 @@ slice that needs it. Each is put to the maintainer before that slice starts.
     into D-235. A revocation expels the user, an invitation counts only if it names every
     revocation of that user as lifted, and every revocation by a user ever invited counts, so
     two guests who revoke each other are both out.
-11. The creator's admission (slice 0). The room's first event is the creator's invitation of
-    themselves (section 3.3).
+11. The creator's admission (slice 0), confirmed on 2026-10-24 and written into D-240: the
+    founding self-invitation, under a room identifier that commits to the creator.
 12. Turns past a lifted cutoff (slice 2). They are fetched again by ordinary sync, since a
     receiver never stored them and they are still offered by machines that hold them.
 13. A forgotten guest on a room's list, and a cached list (slices 1 and 5). The list shows
