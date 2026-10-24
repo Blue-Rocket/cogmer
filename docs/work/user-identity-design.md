@@ -13,10 +13,13 @@ acknowledges), D-226 (a cloud session takes the highest valid snapshot from any 
 D-227 (the daemon pushes a new snapshot to the user's repo once the user has opted in) and
 D-216 (a cloud session signs with a key of its own that the user's shared key vouches for).
 
-The first run builds section 3 and section 4 as pure functions with no daemon. Section 6
-lists the slices of the second run in the order of their dependencies. Section 7 lists the
-choices this design makes where no decision settles the question, and `docs/open.md` lists
-each of them as a question.
+It also builds the decisions that make the user, and not the machine, the peer: D-228 to
+D-239, which section 7 names.
+
+The first run built sections 2 to 4 as pure functions with no daemon. Section 6 lists the
+slices of the second run in the order of their dependencies. Section 7 records the choices
+the maintainer made. Section 8 proposes a choice for each detail the decisions leave open,
+for the maintainer to confirm before the slice that needs it starts.
 
 ## 1. Keys
 
@@ -25,7 +28,7 @@ A user has three kinds of key, and a machine has one more.
 | key | made from | held by | signs |
 |---|---|---|---|
 | master | the recovery phrase | nothing; derived while the phrase is in the page, then dropped | shared-key certificates, removals |
-| shared key, version n | random, made when the master certifies it | each machine the user lets hold it, in a file of its own | machine certificates, removals |
+| shared key, version n | random, made when the master certifies it | every machine the user adds, never a cloud key (D-219), in a file of its own | machine certificates, removals |
 | machine key | random, made once on the machine (D-141, a machine's key never leaves it) | the machine, in `identity.key` | events, sync requests, admission proofs, TLS, a self-removal |
 | cloud key | random, made by the cloud setup on a machine | the cloud environment, as its one secret | session certificates, a self-removal |
 | session key | random, made when a cloud session starts | the session's container | events, sync requests, admission proofs, TLS |
@@ -121,6 +124,45 @@ hashes of the removals it has seen, each a signed field of its own (D-239). `Pee
 is identified by its signer, room and sequence, and a sequence conflict (D-027) is between
 two events of one signer. A v3 event verifies as it does now.
 
+### 3.3 Changes to a room's guest list
+
+A room's guest list is the result of invitation and revocation events in the room itself
+(D-235, a room's one guest list decides whose events count). They are v4 events like any
+turn, signed by a guest's machine, sequenced and relayed with the room's other events, and
+never given to an assistant.
+
+| event type | content, as JSON |
+|---|---|
+| `GUEST_INVITE` | the invited user's identifier, and the hash of the revocation it lifts when it lifts one |
+| `GUEST_REVOKE` | the revoked user's identifier, the event identifier of the invitation it ends, and a cutoff for each of the revoked user's machines: the machine's key and the last sequence that counts (D-236) |
+
+The room's first event is the creator's invitation of themselves, so that the creator is on
+the list by the same rule as everyone else and can be revoked like anyone.
+
+### 3.4 Records a user's machines copy between them
+
+A user's colleagues, verifications, labels and room list belong to the user (D-228, a
+user's lists are copied between the user's machines). Each change is a `ListChange` record,
+signed by the machine that made it under its chain and carried with the identity records
+between the user's machines (D-222).
+
+| field | meaning |
+|---|---|
+| user | the user whose list this is |
+| entry | what the change is about: `colleague:<identifier>` or `room:<identifier>` |
+| value | the entry as the change leaves it: a colleague's label, whether and when they were verified, or forgotten; a room's name and the user's machines that joined it |
+| counter | one more than the highest counter the machine has seen for that entry |
+| signer, chain, signature | as for any identity record (D-238) |
+
+How two changes to one entry merge is detail 1 in section 8.
+
+### 3.5 The two words when adding a machine
+
+Adding a machine runs the commit-then-reveal exchange of a pairing (D-048) under the purpose
+tags `peer-room/sas-machine/v1` and `peer-room/sas-machine-commit/v1`, over the two machine
+keys and two fresh nonces (D-229, a machine is added from another of the user's machines).
+The tags differ from a colleague pairing's, so neither exchange can pass for the other.
+
 ## 4. Resolving a user's records
 
 A receiver holds a set of records for each user it knows. `Resolve` turns that set into the
@@ -156,8 +198,21 @@ addition, then the lowest hash. `Prevails` implements that order once and `Resol
 for every conflict above. A removal and the certificate of the machine it removes do not
 conflict, because a removal presupposes the certificate it ends (question 1 in section 7).
 
-A machine's event counts when the machine is not removed, or when the event's sequence in
-its room is at most the machine's cutoff there. An unknown machine's event does not count.
+A machine's event counts when the machine is current, and either not removed or the event's
+sequence in its room is at most the machine's cutoff there. An unknown or suspended
+machine's event does not count.
+
+### 4.1 Resolving a room's guest list
+
+`ResolveGuests` turns a room's `GUEST_INVITE` and `GUEST_REVOKE` events into the room's
+list, with the same purity as `Resolve`: every machine holding the same events computes the
+same list. An invitation admits its user unless a revocation names it; a later invitation
+naming that revocation admits them again. A revoked user's machines carry the lowest cutoff
+any revocation gave them (D-236). Whose changes count when their makers are revoked by
+changes made at the same time is detail 10 in section 8.
+
+An event reaches the store, the view and an assistant only when its author is on the list,
+or is past it but within a cutoff, and its machine counts under `Resolve` (D-234, D-235).
 
 ## 5. Go interfaces between the slices
 
@@ -293,6 +348,18 @@ func (s *UserState) List() []MachineCert  // the machines not removed, sorted by
 func (s *UserState) Check(c Chain, signer string) (ChainLink, error) // verifies c and refuses
 	// a chain whose shared certificate lost, or whose machine is removed
 func (s *UserState) Lacks(version uint64, removals [][32]byte) bool // D-221's test
+
+// Added in the second run's first slice.
+func (s *UserState) CheckEvent(c Chain, signer string) (ChainLink, error) // as Check, without
+	// refusing a removed machine, whose events count up to its cutoff
+func ResolveGuests(room string, events []Event) *GuestList
+type GuestList struct {
+	Admitted map[string]bool             // user identifier to whether the user is on the list
+	Cutoffs  map[string]map[string]int64 // revoked user to machine key to last counting sequence
+	Changes  []GuestChange               // who invited or revoked whom, for the view
+}
+func (g *GuestList) Counts(user, machine string, sequence int64) bool
+func MergeListChanges(changes []ListChange) map[string]ListChange // detail 1 in section 8
 ```
 
 `Removal` carries its signer's level because a receiver has to know which key to check the
@@ -301,56 +368,103 @@ fails in step 3.
 
 ## 6. The slices of the second run
 
-Each slice is one agent in its own worktree. The order is the order of the dependencies,
-and the slices on one line can run at the same time.
+Each slice is one agent in its own worktree, started from the last commit of
+`user-identity` (`worktree.baseRef` is `"head"`). The order is the order of the
+dependencies, and at most three slices run at once.
 
-1. Storage and migration. A table of identity records in `membership.db`, keyed on the
-   record's hash, holding records of every user this machine knows; the machine's own
-   certificate and chain in `identity.json`; the shared key's private half in
-   `shared.key`, a file of its own (D-153, the private key is kept in a file of its own);
-   a `signer` column on `events`, migrated with `addColumnIfMissing` and filled with
-   `peer_id` for v3 events. Tests: a store made before the migration opens and reads, and
-   `shared.key` never appears in `identity.json` or `whoami`.
-2. Trust. Event scheme v4 (section 3.2) beside v3, a sync request scheme carrying the chain,
-   the chain in the TLS certificate as an extension that `pinnedVerifier` reads (D-101, peer
-   connections are TLS pinned), admission by chain (D-143, admission is proved by signing a
-   fresh challenge), and pairing that records and verifies a user's master key rather than
-   a machine's key. Adding a machine of one's own belongs here. Tests: frozen v4 vectors
-   beside the v3 ones, a machine the user added later syncs with a colleague who verified
-   only the first, and a chain to an unverified master is refused.
-3. Propagation, after trust. The shared-key version and removals an event names (D-239), a
-   fetch route for identity records like `/blob`, the withhold rule (D-221) under the existing
-   notice of a turn not yet given to the assistant, the list sync between a user's machines
-   (D-222) and the push with acknowledgement to colleagues (D-225). Tests: an event naming a
-   version the receiver lacks is shown and withheld until the record arrives from a third peer.
-4. Removal and recovery, after propagation, at the same time as 5. The browser pages that
-   take the phrase (D-223), removing a machine with a cutoff, certifying a new shared key,
-   and marking a removed machine's later events in the view and never giving them to an
-   assistant. Tests: the phrase reaches no command, argument or log, and an event past a
-   cutoff never reaches a hook's output.
-5. Cloud, after trust and propagation, at the same time as 4. The cloud key and session
-   key (D-216), the snapshot and its sources (D-226), the push to the user's repo (D-227),
-   the setup command, and fail-open behavior under `CLAUDE_CODE_REMOTE`. The three probes
-   the brief names run in this slice.
+0. Foundation additions. `CheckEvent`, `ResolveGuests` and `GuestList`, and
+   `MergeListChanges` once detail 1 is confirmed, as pure functions with tests, beside the
+   foundation in `idstate.go`. Tests: two guests' machines holding one set of guest-list
+   events in different orders compute one list; a removed machine's event within its cutoff
+   passes `CheckEvent`.
+1. Storage and migration, after 0. A table of identity records and `ListChange` records in
+   `membership.db`, keyed on the record's hash; a machine table holding each machine's
+   address, replacing the address on `known_peers` (D-103, an address belongs to a machine);
+   the machine's own chain in `identity.json` and the shared key in `shared.key` (D-153);
+   `signer` on `events`, filled with `peer_id` for v3 events; a cache of each room's guest
+   list computed from its events. Tests: a store made before the migration opens and reads,
+   and `shared.key` never appears in `identity.json` or `whoami`.
+2. Trust, after 1. Event scheme v4 (D-239) beside v3; a sync request scheme carrying the
+   chain; the chain in the TLS certificate as an extension that `pinnedVerifier` reads
+   (D-101); admission by chain (D-143); pairing that records and verifies a colleague's
+   master key, with the words over the two users' identifiers (D-048); the author check
+   against the room's guest list (D-235) and revocation with its cutoff (D-236); forgetting
+   that leaves rooms alone (D-073). Tests: frozen v4 vectors beside the v3 ones; a machine
+   the user added later syncs with a colleague who verified only the first; a chain to an
+   unverified master is refused; a revoked guest's turn past the cutoff is not stored.
+3. A user's own machines, after 2, beside 4. The identity page (D-230) with the phrase and
+   its confirmation; adding a machine with the machine words (D-229); `self-machines` and the
+   machine list in `self-status` (D-231); copying `ListChange` records (D-228); joining a room
+   by name from the shared room list; syncing a room between the user's machines that joined
+   it (D-103, D-222). Tests: a colleague verified on one machine is verified on the other; a
+   session on a second machine joins by name and receives the room; the two machines' turns
+   reach each other with no colleague online.
+4. Propagation, after 2, beside 3. The shared-key version and removals an event names
+   (D-239); a fetch route for identity records like `/blob`; the withhold rule (D-221) under
+   the existing notice of a turn not yet given to the assistant; the push with
+   acknowledgement to colleagues (D-225). Tests: an event naming a version the receiver
+   lacks is shown and withheld until the record arrives from a third machine.
+5. Removal, recovery and what the user sees, after 3 and 4, beside 6. Removing a machine
+   with a cutoff and certifying a new shared key with the user confirming each removal to
+   carry (D-220); suspension (D-234); recovery from the phrase (D-223); the user's own turns
+   marked as theirs (D-232); machine names (D-233); "mine" by user (D-198); reachability
+   per colleague and per own machine (D-194). Tests: the phrase reaches no command, argument
+   or log; a suspended machine's turn appears in no view, export or hook output; an event
+   past a cutoff never reaches a hook's output.
+6. Cloud, after 3 and 4, beside 5. The cloud key and session key (D-216), the snapshot and
+   its sources (D-226), the push to the user's repo (D-227), the setup command, and
+   fail-open behavior under `CLAUDE_CODE_REMOTE`. The three probes the brief names run in
+   this slice.
 
-Every slice that serves a room copies the two-room tests in `roomscope_test.go`.
+Every slice that serves a room copies the two-room tests in `roomscope_test.go`. A slice's
+decisions become active, and the specification already states them, when its behavior is
+reachable.
 
-## 7. Choices this design makes where no decision settles the question
+## 7. Choices the maintainer made
 
-1. Decided on 2026-10-24 and written into D-224: a removal and the certificate it removes do
-   not conflict, so every valid removal takes effect, a self-removal included.
-2. Decided on 2026-10-24 and written into D-237: the phrase is 18 words of the PGP word list,
-   and the master key is HKDF-SHA256 of its 16 bytes (section 2).
-3. Decided on 2026-10-24 and written into D-238 and D-239: records are signed over
-   length-prefixed fields and carried as JSON, and an event carries its certificates and names
-   its signing key, shared-key version and removals seen as signed fields.
-4. Decided on 2026-10-24 and written into D-234: a machine not certified under the current
-   shared key is suspended, and its turns appear nowhere until it is certified again.
-5. Decided on 2026-10-24 and written into D-220: a removal signed by an older shared key does
-   not count, and certifying a new shared key signs the valid removals again under it.
-6. Decided on 2026-10-24 and written into D-219: every machine the user adds holds the shared
-   key, and a cloud key never does. Certifying a new shared key signs again only the removals
-   the user confirms (D-220).
-7. Decided on 2026-10-24 and written into D-235 and D-236: a room has one guest list made of
-   invitation and revocation events any guest signs, an event counts only if its author is on
-   it, and a revocation names the last turn of each of the revoked user's machines that counts.
+The first run's seven questions were decided on 2026-10-24: a removal and the certificate it
+removes do not conflict (D-224); the phrase is 18 words of the PGP word list (D-237); records
+are signed over length-prefixed fields and carried as JSON, and an event names its signing
+key, shared-key version and removals seen as signed fields (D-238, D-239); a machine not
+certified under the current shared key is suspended (D-234); only the current shared key
+removes, and a new key carries only the removals the user confirms (D-220); every machine the
+user adds holds the shared key (D-219); and a room has one guest list that any guest changes
+(D-235, D-236).
+
+## 8. Details the decisions leave open, with a proposed choice
+
+These are the details in `docs/open.md`, each with the choice this design proposes and the
+slice that needs it. Each is put to the maintainer before that slice starts.
+
+1. Merging changes to a user's copied lists (slice 0). The change with the highest counter
+   for an entry wins, and the lowest hash between two with one counter, so every machine
+   computes the same value with no clock.
+2. Naming a machine and the display name (slice 3). The page asks for a machine's name when
+   the machine is added, with no default, and asks for the display name with an empty field,
+   since a guessed name is never presented as a choice.
+3. Acknowledgement by a colleague (slice 4). One machine of the colleague acknowledging
+   counts, since it copies the record to the colleague's other machines with the colleague's
+   identity records.
+4. Offers (slice 3). An offer goes to every machine of the guest the inviting machine knows,
+   and an offered room enters the guest's shared room list as offered, so the guest can join
+   from any machine.
+5. The user's own turn that no session here holds (slice 5). It is marked as not given to an
+   assistant, as a colleague's is, since it is injected like one.
+6. A removal outside a theft (slice 5). The page proposes, for each room, the removed
+   machine's last turn this machine has seen, and the user confirms it or chooses to mark all.
+7. Recovery and machines the user no longer holds (slice 5). Certifying a new shared key
+   suspends every machine not certified again (D-234), so no separate removal is needed.
+8. Which machine a sync connection reaches (slice 2). Any machine of a guest is accepted, and
+   the request's signature says which.
+9. A machine with no browser (slice 3). Out of scope for the second run, since a cloud
+   session needs no phrase (D-223) and every other machine a user adds has a browser.
+10. Guests revoking each other at the same time (slice 0). Every revocation by a user who was
+    ever invited counts, so two guests revoking each other are both revoked, and a revocation
+    names one invitation, leaving another invitation of the same user standing.
+11. The creator's admission (slice 0). The room's first event is the creator's invitation of
+    themselves (section 3.3).
+12. Turns past a lifted cutoff (slice 2). They are fetched again by ordinary sync, since a
+    receiver never stored them and they are still offered by machines that hold them.
+13. A forgotten guest on a room's list, and a cached list (slices 1 and 5). The list shows
+    the guest by derived name, marked unverified, and `membership.db` caches each room's list
+    computed from its events, rebuilt whenever they change.

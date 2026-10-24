@@ -13,8 +13,9 @@ Before the second run, the maintainer decided on 2026-10-23 that the user, and n
 machine, is the primary entity, and answered ten questions it raised, recorded in
 `docs/work/user-primary-inventory.md`. The decisions and the specification were rewritten to
 match on 2026-10-24, and the seven build questions were decided the same day, in D-224 and
-D-234 to D-239 among others. Next is a revision of the design, which gains a slice for a
-user's own machines, and only then the second run.
+D-234 to D-239 among others. The design was revised the same day: its section 6 lists the second
+run's slices, now seven, and its section 8 proposes a choice for each detail the decisions
+leave open, for the maintainer to confirm before the slice that needs it.
 
 Merged in the first run:
 
@@ -47,8 +48,9 @@ What the second run's slices need to know from the first:
   until it is certified under the current version (D-234). Only the current shared key may
   remove a machine (D-220).
 
-Next, the slices in section 6 of the design, in order: storage, then trust, then
-propagation, then removal and recovery beside cloud.
+Next, the slices in section 6 of the design, in order: foundation additions, storage, trust,
+then a user's own machines beside propagation, then removal and what the user sees beside
+cloud.
 
 An agent's worktree starts from the remote's default branch unless `worktree.baseRef` is
 `"head"` in the Claude Code settings, so each slice needs that setting to start from
