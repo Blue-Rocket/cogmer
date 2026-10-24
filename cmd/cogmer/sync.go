@@ -400,6 +400,9 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 	if resp.StatusCode == http.StatusUnauthorized {
 		// Not a guest there, or no such room. Both are ordinary when a peer hosts
 		// rooms we are not in, so this is not an error worth repeating every second.
+		// It is remembered for the room, whose status says the guests are refusing
+		// this machine when that is the last word from them (D-241).
+		d.noteRoomRefused(room.RoomID)
 		return 0, nil
 	}
 
@@ -417,6 +420,7 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 	}
 
 	d.markPeerSeen(addr)
+	d.noteRoomAnswered(room.RoomID)
 
 	d.mu.Lock()
 	defer d.mu.Unlock()

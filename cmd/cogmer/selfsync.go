@@ -55,6 +55,11 @@ type selfListsPayload struct {
 	Records  []selfRecord  `json:"records,omitempty"`
 	Have     []string      `json:"have,omitempty"`
 	Machines []machineAddr `json:"machines,omitempty"`
+	// HeldShared is the version of the shared key the sender holds, and Shared the
+	// current key for a machine of the user that holds an older one, sent over this
+	// pinned connection (D-219, every machine the user adds holds the shared key).
+	HeldShared uint64         `json:"heldShared,omitempty"`
+	Shared     *sharedKeyGift `json:"shared,omitempty"`
 }
 
 type selfListsRequest struct {
@@ -219,6 +224,7 @@ func (d *Daemon) handleSelfLists(w http.ResponseWriter, r *http.Request) {
 	}
 	d.markPeerHeardFrom(req.Signer)
 	d.ingestSelfRecords(p)
+	d.acceptGift(p.Shared, req.Signer)
 	have := map[string]bool{}
 	for _, h := range p.Have {
 		have[h] = true
@@ -230,6 +236,8 @@ func (d *Daemon) handleSelfLists(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	out.Machines = d.ownMachineAddrs()
+	out.HeldShared = d.heldSharedVersion()
+	out.Shared = d.giftFor(req.Signer, p.HeldShared)
 	writeJSON(w, out)
 }
 
@@ -318,6 +326,15 @@ func (d *Daemon) exchangeWith(machine, addr string) error {
 		}
 	}
 	p.Machines = d.ownMachineAddrs()
+	p.HeldShared = d.heldSharedVersion()
+	// The key is sent until the machine has answered a request that carried it,
+	// which is in memory, so a restarted daemon sends it once more.
+	if g := d.giftFor(machine, 0); g != nil {
+		if k := fmt.Sprintf("shared-key:%d", g.Version); !acked[k] {
+			p.Shared = g
+			sent = append(sent, k)
+		}
+	}
 	payload, err := json.Marshal(p)
 	if err != nil {
 		return err
@@ -371,6 +388,7 @@ func (d *Daemon) exchangeWith(machine, addr string) error {
 	}
 	d.flows.mu.Unlock()
 	d.ingestSelfRecords(answer)
+	d.acceptGift(answer.Shared, machine)
 	return nil
 }
 

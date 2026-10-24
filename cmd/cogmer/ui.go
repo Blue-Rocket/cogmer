@@ -61,6 +61,13 @@ type uiEvent struct {
 	// Images are the pasted images the turn's event names, as the event names them. Whether
 	// this machine holds each one is not said here; the view's stream says it in HTML.
 	Images []imageRef `json:"images,omitempty"`
+	// Machine is the name of the machine the turn came from, as its user gave it, shown
+	// as a field of its own and never joined to a name (D-233).
+	Machine string `json:"machine,omitempty"`
+	// Marked says the turn does not count, "from a removed machine" past its removal's
+	// cutoff (D-220) or "from a removed guest" past a revocation's (D-236). Such a turn
+	// is shown and never given to an assistant.
+	Marked string `json:"marked,omitempty"`
 }
 
 type uiPeer struct {
@@ -83,6 +90,17 @@ type uiPeer struct {
 	// not. An online peer whose turns stop arriving shows here, where the dot alone
 	// says it is reachable.
 	LastTurn string `json:"lastTurn,omitempty"`
+	// Own is one of this user's own machines, named by Name, the name the user gave it,
+	// and keyed by Machine; NoAddress is one this machine has no address for (D-194).
+	Own       bool   `json:"own,omitempty"`
+	Machine   string `json:"machine,omitempty"`
+	NoAddress bool   `json:"noAddress,omitempty"`
+	// Machines is how many of a colleague's machines the line stands for.
+	Machines int `json:"machines,omitempty"`
+
+	addr      string
+	tryingFor time.Duration
+	heardAgo  time.Duration
 }
 
 type uiState struct {
@@ -94,6 +112,12 @@ type uiState struct {
 	// SessionsInRoom is how many sessions on this machine are in the room. A turn nobody has been
 	// given waits for the next prompt of one of them, and with none there is nothing to wait for.
 	SessionsInRoom int `json:"sessionsInRoom"`
+	// Guests is the room's list as its events compute it, with who invited and who
+	// revoked each guest (D-235), for a room that keeps its list as events.
+	Guests []uiGuest `json:"guests,omitempty"`
+	// Removed is this user's removal from the room, when the room's list expels them
+	// (D-241).
+	Removed *removalSummary `json:"removed,omitempty"`
 }
 
 // subscribe registers a channel woken whenever the room changes.
@@ -156,11 +180,23 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 	}
 	now := time.Now()
 	lastTurn := map[string]string{}
-	st := uiState{Room: cur.RoomID, RoomName: cur.RoomName, SelfPeerID: d.id.Peer(), Peers: d.roomPeerStatus(cur.RoomID),
+	self := d.id.Peer()
+	st := uiState{Room: cur.RoomID, RoomName: cur.RoomName, SelfPeerID: self, Peers: d.roomPeerStatus(cur.RoomID),
 		SessionsInRoom: len(d.members.SessionIDsInRoom(cur.RoomID))}
+	st.Guests = d.guestView(store, cur.RoomID)
+	if s, ok := d.removalFrom(cur.RoomID); ok {
+		st.Removed = &s
+	}
 	labels := d.members.Labels()
+	judge := d.standingsFor(cur.RoomID)
 	var imageEvents []Event
 	for _, e := range evs {
+		// A suspended machine's turns appear nowhere, and are kept, so that certifying
+		// the machine again brings them back (D-234).
+		standing := judge.of(e)
+		if standing == standingHidden {
+			continue
+		}
 		// Images that a host showed after their prompt belong to that prompt's turn, and are no
 		// turn of their own (D-214).
 		if e.EventType == EventUserImage {
@@ -176,14 +212,22 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 		ue := uiEvent{
 			EventID: e.EventID, PeerID: e.PeerID, PeerName: PeerName(e.PeerID),
 			Display: e.UserDisplayName, Label: labels[e.PeerID],
-			Verified:  e.PeerID == d.id.PeerID || d.members.IsVerified(e.PeerID),
+			Verified:  e.PeerID == self || d.members.IsVerified(e.PeerID),
 			EventType: e.EventType, Content: e.Content, Clock: ts,
 			// §6 and D-139 require the identifier be shown for any peer whose identity
 			// is unverified. That is every remote peer today. It is not required
-			// for your own turns, where it identifies nothing you did not know.
-			Mine: e.PeerID == d.id.PeerID, At: at,
+			// for your own turns, where it identifies nothing you did not know. A turn
+			// is this user's by the user's identifier, whichever of their machines wrote
+			// it (D-198, the view shows the derived name only on other people's turns).
+			Mine: e.PeerID == self, At: at,
+			Machine: turnMachine(e), Marked: standing.markText(),
 		}
-		ue.NotInSession = !ue.Mine && !cur.ShowOnly && !delivered[e.EventID]
+		// A turn written on this machine is held by the session that wrote it. Any other,
+		// a colleague's or this user's own from another machine, is marked until a session
+		// here holds it, since it is injected as a colleague's is (D-204; D-232). A marked
+		// turn is never given, so it is not waiting for a session.
+		fromHere := ue.Mine && e.signerKey() == d.id.PeerID
+		ue.NotInSession = !fromHere && !cur.ShowOnly && !delivered[e.EventID] && ue.Marked == ""
 		// A change to the guest list is shown as the membership change it is, and is
 		// never given to an assistant, so it is never waiting for one (D-235).
 		if isGuestEventType(e.EventType) {
@@ -518,7 +562,15 @@ func exportMarkdown(st uiState, at time.Time) string {
 	if title == "" {
 		title = st.Room
 	}
-	fmt.Fprintf(&b, "# %s\n\nExported %s from cogmer. %d turns.\n", title, at.Local().Format("2006-01-02 15:04"), len(st.Events))
+	// A turn marked as from a removed machine or a removed guest is in the file, marked,
+	// and left out of the count, since it does not count in the room (D-220, D-236).
+	counted := 0
+	for _, e := range st.Events {
+		if e.Marked == "" {
+			counted++
+		}
+	}
+	fmt.Fprintf(&b, "# %s\n\nExported %s from cogmer. %d turns.\n", title, at.Local().Format("2006-01-02 15:04"), counted)
 	for _, e := range st.Events {
 		who := firstNonEmpty(e.Label, e.Display)
 		if e.EventType == "ASSISTANT_MESSAGE" {
@@ -531,6 +583,13 @@ func exportMarkdown(st uiState, at time.Time) string {
 				b.WriteString(", unverified")
 			}
 			b.WriteString(")")
+		}
+		// The machine's name is its user's claim, on a line of its own (D-233).
+		if e.Machine != "" {
+			fmt.Fprintf(&b, "\n\nmachine, as its user named it: %s", e.Machine)
+		}
+		if e.Marked != "" {
+			fmt.Fprintf(&b, "\n\n*[%s; it does not count]*", e.Marked)
 		}
 		fmt.Fprintf(&b, "\n\n%s\n", strings.TrimRight(e.Content, "\n"))
 		for _, im := range e.Images {
@@ -625,14 +684,14 @@ const reachUnknown = "checking"
 // environment, because peers learned by pairing or by joining a room are most of
 // them.
 func (d *Daemon) peerStatus() []uiPeer {
-	return d.statusOf(d.syncTargets())
+	return d.groupReach(d.statusOf(d.syncTargets()), nil)
 }
 
 // roomPeerStatus is peerStatus for one room: the guests of that room, and the addresses
 // configured for this machine, which this daemon syncs every room with. A room's page
 // says nothing of a colleague who is a guest of another room only.
 func (d *Daemon) roomPeerStatus(roomID string) []uiPeer {
-	return d.statusOf(d.roomTargets(roomID))
+	return d.groupReach(d.statusOf(d.roomTargets(roomID)), d.roomJoinedOwn(roomID))
 }
 
 func (d *Daemon) statusOf(targets []string) []uiPeer {
@@ -641,12 +700,13 @@ func (d *Daemon) statusOf(targets []string) []uiPeer {
 	owners := d.members.EndpointOwners()
 	var out []uiPeer
 	for _, addr := range targets {
-		p := uiPeer{Name: shortEndpoint(addr), Since: reachUnknown}
+		p := uiPeer{Name: shortEndpoint(addr), Since: reachUnknown, addr: addr}
 		if id, ok := owners[addr]; ok {
 			p.PeerID = id
 			p.Name = firstNonEmpty(d.members.Label(id), PeerName(id))
 			if at, ok := d.heard[id]; ok {
-				p.HeardFrom = roughDuration(time.Since(at))
+				p.heardAgo = time.Since(at)
+				p.HeardFrom = roughDuration(p.heardAgo)
 			}
 		}
 		if st, ok := d.peerSeen[addr]; ok {
@@ -665,7 +725,8 @@ func (d *Daemon) statusOf(targets []string) []uiPeer {
 			// its relay, and its first attempts fail whatever state the colleague is in.
 			// Until the failures have lasted unreachableAfter, the peer is being checked.
 			if !p.Online && !st.downSince.IsZero() && time.Since(st.downSince) >= unreachableAfter {
-				p.Trying = roughDuration(time.Since(st.downSince))
+				p.tryingFor = time.Since(st.downSince)
+				p.Trying = roughDuration(p.tryingFor)
 				p.Error = st.lastErr
 			}
 		}
@@ -724,7 +785,18 @@ func (d *Daemon) handleSelf(w http.ResponseWriter, r *http.Request) {
 // handlePeers answers with the state of every peer this daemon tries, for the
 // commands that tell a person whom they can reach. A read like the view's, so it
 // needs no header, and the daemon sends no CORS headers (D-087).
+//
+// Asked with ?room=<identifier>, it answers for that room: its colleagues, one line
+// each, and the user's own machines that joined it, one line each (D-194), and whether
+// the room's guests are refusing this machine (D-241).
 func (d *Daemon) handlePeers(w http.ResponseWriter, r *http.Request) {
+	if roomID := r.URL.Query().Get("room"); roomID != "" {
+		if _, ok := d.members.RoomByID(roomID); ok {
+			writeJSON(w, map[string]any{"peers": d.roomPeerStatus(roomID), "self": d.selfStatus(),
+				"hostCalls": d.hostCalls.ages(), "refusing": d.roomRefusing(roomID)})
+			return
+		}
+	}
 	writeJSON(w, map[string]any{"peers": d.peerStatus(), "self": d.selfStatus(), "hostCalls": d.hostCalls.ages()})
 }
 

@@ -220,7 +220,7 @@ function machines(msg){
   const rows = (state.machines||[]).map(m => `<tr><td><b>${esc(m.name)}</b> <span class="hint">#${esc(m.serial)}</span></td>
       <td class="hint">${esc(reachText(m))}</td>
       <td><button data-rename="${esc(m.machine)}">Rename</button>
-          <button disabled title="Removing a machine comes in a later version">Remove</button></td></tr>`).join('');
+          <button data-remove="${esc(m.machine)}">Remove</button></td></tr>`).join('');
   show(`<p class="lead">Your machines, as ${esc(state.displayName)} (${esc(state.userName)}).</p>
     <div class="card" id="machines"><h2>Machines</h2><table>${rows}</table>${errorBox(msg)}</div>
     <div class="card"><h2>Add a machine</h2>
@@ -229,12 +229,99 @@ function machines(msg){
       <input id="string" autocomplete="off" spellcheck="false" placeholder="ed25519:…@…">
       <div class="row"><button class="yes" id="add">Add</button></div>`
       : `<p class="hint" style="margin:0">This machine holds no shared key, so it cannot add a machine.</p>`}</div>
-    <div class="card"><h2>Recover</h2><p class="hint" style="margin:0 0 6px">If one of your machines was stolen,
-      recovering with your phrase vouches for this machine afresh, and any machine you do not add back stops
-      speaking as you.</p><div class="row"><button id="recover">Recover with my phrase</button></div></div>`);
+    <div class="card"><h2>A new shared key</h2><p class="hint" style="margin:0 0 6px">If one of your machines was stolen,
+      a new shared key, certified with your recovery phrase, vouches again for the machines you keep, and any
+      machine you do not keep, such as one a thief added, stops speaking as you.</p>
+      <div class="row"><button id="newkey">Certify a new shared key</button></div></div>`);
   document.querySelectorAll('[data-rename]').forEach(b => b.onclick = () => rename(b.dataset.rename));
+  document.querySelectorAll('[data-remove]').forEach(b => b.onclick = () => removeAsk(b.dataset.remove));
   if(el('add')) el('add').onclick = addStart;
-  el('recover').onclick = recoverForm;
+  el('newkey').onclick = newKeyForm;
+}
+
+// --- removing a machine (D-220) ---
+
+// The page asks first whether the machine was stolen, since that decides what it proposes:
+// the last turn of the machine this machine holds in each room, so none of your own turns
+// are marked, or none at all.
+function removeAsk(machine){
+  const m = (state.machines||[]).find(x => x.machine === machine) || {name: machine};
+  show(`<p class="lead">Was ${esc(m.name)} stolen?</p>
+    <div class="card"><p style="margin:0 0 6px">${m.self ? 'This is the machine you are using. Removing it means it no longer speaks as you.' :
+      'Removing a machine means it no longer speaks as you.'} Its turns up to the point you choose in each room
+      still count; later ones are shown marked and never given to an assistant.</p>
+      <div class="row">
+        <button class="no" id="stolen">Stolen, or it may be in someone else's hands</button>
+        <button id="retired">Not stolen: retired, or lost where nobody will use it</button>
+        <button id="back">Back</button>
+      </div></div>`);
+  el('stolen').onclick = () => removePropose(machine, true);
+  el('retired').onclick = () => removePropose(machine, false);
+  el('back').onclick = () => machines();
+}
+
+async function removePropose(machine, stolen, msg){
+  const p = await post('/machines/remove/propose', {machine, stolen}).catch(e => ({error:e.message}));
+  if(p.error){ machines(p.error); return; }
+  const rows = (p.rooms||[]).map((r, i) => `<tr><td>${esc(r.roomName)}</td>
+      <td class="hint">its last turn here: ${esc(r.last)}</td>
+      <td><input id="c${i}" type="number" min="0" max="${esc(r.last)}" value="${esc(r.proposed)}" style="width:7em"></td></tr>`).join('');
+  show(`<p class="lead">Remove ${esc(p.name)}: the last of its turns that counts, room by room.</p>
+    <div class="card">
+      <p class="hint" style="margin:0 0 6px">${stolen ? 'Nothing it wrote counts unless you name a turn. Name a later one only if you are sure that turn was yours.' :
+        'Each room shows the last of its turns this machine holds. You can name an earlier one; a cutoff can never be moved later.'}</p>
+      ${rows ? `<table><tr><td><b>Room</b></td><td></td><td><b>Last turn that counts</b></td></tr>${rows}</table>` :
+        '<p class="hint">This machine holds no room, so none of its turns count anywhere.</p>'}
+      <div class="row"><button class="no" id="confirm">Remove ${esc(p.name)}</button><button id="back">Back</button></div>
+      ${errorBox(msg)}</div>`);
+  el('back').onclick = () => machines();
+  el('confirm').onclick = async () => {
+    const cutoffs = {};
+    (p.rooms||[]).forEach((r, i) => { cutoffs[r.room] = parseInt(el('c'+i).value, 10) || 0; });
+    const res = await post('/machines/remove', {machine, stolen, cutoffs}).catch(e => ({error:e.message}));
+    if(res.error){ removePropose(machine, stolen, res.error); return; }
+    state = await post('/identity/state');
+    machines();
+  };
+}
+
+// --- certifying a new shared key (D-220, D-234) ---
+
+// The page lists every removal this machine holds, with the key that signed it, so you can
+// leave out any you did not make: only those you keep are signed again under the new key.
+async function newKeyForm(msg){
+  const p = await post('/machines/newkey/preview').catch(e => ({error:e.message}));
+  if(p.error){ machines(p.error); return; }
+  const rems = (p.removals||[]).map((r, i) => `<tr><td>${r.carried ? `<input type="checkbox" id="r${i}" checked style="width:auto">` : ''}</td>
+      <td>removes <b>${esc(r.machineName || r.machine.slice(0, 20) + '…')}</b></td>
+      <td class="hint">signed by ${esc(r.signedBy)}${r.carried ? '' : '; it carries over by itself'}</td></tr>`).join('');
+  const ms = (p.machines||[]).map((m, i) => `<tr><td><input type="checkbox" id="m${i}" checked ${m.self ? 'disabled' : ''} style="width:auto"></td>
+      <td><b>${esc(m.name)}</b> <span class="hint">#${esc(m.serial)}</span></td>
+      <td class="hint">${m.self ? 'this machine' : (m.removed ? 'removed' : (m.current ? '' : 'suspended'))}</td></tr>`).join('');
+  show(`<p class="lead">Certify shared key version ${esc(p.version)}.</p>
+    <div class="card"><h2>Removals</h2>
+      <p class="hint" style="margin:0 0 6px">Untick any removal you did not make. Only the ones you keep count under the new key.</p>
+      ${rems ? `<table>${rems}</table>` : '<p class="hint">This machine holds no removal.</p>'}</div>
+    <div class="card"><h2>Machines</h2>
+      <p class="hint" style="margin:0 0 6px">Untick any machine you do not recognize. A machine left out stops speaking as you
+      until you add it again, and its turns are hidden until then.</p><table>${ms}</table></div>
+    <div class="card">
+      <label for="phrase">Your recovery phrase, eighteen words</label>
+      <textarea id="phrase" rows="4" autocomplete="off" spellcheck="false"></textarea>
+      <p class="hint">The phrase is used here and forgotten. Never type it into a session or a terminal.</p>
+      <div class="row"><button class="yes" id="go">Certify the new key</button><button id="back">Back</button></div>
+      ${errorBox(typeof msg === 'string' ? msg : '')}</div>`);
+  el('back').onclick = () => machines();
+  el('go').onclick = async () => {
+    const keep = (p.removals||[]).filter((r, i) => r.carried && el('r'+i).checked).map(r => r.hash);
+    const kept = (p.machines||[]).filter((m, i) => el('m'+i).checked).map(m => m.machine);
+    const phrase = el('phrase').value;
+    el('phrase').value = '';
+    const res = await post('/machines/newkey', {phrase, keep, machines: kept}).catch(e => ({error:e.message}));
+    if(res.error){ newKeyForm(res.error); return; }
+    state = await post('/identity/state');
+    machines();
+  };
 }
 
 async function rename(machine){

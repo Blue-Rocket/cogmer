@@ -71,6 +71,16 @@
   #notice p{margin:0;padding:8px 12px;border-left:3px solid var(--warn);background:var(--card)}
   #notice[hidden]{display:none}
   #notice code{background:var(--code);padding:1px 5px;border-radius:3px;white-space:nowrap}
+  .machine{font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:3px;padding:0 4px}
+  .marked{font-size:10px;color:var(--warn);border:1px dashed var(--warn);border-radius:3px;padding:0 4px}
+  .turn.marked-turn .body{opacity:.55}
+  #removed{max-width:820px;margin:16px auto 0;padding:0 20px;font-size:14px}
+  #removed p{margin:0;padding:10px 12px;border-left:3px solid var(--warn);background:var(--card)}
+  #removed[hidden]{display:none}
+  #guests{max-width:820px;margin:12px auto 0;padding:0 20px;font-size:13px;color:var(--dim)}
+  #guests[hidden]{display:none}
+  #guests summary{cursor:pointer}
+  #guests ul{margin:6px 0 0;padding-left:1.2em}
   .empty{color:var(--dim);text-align:center;padding:60px 20px}
   .empty code{background:var(--code);padding:2px 6px;border-radius:3px;font-size:13px}
 </style>
@@ -82,6 +92,8 @@
     <a class="export" id="export" download>Export</a>
   </div>
 </header>
+<div id="removed" hidden></div>
+<details id="guests" hidden><summary>Guests</summary><ul id="guestList"></ul></details>
 <div id="notice" hidden></div>
 <main id="feed"><div class="empty">Waiting for the room…</div></main>
 <button id="jump" hidden></button>
@@ -133,8 +145,16 @@ const ROOM = decodeURIComponent(location.pathname.replace(/^\/room\//, ''));
     // about it are not about any one turn, so the notice above the feed says them once.
     const notyet=e.notInSession
       ? '<span class="notyet" title="Your assistant has not received this turn.">not yet given to your assistant</span>':'';
+    // The machine's name is its user's claim, so it is an element of its own and never
+    // part of a name (D-233).
+    const machine=e.machine
+      ? '<span class="machine" title="The name its user gave the machine this turn came from">machine: '+esc(e.machine)+'</span>':'';
+    // A turn past a removal's or a revocation's cutoff is shown, marked, and never given
+    // to an assistant (D-220, D-236).
+    const marked=e.marked
+      ? '<span class="marked" title="This turn does not count, and no assistant is given it.">'+esc(e.marked)+'</span>':'';
     return '<span class="name '+(mine?'me':'them')+'">'+esc(name)+'</span>'
-      +ident+notyet+'<span class="time">'+esc(e.clock)+'</span>';
+      +ident+machine+marked+notyet+'<span class="time">'+esc(e.clock)+'</span>';
   }
   function toolsHtml(e){
     // A real disclosure rather than a triangle that does nothing: the tool
@@ -150,6 +170,43 @@ const ROOM = decodeURIComponent(location.pathname.replace(/^\/room\//, ''));
   // the fallback.
   const mdHtml=e=>e.html||'<p>'+esc(e.content)+'</p>';
 
+  // This user's removal from the room, by whom and from which turns on, and that the
+  // room is coming back when a guest has offered it again (D-241). Built from text
+  // nodes, since a label is text this user typed.
+  const removed=document.getElementById('removed');
+  function showRemoved(state){
+    const s=state.removed;
+    removed.hidden=!s;
+    if(!s) return;
+    const p=document.createElement('p');
+    const b=document.createElement('b'); b.textContent='You were removed from this room';
+    p.append(b,' by '+(s.by||[]).join(' and ')+'. What counts of yours stops at: '+(s.from||[]).join('; ')+'. '
+      +'The room up to then stays readable here, and your sessions in it keep recording your turns, which reach the room if a guest invites you back.'
+      +(s.resuming?' A guest has offered the room to you again, so it is coming back once their invitation arrives.':''));
+    removed.replaceChildren(p);
+  }
+
+  // The room's guest list, with who invited and who revoked each guest (D-235). A guest
+  // this user does not know, such as one they forgot, is shown by the derived name and
+  // marked unverified (D-073), and a user an invitation counted for whom the list does not
+  // admit is never shown as a guest.
+  const guests=document.getElementById('guests');
+  function showGuests(state){
+    const list=state.guests||[];
+    guests.hidden=list.length===0;
+    document.getElementById('guestList').innerHTML=list.map(g=>{
+      let line='<b>'+esc(g.name)+'</b>';
+      if(!g.self&&!g.verified) line+=' <span class="peer">'+esc(g.peerName)+'</span> <span class="unverified">unverified</span>';
+      const how=[];
+      if(g.founder) how.push('founded the room');
+      if(g.invitedBy&&g.invitedBy.length) how.push('invited by '+g.invitedBy.map(esc).join(', '));
+      if(g.revokedBy&&g.revokedBy.length) how.push('revoked by '+g.revokedBy.map(esc).join(', '));
+      if(g.state==='removed') how.push('not a guest now');
+      if(g.state==='unsettled') how.push('an invitation of them counted, but the room\u2019s changes do not settle, so they are not on the list');
+      return '<li>'+line+(how.length?' \u2014 '+how.join('; '):'')+'</li>';
+    }).join('');
+  }
+
   // What the person can do about turns their assistant has not been given is said once, above the
   // turns. Injection waits for their own next prompt, which most people do not know, so the notice
   // says that, and says how to join the room when no session of theirs is in it. It is built from
@@ -160,7 +217,7 @@ const ROOM = decodeURIComponent(location.pathname.replace(/^\/room\//, ''));
     notice.hidden=n===0;
     if(!n) return;
     const p=document.createElement('p');
-    const turns=n+' turn'+(n>1?'s':'')+' from colleagues '+(n>1?'have':'has')+' not been given to your assistant';
+    const turns=n+' turn'+(n>1?'s':'')+' from colleagues or your other sessions '+(n>1?'have':'has')+' not been given to your assistant';
     if(state.sessionsInRoom>0){
       p.append(turns+' yet. '+(n>1?'They are':'It is')+' included the next time you send a prompt in a session in this room.');
     }else{
@@ -174,6 +231,8 @@ const ROOM = decodeURIComponent(location.pathname.replace(/^\/room\//, ''));
   function draw(state){
     roomTitle=state.roomName||state.room;
     showNotice(state);
+    showRemoved(state);
+    showGuests(state);
     document.getElementById('room').textContent=roomTitle;
     document.getElementById('export').href='/export?room='+encodeURIComponent(ROOM);
 
@@ -211,6 +270,7 @@ const ROOM = decodeURIComponent(location.pathname.replace(/^\/room\//, ''));
       if(at!==t.el) feed.insertBefore(t.el,at||null);
       const h=whoHtml(e,state);
       if(h!==t.html){t.who.innerHTML=h;t.html=h;}
+      t.el.classList.toggle('marked-turn',!!e.marked);
     });
 
     if(pinned&&!document.hidden) toBottom();
@@ -221,7 +281,12 @@ const ROOM = decodeURIComponent(location.pathname.replace(/^\/room\//, ''));
   function peers(list){
     const el=document.getElementById('peers');
     if(!list||!list.length){el.textContent='';return;}
-    el.innerHTML=list.map(p=>'<span><span class="dot '+(p.online?'live':'down')+'"></span>'
+    // A colleague is one line, unreachable only when none of their machines in the room can
+    // be reached; the user's own machines are each a line, by name (D-194).
+    el.innerHTML=list.map(p=>p.own
+      ? '<span><span class="dot '+(p.online?'live':'down')+'"></span>your '+esc(p.name)
+        +(p.online?'':' · '+(p.noAddress?'no address':(p.trying?'unreachable for '+esc(p.trying):esc(p.since))))+'</span>'
+      : '<span><span class="dot '+(p.online?'live':'down')+'"></span>'
       +esc(p.name)+(p.online?'':' · '+(p.trying?'unreachable for '+esc(p.trying):esc(p.since)))
       +(p.peerId?' · '+(p.lastTurn?'last turn '+esc(p.lastTurn):'no turns yet'):'')+'</span>').join(' ');
   }

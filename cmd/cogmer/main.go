@@ -11,10 +11,12 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -1302,12 +1304,19 @@ func runGuests() {
 		if err != nil {
 			log.Fatalf("guests: %v", err)
 		}
-		reach, self, up := fetchPeers()
+		reach, self, up, refusing := fetchPeers(r.RoomID)
 		var rows []guestRow
 		for _, p := range g {
 			rows = append(rows, guestRow{Name: firstNonEmpty(m.Label(p), PeerName(p)), ID: p, Self: p == id.Peer()})
 		}
+		// A user removed from the room is no longer on its list, and is told so here,
+		// by whom and from which turns on (D-241).
+		removal, removed := localRemoval(m, id, r)
+		if removed && !slices.Contains(g, id.Peer()) {
+			rows = append([]guestRow{{Name: "you", ID: id.Peer(), Self: true}}, rows...)
+		}
 		renderGuests(os.Stdout, r.RoomName, rows, reach, self, up)
+		renderRemoval(os.Stdout, removal, removed, refusing)
 		if line := coworkLine(m.SessionIDsInRoom(r.RoomID), fetchHostCalls(), up); line != "" {
 			fmt.Println()
 			fmt.Println(line)
@@ -1356,27 +1365,58 @@ func fetchHostCalls() map[string]string {
 	return body.HostCalls
 }
 
-// fetchPeers asks the running daemon whom it can reach. The answer lives in the
-// daemon, which is the process that tries, so a command that is a separate process
-// has to ask it. The second result is false when no daemon answered.
-func fetchPeers() ([]uiPeer, *uiSelf, bool) {
+// localRemoval reads this machine's record of its user's removal from a room, which is
+// in the room's own events, so the room status says it whether or not a daemon runs.
+func localRemoval(m *Membership, id *Identity, r Room) (removalSummary, bool) {
+	d := &Daemon{id: id, members: m}
+	defer d.closeStores()
+	return d.removalFrom(r.RoomID)
+}
+
+// renderRemoval says that the user was removed from the room, by whom and from which
+// of their turns on, and that their sessions keep their turns; or, when this machine
+// holds no revocation and the room's guests refuse it, that they are refusing it and
+// what that usually means, and no more (D-241).
+func renderRemoval(w io.Writer, s removalSummary, removed, refusing bool) {
+	switch {
+	case removed:
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "YOU WERE REMOVED FROM THIS ROOM. "+s.sentence())
+		fmt.Fprintln(w, "The room up to then stays readable here. Your sessions in it keep recording your turns on this")
+		fmt.Fprintln(w, "machine, and they reach the room if a guest invites you back.")
+		if s.Resuming {
+			fmt.Fprintln(w, "A guest has offered the room to you again, so it is coming back once their invitation arrives.")
+		}
+	case refusing:
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "The room's guests are refusing this machine, which usually means you were removed from the room.")
+	}
+}
+
+// fetchPeers asks the running daemon whom it can reach for one room: its colleagues,
+// one line each, the user's own machines that joined it, one line each, and whether
+// its guests are refusing this machine (D-194; D-241). The answer lives in the daemon,
+// which is the process that tries, so a command that is a separate process has to ask
+// it. The third result is false when no daemon answered.
+func fetchPeers(roomID string) ([]uiPeer, *uiSelf, bool, bool) {
 	c := &http.Client{Timeout: 2 * time.Second}
-	resp, err := c.Get("http://" + addr() + "/peers")
+	resp, err := c.Get("http://" + addr() + "/peers?room=" + url.QueryEscape(roomID))
 	if err != nil {
-		return nil, nil, false
+		return nil, nil, false, false
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, nil, false
+		return nil, nil, false, false
 	}
 	var body struct {
-		Peers []uiPeer `json:"peers"`
-		Self  *uiSelf  `json:"self"`
+		Peers    []uiPeer `json:"peers"`
+		Self     *uiSelf  `json:"self"`
+		Refusing bool     `json:"refusing"`
 	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&body); err != nil {
-		return nil, nil, false
+		return nil, nil, false, false
 	}
-	return body.Peers, body.Self, true
+	return body.Peers, body.Self, true, body.Refusing
 }
 
 type guestRow struct {
@@ -1410,6 +1450,13 @@ func renderGuests(w io.Writer, room string, rows []guestRow, reach []uiPeer, sel
 		}
 		fmt.Fprintf(w, "  %-22s %s%s\n", g.Name, g.ID[:32]+"…", mine)
 		if g.Self {
+			// The user's own machines that joined the room, one by one, since the user
+			// acts on each (D-194).
+			for _, p := range reach {
+				if p.Own {
+					fmt.Fprintf(w, "    your machine %s: %s\n", p.Name, ownReachLine(p, daemonUp))
+				}
+			}
 			continue
 		}
 		line := reachLine(byID[g.ID], daemonUp)
@@ -1424,6 +1471,14 @@ func renderGuests(w io.Writer, room string, rows []guestRow, reach []uiPeer, sel
 		fmt.Fprintln(w, commandText("do not arrive here, and the room looks quiet. They can run /cogmer:self-status to see"))
 		fmt.Fprintln(w, "whether this machine can be reached from theirs, and whether their daemon is running.")
 	}
+}
+
+// ownReachLine says whether this machine can reach one of the user's own machines.
+func ownReachLine(p uiPeer, daemonUp bool) string {
+	if daemonUp && p.NoAddress {
+		return "no address is recorded for it here, so nothing here tries to reach it"
+	}
+	return reachLine(&p, daemonUp)
 }
 
 // selfFailingFor says for how long this daemon has been unreachable, in a few words.

@@ -129,6 +129,16 @@ CREATE TABLE IF NOT EXISTS pending_offers (
 -- expelled user's turns reach the room by ordinary synchronization). revocations is
 -- the JSON list of the revocations of this machine's user held when the offer came,
 -- so that a revocation made after it ends the resumption.
+-- Each session told it was removed from a room, with the revocations it was told of,
+-- so the notice is given once per session for one removal (D-241, an expelled user is
+-- told at the next prompt of each of their sessions in the room).
+CREATE TABLE IF NOT EXISTS expulsion_notices (
+  session_id  TEXT NOT NULL,
+  room_id     TEXT NOT NULL,
+  revocations TEXT NOT NULL,
+  told_at     TEXT NOT NULL,
+  PRIMARY KEY (session_id, room_id, revocations)
+);
 CREATE TABLE IF NOT EXISTS resumed_rooms (
   room_id     TEXT PRIMARY KEY,
   host        TEXT NOT NULL,
