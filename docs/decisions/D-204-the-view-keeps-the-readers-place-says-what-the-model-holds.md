@@ -9,7 +9,10 @@ button that jumps to them and in the tab's title, and clears it on reaching the 
 colleague's turn that no session on this machine is confirmed to hold, except in a show-only room. It shows
 when each colleague last wrote a turn. It offers the room as a Markdown download. A turn written on another
 of this user's machines is the user's own (D-198, the view shows the derived name and the unverified marker
-only on other people's turns), so it is neither counted nor marked as a colleague's turn.
+only on other people's turns), so it is not counted as a colleague's arrival, and it is marked
+when no session on this machine is confirmed to hold it, as a colleague's turn is, since it is
+injected as one (D-232, a user's own turn from another session is injected as a report marked
+as the user's).
 
 **Support.**
 - The view is the only way a user sees a colleague's turns, so a turn the reader did not notice arrived

@@ -290,8 +290,6 @@ examined.
 **The decisions that make the user the peer leave details undecided.** Each is needed by a
 slice of the second run, and none has a choice taken yet:
 
-- Whether a user's own turn from another machine that no session here holds is marked as not
-  given to the assistant (D-204, the view says what the model holds).
 - Which turns a removal marks when the user names no cutoff, outside a theft (D-220).
 - Whether recovery can remove every machine the user no longer holds in one act (D-222).
 - Adding a machine or pairing on a machine with no browser, which the second run leaves out,
