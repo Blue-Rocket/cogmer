@@ -106,6 +106,9 @@ type pinTrust struct {
 	knows func(string) bool
 	self  string
 	live  func(user, signer string, c Chain) error
+	// anyUser accepts a verified chain to a user this machine does not know. It is
+	// true only on a machine with no user whose page is waiting to be added.
+	anyUser bool
 }
 
 // pinnedVerifier checks that whoever is on the other end holds a key this machine
@@ -179,7 +182,7 @@ func pinChain(trust pinTrust, expect, got string, c Chain) error {
 		return fmt.Errorf("expected %s and reached a machine of %s: the address answers for a different user",
 			PeerName(expect), PeerName(user))
 	}
-	known := (trust.self != "" && user == trust.self) || (trust.knows != nil && (trust.knows(user) || trust.knows(got)))
+	known := trust.anyUser || (trust.self != "" && user == trust.self) || (trust.knows != nil && (trust.knows(user) || trust.knows(got)))
 	if !known {
 		return fmt.Errorf("%s speaks for %s, who is not a peer this machine knows", PeerName(got), PeerName(user))
 	}
@@ -199,7 +202,7 @@ func (d *Daemon) pinTrust() pinTrust {
 	if d.id.HasUser() {
 		self = d.id.User
 	}
-	return pinTrust{
+	t := pinTrust{
 		knows: d.members.Knows,
 		self:  self,
 		live: func(user, signer string, c Chain) error {
@@ -207,18 +210,43 @@ func (d *Daemon) pinTrust() pinTrust {
 			return err
 		},
 	}
+	// A machine whose page is waiting to be added has no user yet and knows nobody,
+	// and the machine that adds it is one it has never heard of, so for as long as
+	// the page waits it accepts a machine of any user whose chain verifies. Nothing
+	// is given to that machine but the exchange of D-229 (a machine is added from
+	// another of the user's machines, with the two-word check), whose words the user
+	// compares before anything is written.
+	t.anyUser = !d.id.HasUser() && d.awaitingAdd()
+	return t
 }
 
-// peerTLS caches the certificate, which is derived from a key that never changes.
+// peerTLS caches the certificate, which is derived from the machine's key and, once
+// the machine speaks for a user, from its chain. The chain changes when the user
+// identity is made or the machine is renamed, so the certificate is made again then
+// (reset), and every handshake reads the current one.
 type peerTLS struct {
-	once sync.Once
+	mu   sync.Mutex
+	have bool
 	cert tls.Certificate
 	err  error
 }
 
 func (p *peerTLS) certificate(id *Identity) (tls.Certificate, error) {
-	p.once.Do(func() { p.cert, p.err = peerCert(id) })
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.have {
+		p.cert, p.err = peerCert(id)
+		p.have = true
+	}
 	return p.cert, p.err
+}
+
+// reset drops the cached certificate, so that the next handshake presents one made
+// from the identity as it now is.
+func (p *peerTLS) reset() {
+	p.mu.Lock()
+	p.have = false
+	p.mu.Unlock()
 }
 
 // serverConfig is what the peer listeners present.
@@ -226,16 +254,24 @@ func (p *peerTLS) certificate(id *Identity) (tls.Certificate, error) {
 // A client certificate is REQUIRED, not requested: an anonymous peer has nothing to
 // pin and no business here, and refusing at the handshake is cheaper and clearer
 // than refusing after a body has been read.
+//
+// The certificate and the trust are read at each handshake rather than once, since
+// the listener outlives the moment the user identity is made in the page (D-230, a
+// user identity is made in the daemon's page the first time the user needs one).
 func (d *Daemon) serverConfig() (*tls.Config, error) {
-	cert, err := d.tls.certificate(d.id)
-	if err != nil {
+	if _, err := d.tls.certificate(d.id); err != nil {
 		return nil, err
 	}
 	return &tls.Config{
-		Certificates:          []tls.Certificate{cert},
-		MinVersion:            tls.VersionTLS13,
-		ClientAuth:            tls.RequireAnyClientCert,
-		VerifyPeerCertificate: pinnedVerifier(d.pinTrust(), ""),
+		GetCertificate: func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+			c, err := d.tls.certificate(d.id)
+			return &c, err
+		},
+		MinVersion: tls.VersionTLS13,
+		ClientAuth: tls.RequireAnyClientCert,
+		VerifyPeerCertificate: func(raw [][]byte, chains [][]*x509.Certificate) error {
+			return pinnedVerifier(d.pinTrust(), "")(raw, chains)
+		},
 	}, nil
 }
 
@@ -255,5 +291,23 @@ func (d *Daemon) clientConfig(expect string) (*tls.Config, error) {
 		MinVersion:            tls.VersionTLS13,
 		InsecureSkipVerify:    true,
 		VerifyPeerCertificate: pinnedVerifier(d.pinTrust(), expect),
+	}, nil
+}
+
+// machineClientConfig is the client configuration for dialling a machine being added,
+// which has no user yet and is known here by nothing but the key in the string the
+// user entered: the connection is pinned to exactly that key (D-229, a machine is
+// added from another of the user's machines, with the two-word check).
+func (d *Daemon) machineClientConfig(machine string) (*tls.Config, error) {
+	cert, err := d.tls.certificate(d.id)
+	if err != nil {
+		return nil, err
+	}
+	trust := pinTrust{knows: func(k string) bool { return k == machine }}
+	return &tls.Config{
+		Certificates:          []tls.Certificate{cert},
+		MinVersion:            tls.VersionTLS13,
+		InsecureSkipVerify:    true,
+		VerifyPeerCertificate: pinnedVerifier(trust, machine),
 	}, nil
 }

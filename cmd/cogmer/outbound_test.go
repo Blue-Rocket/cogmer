@@ -50,6 +50,7 @@ var outboundCalls = map[site]struct {
 	{"transport.go", "http.Client"}:           {2, "a peer, over TLS pinned to its key, by TCP or the overlay"},
 	{"sync.go", "http.Client"}:                {1, "the peer client it is handed, which is the one above"},
 	{"verify.go", "http.Client"}:              {1, "the peer client it is handed, which is the one above"},
+	{"machineadd.go", "http.Client"}:          {3, "the peer client it is handed, to a machine being added, pinned to the key in the string the user entered"},
 	{"localguard.go", "http.Client"}:          {1, "the daemon on loopback, with the guard header attached in one place"},
 	{"localguard.go", "http.NewRequest"}:      {1, "the same request"},
 	{"transport.go", "http.Transport"}:        {1, "the same client"},

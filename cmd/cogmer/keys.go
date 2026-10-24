@@ -83,7 +83,9 @@ func loadOrCreateKey() (ed25519.PrivateKey, error) {
 	return priv, nil
 }
 
-func sharedKeyPath() string { return filepath.Join(homeDir(), "shared.key") }
+func sharedKeyPath() string { return sharedKeyPathIn(homeDir()) }
+
+func sharedKeyPathIn(dir string) string { return filepath.Join(dir, "shared.key") }
 
 // sharedKeyFile is the form of shared.key: the private half of the user's shared
 // key and the version the master key certified it under.
@@ -98,7 +100,12 @@ type sharedKeyFile struct {
 // file of its own, apart from identity.json, which whoami prints and a user may
 // hand to a colleague (D-153, the private key is kept in a file of its own).
 func loadSharedKey() (ed25519.PrivateKey, uint64, bool, error) {
-	path := sharedKeyPath()
+	return loadSharedKeyIn(homeDir())
+}
+
+// loadSharedKeyIn is loadSharedKey for the state directory dir.
+func loadSharedKeyIn(dir string) (ed25519.PrivateKey, uint64, bool, error) {
+	path := sharedKeyPathIn(dir)
 	raw, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		return nil, 0, false, nil
@@ -124,20 +131,25 @@ func loadSharedKey() (ed25519.PrivateKey, uint64, bool, error) {
 // writes a temporary file and renames it over the old one, so that a crash leaves
 // either the old key or the new one and never half of either.
 func saveSharedKey(priv ed25519.PrivateKey, version uint64) error {
+	return saveSharedKeyIn(homeDir(), priv, version)
+}
+
+// saveSharedKeyIn is saveSharedKey for the state directory dir.
+func saveSharedKeyIn(dir string, priv ed25519.PrivateKey, version uint64) error {
 	if len(priv) != ed25519.PrivateKeySize {
 		return errors.New("a shared key to save is not an Ed25519 private key")
 	}
 	if version == 0 {
 		return errors.New("shared key version is 0; versions start at 1")
 	}
-	if err := os.MkdirAll(homeDir(), 0o700); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
 	buf, err := json.Marshal(sharedKeyFile{Version: version, PrivateKey: base64.RawURLEncoding.EncodeToString(priv)})
 	if err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(homeDir(), "shared.key.*")
+	tmp, err := os.CreateTemp(dir, "shared.key.*")
 	if err != nil {
 		return err
 	}
@@ -153,7 +165,7 @@ func saveSharedKey(priv ed25519.PrivateKey, version uint64) error {
 	if err := tmp.Close(); err != nil {
 		return err
 	}
-	return os.Rename(tmp.Name(), sharedKeyPath())
+	return os.Rename(tmp.Name(), sharedKeyPathIn(dir))
 }
 
 // signingBytes is the exact sequence an event's signature covers.

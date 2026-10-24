@@ -292,7 +292,7 @@ func TestCodexCommandWrapperRequiresItsOwnSessionAndRendersItsCommands(t *testin
 	run := func(sid string, args ...string) string {
 		t.Helper()
 		cmd := exec.Command("bash", append([]string{filepath.Join(root, "codex-cli.sh")}, args...)...)
-		cmd.Env = append(os.Environ(), "COGMER_BIN="+bin, "COGMER_HOME="+home, "COGMER_PREFLIGHT=off", "CODEX_THREAD_ID="+sid, "CLAUDE_CODE_SESSION_ID=ambient-claude")
+		cmd.Env = append(os.Environ(), "COGMER_BIN="+bin, "COGMER_HOME="+home, "COGMER_PREFLIGHT=off", "COGMER_IDENTITY_PAGE=off", "CODEX_THREAD_ID="+sid, "CLAUDE_CODE_SESSION_ID=ambient-claude")
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatal(err)

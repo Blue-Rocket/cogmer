@@ -239,6 +239,11 @@ func (d *Daemon) FoundRoom(showOnly bool) (Room, error) {
 	if err := d.members.RecordRoomMachine(roomID, d.id.PeerID, d.id.User); err != nil {
 		return Room{}, err
 	}
+	// The room is the user's, so it goes on the room list the user's machines share,
+	// with this machine as one that joined it (D-228).
+	if err := d.members.RecordRoomOnList(d.id, roomID, room.RoomName, withMachine(d.id.PeerID)); err != nil {
+		log.Printf("guests: %s was not written to your room list: %v", room.RoomName, err)
+	}
 	return room, nil
 }
 

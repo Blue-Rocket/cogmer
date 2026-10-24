@@ -210,5 +210,13 @@
         }
       }
     }
-  ]
+  ],
+  "machineSAS": {
+    "machineA": "ed25519:1AS8RFZa7buJkVDlsLOzK5RBvwy3iEwzEw2o28J90s8",
+    "nonceA": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE",
+    "machineB": "ed25519:7TI0snbUztpX1ZutFPuvWnc8DzGMmZ3jpg1TxaWzTAU",
+    "nonceB": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI",
+    "words": "nightbird consulting",
+    "commitmentA": "qFif8WU7o3QKvgqhjIHwUtQj_-9xf0ip3bRDQ_0Rsmc"
+  }
 }

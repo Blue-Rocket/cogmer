@@ -1,0 +1,273 @@
+<!doctype html>
+<!-- Served from the binary; no external requests. This page is the only place the
+     recovery phrase is shown or typed (D-223), and the only place a user identity is
+     made (D-230) and a machine added (D-229). Every request it makes carries the
+     header a page from another site cannot send (D-087). -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>your cogmer identity</title>
+<style>
+  :root {
+    --bg:#faf9f7; --fg:#1c1b19; --dim:#6b6660; --line:#e3e0db;
+    --card:#fff; --code:#f2f0ec; --ok:#2f6f4f; --warn:#a3521f; --stop:#9b2226;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --bg:#16150f; --fg:#e8e4dc; --dim:#8f8a82; --line:#2b2924;
+           --card:#1d1c16; --code:#23211b; --ok:#7fc0a0; --warn:#d99a5e; --stop:#e06c75; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+  header{border-bottom:1px solid var(--line);padding:14px 20px}
+  h1{margin:0;font-size:15px;font-weight:600;letter-spacing:.14em;text-transform:uppercase}
+  h2{font-size:15px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 12px}
+  main{max-width:680px;margin:0 auto;padding:40px 20px 80px}
+  .lead{font-size:17px;margin:0 0 24px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:24px;margin:0 0 24px}
+  .hint{color:var(--dim);font-size:13px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
+  button{font:inherit;font-weight:600;padding:10px 16px;border-radius:7px;cursor:pointer;
+         border:1px solid var(--line);background:var(--card);color:var(--fg)}
+  button:hover{border-color:var(--dim)}
+  button.yes{background:var(--ok);border-color:var(--ok);color:var(--bg)}
+  button.no{border-color:var(--stop);color:var(--stop)}
+  input,textarea{font:inherit;width:100%;padding:9px 11px;border-radius:6px;border:1px solid var(--line);
+         background:var(--bg);color:var(--fg)}
+  label{display:block;margin:14px 0 4px;font-weight:600}
+  ol.phrase{columns:3;column-gap:24px;font:600 17px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace;margin:8px 0 0}
+  @media (max-width:520px){ol.phrase{columns:2}}
+  .words{font:600 32px/1.25 ui-monospace,SFMono-Regular,Menlo,monospace;text-align:center;padding:12px 0 16px;overflow-wrap:anywhere}
+  code{background:var(--code);padding:2px 6px;border-radius:4px;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
+  .fp{display:block;padding:10px 12px;margin:12px 0}
+  .stop{border-color:var(--stop)} .stop h2{color:var(--stop)} .ok h2{color:var(--ok)}
+  .err{color:var(--stop);margin-top:12px}
+  table{width:100%;border-collapse:collapse} td{padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+  .spin{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--dim);
+        margin-right:9px;animation:p 1.1s ease-in-out infinite}
+  @keyframes p{0%,100%{opacity:.25}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){.spin{animation:none;opacity:.6}}
+</style>
+<header><h1>your cogmer identity</h1></header>
+<main><div id="stage"></div></main>
+<script>
+const stage = document.getElementById('stage');
+let state = null;
+
+function esc(s){ const d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML; }
+function show(html){ stage.innerHTML = html; }
+function el(id){ return document.getElementById(id); }
+
+// Every request to our own daemon carries this header; a page from anywhere else
+// cannot send it (D-087).
+async function post(path, body){
+  const r = await fetch(path, {method:'POST', headers:{'Content-Type':'application/json','X-Cogmer':'1'},
+    body: JSON.stringify(body||{})});
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+function errorBox(msg){ return msg ? `<p class="err">${esc(msg)}</p>` : ''; }
+
+async function load(){
+  try { state = await post('/identity/state'); } catch(e){ show(errorBox(e.message)); return; }
+  state.hasUser ? machines() : ask();
+}
+
+// --- no user yet: which of the three ways in ---
+
+function ask(){
+  show(`<p class="lead">Have you used cogmer on another machine?</p>
+    <div class="card">
+      <p style="margin:0 0 6px">Your identity is the same on every machine you use, so that a colleague
+      who knows you on one knows you on all of them. Answer carefully: saying no when you have
+      would make you a second person to your colleagues.</p>
+      <div class="row">
+        <button class="yes" id="first">No, this is my first</button>
+        <button id="athand">Yes, and I have that machine with me</button>
+        <button id="none">Yes, but I no longer have any of them</button>
+      </div>
+    </div>`);
+  el('first').onclick = create;
+  el('athand').onclick = joinStart;
+  el('none').onclick = recoverForm;
+}
+
+// --- creating a user ---
+
+let created = null;
+async function create(){
+  show(`<p class="lead"><span class="spin"></span>Drawing your recovery phrase…</p>`);
+  try { created = await post('/identity/phrase'); } catch(e){ show(errorBox(e.message)); return; }
+  if(created.error){ show(errorBox(created.error)); return; }
+  const words = created.words.map(w => `<li>${esc(w)}</li>`).join('');
+  show(`<p class="lead">Write down these eighteen words, in order.</p>
+    <div class="card"><ol class="phrase">${words}</ol>
+      <p class="hint">This is the only time they are shown. They are you: whoever holds them can
+      speak as you, and with them you can get your identity back if you lose every machine.
+      Keep them on paper or in a password manager, never in a chat or a note an assistant can read.</p>
+      <div class="row"><button class="yes" id="wrote">I have written them down</button></div></div>`);
+  el('wrote').onclick = confirmForm;
+}
+
+function confirmForm(msg){
+  const fields = created.confirm.map(n =>
+    `<label for="w${n}">Word ${n}</label><input id="w${n}" autocomplete="off" spellcheck="false">`).join('');
+  show(`<p class="lead">Type back three of the words, so you know you kept them.</p>
+    <div class="card">${fields}
+      <label for="display">The name your colleagues will see</label>
+      <input id="display" autocomplete="off">
+      <label for="machine">This machine's name</label>
+      <input id="machine" autocomplete="off" value="${esc(state.hostname)}">
+      <p class="hint">The machine's name is shown beside your turns, so you and your colleagues can tell
+      your machines apart. Keep the computer's own name or give it one.</p>
+      <div class="row"><button class="yes" id="make">Make my identity</button></div>
+      ${errorBox(typeof msg === 'string' ? msg : '')}</div>`);
+  el('make').onclick = async () => {
+    const words = {};
+    created.confirm.forEach(n => words[n] = el('w'+n).value);
+    const res = await post('/identity/create', {createId: created.createId, words,
+      displayName: el('display').value, machineName: el('machine').value}).catch(e => ({error:e.message}));
+    if(res.error){ confirmForm(res.error); return; }
+    created = null;
+    done('Your identity is made, and the phrase has been forgotten by this machine.');
+  };
+}
+
+function done(text){
+  show(`<div class="card ok"><h2>Done</h2><p style="margin:0">${esc(text)}</p>
+    <p class="hint">Go back to your session and run the command again.</p></div>`);
+}
+
+// --- adding this machine from another of yours ---
+
+async function joinStart(){
+  let res;
+  try { res = await post('/identity/join/start'); } catch(e){ show(errorBox(e.message)); return; }
+  if(res.error){ show(errorBox(res.error)); return; }
+  show(`<p class="lead">Add this machine from the one you already have.</p>
+    <div class="card"><p style="margin:0 0 6px">On that machine, run <code>/cogmer:self-machines</code>,
+      choose to add a machine, and enter this:</p>
+      <code class="fp">${esc(res.string)}</code>
+      <p class="hint"><span class="spin"></span>Waiting for it. Both pages will then show two words.</p></div>`);
+  pollJoin();
+}
+
+async function pollJoin(){
+  let st;
+  try { st = await post('/identity/join/status'); } catch(e){ setTimeout(pollJoin, 1500); return; }
+  if(st.state === 'compare'){ joinCompare(st.words); return; }
+  if(st.state === 'failed'){ stop(st.error); return; }
+  if(st.state === 'added'){ done('This machine is now one of yours.'); return; }
+  setTimeout(pollJoin, 1000);
+}
+
+function joinCompare(words, msg){
+  show(`<p class="lead">Compare these two words with the other machine's page.</p>
+    <div class="card"><div class="words">${esc(words)}</div>
+      <label for="machine">This machine's name</label>
+      <input id="machine" autocomplete="off" value="${esc(state.hostname)}">
+      <div class="row">
+        <button class="yes" id="same">The other page shows the same two words</button>
+        <button class="no" id="diff">It shows something different</button>
+      </div>${errorBox(msg)}</div>`);
+  el('same').onclick = async () => {
+    const res = await post('/identity/join/confirm', {matched:true, machineName: el('machine').value}).catch(e => ({error:e.message}));
+    if(res.error){ joinCompare(words, res.error); return; }
+    show(`<p class="lead"><span class="spin"></span>Waiting for you to confirm on the other machine…</p>`);
+    pollJoin();
+  };
+  el('diff').onclick = async () => {
+    await post('/identity/join/confirm', {matched:false}).catch(() => {});
+    stop('Different words mean the two pages are not talking to each other. Something is relaying the exchange, and this machine was not added.');
+  };
+}
+
+function stop(msg){
+  show(`<div class="card stop"><h2>Stop</h2><p style="margin:0">${esc(msg||'Nothing was added.')}</p></div>`);
+}
+
+// --- recovering from the phrase ---
+
+function recoverForm(msg){
+  show(`<p class="lead">Recover your identity from your recovery phrase.</p>
+    <div class="card">
+      <label for="phrase">The eighteen words</label>
+      <textarea id="phrase" rows="4" autocomplete="off" spellcheck="false"></textarea>
+      <label for="display">The name your colleagues will see</label>
+      <input id="display" autocomplete="off" value="${esc(state.displayName||'')}">
+      <label for="machine">This machine's name</label>
+      <input id="machine" autocomplete="off" value="${esc(state.hostname)}">
+      <p class="hint">Recovering vouches for this machine afresh. Any machine of yours not vouched for
+      again, such as one a thief added, stops speaking as you, and you add back each machine you still have.</p>
+      <div class="row"><button class="yes" id="go">Recover</button></div>${errorBox(typeof msg==='string'?msg:'')}</div>`);
+  el('go').onclick = async () => {
+    const res = await post('/identity/recover', {phrase: el('phrase').value,
+      displayName: el('display').value, machineName: el('machine').value}).catch(e => ({error:e.message}));
+    if(res.error){ recoverForm(res.error); return; }
+    done('Your identity is recovered on this machine, and the phrase has been forgotten by it.');
+  };
+}
+
+// --- the user's machines (D-231) ---
+
+function reachText(m){
+  if(m.self) return 'this machine';
+  if(!m.current) return 'suspended until it is added again';
+  if(m.reach === 'not reachable') return 'not reachable' + (m.trying ? ' (tried for ' + m.trying + ')' : '');
+  return m.reach || '';
+}
+
+function machines(msg){
+  const rows = (state.machines||[]).map(m => `<tr><td><b>${esc(m.name)}</b> <span class="hint">#${esc(m.serial)}</span></td>
+      <td class="hint">${esc(reachText(m))}</td>
+      <td><button data-rename="${esc(m.machine)}">Rename</button>
+          <button disabled title="Removing a machine comes in a later version">Remove</button></td></tr>`).join('');
+  show(`<p class="lead">Your machines, as ${esc(state.displayName)} (${esc(state.userName)}).</p>
+    <div class="card" id="machines"><h2>Machines</h2><table>${rows}</table>${errorBox(msg)}</div>
+    <div class="card"><h2>Add a machine</h2>
+      ${state.canCertify ? `<p style="margin:0 0 6px">On the new machine, run any cogmer command; its page asks whether you
+      have used cogmer before. Answer that you have the machine with you, and enter the string it shows here.</p>
+      <input id="string" autocomplete="off" spellcheck="false" placeholder="ed25519:…@…">
+      <div class="row"><button class="yes" id="add">Add</button></div>`
+      : `<p class="hint" style="margin:0">This machine holds no shared key, so it cannot add a machine.</p>`}</div>
+    <div class="card"><h2>Recover</h2><p class="hint" style="margin:0 0 6px">If one of your machines was stolen,
+      recovering with your phrase vouches for this machine afresh, and any machine you do not add back stops
+      speaking as you.</p><div class="row"><button id="recover">Recover with my phrase</button></div></div>`);
+  document.querySelectorAll('[data-rename]').forEach(b => b.onclick = () => rename(b.dataset.rename));
+  if(el('add')) el('add').onclick = addStart;
+  el('recover').onclick = recoverForm;
+}
+
+async function rename(machine){
+  const name = prompt('What should this machine be called?');
+  if(!name) return;
+  const res = await post('/machines/rename', {machine, name}).catch(e => ({error:e.message}));
+  state = await post('/identity/state');
+  machines(res.error);
+}
+
+async function addStart(){
+  const s = el('string').value.trim();
+  show(`<p class="lead"><span class="spin"></span>Reaching the new machine…</p>`);
+  const res = await post('/machines/add/start', {string: s}).catch(e => ({error:e.message}));
+  if(res.error){ machines(res.error); return; }
+  show(`<p class="lead">Compare these two words with the new machine's page.</p>
+    <div class="card"><div class="words">${esc(res.words)}</div>
+      <div class="row">
+        <button class="yes" id="same">The new machine shows the same two words</button>
+        <button class="no" id="diff">It shows something different</button>
+      </div></div>`);
+  el('same').onclick = async () => {
+    show(`<p class="lead"><span class="spin"></span>Waiting for you to confirm on the new machine…</p>`);
+    const r = await post('/machines/add/confirm', {addId: res.addId, matched:true}).catch(e => ({error:e.message}));
+    if(r.error){ stop(r.error); return; }
+    state = await post('/identity/state');
+    machines();
+  };
+  el('diff').onclick = async () => {
+    await post('/machines/add/confirm', {addId: res.addId, matched:false}).catch(() => {});
+    stop('Different words mean the two pages are not talking to each other. Something is relaying the exchange, and nothing was added.');
+  };
+}
+
+load();
+</script>

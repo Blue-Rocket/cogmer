@@ -348,7 +348,7 @@ func TestCreateAndJoinRefuseBeforeWritingWhenTheHostCannotBeTold(t *testing.T) {
 	run := func(extra []string, args ...string) (string, int) {
 		cmd := exec.Command(bin, args...)
 		cmd.Env = append([]string{"PATH=/usr/bin:/bin", "HOME=" + dir, "COGMER_HOME=" + home,
-			"COGMER_TAILCAT=off", "COGMER_PREFLIGHT=off", "COGMER_ADDR=127.0.0.1:1"}, extra...)
+			"COGMER_TAILCAT=off", "COGMER_PREFLIGHT=off", "COGMER_IDENTITY_PAGE=off", "COGMER_ADDR=127.0.0.1:1"}, extra...)
 		out, err := cmd.CombinedOutput()
 		code := 0
 		if ee, ok := err.(*exec.ExitError); ok {
@@ -400,7 +400,7 @@ func TestCommandsNameTheNextCommandTheWayTheHostInvokesIt(t *testing.T) {
 	run := func(home string, extra []string, args ...string) string {
 		cmd := exec.Command(bin, args...)
 		cmd.Env = append([]string{"PATH=/usr/bin:/bin", "HOME=" + dir, "COGMER_HOME=" + home,
-			"COGMER_TAILCAT=off", "COGMER_PREFLIGHT=off", "COGMER_ADDR=127.0.0.1:1"}, extra...)
+			"COGMER_TAILCAT=off", "COGMER_PREFLIGHT=off", "COGMER_IDENTITY_PAGE=off", "COGMER_ADDR=127.0.0.1:1"}, extra...)
 		out, _ := cmd.CombinedOutput()
 		return string(out)
 	}

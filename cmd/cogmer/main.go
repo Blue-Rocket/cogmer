@@ -63,6 +63,8 @@ func main() {
 		runWhere()
 	case "whoami":
 		runWhoami()
+	case "machines":
+		runMachines()
 	case "name":
 		runName(os.Args[2:])
 	case "conflicts":
@@ -140,6 +142,7 @@ func usage() {
   cogmer version         Print the build version
   cogmer where           Print the address to watch the room at
   cogmer whoami          Show this peer's identity and room
+  cogmer machines        Open the page where your machines are added, renamed and recovered
   cogmer name [text]     Show or set the name other people see for you
   cogmer conflicts [room] Show quarantined events (sequence conflicts)
 
@@ -169,6 +172,7 @@ Environment:
   COGMER_ADDR        hooks and UI address (loopback only, default 127.0.0.1:4782)
   COGMER_PEER_ADDR   peer sync address (default 127.0.0.1:4783)
   COGMER_PREFLIGHT   set to "off" to skip behavior checks on new rooms
+  COGMER_IDENTITY_PAGE  set to "off" to run a command on a machine with no user identity (tests)
   COGMER_PEERS       comma-separated peer addresses to synchronize with
   COGMER_SYNC_MS     poll interval in milliseconds (default 1000)
   COGMER_MAX_EVENTS       turns per injected block (default 40)
@@ -449,6 +453,11 @@ func runDaemon() {
 
 	d := &Daemon{id: id, members: members}
 	defer d.closeStores()
+	// The machine's own chain is kept with the user's records, so that its own state
+	// and the removals its events name include its own certificates, whatever wrote
+	// identity.json (D-219, a user is a master key that certifies machines through a
+	// shared key).
+	d.storeOwnChain()
 
 	if !isLoopback(addr()) {
 		log.Fatalf("refusing to serve hooks on %s: the hook API publishes into the room "+
@@ -550,6 +559,7 @@ func runDaemon() {
 	go d.RunSync(peerList(), syncInterval())
 	go d.RunImages(2 * time.Second)
 	go d.RunIdentity(5 * time.Second)
+	go d.RunSelfLists(10 * time.Second)
 	// One set of routes over both listeners. Every check a request passes is the
 	// same whichever carried it, which is the point of the listener interface
 	// rather than a happy accident.
@@ -931,10 +941,13 @@ func runAllow(args []string) {
 	if len(args) > 1 {
 		name = args[1]
 	}
-	withMembership(func(m *Membership, _ *Identity) {
+	withMembership(func(m *Membership, id *Identity) {
 		if err := m.Allow(args[0], name); err != nil {
 			explainNameTaken(err)
 			log.Fatalf("allow: %v", err)
+		}
+		if err := m.RecordColleague(id, args[0]); err != nil {
+			fmt.Printf("recorded here, but your other machines were not told: %v\n", err)
 		}
 		fmt.Printf("recorded %s as %s — UNVERIFIED.\n", PeerName(args[0]), firstNonEmpty(name, PeerName(args[0])))
 		fmt.Println("nothing yet says this key is theirs rather than someone who intercepted it.")
@@ -947,7 +960,7 @@ func runForget(args []string) {
 	if len(args) == 0 {
 		log.Fatal(commandText("usage: /cogmer:peer-forget <peer>"))
 	}
-	withMembership(func(m *Membership, _ *Identity) {
+	withMembership(func(m *Membership, id *Identity) {
 		pid, err := resolvePeer(m, args[0])
 		if err != nil {
 			log.Fatal(err)
@@ -958,6 +971,11 @@ func runForget(args []string) {
 		who := firstNonEmpty(m.Label(pid), PeerName(pid))
 		if err := m.Forget(pid); err != nil {
 			log.Fatalf("forget: %v", err)
+		}
+		// Forgetting on one machine forgets on every machine of the user (D-228;
+		// D-073, forgetting a peer changes no room's guest list).
+		if err := m.RecordColleague(id, pid); err != nil {
+			fmt.Printf("forgot here, but your other machines were not told: %v\n", err)
 		}
 		fmt.Printf("forgot %s. A later meeting will be a first meeting.\n", who)
 	})
@@ -1010,6 +1028,9 @@ func runCreateRoom(args []string) {
 	}
 	refuseWhenTheHostIsUnclear()
 	withMembership(func(m *Membership, id *Identity) {
+		if needsUserIdentity(id) {
+			return
+		}
 		r, err := createRoom(m, id, showOnly)
 		if err != nil {
 			log.Fatalf("create: %v", err)
@@ -1111,6 +1132,9 @@ func runJoin(args []string) {
 	}
 	refuseWhenTheHostIsUnclear()
 	withMembership(func(m *Membership, id *Identity) {
+		if needsUserIdentity(id) {
+			return
+		}
 		name, roomID, endpoint, host, full := parseInvitation(args[0])
 		// A name on its own may be an offer already delivered over the channel
 		// (D-105), in which case the four facts an invitation line carries are
@@ -1169,6 +1193,13 @@ func runJoin(args []string) {
 				}
 			}
 		}
+		// A room on the user's room list, created or joined from another of the user's
+		// machines or offered to the user there, is joined here by its name (D-228).
+		if !full {
+			if _, err := joinFromList(m, id, name, showOnlyFlag); err != nil {
+				log.Fatalf("join: %v", err)
+			}
+		}
 		r, err := m.FindRoom(name)
 		if errors.Is(err, errNoSuchRoom) {
 			if offers := m.Offers(); len(offers) > 0 {
@@ -1200,6 +1231,11 @@ func runJoin(args []string) {
 		// A session here has joined the room, so this machine is one of its machines.
 		if err := m.RecordRoomMachine(r.RoomID, id.PeerID, id.Peer()); err != nil {
 			log.Fatalf("join: %v", err)
+		}
+		// The room and this machine's joining it go on the user's room list, so the
+		// user's other machines can join it by name and sync it with this one (D-228).
+		if err := m.RecordRoomOnList(id, r.RoomID, r.RoomName, withMachine(id.PeerID)); err != nil {
+			fmt.Printf("joined here, but your other machines were not told: %v\n", err)
 		}
 		fmt.Printf("joined %s. %s\n", r.RoomName, watchLine(r.RoomName))
 		if r.ShowOnly {
@@ -1237,11 +1273,18 @@ func runLeave() {
 		fmt.Println("there is nothing at a terminal to leave.")
 		return
 	}
-	withMembership(func(m *Membership, _ *Identity) {
+	withMembership(func(m *Membership, id *Identity) {
 		room, err := m.LeaveSession(sid)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			return
+		}
+		// With no session of this machine left in the room, the user's room list no
+		// longer names this machine as one that joined it (D-228).
+		if m.SessionsInRoom(room.RoomID) == 0 {
+			if err := m.RecordRoomOnList(id, room.RoomID, room.RoomName, withoutMachine(id.PeerID)); err != nil {
+				fmt.Printf("left here, but your other machines were not told: %v\n", err)
+			}
 		}
 		fmt.Printf("this session has left %s. It stops capturing and stops receiving.\n", room.RoomName)
 		fmt.Println("Nothing is hidden or undone: the room's history is unchanged, still readable")
@@ -1600,7 +1643,16 @@ func runWhoami() {
 		// said twice.
 		fmt.Printf("\n%s\n", nameLine(id))
 	}
-	printPairingInvitation(id)
+	// A first pairing string needs the user identity, since the string names the
+	// user (D-230, a user identity is made in the daemon's page the first time the
+	// user needs one).
+	if id.HasUser() || userIdentityGateOff() {
+		printPairingInvitation(id)
+	} else {
+		fmt.Println()
+		writeIdentityNeeded(os.Stdout)
+	}
+	writeOwnMachines(os.Stdout, m, id)
 
 	running, answering := daemonVersionAt(addr())
 	fmt.Printf("\n%s", versionReport(pluginVersion(), version, running, answering))
@@ -1800,6 +1852,13 @@ func runPair(args []string) {
 		return
 	}
 	peerID, endpoint, theirName := parsePairing(args[0])
+
+	// Pairing is between users, so it needs this user's identity first (D-230).
+	var gated bool
+	withMembership(func(_ *Membership, id *Identity) { gated = needsUserIdentity(id) })
+	if gated {
+		return
+	}
 
 	// A name rather than a pairing string: somebody finishing what they started.
 	// Pairing is the act people recognize, and verifying is our word for a step

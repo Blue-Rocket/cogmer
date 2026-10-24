@@ -126,6 +126,19 @@ type Daemon struct {
 	// Pairings awaiting their ceremony, one per opened page (D-180).
 	pairs pairRegistry
 
+	// The identity page's flows in progress: a user being created, this machine
+	// waiting to be added, another machine being added from this one, and which of
+	// the user's records each of the user's machines has acknowledged (D-230, D-229,
+	// D-222). home is the state directory the page writes identity.json and shared.key
+	// into, which is homeDir() unless a test runs several machines in one process, and
+	// newPhrase draws a recovery phrase, which is NewPhrase unless a test fixes one.
+	// advertise is the address this machine tells the user's other machines, which is
+	// AdvertisedEndpoint unless a test runs several machines that share one.
+	flows     selfFlows
+	home      string
+	newPhrase func() (Phrase, error)
+	advertise string
+
 	// selfCheck asks whether this daemon can be reached through its relay. Nil when
 	// the daemon runs no overlay. It lives in tailcat.go, which is the only place
 	// that knows what the overlay is (D-068).
@@ -213,6 +226,7 @@ func (d *Daemon) LocalRoutes() *http.ServeMux {
 	mux.HandleFunc("/pair/", d.handlePairPage)
 	mux.HandleFunc("/verify/start", guardLocal(d.handleVerifyStart))
 	mux.HandleFunc("/verify/confirm", guardLocal(d.handleVerifyConfirm))
+	d.selfLocalRoutes(mux)
 	// Deliberately NOT guarded: /healthz, /events, /stream, /export, /image and the page itself are
 	// reads. A cross-origin page cannot read their responses, because we send no
 	// CORS headers and the browser withholds an opaque response from the script.
@@ -239,6 +253,7 @@ func (d *Daemon) PeerRoutes() *http.ServeMux {
 	// Identity records, fetched by hash and pushed until acknowledged (D-221, D-225).
 	mux.HandleFunc("/identity/fetch", d.handleIdentityFetch)
 	mux.HandleFunc("/identity/push", d.handleIdentityPush)
+	d.selfPeerRoutes(mux)
 	return mux
 }
 

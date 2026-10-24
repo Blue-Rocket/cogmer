@@ -49,6 +49,7 @@ var typedCommands = map[string][]commandStep{
 	"peer-pair":      {{"", "pair"}},
 	"self-name":      {{"", "name"}},
 	"self-status":    {{"", "whoami"}},
+	"self-machines":  {{"", "machines"}},
 }
 
 // typedCommandsUnavailable are the commands that cannot run from the daemon, with what a

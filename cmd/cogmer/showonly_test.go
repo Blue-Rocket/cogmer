@@ -212,7 +212,7 @@ func TestTheCommandsCreateAndJoinShowOnlyAndRefuseToChangeIt(t *testing.T) {
 	home := filepath.Join(dir, "home")
 	run := func(session string, args ...string) (string, int) {
 		cmd := exec.Command(bin, args...)
-		cmd.Env = append(os.Environ(), "COGMER_HOME="+home, "COGMER_TAILCAT=off", "COGMER_PREFLIGHT=off",
+		cmd.Env = append(os.Environ(), "COGMER_HOME="+home, "COGMER_TAILCAT=off", "COGMER_PREFLIGHT=off", "COGMER_IDENTITY_PAGE=off",
 			"COGMER_ADDR=127.0.0.1:1", "CLAUDE_CODE_SESSION_ID="+session)
 		out, err := cmd.CombinedOutput()
 		code := 0

@@ -264,3 +264,52 @@ func checkVerify(peerID, step string, payload, sig []byte) bool {
 	}
 	return ed25519.Verify(pub, verifyBytes(step, peerID, payload), sig)
 }
+
+// --- the two words for adding one of the user's own machines (D-229) ---
+//
+// Adding a machine runs the same commit-then-reveal exchange as a pairing between
+// colleagues (D-048, verification is a live commit-then-reveal exchange that derives
+// two words), over the two machine keys and under purpose tags of its own (D-229, a
+// machine is added from another of the user's machines, with the two-word check). The
+// tags are what keep the two exchanges apart: with the colleague tags, a user who
+// believed they were pairing with a colleague could be led to certify a stranger's
+// machine, and the reverse. They are new constants beside the colleague ones, which
+// stay as they are, since two builds must agree on every word they derive.
+const (
+	sasMachineTag    = protocolNamespace + "/sas-machine/v1"
+	sasMachineCommit = protocolNamespace + "/sas-machine-commit/v1"
+)
+
+// sasMachineCommitment is what a machine publishes before revealing its nonce in an
+// exchange that adds a machine.
+func sasMachineCommitment(machine string, nonce []byte) []byte {
+	h := sha256.New()
+	writeField(h, sasMachineCommit)
+	writeField(h, machine)
+	h.Write(nonce)
+	return h.Sum(nil)
+}
+
+// sasMachineOpens reports whether a revealed nonce opens a machine-add commitment.
+func sasMachineOpens(commitment []byte, machine string, nonce []byte) bool {
+	return subtle.ConstantTimeCompare(commitment, sasMachineCommitment(machine, nonce)) == 1
+}
+
+// SASMachine derives the two words the user compares between the machine that adds
+// and the machine being added: SAS's derivation under sasMachineTag, sorted by key so
+// that both machines compute the same words.
+func SASMachine(machineA string, nonceA []byte, machineB string, nonceB []byte) string {
+	type side struct {
+		id    string
+		nonce []byte
+	}
+	s := []side{{machineA, nonceA}, {machineB, nonceB}}
+	sort.Slice(s, func(i, j int) bool { return s[i].id < s[j].id })
+	h := sha256.New()
+	writeField(h, sasMachineTag)
+	for _, x := range s {
+		writeField(h, x.id)
+		writeField(h, string(x.nonce))
+	}
+	return sasRender(h.Sum(nil)[:sasWords])
+}

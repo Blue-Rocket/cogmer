@@ -504,16 +504,24 @@ func (d *Daemon) handleVerifyConfirm(w http.ResponseWriter, r *http.Request) {
 	d.inBackground(func() { d.deliverPending(req.Peer) })
 
 	// Only now is the label a true statement about who holds this key.
+	labelTaken := false
 	if havePair && pair.name != "" {
-		if err := d.members.Allow(req.Peer, pair.name); err != nil {
-			// Checked free before the ceremony, so this is a race in the last
-			// ninety seconds. The verification stands; say what did not happen.
-			writeJSON(w, map[string]string{
-				"status": "verified",
-				"note":   fmt.Sprintf("verified, but %q is now taken, so they are still listed as %s", pair.name, PeerName(req.Peer)),
-			})
-			return
-		}
+		// Checked free before the ceremony, so a failure is a race in the last
+		// ninety seconds. The verification stands; say what did not happen.
+		labelTaken = d.members.Allow(req.Peer, pair.name) != nil
+	}
+	// The colleague, verified and labeled, belongs to the user, so the change goes to
+	// the user's other machines (D-228, a colleague verified from one machine is
+	// verified from all of them).
+	if err := d.members.RecordColleague(d.id, req.Peer); err != nil {
+		log.Printf("verify: the verification of %s was not written to your lists: %v", PeerName(req.Peer), err)
+	}
+	if labelTaken {
+		writeJSON(w, map[string]string{
+			"status": "verified",
+			"note":   fmt.Sprintf("verified, but %q is now taken, so they are still listed as %s", pair.name, PeerName(req.Peer)),
+		})
+		return
 	}
 	writeJSON(w, map[string]string{"status": "verified", "name": pair.name})
 }

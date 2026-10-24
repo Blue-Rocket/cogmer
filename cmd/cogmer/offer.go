@@ -155,6 +155,17 @@ func (d *Daemon) handleOffer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// An offered room enters the user's room list as offered, so a session on any of
+	// the user's machines can join it by name (D-105).
+	if _, joined := d.members.RoomByID(req.RoomID); !joined {
+		if err := d.members.RecordRoomOnList(d.id, req.RoomID, req.RoomName, func(v *roomEntry) {
+			if len(v.Machines) == 0 {
+				v.OfferedBy, v.Endpoint = req.PeerID, req.Endpoint
+			}
+		}); err != nil {
+			log.Printf("offer: %s was not written to your room list: %v", req.RoomName, err)
+		}
+	}
 	log.Printf("OFFER %s from %s — accept with /cogmer:room-join %s",
 		req.RoomName, PeerName(req.PeerID), req.RoomName)
 	d.notify()
