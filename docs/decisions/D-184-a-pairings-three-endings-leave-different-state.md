@@ -13,9 +13,8 @@ created.
   a name then blocked pairing with the real colleague until somebody worked out that they had
   to `forget` first. `cmd/cogmer/pairview_test.go`, `TestTheThreeEndingsOfAPairing`.
 - Re-verifying a colleague of years and seeing different words is an alarm about an existing
-  relationship and not a reason to discard it and every admission it holds, so a mismatch
-  removes only a row this pairing created. D-073 (forgetting a peer discards their admissions
-  with them), `cmd/cogmer/verify.go`.
+  relationship and not a reason to discard it, so a mismatch removes only a row this
+  pairing created. D-073 (forgetting a peer changes no room's guest list), `cmd/cogmer/verify.go`.
 
 **Rejected.**
 - *Leaving a mismatched key recorded under the colleague's name.* The attack that was detected

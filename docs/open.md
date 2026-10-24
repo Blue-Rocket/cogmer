@@ -298,16 +298,12 @@ changes it:
 - The wire form of certificates and of an event a machine signs for its user. The build
   signs length-prefixed fields as events are, carries JSON, and puts the user in an event's
   peer identifier with the signing key beside it.
-- Whether an event's author must have been a guest of its room. The lean is to refuse an
-  author who never was one, which needs a record of past guests. A guest list is now the
-  user's, copied between the user's machines that joined the room (D-228, a user's lists are
-  copied between the user's machines), and colleagues' guest lists can still differ.
 
 **The decisions that make the user the peer leave details undecided.** Each is needed by a
 slice of the second run, and none has a choice taken yet:
 
-- How concurrent changes to a user's copied lists merge, such as an invitation on one machine
-  and a revocation on another (D-228).
+- How concurrent changes to a user's copied lists of colleagues, verifications, labels and
+  rooms merge, such as a label set on one machine and a colleague forgotten on another (D-228).
 - When a machine is first named and what it is called by default, and whether the identity
   page offers a guessed display name (D-230, the user identity is made in the daemon's page).
 - Whether one acknowledging machine of a colleague counts as the colleague for a removal or a

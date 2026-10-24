@@ -10,8 +10,8 @@ guest of by name, from the list of those rooms that the user's machines share (D
 string to send by hand only when the daemon cannot reach the guest.
 
 **Support.**
-- Delivering an offer is not pushing an admission. The row on the host's guest list is the
-  admission, and whom to admit is the host's judgment, so an offer tells the guest that the row
+- Delivering an offer is not pushing an admission. The invitation on the room's guest list
+  is the admission, and whom to admit is the inviting guest's judgment, so an offer tells the guest that the row
   exists, joining remains the guest's own act and reading anything still requires
   verification. D-024 (admission is a guest list), D-054 (verification gates synchronization
   and injection).

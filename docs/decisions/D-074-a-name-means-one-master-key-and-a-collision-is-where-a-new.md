@@ -18,8 +18,7 @@ that certifies machines through a shared key), so only a new master key meets th
   pair).
 - The one moment the two can be connected is when somebody records the new key under a name that is in use, which is also what a substitution looks like from the host's side, and
   without the rule it passed silently. `cmd/cogmer/membership_test.go`, `TestANameMeansOneKey`.
-- Forgetting the old key discards its admissions, so the user invites the new one again on purpose and inherits no rooms. D-073 (forgetting a peer discards their admissions
-  with them).
+- A new master key is a peer on no room's guest list, so the user invites the new one again on purpose and it inherits no rooms, while forgetting the old key leaves the old key on the guest lists it was on. D-073 (forgetting a peer changes no room's guest list).
 
 **Rejected.**
 - *Two keys under one name.* A name would then admit whichever key was listed first,

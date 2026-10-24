@@ -352,6 +352,6 @@ Every slice that serves a room copies the two-room tests in `roomscope_test.go`.
 6. Decided on 2026-10-24 and written into D-219: every machine the user adds holds the shared
    key, and a cloud key never does. Certifying a new shared key signs again only the removals
    the user confirms (D-220).
-7. Whether an event's author must be a guest of its room. The lean in the brief is to
-   refuse an author who never was one, which needs a record of past guests. It belongs to
-   the trust slice.
+7. Decided on 2026-10-24 and written into D-235 and D-236: a room has one guest list made of
+   invitation and revocation events any guest signs, an event counts only if its author is on
+   it, and a revocation names the last turn of each of the revoked user's machines that counts.

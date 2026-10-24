@@ -4,7 +4,8 @@
 
 **Decision.** A room is a record in `membership.db`, holding its identifier, its
 generated name and its guest list, and a sync request is refused unless the user whose
-machine signed it is a guest of the room.
+machine signed it is on the room's guest list as the room's invitations and revocations
+compute it (D-235, a room's one guest list decides whose events count).
 
 **Support.**
 - Authenticating a caller establishes who is asking, not whether they may. D-044 (sync

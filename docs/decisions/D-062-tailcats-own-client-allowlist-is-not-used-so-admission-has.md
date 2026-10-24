@@ -9,7 +9,8 @@ decided by the guest list and by verification, and by nothing in the transport.
 - A client allowlist would be a third list, keyed on a WireGuard key and not on a peer's
   identifier, that has to agree with `known_peers` and `room_guests`, and lists that can
   disagree give a room that works in one direction only. D-159 (an invitation carries the
-  room and the inviter, and joining admits the inviter).
+  room and the inviter, and joining receives the room's guest list from the inviting
+  machine).
 - Tailcat's WireGuard keypair is a transport identity. A peer's identifier is an Ed25519
   master key that a user verifies, and it certifies the machine keys that sign events, so
   the WireGuard key and the Ed25519 keys have separate jobs. D-042 (peer identity is an

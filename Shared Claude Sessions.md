@@ -446,8 +446,8 @@ the old one. The old one is superseded rather than disproved, since the machine 
 return to it, but keeping both would grow a machine's addresses with every network
 it visits.
 
-Forgetting a colleague removes every address recorded for any of their machines, as
-it removes their admissions (section 12), so a later meeting is a first meeting.
+Forgetting a colleague removes every address recorded for any of their machines, so a
+later meeting is a first meeting.
 
 ### What a failed key check means
 
@@ -708,8 +708,9 @@ name while its conversation stays on the machines that joined it.
 A machine on which no session has joined a room holds none of the room's guests or
 turns, so that a room's conversation is on no machine the user has not brought into it.
 
-A room's guest list is the same on every one of the user's machines that has joined the
-room, so that who may enter does not depend on which machine a colleague reaches.
+A room's guest list belongs to the room, not to the user, and is the same on every
+machine of every guest that has joined the room (section 12), so that who may enter does
+not depend on which machine a colleague reaches.
 
 A change made on one of a user's machines reaches the others when they next reach one
 another, with nothing for the user to do, so that a user never keeps their machines in
@@ -986,8 +987,8 @@ offer waits until she accepts it, from a session on any of her machines. Nothing
 secret is typed, spoken or sent, and the room's name, which is guessable, grants
 nothing to whoever guesses it.
 
-Delivering an offer admits nobody. The admission is the entry on the host's guest
-list, which is the host's judgment. The offer says only that the entry exists,
+Delivering an offer admits nobody. The admission is the invitation on the room's guest
+list, which is the inviting guest's judgment. The offer says only that the entry exists,
 joining is the guest's own act, and reading the room waits on verification
 (section 25).
 
@@ -1004,6 +1005,9 @@ A name locates a room, and a guest list admits a user.
 
 A session that joins receives the room's identifier on admission, and its machine uses
 it from then on.
+
+A machine that joins receives the room's guest list from the machine that invited it, so
+that it knows who is in the room before it fetches the room's turns.
 
 ## Two acts, at two scopes, with two names
 
@@ -1108,9 +1112,27 @@ user knows them by. The list is durable, outlasts every room and is the same on 
 one of the user's machines, which is why a colleague is recognized on a later
 occasion, from any machine, rather than met afresh.
 
-A room's guests are the known peers who may enter it. The list is created with the
-room and archived with it. A user may know six colleagues and admit two of them to a
-room about customer data.
+A room's guests are the users who may enter it, each invited by a guest who knows them.
+The list is created with the room and archived with it. A user may know six colleagues
+and admit two of them to a room about customer data.
+
+A room has one guest list, and every guest's machines that have joined the room hold the
+same one, so that guests never disagree about who is in the room and a turn one guest
+accepts is never refused by another.
+
+Each invitation and each revocation is part of the room's history and reaches every guest
+the way a turn does, through any machine that holds it, so that every machine holding the
+same history computes the same list and nobody keeps the list in step by hand.
+
+Any guest may invite or revoke, so that nobody waits on the room's creator to add or take
+out a colleague, and a room keeps working if its creator is away or stops using cogmer
+(section 3.3).
+
+The guest list shows who invited and who revoked each guest, so that a guest who
+questions a change knows which colleague made it.
+
+A revocation ends one invitation, and inviting the same colleague again lifts the
+revocation, so that a colleague revoked by mistake can be let back in.
 
 Both lists can be inspected and changed:
 
@@ -1144,17 +1166,52 @@ cannot collaborate until the comparison happens.
 A room's creator is its first guest, so every machine of the creating user may join
 the room.
 
-Revoking withdraws admission to one room. Forgetting discards the colleague, on every
-one of the user's machines, so a later meeting is a first meeting again.
+A turn counts only if its author is on the room's guest list. A turn whose author is not
+is never stored, shown or given to an assistant, whichever machine carried it, so that
+nobody outside a room can write into its conversation.
+
+Revoking a colleague sets, for each of their machines, the last turn that counts, as far
+as the revoking guest's machine had received that machine's turns, so that every guest
+holds the same history of the room whenever the revocation reaches them.
+
+A revoked colleague's later turns are treated as those of somebody who is not a guest.
+What they wrote up to the last turn that counts remains in the room, because the other
+guests have read it and an assistant cannot unread a turn.
+
+When two guests revoke the same colleague, the earlier of the two last turns applies
+for each machine, so that the order in which the revocations arrive changes nothing.
+
+Inviting a revoked colleague again lets their turns after the last turn that counted
+count again, so that
+undoing a mistaken revocation also restores what the colleague wrote in the meantime.
+
+Revoking withdraws a colleague's admission to one room, for every guest, and leaves the
+colleague known to every user who knows them, so that taking somebody out of one room
+costs nobody a pairing.
+
+Forgetting a colleague is the forgetting user's act alone. It discards the colleague on
+every one of that user's machines, and the colleague's turns stop reaching that user,
+because a colleague the user does not know is unverified to them. It changes no room's
+guest list, so that one user's forgetting never takes a colleague away from the other
+guests, or out of a room the user has half forgotten.
+
+A forgotten colleague who pairs with the user again is met as at a first meeting,
+unverified until the two compare words, and is a guest of every room they were never
+revoked from, so that the other guests, who never took the colleague out, have nothing
+to do.
 
 ## Proving admission
 
 A machine that joins presents its key and what ties that key to its user. The machine
-it asks finds that user among the room's guests, then issues a fresh, unpredictable
+it asks finds that user on the room's guest list, then issues a fresh, unpredictable
 challenge, which the joining machine signs with its own private key.
 
 The challenge is new every time, because an exchange that can be replayed is a bearer
 credential.
+
+The guest list the asked machine checks is the room's own, computed from the invitations
+and revocations it holds, so that any guest's machine that holds the invitation can admit
+the joining machine, and no one machine has to be online for a colleague to join.
 
 Nothing secret passes in either direction, so the exchange needs integrity, which the
 signature supplies, and no confidential channel.
@@ -2034,8 +2091,8 @@ connects, that it holds its own private key and that its user's identity vouches
 it, and every event is signed by the machine that created it, so an identifier cannot
 be claimed by anyone who holds neither the user's key nor a machine it vouches for.
 
-A room admits its members from the users this machine knows, by proof of possession,
-never by the presentation of a token. Nothing an interceptor could reuse is ever
+A room admits as members the users its guests invite, by proof of possession, never by
+the presentation of a token. Nothing an interceptor could reuse is ever
 sent, nothing expires, and admission can be withdrawn.
 
 Two users who have never met still have to establish each other's keys once, over a

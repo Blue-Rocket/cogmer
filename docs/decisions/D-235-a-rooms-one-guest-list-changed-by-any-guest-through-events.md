@@ -1,0 +1,17 @@
+# D-235 — A room's one guest list, changed by any guest through events in the room, decides whose events count
+
+**Date:** 2026-10-24 · **Status:** not built · **Areas:** admission, rooms, sync
+
+**Decision.** A room has one guest list, which every guest holds and agrees on, so that guests never hold different notions of who is in the room. Each change to the list, an invitation or a revocation, is an event in the room, signed by the machine that made it under its user's chain (D-219, a user is a master key that certifies machines through a shared key), so it travels by ordinary synchronization and relay (§13, transitive synchronization) and every machine holding the same events computes the same list. Any guest may invite or revoke, since no machine is a room's permanent host and a room keeps working whoever is offline (§3.3, no authoritative peer), and the list shows who invited or revoked whom. A revocation names the invitation it ends, so it beats that invitation, and a later invitation of the same user names the revocation it lifts and admits the user again, so a mistaken revocation can be undone. An event counts only if its author, a user, is on the room's list as the room's events compute it: a receiver checks this beside verification (D-054, verification gates synchronization and injection, not just a marker), and does not store, show or give to an assistant an event whose author is not on the list.
+
+**Rejected.**
+- *Only the room's creator changing the list.* Nobody can be invited while the creator is away, and the room has no owner once the creator stops using cogmer.
+- *Any guest inviting, and only the creator revoking.* Every revocation waits on the creator.
+- *A guest list of each user's, copied between that user's machines that joined the room, with joining adding the inviter to the joining user's list.* Two guests could hold different lists, so who may enter would depend on which guest a machine asks.
+- *No author check, with writing limited only by which machines a machine pulls from.* Guests would still hold different lists, and the limit D-216 (a cloud session signs with a key of its own that the user's shared key vouches for) states for a stolen cloud key would rest on routing.
+- *Requiring the author to be on this machine's own list.* A guest who joined through one host would refuse another guest's relayed turns, and a revoked guest's earlier turns, fetched again after a lost database, would be refused.
+- *Requiring the author to have ever been a guest on this machine's own list.* Each guest would still hold a list of their own.
+
+**Limits.** This entry does not decide whether a change counts when the guest who made it is revoked by a change made at the same time, or what a revocation does when the same user holds two invitations that neither names.
+
+**Revisit when** users need a room whose guest list only some of its guests may change.

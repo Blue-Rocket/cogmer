@@ -2,18 +2,19 @@
 
 **Date:** 2026-09-16 · **Status:** active · **Areas:** admission, pairing
 
-**Decision.** There are two lists at two scopes, and both belong to the user (D-228, a
-user's colleagues, verifications, labels and rooms belong to the user and are copied between
-the user's machines). Each of the user's machines holds the known peers, and a room's guests
-are held by the user's machines that have joined the room. A user's known peers are
+**Decision.** There are two lists at two scopes. A user's known peers belong to the user,
+and each of the user's machines holds them (D-228, a user's colleagues, verifications,
+labels and rooms belong to the user and are copied between the user's machines). A room's
+guest list belongs to the room, and every guest's machines that have joined the room hold it
+(D-235, a room's one guest list decides whose events count). A user's known peers are
 the identifiers the user has learned and the names the user knows them by, durable and
-outlasting every room. A room's guests are the known peers who may enter it, created with
-the room and archived with it. Revoking withdraws a peer's admission to one room, and
-forgetting a peer discards the identity and every admission it held, for every machine of
-that colleague and on every machine of the user (D-073, forgetting a peer discards their
-admissions with them). Forgetting is never how one of a colleague's machines stops
-counting: only that colleague removes it (D-220, a removal names the last event of a
-machine that counts).
+outlasting every room. A room's guests are the users who may enter it, each invited by a
+guest who knows them, and the list is created with the room and archived with it. Revoking
+withdraws a peer's admission to one room for every guest, and forgetting a peer discards the
+identity, for every machine of that colleague and on every machine of the user, and changes
+no room's guest list (D-073, forgetting a peer changes no room's guest list). Forgetting
+is never how one of a colleague's machines stops counting: only that colleague removes it
+(D-220, a removal names the last event of a machine that counts).
 
 **Support.**
 - A user may know six colleagues and admit two of them to a room about customer data.

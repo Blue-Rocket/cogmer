@@ -7,12 +7,13 @@ that cannot extend past two is a defect to be argued for explicitly, and not a s
 quietly.
 
 **Support.**
-- A cost differs from a ceiling. Synchronization is a pull against a per-machine watermark and guest
-  lists belong to each peer, so both would do work that grows with the number of peers and neither
+- A cost differs from a ceiling. Synchronization is a pull against a per-machine watermark and a
+  room's guest list is events in the room that every guest holds, so both would do work that grows with the number of peers and neither
   breaks, and those are costs. A pairwise ceremony assumed to be the only shape of admission, or a
   room identity derived from two identifiers, would be ceilings, and so is describing the
   tool by a number of participants. D-159 (an invitation carries the room and the inviter, and
-  joining admits the inviter).
+  joining receives the room's guest list from the inviting machine), D-235 (a room's one guest
+  list decides whose events count).
 - Transitive relay and immutable events with per-machine sequences pay for themselves only past two
   peers, and they were built for two because event identity cannot be retrofitted once events
   exist. §13 (transitive synchronization), §7 (event model).

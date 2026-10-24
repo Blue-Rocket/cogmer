@@ -2,10 +2,11 @@
 
 **Date:** 2026-09-16 · **Status:** active · **Areas:** admission
 
-**Decision.** Admission to a room is an entry on the host's guest list for a user the
-host knows, proved by a machine whose key carries a chain of certificates to the master
-key the host holds for that user (D-219, a user is a master key that certifies machines
-through a shared key). A guest is a user, so any machine of an admitted user proves the
+**Decision.** Admission to a room is an entry for a user on the room's one guest list,
+which every guest holds (D-235, a room's one guest list decides whose events count), made
+by a guest who knows that user, and proved by a machine whose key carries a chain of
+certificates to the master key the list names for that user (D-219, a user is a master
+key that certifies machines through a shared key). A guest is a user, so any machine of an admitted user proves the
 admission. The room's name locates the room and the guest list admits the user, so
 nothing secret is typed, spoken or sent, and guessing the name gains nothing.
 

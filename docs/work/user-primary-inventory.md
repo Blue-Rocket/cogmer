@@ -36,12 +36,12 @@ Partial rewrite, once the root questions are answered:
 | D-052 (verifying a peer is its own act) | the daemon dials a colleague's machines and keeps one certified to that user |
 | D-053 (`pair` is the machine-scope act) | `pair` is the act with a colleague, once per user; the title |
 | D-060 (`Store.Append` never derives a sequence) | its revisit condition, two machines under one identity, is answered by a counter per machine |
-| D-073 (forgetting a peer discards their admissions) | forgetting a colleague covers all their machines; question R2 |
+| D-073 (forgetting a peer changes no room's guest list) | forgetting a colleague covers all their machines; question R2 |
 | D-074 (a name means one key) | a name means one master key, and a new machine is no key change |
 | D-086 (the view is the surface) | creating and recovering a user and removing a machine are acts in the view |
 | D-103 (an address belongs to a peer) | an address belongs to a machine; sync targets are the machines of guest users; question R1 |
 | D-141 (a machine's key is created once) | recognition rests on the master key; a cloud session's key is per session |
-| D-159 (joining admits the inviter) | the invitation carries the inviting user and the inviting machine's address; question R6 |
+| D-159 (joining receives the room's guest list from the inviting machine) | the invitation carries the inviting user and the inviting machine's address; question R6 |
 | D-198 (the view marks only other people's turns) | "mine" is any of this user's machines; question R4 |
 | D-222 (a machine tells every machine it knows) | what passes between a user's machines besides identity records; questions R1 and R2 |
 
