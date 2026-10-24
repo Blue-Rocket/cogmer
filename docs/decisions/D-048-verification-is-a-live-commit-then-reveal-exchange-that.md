@@ -3,10 +3,14 @@
 **Date:** 2026-09-17 · **Status:** active · **Areas:** pairing
 
 **Decision.** Each side commits to a hash of its contribution, and then both reveal.
-The string derives from both long-term identity keys and both fresh nonces, and each
-side prints two words for the two users to compare aloud on the call they
-are on. A mismatch refuses, says plainly that something intercepted the exchange, and is
-never presented as a transient error worth repeating.
+The string derives from the two users' identifiers, which are their master public keys
+(D-042, peer identity is an Ed25519 key pair), and both fresh nonces, and each side prints
+two words for the two users to compare aloud on the call they are on. Each machine proves
+its presence with its own key over a connection pinned to that key (D-101, peer connections
+are TLS pinned to a key this machine has recorded), and the machine's certificate chain
+ties its key to the identifier the words name (D-219, a user is a master key that certifies
+machines through a shared key). A mismatch refuses, says plainly that something
+intercepted the exchange, and is never presented as a transient error worth repeating.
 
 **Support.**
 - A standing identifier can be ground against offline at a cost of the entropy shown,
@@ -40,7 +44,10 @@ presumes acquaintance. D-051 (stranger pairing is not a supported case). Nothing
 rate-limits attempts, so protection against repetition rests on a mismatch stopping a
 person, which is a claim about the interface and not the protocol. A commitment step
 implemented wrongly degrades to a value that can be ground while still looking like a
-ceremony, and the test above fails when the check is removed.
+ceremony, and the test above fails when the check is removed. Adding one of the user's own
+machines is a different exchange, whose words come from the two machine keys under a
+purpose tag of its own (D-229, a machine is added from another of the user's machines,
+with the two-word check).
 
 **Revisit when** verification is wanted between peers that cannot be connected at the
 same moment, since the short form is unavailable there.

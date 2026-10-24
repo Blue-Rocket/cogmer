@@ -4,7 +4,12 @@
 
 **Decision.** `Forget` deletes a peer's identity and every admission it carries in one
 transaction, so a later meeting is a first meeting: known again, unverified again, and
-admitted to nothing until a host says so.
+admitted to nothing until a host says so. Forgetting acts on the colleague as a user: it
+covers every machine of theirs, and it applies on every machine of the user who forgets,
+since the lists belong to that user (D-228, a user's colleagues, verifications, labels and
+rooms belong to the user and are copied between the user's machines). It never stands for
+removing one machine, which only the user whose machine it is can do (D-220, a removal
+names the last event of a machine that counts).
 
 **Support.**
 - Forgetting discards the identity itself, so a later meeting is a first meeting again,
@@ -21,6 +26,7 @@ admitted to nothing until a host says so.
 **Limits.** `revoke` removes one admission to one room and leaves the identity. A host
 forgetting somebody does not tell them so.
 
-**Revisit when** a peer needs to be forgotten on one machine while remaining a guest
-elsewhere. Guest lists belong to each peer, so two peers can disagree about who belongs
-(D-159, an invitation carries the room and the inviter, and joining admits the inviter).
+**Revisit when** a colleague needs to be forgotten by one user while remaining a guest in
+another user's room. Guest lists belong to each user, so two users can disagree about who
+belongs (D-159, an invitation carries the room and the inviter, and joining admits the
+inviter).

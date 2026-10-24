@@ -1,0 +1,12 @@
+# D-228 — A user's colleagues, verifications, labels and rooms belong to the user and are copied between the user's machines
+
+**Date:** 2026-10-24 · **Status:** not built · **Areas:** admission, identity, rooms, sync
+
+**Decision.** The colleagues a user knows, which of them the user has verified, the labels the user gave them and the list of the user's rooms belong to the user, and each of the user's machines holds a copy, so that a colleague verified from one machine is verified from all of them (D-222, a machine tells every machine it knows of each machine it adds, until each has acknowledged). Each room on the list carries its identifier, its name and the user's machines that have joined it, so a session on another of the user's machines joins the room by name, and its machine then fetches the guest list and the events from a machine that has joined. A room's guest list is copied only between the user's machines that have joined that room, and a machine where no session has joined a room holds nothing of the room but its entry on the list. Forgetting a colleague on one machine forgets them on all of them (D-073, forgetting a peer discards their admissions with them). Whether a room is show-only belongs to each machine (D-200, a room is created or joined show-only or not, and the choice never changes for that room).
+
+**Rejected.**
+- *A list held by each machine on its own.* A colleague verified from one machine would be a stranger to the user's next one, and the user would pair with every colleague again from each machine, which a user identity exists to spare them (D-219, a user is a master key that certifies machines through a shared key).
+- *Copying every room's guest list and events to all of the user's machines.* A room's conversation would reach a machine where the user never brought it, such as a personal computer holding a room about a customer's data.
+- *Show-only as one choice for the user across machines.* Only a machine's own setting decides what its sessions receive, and a user may want a room's turns injected on one machine and only shown on another.
+
+**Revisit when** a user is found to want a colleague verified on one of their machines and not on another.

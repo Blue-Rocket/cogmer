@@ -8,7 +8,7 @@ derived name beside it. A label equal to the derived name counts as absent.
 **Support.**
 - The label is the one name that is both memorable and bound to a key, since the display name
   is the peer's own claim and the derived name is computed by nobody who chose it. D-074 (a
-  name means one key, and a collision is where a key change surfaces).
+  name means one master key, and a collision is where a new master key surfaces).
 - The derived name has momentary jobs, which are to disambiguate a collision and to anchor an
   alarm, and neither asks anybody to remember it, so a mnemonic nobody chose is not much of
   one. D-021 (peer names are word pairs derived from the identity, never chosen).

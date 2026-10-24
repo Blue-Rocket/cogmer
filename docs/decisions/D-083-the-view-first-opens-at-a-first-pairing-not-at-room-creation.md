@@ -6,9 +6,9 @@
 room is first created.
 
 **Support.**
-- Pairing comes before a room in the user's experience. It is a machine-scope act that
+- Pairing comes before a room in the user's experience. It is an act with a colleague that
   outlasts every room, and an unverified peer is refused before any room content moves.
-  D-053 (`pair` is the machine-scope act, and `invite` is the room-scope act), D-054
+  D-053 (`pair` is the act with a colleague, and `invite` is the room-scope act), D-054
   (verification gates synchronization and injection).
 - The first unfamiliar step is reading two words aloud with a colleague, and that step needs
   something on screen where a terminal is the wrong place for something a user must find and

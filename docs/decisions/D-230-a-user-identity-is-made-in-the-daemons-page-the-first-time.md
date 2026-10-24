@@ -1,0 +1,12 @@
+# D-230 — A user identity is made in the daemon's page the first time the user needs one
+
+**Date:** 2026-10-24 · **Status:** not built · **Areas:** identity, view, pairing
+
+**Decision.** A machine's key is made at its first use of cogmer (D-141, a machine's key is created once and never leaves the machine), and the user identity is made in the daemon's page the first time the user does something that needs it: a first pairing string, pairing, creating or joining a room, or adding a machine. The page asks first whether the user has used cogmer on another machine. Without one, it creates the user: it shows the recovery phrase, has the user confirm words from it, takes the name colleagues will see, certifies the shared key and this machine (D-219, a user is a master key that certifies machines through a shared key), and drops the master key. With one at hand, it adds this machine from that one (D-229, a machine is added from another of the user's machines, with the two-word check), and with none left, it recovers from the phrase (D-223, the recovery phrase is typed only into the daemon's browser page). Until then, a command that needs the identity points to the page and does nothing else, because the phrase is shown and typed only in the page, and a person is there only once they have acted.
+
+**Rejected.**
+- *Creating the user automatically at first use, and showing the phrase later.* The machine would have to hold the phrase or the master key until the user saw it, which no machine does, and a phrase shown later can be put off until the machine is lost.
+- *Offering the choice of name where the user's identity first travels, in the pairing string.* The user identity is made before any pairing string exists, with the user at the page, so the name is asked for there (D-186, a user chooses the name colleagues see when the user identity is made in the daemon's page).
+- *Creating the user without having the user confirm words from the phrase.* A user who did not write the phrase down learns it only when recovery fails.
+
+**Revisit when** a user is found unable to reach the daemon's page the first time they need the identity.
