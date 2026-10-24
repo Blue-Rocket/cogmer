@@ -2,9 +2,9 @@
 
 **Date:** 2026-09-16 · **Status:** active · **Areas:** admission, identity, trust
 
-**Decision.** A peer that joins presents its identifier and the certificates of the
-machine answering, the host finds the identifier among the room's guests and issues a
-fresh, unpredictable challenge, and the machine signs it with its own key, which the
+**Decision.** A machine that joins presents its user's identifier and its own
+certificates, the host's machine finds the identifier among the room's guests and issues a
+fresh, unpredictable challenge, and the joining machine signs it with its own key, which the
 certificates tie to the master key the identifier names (D-219, a user is a master key
 that certifies machines through a shared key).
 

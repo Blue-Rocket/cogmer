@@ -14,8 +14,8 @@ filters again before injecting.
   `249ddd0:docs/decisions.md`, the entry D-047 held there.
 - The serving gate runs after the guest check, so a caller that reaches it is a recorded
   guest and learns nothing it did not put there. `cmd/cogmer/auth.go`, `verifyRequest`.
-- The accepting gate judges the origin and not the sender, so a verified relay cannot
-  launder an unverified author. §13 (transitive synchronization),
+- The accepting gate judges the origin and not the sender, so a relaying machine whose
+  user is verified cannot launder an unverified author. §13 (transitive synchronization),
   `cmd/cogmer/sync.go`.
 - The injecting gate runs again because an event stored while its peer was verified
   outlives a later `forget`, and a context window has no delete. `cmd/cogmer/daemon.go`,

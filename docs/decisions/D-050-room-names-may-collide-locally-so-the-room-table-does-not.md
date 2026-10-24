@@ -14,7 +14,7 @@ with the constraint.
 - The table holds every room ever recorded and not only those in use, and names are
   drawn from 7,656 combinations, so about a hundred rooms make a clash as likely as
   not. D-135 (a room's name is unique only among one user's rooms).
-- A name this peer mints can be minted differently, so `CreateRoom` can avoid a local
+- A name this machine mints can be minted differently, so `CreateRoom` can avoid a local
   clash at no cost, which a name arriving with a room cannot. `cmd/cogmer/membership.go`,
   `CreateRoom`.
 - SQLite has no `DROP CONSTRAINT`, so a table created with the rule keeps it until it

@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-02 · **Status:** active · **Areas:** transport, trust
 
-**Decision.** The overlay is on by default and introduces two peers through the free relays that
+**Decision.** The overlay is on by default and introduces two machines through the free relays that
 tailcat's default relay map lists. `plugin/README.md` tells a user what the relay sees and that
 `COGMER_TAILCAT=off` turns the overlay off.
 
@@ -18,7 +18,7 @@ tailcat's default relay map lists. `plugin/README.md` tells a user what the rela
 - The relay carries WireGuard packets between the two machines and cannot read them. The
   daemon holds one connection to its relay for as long as it runs, so the relay sees this
   machine's network address and key whenever the daemon is up, and which machines connect, when
-  and how much passes. An idle daemon held that connection for 32 seconds with no peer.
+  and how much passes. An idle daemon held that connection for 32 seconds with no other machine.
   `55c73eb`, `cmd/cogmer/tailcat.go`, `StartTailcat`.
 - With the pre-shared key disabled (D-104), an operator who sees both keys can open a tunnel to
   the daemon, and what stops it there is the pinned TLS key, the signed request, the guest list and
@@ -39,7 +39,7 @@ tailcat's default relay map lists. `plugin/README.md` tells a user what the rela
 each of four relay nodes to pick the nearest, so each learns the machine's public address once.
 Later starts contact only the pinned relay. `cmd/cogmer/tailcat.go`, `loadTailcatRegion`.
 
-The documentation promises no availability and says the relays are rate-limited. Two peers on one
+The documentation promises no availability and says the relays are rate-limited. Two machines on one
 network also meet through the relay, because a pairing string carries one endpoint. D-104 gives up
 the only quantum-resistant element, so a recording of relayed traffic is not protected against a
 later quantum computer.

@@ -4,7 +4,7 @@
 
 **Decision.** A session a user is working in takes a turn when that user asks it to, and
 at no other time. A remote event never prompts, resumes or otherwise drives an
-interactive session, and any Claude run a peer event causes outside that session
+interactive session, and any Claude run a remote event causes outside that session
 neither borrows its context nor interrupts it.
 
 **Support.**
@@ -23,7 +23,7 @@ neither borrows its context nor interrupts it.
   not disturbing a session and not spending a user's resources, which have different
   remedies.
 
-**Limits.** It does not decide whether a peer event may cause a separate Claude run
+**Limits.** It does not decide whether a remote event may cause a separate Claude run
 outside the interactive session.
 
-**Revisit when** a peer event needs to cause a Claude run of its own.
+**Revisit when** a remote event needs to cause a Claude run of its own.

@@ -13,7 +13,7 @@ may rejoin the room it was in and no other, so its `session_rooms` row is marked
 - Binding refuses a second room by finding a row, so deleting the row on leave would make
   leave then join the move the rule forbids, with two extra commands. `cmd/cogmer/membership_test.go`,
   `TestLeavingIsNotALaunderedMove` and `TestLeavingDoesNotForecloseReturn`.
-- Membership is held by a session, so a peer with three sessions in a room leaves three
+- Membership is held by a session, so a user with three sessions in a room leaves three
   times, and `/room-leave` runs inside the session it removes. At a terminal there is
   nothing to leave, and the command says so. §3.6 (session-scoped rooms),
   `cmd/cogmer/main.go`, `runLeave`.
@@ -24,5 +24,5 @@ may rejoin the room it was in and no other, so its `session_rooms` row is marked
 - *Deleting the row when a session leaves.* It reopens the move §12a forbids.
 
 **Limits.** Leaving does not touch the guest list, since withdrawing admission is the
-host's act with `revoke`, and it does not stop synchronization. Whether a peer should stop
-serving a room it has left is not decided here.
+host's act with `revoke`, and it does not stop synchronization. Whether a machine should stop
+serving a room its sessions have left is not decided here.

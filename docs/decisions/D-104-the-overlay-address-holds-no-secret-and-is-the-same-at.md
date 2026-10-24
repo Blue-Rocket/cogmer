@@ -33,4 +33,4 @@ carries three public keys and a relay and is the same at every start.
 the TLS layer keys on the same elliptic curve. Whether to rebuild it at this layer is not
 decided here. Who may open a tunnel is D-157 (the overlay listener admits any dialer).
 
-**Revisit when** the library offers a per-peer pre-shared key.
+**Revisit when** the library offers a pre-shared key for each machine it connects to.

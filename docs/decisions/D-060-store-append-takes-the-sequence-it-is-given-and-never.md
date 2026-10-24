@@ -14,7 +14,7 @@ not end membership; the sequence lives with the machine).
   different events, which a receiver can only quarantine. D-029 (losing a room database
   does not end membership), D-027 (a sequence conflict is quarantined, not dropped).
 - Reserving before publishing loses a number and never reissues one, and a lost number is
-  harmless because a gap makes peers wait and not skip. `cmd/cogmer/offline_test.go`,
+  harmless because a gap makes receivers wait and not skip. `cmd/cogmer/offline_test.go`,
   `TestAReservationIsSpentEvenIfNothingIsWritten`.
 - No call derives a sequence, so the dangerous path is absent as well as unused.
   `cmd/cogmer/store.go`, `Append`.

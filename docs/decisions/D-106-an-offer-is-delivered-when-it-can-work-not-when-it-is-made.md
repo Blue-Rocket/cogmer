@@ -20,8 +20,9 @@ delivered. The invite reads as admitted and queued and never as a refusal.
   `cmd/cogmer/offer_test.go`.
 - The fallback string is withheld on the same terms, because a guest who pasted it would join and
   get the same dead room. `cmd/cogmer/offer.go`.
-- This peer is a guest of its own rooms and is never in its own peer list, so a check that a
-  guest is verified excludes this peer and does not conclude that the creator is unverified.
+- This user is a guest of their own rooms and is never in their own list of colleagues, so a
+  check that a guest is verified excludes this user and does not conclude that the creator is
+  unverified.
   D-103 (an address belongs to a machine and is stored in one place).
 
 **Rejected.**

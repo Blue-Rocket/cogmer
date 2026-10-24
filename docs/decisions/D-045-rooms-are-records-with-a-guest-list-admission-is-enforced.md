@@ -3,8 +3,8 @@
 **Date:** 2026-09-17 · **Status:** active · **Areas:** admission, rooms
 
 **Decision.** A room is a record in `membership.db`, holding its identifier, its
-generated name and its guest list, and a sync request is refused unless the peer that
-signed it is a guest of the room.
+generated name and its guest list, and a sync request is refused unless the user whose
+machine signed it is a guest of the room.
 
 **Support.**
 - Authenticating a caller establishes who is asking, not whether they may. D-044 (sync

@@ -3,7 +3,7 @@
 **Date:** 2026-09-18 · **Status:** active · **Areas:** sync, rooms
 
 **Decision.** When a room is opened, `reportLostState` compares the highest sequence the
-store holds for this peer with the highest this peer recorded as issued. If the room holds
+store holds for this machine with the highest this machine recorded as issued. If the room holds
 less, the daemon says that state was lost, that membership and sequence position are
 intact, that history is being refetched and depends on a member being reachable, and that
 colleagues' turns may be injected a second time.

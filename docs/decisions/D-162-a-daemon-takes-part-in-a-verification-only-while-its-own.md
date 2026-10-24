@@ -4,7 +4,7 @@
 
 **Decision.** A daemon answers a peer's verification step only when it holds a session its
 own user opened, and otherwise answers 409 and displays nothing to anyone. The caller
-must also be a peer this machine knows.
+must also be a machine of a peer this machine knows.
 
 **Support.**
 - Only the user's own request creates a session, so no inbound request creates anything,
@@ -17,7 +17,7 @@ must also be a peer this machine knows.
 
 **Rejected.**
 - *An inbound verification request that prompts the host.* A prompt people learn to
-  dismiss is a poor place for a decision that matters, and it lets any peer that can
+  dismiss is a poor place for a decision that matters, and it lets any machine that can
   reach the address put something on the host's screen.
 
 **Limits.** Which side drives the exchange is D-059 (either side completes a verification

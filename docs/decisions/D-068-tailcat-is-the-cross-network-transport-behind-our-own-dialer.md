@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-18 · **Status:** active · **Areas:** transport
 
-**Decision.** Tailcat carries synchronization between peers on different networks, and
+**Decision.** Tailcat carries synchronization between machines on different networks, and
 all of it is confined to `cmd/cogmer/tailcat.go` behind the `Dialer` interface and a
 `net.Listener`. One set of routes serves both transports.
 
@@ -18,7 +18,7 @@ all of it is confined to `cmd/cogmer/tailcat.go` behind the `Dialer` interface a
   D-045 (rooms are records with a guest list), D-054 (verification gates synchronization
   and injection).
 - Constructing a tailcat client starts a userspace WireGuard stack and takes seconds, so a
-  client is cached for each peer and the first contact has a timeout of its own.
+  client is cached for each machine and the first contact has a timeout of its own.
   `cmd/cogmer/sync.go`, `cmd/cogmer/transport.go`.
 - A dial to a port the packet filter does not serve times out with no reset, so the served
   port is set explicitly. `cmd/cogmer/tailcat.go`, `ServedTCPPorts`.

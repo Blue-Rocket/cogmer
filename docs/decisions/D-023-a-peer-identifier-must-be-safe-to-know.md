@@ -2,13 +2,15 @@
 
 **Date:** 2026-09-16 · **Status:** active · **Areas:** identity, pairing
 
-**Decision.** A peer's identifier is its public key, so knowing it grants nothing. An
-identifier is safe to know only because signatures are checked: every event is signed by
-the peer that created it and rejected on receipt if it does not verify.
+**Decision.** A peer's identifier is the user's master public key, so knowing it grants
+nothing. An identifier is safe to know only because signatures are checked: every event is
+signed by the machine that created it, with a key whose certificates end at that master key
+(D-219, a user is a master key that certifies machines through a shared key), and rejected
+on receipt if it does not verify.
 
 **Support.**
-- An identifier appears in every event its peer creates, in every interface and in every
-  exchange between peers, so an identifier that gave its holder any power could not be
+- An identifier appears in every event its peer's machines create, in every interface and
+  in every exchange between machines, so an identifier that gave its holder any power could not be
   protected. §6 (identity).
 - Peer identity is an Ed25519 key pair, and events are signed at origin. D-042 (peer
   identity is an Ed25519 key pair) and D-152 (events are signed at origin over
@@ -25,4 +27,4 @@ the peer that created it and rejected on receipt if it does not verify.
 Verification establishes that. D-054 (verification gates synchronization and
 injection).
 
-**Revisit when** an identifier has to carry something other than the public key.
+**Revisit when** an identifier has to carry something other than the master public key.

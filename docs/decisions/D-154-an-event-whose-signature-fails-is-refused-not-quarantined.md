@@ -7,8 +7,8 @@ kept aside.
 
 **Support.**
 - A failed signature has no harmless reading, unlike a sequence conflict, which may be a
-  peer that lost its state. D-027 (a sequence conflict is quarantined, not dropped).
-- A peer that impersonated another and offered an event signed by nobody was refused, and
+  machine that lost its state. D-027 (a sequence conflict is quarantined, not dropped).
+- A machine that impersonated another peer and offered an event signed by nobody was refused, and
   nothing reached the room. `84a0751:docs/decisions.md`.
 
 **Rejected.**

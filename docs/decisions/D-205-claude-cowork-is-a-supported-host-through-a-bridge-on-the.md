@@ -13,7 +13,7 @@
 - An MCP server and a plugin are extension points that a host loads unchanged. D-037 (Claude Code is launched and used unchanged), §3.8 (the host is launched and used unchanged).
 
 **Rejected.**
-- *The daemon in the Cowork sandbox.* It cannot reach a relay or a peer, and its state does not survive the session. `06749a0`.
+- *The daemon in the Cowork sandbox.* It cannot reach a relay or another machine, and its state does not survive the session. `06749a0`.
 
 **Limits.** The program has to be on the user's machine before this, fetched and verified by the plugin of Claude Code or Codex, since nothing else installs it. The user adds the bridge to Desktop's configuration, because a server that a plugin bundles would start in the sandbox. A call at session start does not reach the bridge (`a191489`), so the daemon first hears of a session at its first prompt. A hung bridge held a session for the full 60 seconds, past the 15 seconds the hook declared, so the bridge answers within a deadline of its own and exits when a call runs long, and a bridge stopped from outside can still cost that wait. The names the hook calls, the server `remote-devices` and the tool `<server>__<tool>`, are Anthropic's and are not documented, and a changed name stops capture without a sign, so a room's status says how long ago a Cowork session last reached the machine (`cmd/cogmer/main.go`, `coworkLine`). A user with more than one computer was not tested, and neither was a renamed computer, which the setup's output and the README tell the user to set up again. Anthropic chooses the Cowork version and can change what a hook does.
 

@@ -9,7 +9,7 @@ originating peer's identifier names (D-219, a user is a master key that certifie
 machines through a shared key).
 
 **Support.**
-- A relaying peer can then carry an event and cannot author one. §13 (transitive
+- A relaying machine can then carry an event and cannot author one. §13 (transitive
   synchronization).
 - The purpose tag binds a signature to this purpose and version, so a signature made here
   cannot be replayed as one made over something else. `cmd/cogmer/keys.go`,

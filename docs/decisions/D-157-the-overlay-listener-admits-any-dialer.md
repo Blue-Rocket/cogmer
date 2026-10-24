@@ -3,7 +3,7 @@
 **Date:** 2026-10-01 · **Status:** active · **Areas:** transport, trust
 
 **Decision.** The overlay listener accepts a tunnel from a dialer whatever key the
-dialer presents. Whether the other side is a peer is decided above the tunnel, by the
+dialer presents. Whether the other side is a machine of a recorded peer is decided above the tunnel, by the
 TLS pin and the signed request, as on every other transport.
 
 **Support.**
@@ -15,7 +15,7 @@ TLS pin and the signed request, as on every other transport.
   sends it no reply. https://pkg.go.dev/github.com/tailscale/tailcat@v0.6.0#Server
   (`AllowedClients`).
 - During the TLS handshake, before any request is read, the peer listener refuses a
-  client whose key this machine has not recorded. `serverConfig` and `pinnedVerifier`
+  client whose certificates do not end at a key this machine has recorded. `serverConfig` and `pinnedVerifier`
   in `cmd/cogmer/peertls.go`, and D-101 (peer connections are TLS pinned).
 - A stranger who completes a tunnel learns the identifier in this machine's
   certificate, and a pairing string carries that identifier beside the overlay
@@ -28,13 +28,13 @@ TLS pin and the signed request, as on every other transport.
   because it needs the public relay.
 
 **Rejected.**
-- *Admitting only the listener keys of recorded peers, read from their overlay
-  addresses.* A colleague's daemon dials with a key its address does not carry, so
+- *Admitting only the listener keys of recorded peers' machines, read from their
+  overlay addresses.* A colleague's daemon dials with a key its address does not carry, so
   once one peer is recorded no colleague's dial is answered, and a verification waits
   out its timeout. https://pkg.go.dev/github.com/tailscale/tailcat@v0.6.0#Client
   (`Key`).
 - *A persistent dialer key, carried in the pairing string beside the address.* The
-  daemon opens one tunnel client per peer, so two colleagues whose addresses name the
+  daemon opens one tunnel client per machine it dials, so two colleagues whose addresses name the
   same relay region would put one key on two connections to that relay, and the
   tailcat documentation does not say how the relay treats that. `tailcatDialer` in
   `cmd/cogmer/tailcat.go`.

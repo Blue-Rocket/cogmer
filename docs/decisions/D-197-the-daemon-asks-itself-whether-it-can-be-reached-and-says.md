@@ -19,10 +19,10 @@ being reachable, at a slow repeat while that continues, and when it is reachable
 - A laptop that has just woken fails a check once and is fine, so one failure is asked again before it counts.
   A relay missing for two reads running is the same, so it counts at the third. `cmd/cogmer/selfwatch_test.go`,
   `TestOneFailedCheckIsConfirmedBeforeItCounts` and `TestAMissingRelayIsNoticedAfterSeveralChecks`.
-- A message repeated at every check is not a signal, so a failure is said when it begins, at the slow repeat the
-  peer states use, and when it ends. `cmd/cogmer/ui.go`, `downRepeat`, `cmd/cogmer/selfwatch_test.go`,
+- A message repeated at every check is not a signal, so a failure is said when it begins, at the slow repeat that an
+  unreachable machine's state uses, and when it ends. `cmd/cogmer/ui.go`, `downRepeat`, `cmd/cogmer/selfwatch_test.go`,
   `TestAConfirmedFailureIsReportedOnceAndItsEndIsSaid`.
-- Peers pull, so a machine nobody can reach hands its turns to nobody, and the room status leads with that
+- Machines pull, so a machine nobody can reach hands its turns to nobody, and the room status leads with that
   before it lists colleagues. D-194 (a colleague this machine cannot reach is named, with how long, in the room
   status and the view), `cmd/cogmer/main.go`, `renderGuests`,
   `cmd/cogmer/selfwatch_test.go`, `TestAnUnreachableMachineIsSaidFirstInTheRoomStatusAndInSelfStatus`.

@@ -19,4 +19,4 @@ product name appears in no signed bytes.
 
 **Rejected.**
 - *A namespace that names the product.* A rename would then force a new signing scheme
-  that every peer must carry for good.
+  that every machine must carry for good.

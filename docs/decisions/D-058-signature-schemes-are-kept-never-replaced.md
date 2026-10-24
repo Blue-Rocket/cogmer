@@ -8,7 +8,7 @@ edited. An event whose scheme is missing or unknown is refused as a version prob
 not as a forgery.
 
 **Support.**
-- Events are immutable and cannot be re-signed, and they are relayed between peers and
+- Events are immutable and cannot be re-signed, and they are relayed between machines and
   refetched as recovery, so after a format change old events keep arriving and would be
   rejected if they were verified under the new bytes. §7 (event model), §13 (transitive
   synchronization), D-029 (losing a room database does not end membership).

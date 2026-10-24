@@ -2,8 +2,8 @@
 
 **Date:** 2026-09-21 · **Status:** active · **Areas:** pairing, transport
 
-**Decision.** Neither pairing nor any dedicated command updates a peer's stored address. The
-peer's next synchronization repairs it.
+**Decision.** Neither pairing nor any dedicated command updates a machine's stored address. The
+machine's next synchronization repairs it.
 
 **Support.**
 - Pairing is a security act, and one that silently writes network state is a quiet mutation, and
@@ -20,5 +20,5 @@ peer's next synchronization repairs it.
 - *A command that sets an address.* It is a mechanism for a problem that resolves itself, and one
   more thing to explain.
 
-**Revisit when** a peer can move while sharing no room with anybody and still need to be reached,
+**Revisit when** a machine can move while sharing no room with anybody and still need to be reached,
 which would mean something other than an invitation had come to depend on a stored address.

@@ -17,7 +17,7 @@ every other requirement is subordinate to that. It is stated as a duty and not a
   never delays the session), D-038 (separating the room from the session is correct on its merits).
 - A title that said "local first" promised more than the system delivers, since rendezvous across
   a NAT needs a relay that somebody else operates, recovery from losing a room is a refetch from
-  peers, and nothing before the first invitation is captured at all. D-068 (tailcat is the
+  other machines, and nothing before the first invitation is captured at all. D-068 (tailcat is the
   cross-network transport, behind our own dialer), D-029 (losing a room database does not end
   membership), D-022 (a room begins when someone is invited into it).
 
