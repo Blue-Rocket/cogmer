@@ -340,10 +340,8 @@ Every slice that serves a room copies the two-room tests in `roomscope_test.go`.
 
 1. Decided on 2026-10-24 and written into D-224: a removal and the certificate it removes do
    not conflict, so every valid removal takes effect, a self-removal included.
-2. The phrase is 18 words from the PGP word list, and the master key is HKDF-SHA256 of its
-   16 bytes (section 2). The two words of the pairing comparison come from the same list,
-   which a user might confuse with the phrase. The alternative is the BIP-39 English list of
-   2,048 words, which would make the phrase 12 words and has to be added to the repository.
+2. Decided on 2026-10-24 and written into D-237: the phrase is 18 words of the PGP word list,
+   and the master key is HKDF-SHA256 of its 16 bytes (section 2).
 3. Records are length-prefixed and signed as events are, and carried as JSON (section 3).
 4. Decided on 2026-10-24 and written into D-234: a machine not certified under the current
    shared key is suspended, and its turns appear nowhere until it is certified again.

@@ -292,9 +292,6 @@ examined.
 section 7 holds the reasoning, and each choice stands until the maintainer confirms or
 changes it:
 
-- The phrase's word list and key derivation. The build uses 18 words from the PGP word list
-  that the pairing comparison uses, 16 bytes and two check bytes, and HKDF-SHA256. The
-  BIP-39 list would give 12 words and keep the phrase apart from the comparison's words.
 - The wire form of certificates and of an event a machine signs for its user. The build
   signs length-prefixed fields as events are, carries JSON, and puts the user in an event's
   peer identifier with the signing key beside it.

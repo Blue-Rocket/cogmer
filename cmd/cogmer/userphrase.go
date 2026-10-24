@@ -20,7 +20,8 @@ import (
 // nothing, an error names a position and never a word, and a Phrase refuses to
 // print or marshal itself.
 //
-// The words are the PGP word list that sas.go holds. Sixteen random bytes become
+// The words are the PGP word list that sas.go holds (D-237, the recovery phrase is
+// eighteen words of the PGP word list). Sixteen random bytes become
 // sixteen words, and two more carry the first two bytes of their SHA-256. The two
 // lists alternate by position, so a swapped or dropped word gives a phrase that
 // does not parse, and the check words catch a wrong word that happens to fall in
