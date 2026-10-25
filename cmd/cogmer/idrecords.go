@@ -45,6 +45,13 @@ const (
 // to the fields of any of them is a new scheme beside this one.
 const idRecordScheme = 1
 
+// cloudRemovalScheme is the removal of a cloud key, whose cutoffs name a session key
+// as well as a room, since a cloud key signs no event and each of its sessions
+// numbers its own (D-250, a removal of a cloud key names a cutoff for each of its
+// session keys in each room). It stands beside scheme 1, the removal of a machine,
+// which is never edited (D-058, signature schemes are kept, never replaced).
+const cloudRemovalScheme = 2
+
 type SharedKeyCert struct {
 	Scheme    int    `json:"scheme"`
 	User      string `json:"user"`
@@ -78,15 +85,27 @@ type RoomCutoff struct {
 	Sequence int64  `json:"sequence"`
 }
 
+// SessionCutoff is the last sequence of one session key in one room that counts,
+// in a removal of the cloud key that certified the session.
+type SessionCutoff struct {
+	Room     string `json:"room"`
+	Session  string `json:"session"`
+	Sequence int64  `json:"sequence"`
+}
+
+// Removal is a removal of a machine, under scheme 1, whose cutoffs name rooms, or of
+// a cloud key, under scheme 2, whose cutoffs name a room and a session key. Each
+// scheme signs only its own kind of cutoff, so the other kind must be empty.
 type Removal struct {
-	Scheme        int          `json:"scheme"`
-	User          string       `json:"user"`
-	Machine       string       `json:"machine"`
-	SignerLevel   Level        `json:"signerLevel"`
-	Signer        string       `json:"signer"`
-	SignerVersion uint64       `json:"signerVersion"` // the shared version, when a shared key signed
-	Cutoffs       []RoomCutoff `json:"cutoffs"`
-	Signature     string       `json:"signature"`
+	Scheme         int             `json:"scheme"`
+	User           string          `json:"user"`
+	Machine        string          `json:"machine"`
+	SignerLevel    Level           `json:"signerLevel"`
+	Signer         string          `json:"signer"`
+	SignerVersion  uint64          `json:"signerVersion"` // the shared version, when a shared key signed
+	Cutoffs        []RoomCutoff    `json:"cutoffs"`
+	SessionCutoffs []SessionCutoff `json:"sessionCutoffs,omitempty"`
+	Signature      string          `json:"signature"`
 }
 
 // Chain is what a key sends to show that it speaks for a user. A session
@@ -347,9 +366,54 @@ func SignRemoval(signer ed25519.PrivateKey, level Level, signerVersion uint64,
 	return r, nil
 }
 
+// SignCloudRemoval signs a removal of the cloud key cloud at the signer's level,
+// under the scheme whose cutoffs name a session key in a room (D-250, a removal of a
+// cloud key names a cutoff for each of its session keys in each room). The cutoffs
+// are sorted by room and then by session key, so that one set of cutoffs has one
+// encoding and so one hash.
+func SignCloudRemoval(signer ed25519.PrivateKey, level Level, signerVersion uint64,
+	user, cloud string, cutoffs []SessionCutoff) (Removal, error) {
+	sorted := append([]SessionCutoff{}, cutoffs...)
+	sort.Slice(sorted, func(i, j int) bool { return sessionCutoffLess(sorted[i], sorted[j]) })
+	r := Removal{
+		Scheme:         cloudRemovalScheme,
+		User:           user,
+		Machine:        cloud,
+		SignerLevel:    level,
+		Signer:         PeerIDFromPublic(signer.Public().(ed25519.PublicKey)),
+		SignerVersion:  signerVersion,
+		Cutoffs:        []RoomCutoff{},
+		SessionCutoffs: sorted,
+	}
+	if err := r.checkShape(); err != nil {
+		return Removal{}, err
+	}
+	msg, _ := r.signingBytes()
+	r.Signature = signID(signer, msg)
+	return r, nil
+}
+
+func sessionCutoffLess(a, b SessionCutoff) bool {
+	if a.Room != b.Room {
+		return a.Room < b.Room
+	}
+	return a.Session < b.Session
+}
+
+// Again signs r's cutoffs anew with signer, under r's own scheme, for a removal
+// carried over to a new shared key (D-220, a removal names the last event of a
+// machine that counts).
+func (r Removal) Again(signer ed25519.PrivateKey, level Level, signerVersion uint64) (Removal, error) {
+	if r.Scheme == cloudRemovalScheme {
+		return SignCloudRemoval(signer, level, signerVersion, r.User, r.Machine, r.SessionCutoffs)
+	}
+	return SignRemoval(signer, level, signerVersion, r.User, r.Machine, r.Cutoffs)
+}
+
 // checkShape refuses a removal whose meaning is ambiguous before its signature
 // is worth checking. Strict order by room is what makes a room given twice, with
-// two cutoffs to choose between, impossible to sign or accept.
+// two cutoffs to choose between, impossible to sign or accept. A cutoff of the kind
+// the removal's scheme does not sign is refused, since nothing vouches for it.
 func (r Removal) checkShape() error {
 	switch r.SignerLevel {
 	case LevelShared:
@@ -366,6 +430,35 @@ func (r Removal) checkShape() error {
 	}
 	if _, err := PublicFromPeerID(r.Machine); err != nil {
 		return fmt.Errorf("removed machine: %w", err)
+	}
+	if r.Scheme == cloudRemovalScheme {
+		if len(r.Cutoffs) > 0 {
+			return errors.New("a removal of a cloud key names a room cutoff, which its scheme does not sign")
+		}
+		for i, c := range r.SessionCutoffs {
+			if c.Room == "" {
+				return fmt.Errorf("removal cutoff %d names no room", i)
+			}
+			if _, err := PublicFromPeerID(c.Session); err != nil {
+				return fmt.Errorf("removal cutoff %d: session key: %w", i, err)
+			}
+			if c.Session == r.Machine {
+				return fmt.Errorf("removal cutoff %d names the cloud key itself as a session's key", i)
+			}
+			if c.Sequence < 0 {
+				return fmt.Errorf("removal cutoff for room %.12s is negative", c.Room)
+			}
+			if i > 0 && !sessionCutoffLess(r.SessionCutoffs[i-1], c) {
+				if r.SessionCutoffs[i-1].Room == c.Room && r.SessionCutoffs[i-1].Session == c.Session {
+					return fmt.Errorf("removal names session %.24s in room %.12s twice", c.Session, c.Room)
+				}
+				return errors.New("removal cutoffs are not sorted by room and session")
+			}
+		}
+		return nil
+	}
+	if len(r.SessionCutoffs) > 0 {
+		return errors.New("a removal of a machine names a session cutoff, which its scheme does not sign")
 	}
 	for i, c := range r.Cutoffs {
 		if c.Room == "" {
@@ -397,6 +490,21 @@ func (r Removal) signingBytes() ([]byte, error) {
 		b.num(uint64(len(r.Cutoffs)))
 		for _, c := range r.Cutoffs {
 			b.str(c.Room)
+			b.num(uint64(c.Sequence))
+		}
+		return b, nil
+	case cloudRemovalScheme:
+		var b idBytes
+		b.str(protocolNamespace + "/cloud-removal/v2")
+		b.str(r.User)
+		b.str(r.Machine)
+		b.num(uint64(r.SignerLevel))
+		b.str(r.Signer)
+		b.num(r.SignerVersion)
+		b.num(uint64(len(r.SessionCutoffs)))
+		for _, c := range r.SessionCutoffs {
+			b.str(c.Room)
+			b.str(c.Session)
 			b.num(uint64(c.Sequence))
 		}
 		return b, nil

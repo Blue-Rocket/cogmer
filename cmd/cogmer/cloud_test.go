@@ -308,7 +308,7 @@ func TestAReceiverRefusesAnExpiredSessionAndARemovedCloudKey(t *testing.T) {
 	if _, err := a.d.members.checkLiveChain(user, sess, chain, time.Now()); err == nil || !strings.Contains(err.Error(), "removed") {
 		t.Errorf("a session of a removed cloud key is accepted: %v", err)
 	}
-	if st := a.d.members.UserState(user, &chain); st.Counts(setup.cloud.Machine, "r", 1) {
+	if st := a.d.members.UserState(user, &chain); st.Counts(setup.cloud.Machine, sess, "r", 1) {
 		t.Error("a stolen cloud key's session event still counts")
 	}
 }

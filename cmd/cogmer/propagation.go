@@ -140,7 +140,7 @@ func (d *Daemon) onlyIdentityKnown(evs []Event, roomID string) []Event {
 			st = d.members.UserState(e.PeerID, e.Chain)
 			states[key] = st
 		}
-		if identityLacks(st, e) || !st.Counts(e.machineKey(), roomID, e.PeerSequence) {
+		if identityLacks(st, e) || !st.Counts(e.machineKey(), e.signerKey(), roomID, e.PeerSequence) {
 			continue
 		}
 		out = append(out, e)

@@ -36,18 +36,37 @@ type removalRoom struct {
 	Proposed int64  `json:"proposed"`
 }
 
+// removalSession is one session key's cutoff in one room, as the page proposes it for
+// a cloud key (D-250, a removal of a cloud key names a cutoff for each of its session
+// keys in each room): the last of that key's turns this machine holds there, and the
+// proposal, which is that turn when the environment was not stolen and 0 when it was.
+// Started is the time of the earliest turn this machine holds of the session the key
+// signed for, as its author stated it, and Name is the name derived from the key, so
+// that a person can tell the sessions apart.
+type removalSession struct {
+	Room     string `json:"room"`
+	RoomName string `json:"roomName"`
+	Session  string `json:"session"`
+	Name     string `json:"name"`
+	Started  string `json:"started"`
+	Last     int64  `json:"last"`
+	Proposed int64  `json:"proposed"`
+}
+
 type removeProposeRequest struct {
 	Machine string `json:"machine"`
 	Stolen  bool   `json:"stolen"`
 }
 
 type removeProposeResponse struct {
-	Machine string        `json:"machine,omitempty"`
-	Name    string        `json:"name,omitempty"`
-	Self    bool          `json:"self,omitempty"`
-	Stolen  bool          `json:"stolen"`
-	Rooms   []removalRoom `json:"rooms"`
-	Error   string        `json:"error,omitempty"`
+	Machine  string           `json:"machine,omitempty"`
+	Name     string           `json:"name,omitempty"`
+	Self     bool             `json:"self,omitempty"`
+	Cloud    bool             `json:"cloud,omitempty"`
+	Stolen   bool             `json:"stolen"`
+	Rooms    []removalRoom    `json:"rooms"`
+	Sessions []removalSession `json:"sessions,omitempty"`
+	Error    string           `json:"error,omitempty"`
 }
 
 // lastHeldTurns is, for each room this machine holds, the highest sequence of
@@ -90,6 +109,61 @@ func (d *Daemon) proposeRemoval(machine string, stolen bool) []removalRoom {
 	return rooms
 }
 
+// lastHeldSessionTurns is, for each room this machine holds and each session key
+// certified under cloud that has a turn there, the highest sequence of that key's
+// that the store holds. Each session key numbers its own turns (D-249, each key that
+// signs in a room counts its own sequence from 1), so the cutoff is the key's own
+// sequence, as this machine received it.
+func (d *Daemon) lastHeldSessionTurns(cloud string) []removalSession {
+	rooms, err := d.members.Rooms()
+	if err != nil {
+		return nil
+	}
+	keys := d.members.sessionKeysOf(d.id.User, cloud)
+	var out []removalSession
+	for _, r := range rooms {
+		store, err := d.storeFor(r.RoomID)
+		if err != nil {
+			continue
+		}
+		for _, k := range keys {
+			d.mu.Lock()
+			last, err := store.HighestSequence(k)
+			started := ""
+			if err == nil && last > 0 {
+				started = store.sessionStarted(k)
+			}
+			d.mu.Unlock()
+			if err != nil || last == 0 {
+				continue
+			}
+			out = append(out, removalSession{Room: r.RoomID, RoomName: r.RoomName, Session: k,
+				Name: PeerName(k), Started: started, Last: last})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Room != out[j].Room {
+			return out[i].Room < out[j].Room
+		}
+		if out[i].Started != out[j].Started {
+			return out[i].Started < out[j].Started
+		}
+		return out[i].Session < out[j].Session
+	})
+	return out
+}
+
+// proposeCloudRemoval is proposeRemoval for a cloud key, session key by session key.
+func (d *Daemon) proposeCloudRemoval(cloud string, stolen bool) []removalSession {
+	sessions := d.lastHeldSessionTurns(cloud)
+	for i := range sessions {
+		if !stolen {
+			sessions[i].Proposed = sessions[i].Last
+		}
+	}
+	return sessions
+}
+
 // removableMachine is the certificate of one of the user's machines that is not
 // removed already, which is what the page offers to remove.
 func (d *Daemon) removableMachine(machine string) (MachineCert, error) {
@@ -115,10 +189,13 @@ func (d *Daemon) handleRemovePropose(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, removeProposeResponse{Error: err.Error()})
 		return
 	}
-	writeJSON(w, removeProposeResponse{
-		Machine: req.Machine, Name: c.Name, Self: req.Machine == d.id.PeerID, Stolen: req.Stolen,
-		Rooms: d.proposeRemoval(req.Machine, req.Stolen),
-	})
+	res := removeProposeResponse{Machine: req.Machine, Name: c.Name, Self: req.Machine == d.id.PeerID, Stolen: req.Stolen}
+	if c.Kind == KindCloud {
+		res.Cloud, res.Rooms, res.Sessions = true, []removalRoom{}, d.proposeCloudRemoval(req.Machine, req.Stolen)
+	} else {
+		res.Rooms = d.proposeRemoval(req.Machine, req.Stolen)
+	}
+	writeJSON(w, res)
 }
 
 type removeRequest struct {
@@ -127,6 +204,10 @@ type removeRequest struct {
 	// Cutoffs maps a room to the last of the machine's turns there that counts, as
 	// the user confirmed or edited it. A room left out takes what the page proposed.
 	Cutoffs map[string]int64 `json:"cutoffs"`
+	// SessionCutoffs maps a room and then a session key to the last of that key's
+	// turns there that counts, for a cloud key, as the user confirmed or edited it. A
+	// session key left out takes what the page proposed.
+	SessionCutoffs map[string]map[string]int64 `json:"sessionCutoffs,omitempty"`
 }
 
 // cutoffsFor checks the cutoffs the user confirmed against what this machine holds,
@@ -155,6 +236,30 @@ func cutoffsFor(rooms []removalRoom, chosen map[string]int64) ([]RoomCutoff, err
 	return out, nil
 }
 
+// sessionCutoffsFor is cutoffsFor for a cloud key: each cutoff may be anything from 0
+// to the last of the session key's turns this machine holds in the room, and one of 0
+// is left out, which a removal reads as 0 (D-250, a removal of a cloud key names a
+// cutoff for each of its session keys in each room).
+func sessionCutoffsFor(sessions []removalSession, chosen map[string]map[string]int64) ([]SessionCutoff, error) {
+	var out []SessionCutoff
+	for _, s := range sessions {
+		seq, ok := chosen[s.Room][s.Session]
+		if !ok {
+			seq = s.Proposed
+		}
+		if seq < 0 {
+			return nil, fmt.Errorf("the cutoff for session %s in %s is below 0", s.Name, s.RoomName)
+		}
+		if seq > s.Last {
+			return nil, fmt.Errorf("the cutoff for session %s in %s is past the last of its turns this machine holds there, turn %d", s.Name, s.RoomName, s.Last)
+		}
+		if seq > 0 {
+			out = append(out, SessionCutoff{Room: s.Room, Session: s.Session, Sequence: seq})
+		}
+	}
+	return out, nil
+}
+
 // handleRemove signs a removal of one of the user's machines with this machine's
 // current shared key and keeps it, and the identity loop pushes it to every colleague
 // and to the user's other machines until each acknowledges (D-225, a machine sends
@@ -177,14 +282,28 @@ func (d *Daemon) handleRemove(w http.ResponseWriter, r *http.Request) {
 }
 
 func (d *Daemon) removeMachine(req removeRequest) (identityResult, error) {
-	if _, err := d.removableMachine(req.Machine); err != nil {
-		return identityResult{}, err
-	}
-	cutoffs, err := cutoffsFor(d.proposeRemoval(req.Machine, req.Stolen), req.Cutoffs)
+	id := d.id
+	cert, err := d.removableMachine(req.Machine)
 	if err != nil {
 		return identityResult{}, err
 	}
-	id := d.id
+	cloud := cert.Kind == KindCloud
+	var cutoffs []RoomCutoff
+	var sessionCutoffs []SessionCutoff
+	if cloud {
+		sessionCutoffs, err = sessionCutoffsFor(d.proposeCloudRemoval(req.Machine, req.Stolen), req.SessionCutoffs)
+	} else {
+		cutoffs, err = cutoffsFor(d.proposeRemoval(req.Machine, req.Stolen), req.Cutoffs)
+	}
+	if err != nil {
+		return identityResult{}, err
+	}
+	sign := func(key ed25519.PrivateKey, level Level, version uint64) (Removal, error) {
+		if cloud {
+			return SignCloudRemoval(key, level, version, id.User, req.Machine, sessionCutoffs)
+		}
+		return SignRemoval(key, level, version, id.User, req.Machine, cutoffs)
+	}
 	self := req.Machine == id.PeerID
 	home := d.homeDirectory()
 	shared, version, held, err := loadSharedKeyIn(home)
@@ -198,9 +317,9 @@ func (d *Daemon) removeMachine(req removeRequest) (identityResult, error) {
 	var rem Removal
 	switch {
 	case held && version == current:
-		rem, err = SignRemoval(shared, LevelShared, version, id.User, req.Machine, cutoffs)
+		rem, err = sign(shared, LevelShared, version)
 	case self:
-		rem, err = SignRemoval(id.private, LevelMachine, 0, id.User, req.Machine, cutoffs)
+		rem, err = sign(id.private, LevelMachine, 0)
 	default:
 		return identityResult{}, errors.New("this machine does not hold your current shared key, so it cannot remove another machine; remove it from a machine that does")
 	}
@@ -220,7 +339,8 @@ func (d *Daemon) removeMachine(req removeRequest) (identityResult, error) {
 		}
 	}
 	h := rem.Hash()
-	log.Printf("identity: removed machine %s, %d room cutoff(s), removal %.16s", PeerName(req.Machine), len(cutoffs), hex.EncodeToString(h[:]))
+	log.Printf("identity: removed machine %s, %d room cutoff(s), %d session cutoff(s), removal %.16s",
+		PeerName(req.Machine), len(cutoffs), len(sessionCutoffs), hex.EncodeToString(h[:]))
 	d.notify()
 	return identityResult{Status: "removed"}, nil
 }
@@ -233,13 +353,14 @@ func (d *Daemon) removeMachine(req removeRequest) (identityResult, error) {
 // key needs, since one the master signed counts under any key and one a machine
 // signed of itself counts while its certificate does.
 type heldRemoval struct {
-	Hash        string       `json:"hash"`
-	Machine     string       `json:"machine"`
-	MachineName string       `json:"machineName"`
-	SignedBy    string       `json:"signedBy"`
-	Carried     bool         `json:"carried"`
-	Counts      bool         `json:"counts"`
-	Cutoffs     []RoomCutoff `json:"cutoffs"`
+	Hash           string          `json:"hash"`
+	Machine        string          `json:"machine"`
+	MachineName    string          `json:"machineName"`
+	SignedBy       string          `json:"signedBy"`
+	Carried        bool            `json:"carried"`
+	Counts         bool            `json:"counts"`
+	Cutoffs        []RoomCutoff    `json:"cutoffs"`
+	SessionCutoffs []SessionCutoff `json:"sessionCutoffs,omitempty"`
 }
 
 type keyMachine struct {
@@ -309,6 +430,7 @@ func (d *Daemon) newKeyPreview() newKeyPreview {
 		out.Removals = append(out.Removals, heldRemoval{
 			Hash: hex.EncodeToString(h[:]), Machine: r.Machine, MachineName: name,
 			SignedBy: signerText(r), Carried: r.SignerLevel == LevelShared, Counts: counts, Cutoffs: r.Cutoffs,
+			SessionCutoffs: r.SessionCutoffs,
 		})
 	}
 	sort.Slice(out.Removals, func(i, j int) bool { return out.Removals[i].Hash < out.Removals[j].Hash })
@@ -427,7 +549,7 @@ func (d *Daemon) certifyNewKey(p Phrase, keep, machines []string) (newKeyResult,
 			continue
 		}
 		done[h] = true
-		again, err := SignRemoval(shared, LevelShared, version, id.User, r.Machine, r.Cutoffs)
+		again, err := r.Again(shared, LevelShared, version)
 		if err != nil {
 			return newKeyResult{}, err
 		}

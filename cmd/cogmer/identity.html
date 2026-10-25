@@ -290,20 +290,25 @@ async function addCloud(){
   };
 }
 
-// --- removing a machine (D-220) ---
+// --- removing a machine (D-220) or a cloud environment (D-250) ---
 
 // The page asks first whether the machine was stolen, since that decides what it proposes:
 // the last turn of the machine this machine holds in each room, so none of your own turns
-// are marked, or none at all.
+// are marked, or none at all. A cloud environment's turns are its sessions', so for one
+// the page proposes the last turn of each session in each room.
 function removeAsk(machine){
   const m = (state.machines||[]).find(x => x.machine === machine) || {name: machine};
-  show(`<p class="lead">Was ${esc(m.name)} stolen?</p>
-    <div class="card"><p style="margin:0 0 6px">${m.self ? 'This is the machine you are using. Removing it means it no longer speaks as you.' :
-      'Removing a machine means it no longer speaks as you.'} Its turns up to the point you choose in each room
-      still count; later ones are shown marked and never given to an assistant.</p>
+  const cloud = m.kind === 'cloud';
+  const what = cloud ? 'Removing a cloud environment means none of its sessions speak as you any more.' :
+    (m.self ? 'This is the machine you are using. Removing it means it no longer speaks as you.' :
+      'Removing a machine means it no longer speaks as you.');
+  const counts = cloud ? 'Each session\'s turns up to the point you choose in each room still count' :
+    'Its turns up to the point you choose in each room still count';
+  show(`<p class="lead">Was ${esc(m.name)} ${cloud ? 'stolen, or the value in its settings exposed' : 'stolen'}?</p>
+    <div class="card"><p style="margin:0 0 6px">${what} ${counts}; later ones are shown marked and never given to an assistant.</p>
       <div class="row">
         <button class="no" id="stolen">Stolen, or it may be in someone else's hands</button>
-        <button id="retired">Not stolen: retired, or lost where nobody will use it</button>
+        <button id="retired">${cloud ? 'Not stolen: I have stopped using it' : 'Not stolen: retired, or lost where nobody will use it'}</button>
         <button id="back">Back</button>
       </div></div>`);
   el('stolen').onclick = () => removePropose(machine, true);
@@ -314,6 +319,7 @@ function removeAsk(machine){
 async function removePropose(machine, stolen, msg){
   const p = await post('/machines/remove/propose', {machine, stolen}).catch(e => ({error:e.message}));
   if(p.error){ machines(p.error); return; }
+  if(p.cloud){ removeCloudPropose(machine, stolen, p, msg); return; }
   const rows = (p.rooms||[]).map((r, i) => `<tr><td>${esc(r.roomName)}</td>
       <td class="hint">its last turn here: ${esc(r.last)}</td>
       <td><input id="c${i}" type="number" min="0" max="${esc(r.last)}" value="${esc(r.proposed)}" style="width:7em"></td></tr>`).join('');
@@ -330,6 +336,46 @@ async function removePropose(machine, stolen, msg){
     const cutoffs = {};
     (p.rooms||[]).forEach((r, i) => { cutoffs[r.room] = parseInt(el('c'+i).value, 10) || 0; });
     const res = await post('/machines/remove', {machine, stolen, cutoffs}).catch(e => ({error:e.message}));
+    if(res.error){ removePropose(machine, stolen, res.error); return; }
+    state = await post('/identity/state');
+    machines();
+  };
+}
+
+// A cloud environment's sessions each number their own turns, so the page lists, room by
+// room, each session this machine holds turns of, by when it started and the name derived
+// from its key, with the last of its turns that counts.
+function startedText(at){
+  const t = new Date(at);
+  return isNaN(t) ? 'at an unknown time' : t.toLocaleString();
+}
+
+function removeCloudPropose(machine, stolen, p, msg){
+  const byRoom = [];
+  (p.sessions||[]).forEach((s, i) => {
+    let g = byRoom.find(x => x.room === s.room);
+    if(!g){ g = {room: s.room, roomName: s.roomName, rows: []}; byRoom.push(g); }
+    g.rows.push(`<tr><td>the session that started ${esc(startedText(s.started))}
+        <span class="hint">${esc(s.name)}</span></td>
+      <td class="hint">its last turn here: ${esc(s.last)}</td>
+      <td><input id="s${i}" type="number" min="0" max="${esc(s.last)}" value="${esc(s.proposed)}" style="width:7em"></td></tr>`);
+  });
+  const rooms = byRoom.map(g => `<h2>${esc(g.roomName)}</h2>
+      <table><tr><td><b>Session</b></td><td></td><td><b>Last turn that counts</b></td></tr>${g.rows.join('')}</table>`).join('');
+  show(`<p class="lead">Remove ${esc(p.name)}: the last of each session's turns that counts, room by room.</p>
+    <div class="card">
+      <p class="hint" style="margin:0 0 6px">${stolen ? 'Nothing its sessions wrote counts unless you name a turn. Name a later one only if you are sure that turn was yours.' :
+        'Each session shows the last of its turns this machine holds. You can name an earlier one; a cutoff can never be moved later. A session this machine holds no turn of counts none of its turns.'}</p>
+      ${rooms || '<p class="hint">This machine holds no turn of its sessions, so none of their turns count anywhere.</p>'}
+      <div class="row"><button class="no" id="confirm">Remove ${esc(p.name)}</button><button id="back">Back</button></div>
+      ${errorBox(msg)}</div>`);
+  el('back').onclick = () => machines();
+  el('confirm').onclick = async () => {
+    const sessionCutoffs = {};
+    (p.sessions||[]).forEach((s, i) => {
+      (sessionCutoffs[s.room] = sessionCutoffs[s.room] || {})[s.session] = parseInt(el('s'+i).value, 10) || 0;
+    });
+    const res = await post('/machines/remove', {machine, stolen, sessionCutoffs}).catch(e => ({error:e.message}));
     if(res.error){ removePropose(machine, stolen, res.error); return; }
     state = await post('/identity/state');
     machines();

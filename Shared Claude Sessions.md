@@ -753,6 +753,13 @@ never given to an assistant, so that a thief's turns never reach a model as the 
 The last turn a removal lets count can only move earlier, so that whoever holds a
 removed machine, or later obtains the phrase, cannot make its marked turns count.
 
+Removing a cloud environment marks, for each of the environment's sessions, every turn that
+session sent after the last of that session's turns the user names as counting, so that
+retiring an environment the user has stopped using withdraws nothing its sessions wrote.
+
+The page that removes a cloud environment lists its sessions by when each started, not
+only by key, so that a user can tell one session's turns from another's.
+
 A user whose machine was stolen renews, with the recovery phrase in the daemon's page,
 the vouching that lets their machines speak as them. Every machine the user still has is
 vouched for again, and any machine the user does not recognize, such as one a thief

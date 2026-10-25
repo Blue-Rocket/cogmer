@@ -229,5 +229,35 @@
       "signature": "lliiosm2yfiSP2xP8cR3HQxRFGfc1Tp1fdr-6FmxC6DjpS71cJTiI7__BWeTpidCygj9UbRqtQiI3h53GOE4Bw"
     },
     "hash": "984d87830c57bce47288b884810326cfde7e635b98d48c81051f605b8a29e94d"
+  },
+  "cloudRemoval": {
+    "record": {
+      "scheme": 2,
+      "user": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "machine": "ed25519:7TI0snbUztpX1ZutFPuvWnc8DzGMmZ3jpg1TxaWzTAU",
+      "signerLevel": 2,
+      "signer": "ed25519:VRVPQgZepaG-oFRjgmviaE65LfksEAAnqrquV8pVQgc",
+      "signerVersion": 3,
+      "cutoffs": [],
+      "sessionCutoffs": [
+        {
+          "room": "room-a",
+          "session": "ed25519:TmAIsBt05J442LETkr-szHtb_4bKIEjLsPeDYzph4t0",
+          "sequence": 4
+        },
+        {
+          "room": "room-a",
+          "session": "ed25519:yQd1GM-kOHZ-1oxxgXjPGpI0PTxf_IVPImWLZcuiYvA",
+          "sequence": 6
+        },
+        {
+          "room": "room-b",
+          "session": "ed25519:TmAIsBt05J442LETkr-szHtb_4bKIEjLsPeDYzph4t0",
+          "sequence": 2
+        }
+      ],
+      "signature": "IDhy585lW-E9VRkqPHbSgS8QXUHX2upf6ehrWz7Qkw_Bgq3EEWTnMvAPm8J10l4LlZgxaCH9BmjVQXZ9ULN5Ag"
+    },
+    "hash": "71abe864ae0269a5362e87d44a344b97aebed455cc09f138e3249c2de6a49830"
   }
 }

@@ -682,7 +682,7 @@ func TestRecoveryCertifiesANewVersionAndTheMachineNotAddedBackIsSuspended(t *tes
 	if st.Current != 2 || !st.Machines[a.d.id.PeerID].Current {
 		t.Errorf("the recovered machine is not current: %+v", st.Machines[a.d.id.PeerID])
 	}
-	if ms := st.Machines[b.d.id.PeerID]; ms == nil || ms.Current || st.Counts(b.d.id.PeerID, room.RoomID, 1) {
+	if ms := st.Machines[b.d.id.PeerID]; ms == nil || ms.Current || st.Counts(b.d.id.PeerID, b.d.id.PeerID, room.RoomID, 1) {
 		t.Errorf("the machine not added back is not suspended: %+v", ms)
 	}
 

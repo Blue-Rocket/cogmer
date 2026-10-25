@@ -116,7 +116,7 @@ func (d *Daemon) judgeEvent(ev *Event) error {
 	if err := d.members.StoreChain(*ev.Chain); err != nil {
 		return fmt.Errorf("keeping the chain: %w", err)
 	}
-	if !st.Counts(link.Machine, ev.RoomID, ev.PeerSequence) {
+	if !st.Counts(link.Machine, link.Signer, ev.RoomID, ev.PeerSequence) {
 		return errNotCounting
 	}
 	return nil

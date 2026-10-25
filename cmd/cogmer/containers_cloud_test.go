@@ -76,10 +76,16 @@ func TestContainerCloudSessionSpeaksAsItsUserUntilItsKeyIsRemoved(t *testing.T) 
 		t.Fatal("the cloud session's daemon logs the value")
 	}
 
-	// Alice removes the cloud key on her page; once bob holds the removal, bob refuses
-	// the session's next turn.
+	// Alice removes the cloud environment on her page as not stolen, so the page
+	// proposes the last of the session's turns her machine holds (D-250). Once bob holds
+	// the removal, bob still counts the session's earlier turn and refuses its next one.
+	var p removeProposeResponse
+	r.alice.mustPost("/machines/remove/propose", removeProposeRequest{Machine: cloudKey}, &p)
+	if !p.Cloud || len(p.Sessions) != 1 || p.Sessions[0].Proposed == 0 || p.Sessions[0].Started == "" {
+		t.Fatalf("alice's page proposed %+v for her cloud environment", p)
+	}
 	var res identityResult
-	r.alice.mustPost("/machines/remove", removeRequest{Machine: cloudKey, Stolen: true}, &res)
+	r.alice.mustPost("/machines/remove", removeRequest{Machine: cloudKey}, &res)
 	if res.Status != "removed" {
 		t.Fatalf("alice's page did not remove the cloud key: %+v", res)
 	}
@@ -94,6 +100,20 @@ func TestContainerCloudSessionSpeaksAsItsUserUntilItsKeyIsRemoved(t *testing.T) 
 	}
 	if r.alice.viewHas(r.name, "alice in the cloud after removal") {
 		t.Fatal("alice's machine took a turn from a removed cloud key")
+	}
+	for _, who := range []*box{r.bob, r.alice} {
+		found := false
+		for _, e := range who.view(r.name) {
+			if e.Content == "alice in the cloud says the build is green" {
+				found = true
+				if e.Marked != "" {
+					t.Errorf("%s marks the retired environment's earlier turn: %s", who.name, e.Marked)
+				}
+			}
+		}
+		if !found {
+			t.Errorf("%s no longer shows the retired environment's earlier turn", who.name)
+		}
 	}
 }
 

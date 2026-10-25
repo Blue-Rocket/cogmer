@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -846,6 +847,38 @@ func (m *Membership) listsVersion(user string) (uint64, error) {
 		return 0, err
 	}
 	return version, tx.Commit()
+}
+
+// sessionKeysOf is every session key that a session certificate this machine holds
+// says cloud certified for user, sorted, each certificate checked against cloud. The
+// certificates are kept from the chains of events and requests, so a session whose
+// turns never reached this machine is not among them.
+func (m *Membership) sessionKeysOf(user, cloud string) []string {
+	pub, err := PublicFromPeerID(cloud)
+	if err != nil {
+		return nil
+	}
+	rows, err := m.db.Query(`SELECT body FROM identity_records WHERE user = ? AND kind = ?`, user, RecordSession)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	seen := map[string]bool{}
+	var out []string
+	for rows.Next() {
+		var body string
+		var c SessionCert
+		if rows.Scan(&body) != nil || json.Unmarshal([]byte(body), &c) != nil {
+			continue
+		}
+		if c.User != user || c.CloudKey != cloud || seen[c.Session] || c.VerifyBy(pub) != nil {
+			continue
+		}
+		seen[c.Session] = true
+		out = append(out, c.Session)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // machineOfSigner is the key user's records certify for signer: the cloud key of a

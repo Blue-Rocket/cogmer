@@ -55,6 +55,33 @@ type MachineState struct {
 	// Cutoffs maps a room to the machine's last counting sequence there, and is
 	// set only for a removed machine. A room absent counts nothing.
 	Cutoffs map[string]int64
+	// SessionCutoffs maps a room and then a session key to the session's last
+	// counting sequence there, and is set only for a removed cloud key, whose
+	// sessions sign its turns (D-250, a removal of a cloud key names a cutoff for each
+	// of its session keys in each room). A session key absent counts nothing.
+	SessionCutoffs map[string]map[string]int64
+}
+
+// counts reports whether the event with this sequence in room, signed by signer,
+// which is the machine itself or one of a cloud key's sessions, counts. A cloud
+// key's sessions are judged by their own cutoffs, since each numbers its own events
+// and the cloud key signs none (D-249, each key that signs in a room counts its own
+// sequence from 1).
+func (m *MachineState) counts(signer, room string, sequence int64) bool {
+	if !m.Current {
+		return false
+	}
+	if !m.Removed {
+		return true
+	}
+	var cutoff int64
+	var ok bool
+	if m.Cert.Kind == KindCloud {
+		cutoff, ok = m.SessionCutoffs[room][signer]
+	} else {
+		cutoff, ok = m.Cutoffs[room]
+	}
+	return ok && sequence <= cutoff
 }
 
 // Discarded is a record that failed a check or lost a conflict, kept with its
@@ -220,7 +247,7 @@ func Resolve(user string, rs RecordSet) *UserState {
 			continue
 		}
 		m.Removed = true
-		m.Cutoffs = removalCutoffs(r.Machine, s.Removals)
+		m.Cutoffs, m.SessionCutoffs = removalCutoffs(r.Machine, s.Removals)
 	}
 
 	sort.Slice(s.Discarded, func(i, j int) bool {
@@ -275,13 +302,18 @@ func (s *UserState) mayRemove(r Removal) error {
 }
 
 // removalCutoffs gives each room the lowest sequence any removal of machine
-// allows there, a room a removal leaves out counting as 0, so that a cutoff only
+// allows there, and each session key in each room the lowest any removal allows it,
+// a room or a session a removal leaves out counting as 0, so that a cutoff only
 // moves earlier whoever signs next (D-220, a removal names the last event of a
-// machine that counts). A room whose lowest is 0 is left out, which reads the
-// same as a cutoff of 0.
-func removalCutoffs(machine string, removals map[[32]byte]Removal) map[string]int64 {
+// machine that counts; D-250, a removal of a cloud key names a cutoff for each of
+// its session keys in each room). A removal under the machine scheme names no
+// session, and one under the cloud scheme no room, so a removal of a cloud key under
+// the machine scheme leaves every session of it counting nothing. A cutoff whose
+// lowest is 0 is left out, which reads the same as a cutoff of 0.
+func removalCutoffs(machine string, removals map[[32]byte]Removal) (map[string]int64, map[string]map[string]int64) {
 	var mine []Removal
 	rooms := map[string]bool{}
+	sessions := map[[2]string]bool{}
 	for _, r := range removals {
 		if r.Machine != machine {
 			continue
@@ -289,6 +321,9 @@ func removalCutoffs(machine string, removals map[[32]byte]Removal) map[string]in
 		mine = append(mine, r)
 		for _, c := range r.Cutoffs {
 			rooms[c.Room] = true
+		}
+		for _, c := range r.SessionCutoffs {
+			sessions[[2]string{c.Room, c.Session}] = true
 		}
 	}
 	out := map[string]int64{}
@@ -309,7 +344,28 @@ func removalCutoffs(machine string, removals map[[32]byte]Removal) map[string]in
 			out[room] = low
 		}
 	}
-	return out
+	bySession := map[string]map[string]int64{}
+	for key := range sessions {
+		low := int64(-1)
+		for _, r := range mine {
+			var seq int64
+			for _, c := range r.SessionCutoffs {
+				if c.Room == key[0] && c.Session == key[1] {
+					seq = c.Sequence
+				}
+			}
+			if low < 0 || seq < low {
+				low = seq
+			}
+		}
+		if low > 0 {
+			if bySession[key[0]] == nil {
+				bySession[key[0]] = map[string]int64{}
+			}
+			bySession[key[0]][key[1]] = low
+		}
+	}
+	return out, bySession
 }
 
 // certSupersedes reports whether machine certificate a, with hash ha, is the
@@ -356,26 +412,21 @@ func bestHash[T any](m map[[32]byte]T, claim func([32]byte) Claim) [32]byte {
 	return win
 }
 
-// Counts reports whether machine's event with this sequence in room counts. An
-// unknown machine's event does not, since nothing yet says the user vouches for
-// it.
-func (s *UserState) Counts(machine, room string, sequence int64) bool {
+// Counts reports whether the event with this sequence in room, signed by signer
+// under machine, counts. Signer is machine itself for a machine's event, and the
+// session key for a cloud session's, whose machine is its cloud key. An unknown
+// machine's event does not count, since nothing yet says the user vouches for it.
+//
+// A machine not certified under the current shared key is suspended: none of its
+// events count until the user certifies it again, which only the user can do once
+// a new key exists, so a machine a thief added with the old key stays out of every
+// transcript for good.
+func (s *UserState) Counts(machine, signer, room string, sequence int64) bool {
 	m, ok := s.Machines[machine]
 	if !ok {
 		return false
 	}
-	// A machine not certified under the current shared key is suspended: none
-	// of its events count until the user certifies it again, which only the
-	// user can do once a new key exists, so a machine a thief added with the old
-	// key stays out of every transcript for good.
-	if !m.Current {
-		return false
-	}
-	if !m.Removed {
-		return true
-	}
-	cutoff, ok := m.Cutoffs[room]
-	return ok && sequence <= cutoff
+	return m.counts(signer, room, sequence)
 }
 
 // List gives the certificates of the machines not removed, the list a machine

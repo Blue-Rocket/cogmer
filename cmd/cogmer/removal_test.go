@@ -320,7 +320,7 @@ func TestARemovalIsPushedAndAColleagueStopsCountingTheRemovedMachinesLaterTurns(
 		t.Errorf("after the removal arrived the colleague judges the later turn %v", err)
 	}
 	st := bp.d.members.UserState(user, nil)
-	if !st.Counts(b.d.id.PeerID, room.RoomID, 1) || st.Counts(b.d.id.PeerID, room.RoomID, 2) {
+	if !st.Counts(b.d.id.PeerID, b.d.id.PeerID, room.RoomID, 1) || st.Counts(b.d.id.PeerID, b.d.id.PeerID, room.RoomID, 2) {
 		t.Error("the colleague does not count the turn within the cutoff and only it")
 	}
 }
@@ -383,7 +383,7 @@ func TestANewSharedKeyCarriesOnlyTheConfirmedRemovalsAndSuspendsAMachineNotCerti
 		t.Error("the thief's removal carried over to the new key")
 	case !st.Machines[c.d.id.PeerID].Current || !st.Machines[c.d.id.PeerID].Removed:
 		t.Error("the removal the user kept did not carry over")
-	case st.Machines[e.d.id.PeerID].Current || st.Counts(e.d.id.PeerID, "any", 1):
+	case st.Machines[e.d.id.PeerID].Current || st.Counts(e.d.id.PeerID, e.d.id.PeerID, "any", 1):
 		t.Error("the machine not certified again is not suspended")
 	}
 	if a.d.heldSharedVersion() != 2 || a.d.id.Chain.Shared.Version != 2 {
@@ -925,7 +925,7 @@ func TestAMachineRemovesItselfFromItsOwnPage(t *testing.T) {
 	}
 	st := b.d.members.UserState(b.d.id.User, nil)
 	ms := st.Machines[b.d.id.PeerID]
-	if ms == nil || !ms.Removed || ms.Cutoffs[room.RoomID] != 1 || st.Counts(b.d.id.PeerID, room.RoomID, 2) {
+	if ms == nil || !ms.Removed || ms.Cutoffs[room.RoomID] != 1 || st.Counts(b.d.id.PeerID, b.d.id.PeerID, room.RoomID, 2) {
 		t.Errorf("after removing itself the machine is %+v", ms)
 	}
 }

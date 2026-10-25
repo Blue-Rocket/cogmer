@@ -274,7 +274,9 @@ func TestARecordCheckedAgainstTheWrongKeyFails(t *testing.T) {
 
 func TestAnIdentityRecordUnderAnUnknownSchemeIsRefusedAsAVersionProblem(t *testing.T) {
 	k := testIDKeys(t)
-	for _, scheme := range []int{0, 2} {
+	// Scheme 2 is known for a removal (D-250, a removal of a cloud key names a cutoff
+	// for each of its session keys in each room), so 3 is the first unknown to all.
+	for _, scheme := range []int{0, 3} {
 		sc, mc, ss, r, lc := k.sharedCert(), k.machineCert(), k.sessionCert(), k.removal(t), k.listChange()
 		sc.Scheme, mc.Scheme, ss.Scheme, r.Scheme, lc.Scheme = scheme, scheme, scheme, scheme, scheme
 		for name, err := range map[string]error{

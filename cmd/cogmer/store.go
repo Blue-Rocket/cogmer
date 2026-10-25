@@ -336,6 +336,18 @@ func (s *Store) HighestSequence(signer string) (int64, error) {
 	return seq.Int64, nil
 }
 
+// sessionStarted is the earliest timestamp this store holds of any event of the
+// agent sessions signer wrote turns for, under the same peer, as their author stated
+// it, or "" when it holds none. It is for a person telling sessions apart, never for
+// deciding what counts, since an author states its own times.
+func (s *Store) sessionStarted(signer string) string {
+	var at sql.NullString
+	_ = s.db.QueryRow(`SELECT MIN(e.timestamp) FROM events e
+		JOIN (SELECT DISTINCT peer_id, origin_session_id FROM events WHERE signer = ?) o
+		ON e.peer_id = o.peer_id AND e.origin_session_id = o.origin_session_id`, signer).Scan(&at)
+	return at.String
+}
+
 // Append durably commits a locally generated event before it is considered
 // published (§23).
 // The sequence is passed in rather than derived here, because deriving it from

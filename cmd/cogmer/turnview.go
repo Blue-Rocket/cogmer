@@ -73,10 +73,8 @@ func (s *standings) of(e Event) standing {
 		if !ok || !ms.Current {
 			return standingHidden
 		}
-		if ms.Removed {
-			if cutoff, ok := ms.Cutoffs[s.room]; !ok || e.PeerSequence > cutoff {
-				return standingRemovedMachine
-			}
+		if !ms.counts(signer, s.room, e.PeerSequence) {
+			return standingRemovedMachine
 		}
 	}
 	if s.list != nil && !isGuestEventType(e.EventType) && !s.list.Counts(e.PeerID, signer, e.PeerSequence) {

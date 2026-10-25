@@ -516,18 +516,18 @@ func TestTheLowestCutoffAcrossRemovalsAppliesInEachRoom(t *testing.T) {
 		{"b", 8, true}, {"b", 9, false},
 		{"c", 1, false}, {"elsewhere", 1, false},
 	} {
-		if got := s.Counts(m.id, c.room, c.seq); got != c.want {
+		if got := s.Counts(m.id, m.id, c.room, c.seq); got != c.want {
 			t.Errorf("Counts(%s, %d) = %v, want %v", c.room, c.seq, got, c.want)
 		}
 	}
-	if s.Counts(stateKeyFrom("cutoff/unknown").id, "a", 1) {
+	if s.Counts(stateKeyFrom("cutoff/unknown").id, stateKeyFrom("cutoff/unknown").id, "a", 1) {
 		t.Error("an unknown machine's event counts")
 	}
 }
 
 func TestAnUnremovedMachineCountsEverywhere(t *testing.T) {
 	s, m := removedState(t)
-	if !s.Counts(m.id, "any", 1_000_000) {
+	if !s.Counts(m.id, m.id, "any", 1_000_000) {
 		t.Fatal("an unremoved machine's event does not count")
 	}
 }
@@ -729,10 +729,10 @@ func TestAMachineNotUnderTheCurrentKeyIsSuspendedUntilCertifiedAgain(t *testing.
 		},
 	}
 	s := Resolve(u.id(), rs)
-	if !s.Counts(known.id, "room-a", 1) {
+	if !s.Counts(known.id, known.id, "room-a", 1) {
 		t.Fatal("a machine certified under the current key did not count")
 	}
-	if s.Counts(unknown.id, "room-a", 1) {
+	if s.Counts(unknown.id, unknown.id, "room-a", 1) {
 		t.Fatal("a machine left under the old key counted, so a machine a thief added would stay in the transcript")
 	}
 	oldChain := Chain{Shared: u.share(1), Machine: u.certify(1, unknown, KindMachine, "added by a thief", 2)}
@@ -746,7 +746,7 @@ func TestAMachineNotUnderTheCurrentKeyIsSuspendedUntilCertifiedAgain(t *testing.
 
 	rs.Machines = append(rs.Machines, u.certify(2, unknown, KindMachine, "mine after all", 2))
 	s = Resolve(u.id(), rs)
-	if !s.Counts(unknown.id, "room-a", 1) {
+	if !s.Counts(unknown.id, unknown.id, "room-a", 1) {
 		t.Fatal("certifying a suspended machine under the current key did not restore it")
 	}
 }
@@ -765,7 +765,7 @@ func TestARemovedMachinesEventChainPassesCheckEventAndFailsCheck(t *testing.T) {
 	if err != nil {
 		t.Fatalf("a removed machine's event was refused, so its events within the cutoff would be lost: %v", err)
 	}
-	if link.Machine != m.id || !s.Counts(link.Machine, "room-a", 4) || s.Counts(link.Machine, "room-a", 5) {
+	if link.Machine != m.id || !s.Counts(link.Machine, link.Machine, "room-a", 4) || s.Counts(link.Machine, link.Machine, "room-a", 5) {
 		t.Fatal("the removed machine's event is not judged by its cutoff")
 	}
 	if _, err := s.Check(chain, m.id); err == nil || !strings.Contains(err.Error(), "removed") {
@@ -782,7 +782,7 @@ func TestASuspendedMachinesEventChainPassesCheckEventAndCountsForNothing(t *test
 	if _, err := s.CheckEvent(chain, m.id); err != nil {
 		t.Fatalf("a suspended machine's event chain was refused: %v", err)
 	}
-	if s.Counts(m.id, "room-a", 1) {
+	if s.Counts(m.id, m.id, "room-a", 1) {
 		t.Fatal("a suspended machine's event counted")
 	}
 	if _, err := s.Check(chain, m.id); err == nil {

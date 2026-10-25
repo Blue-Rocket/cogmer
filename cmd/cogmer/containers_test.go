@@ -440,6 +440,8 @@ type viewEvent struct {
 	MachineID string `json:"machineId"`
 	EventType string `json:"eventType"`
 	Content   string `json:"content"`
+	// Marked says why a turn does not count, empty for one that counts.
+	Marked string `json:"marked"`
 }
 
 // view is the room's turns as the browser view on this machine shows them.
