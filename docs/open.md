@@ -296,6 +296,13 @@ shows its turns as unverified. D-242 (a machine key from before the user identit
 verification, label and turns) and D-243 (a room from before user identities takes one guest
 list) decide the fix, and neither is built.
 
+**Joining a room from an invitation erases the label the user gave the inviter.** `runJoin`
+records the inviting machine with `Allow(host, "")`, and `Allow` writes the derived name over
+an existing name when it is given none, read on 2026-10-25 and seen in a container test the
+same day: after joining, `peers` shows the inviter as "none given" and the inviter's turns carry
+no label. The same code is on `main`. `Allow` should keep an existing name when it is given
+none.
+
 **An older program run on a machine's upgraded state can damage it.** The program on `main`
 rewrites `identity.json` without the user and the chain when its user renames themselves, and
 cannot read the room databases the user identity migrates, read on 2026-10-25. D-244 (the data
