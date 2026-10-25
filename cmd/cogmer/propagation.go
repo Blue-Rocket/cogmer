@@ -301,9 +301,12 @@ func (d *Daemon) mayExchangeIdentity(peer string) bool {
 
 // verifyIdentityRequest establishes who signed a request to one of the identity
 // routes, and that this machine exchanges records with them.
-func (d *Daemon) verifyIdentityRequest(scope string, cred syncRequest) error {
+func (d *Daemon) verifyIdentityRequest(scope string, cred syncRequest, r *http.Request) error {
 	if cred.RoomID != scope {
 		return errors.New("the request is not signed for this route")
+	}
+	if err := connectedAs(r, cred.requestMachine()); err != nil {
+		return err
 	}
 	// No room: verifyRequest skips admission and verification for an empty room,
 	// and the scope stands in the signed room field.
@@ -332,7 +335,7 @@ func (d *Daemon) handleIdentityFetch(w http.ResponseWriter, r *http.Request) {
 	}
 	cred := syncRequest{PeerID: req.PeerID, RoomID: req.RoomID, Timestamp: req.Timestamp, Nonce: req.Nonce,
 		Signature: req.Signature, Endpoint: req.Endpoint, Signer: req.Signer, Chain: req.Chain}
-	if err := d.verifyIdentityRequest(identityFetchScope, cred); err != nil {
+	if err := d.verifyIdentityRequest(identityFetchScope, cred, r); err != nil {
 		log.Printf("identity: refused a fetch: %v", err)
 		http.Error(w, "unauthenticated", http.StatusUnauthorized)
 		return
@@ -611,7 +614,7 @@ func (d *Daemon) handleIdentityPush(w http.ResponseWriter, r *http.Request) {
 	}
 	cred := syncRequest{PeerID: req.PeerID, RoomID: req.RoomID, Timestamp: req.Timestamp, Nonce: req.Nonce,
 		Signature: req.Signature, Endpoint: req.Endpoint, Signer: req.Signer, Chain: req.Chain}
-	if err := d.verifyIdentityRequest(identityPushScope, cred); err != nil {
+	if err := d.verifyIdentityRequest(identityPushScope, cred, r); err != nil {
 		log.Printf("identity: refused a push: %v", err)
 		http.Error(w, "unauthenticated", http.StatusUnauthorized)
 		return

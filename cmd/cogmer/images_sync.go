@@ -70,6 +70,10 @@ func (d *Daemon) handleBlob(w http.ResponseWriter, r *http.Request) {
 	}
 	cred := syncRequest{PeerID: req.PeerID, RoomID: req.RoomID, Timestamp: req.Timestamp,
 		Nonce: req.Nonce, Signature: req.Signature, Endpoint: req.Endpoint, Signer: req.Signer, Chain: req.Chain}
+	if err := connectedAs(r, cred.requestMachine()); err != nil {
+		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		return
+	}
 	if err := d.verifyRequest(cred, room.RoomID); err != nil {
 		log.Printf("image: refused a request for %s: %v", room.RoomName, err)
 		http.Error(w, "unauthenticated", http.StatusUnauthorized)

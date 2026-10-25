@@ -120,7 +120,7 @@ func (d *Daemon) handleOffer(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	pub, err := PublicFromPeerID(signer)
-	if err != nil {
+	if err != nil || connectedAs(r, signer) != nil {
 		http.Error(w, "unauthenticated", http.StatusUnauthorized)
 		return
 	}
