@@ -260,6 +260,34 @@ func (d *Daemon) PeerRoutes() *http.ServeMux {
 	return mux
 }
 
+// peerServer serves the peer routes with bounds on what a caller can make this
+// machine hold: a body larger than maxPeerBody is refused, and a connection that is
+// slow to send its request, slow to read its answer or idle is closed. Every caller
+// on these routes is a machine somebody else runs, and none of them is trusted to be
+// quick or brief.
+func peerServer(routes http.Handler) *http.Server {
+	return &http.Server{
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r.Body = http.MaxBytesReader(w, r.Body, maxPeerBody)
+			routes.ServeHTTP(w, r)
+		}),
+		ReadHeaderTimeout: 20 * time.Second,
+		ReadTimeout:       time.Minute,
+		WriteTimeout:      2 * time.Minute,
+		IdleTimeout:       2 * time.Minute,
+		MaxHeaderBytes:    1 << 16,
+	}
+}
+
+// maxPeerBody is the largest request body any peer route reads, which is the largest
+// a machine's exchange of lists with another machine of its user may be. Routes that
+// read less bound their own bodies lower.
+const maxPeerBody = 32 << 20
+
+// maxRequestBody bounds a signed request whose only content is its credentials and
+// a few fields, such as a sync request with what the caller holds.
+const maxRequestBody = 1 << 20
+
 func (d *Daemon) health(w http.ResponseWriter, r *http.Request) {
 	// Health reports how many rooms are served, not which one is "current": there
 	// is no current room, and a daemon serving several has no business naming one
@@ -764,7 +792,7 @@ func buildTeamContext(evs []Event, facts PeerFacts, fence string, perEvent, omit
 		content = strings.ReplaceAll(content, fence, "")
 
 		turn := injectedTurn{
-			Speaker: e.UserDisplayName, Label: label,
+			Speaker: shownName(e.UserDisplayName), Label: label,
 			PeerName: PeerName(e.PeerID), Verified: isVerified,
 			Kind: e.EventType, At: e.Timestamp, Text: content,
 		}

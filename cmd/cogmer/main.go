@@ -569,7 +569,7 @@ func runDaemon() {
 	routes := d.PeerRoutes()
 	if tcListener != nil {
 		go func() {
-			if err := http.Serve(tcListener, routes); err != nil && !errors.Is(err, net.ErrClosed) {
+			if err := peerServer(routes).Serve(tcListener); err != nil && !errors.Is(err, net.ErrClosed) {
 				log.Printf("tailcat server stopped: %v", err)
 			}
 		}()
@@ -594,7 +594,7 @@ func runDaemon() {
 		}
 	}()
 	go func() {
-		if err := http.Serve(peer, routes); err != nil && !stopping.Load() {
+		if err := peerServer(routes).Serve(peer); err != nil && !stopping.Load() {
 			log.Fatalf("peer server: %v", err)
 		}
 	}()

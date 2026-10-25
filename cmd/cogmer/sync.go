@@ -57,7 +57,7 @@ type syncResponse struct {
 // rather than by anyone having to remember what it missed.
 func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 	var req syncRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBody)).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

@@ -144,7 +144,7 @@ func (d *Daemon) endVerify(peerID string) {
 // confirm for a stranger.
 func (d *Daemon) handleVerify(w http.ResponseWriter, r *http.Request) {
 	var msg verifyMessage
-	if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBody)).Decode(&msg); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}

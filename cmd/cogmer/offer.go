@@ -100,7 +100,7 @@ func (d *Daemon) signOffer(r Room, endpoint string) (offerRequest, error) {
 // agreed to before the revocation.
 func (d *Daemon) handleOffer(w http.ResponseWriter, r *http.Request) {
 	var req offerRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBody)).Decode(&req); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}

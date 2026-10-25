@@ -115,7 +115,11 @@ func rebuildLists(merged map[string]ListChange) userLists {
 			v := l.colleagues[id]
 			switch field {
 			case fieldLabel:
-				json.Unmarshal([]byte(c.Value), &v.Label)
+				// A label another machine wrote is held to the rule a name typed here
+				// is, since it becomes this machine's name for the colleague.
+				var label string
+				json.Unmarshal([]byte(c.Value), &label)
+				v.Label = sanitizeName(label)
 			case fieldVerified:
 				json.Unmarshal([]byte(c.Value), &v.Verified)
 			case fieldForgotten:

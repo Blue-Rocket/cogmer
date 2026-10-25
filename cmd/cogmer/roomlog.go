@@ -57,7 +57,7 @@ func formatRoomLog(room Room, evs []Event, judge func(Event) standing, fence str
 			content = content[:roomLogChars] + " …"
 		}
 		turns = append(turns, roomLogTurn{
-			Speaker: strip(e.UserDisplayName), PeerName: PeerName(e.PeerID), Sequence: e.PeerSequence,
+			Speaker: strip(shownName(e.UserDisplayName)), PeerName: PeerName(e.PeerID), Sequence: e.PeerSequence,
 			Machine: strip(turnMachine(e)), Kind: e.EventType, At: strip(at), Marked: st.markText(),
 			Text: strip(content),
 		})
