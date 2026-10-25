@@ -2036,6 +2036,10 @@ in SQLite:
 A room's database is named by the room's identifier, never by its name, because names
 may collide and identifiers do not.
 
+A cogmer older than the one that last wrote a machine's stored state neither reads nor
+changes it, and says that the plugin needs updating, so that running an older cogmer never
+damages a user's rooms or identity.
+
 A room's database moves to the archive when the room closes. An archived room can be
 read and searched, and is never rejoined, synchronized or injected. Keeping the
 archive is what lets membership end without discarding the conversation.
