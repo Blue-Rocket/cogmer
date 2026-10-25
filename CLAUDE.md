@@ -105,6 +105,13 @@ every target cross-compiles with `CGO_ENABLED=0`.
   Without the tag, `TestTheRealOverlayCheckPassesForALiveServerAndFailsForADeadOne` speaks
   the relay's own protocol, which the session's proxy breaks, and fails after 10s with
   nothing wrong in cogmer. On a user's own machine, plain `go test ./...` is right.
+- **Test several machines in containers with `go test -tags 'docker
+  ts_debug_websockets' -run Container ./cmd/cogmer`.** Each machine is a container
+  with its own state, driven through the commands, the hooks and the requests the
+  daemon's pages make, and the tests build images from the working tree and from
+  `main`. The images are `FROM scratch` with static binaries, because Docker Hub may
+  refuse pulls. In a cloud session `dockerd` is not running at the start, so start it
+  by hand with `dockerd > <log> 2>&1 &`. Without a Docker daemon the tests skip.
 - **Outside a host, the binary is for tests, not for users.** A user runs commands
   through the plugin, whose entry point declares the host. A test supplies one with
   `COGMER_HOST=claude` or `COGMER_HOST=codex`, or with only one of
