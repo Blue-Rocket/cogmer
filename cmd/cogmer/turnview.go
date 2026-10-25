@@ -69,7 +69,7 @@ func (s *standings) of(e Event) standing {
 			st = s.members.UserState(e.PeerID, e.Chain)
 			s.states[key] = st
 		}
-		ms, ok := st.Machines[signer]
+		ms, ok := st.Machines[e.machineKey()]
 		if !ok || !ms.Current {
 			return standingHidden
 		}

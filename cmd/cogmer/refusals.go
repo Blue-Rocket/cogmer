@@ -103,7 +103,7 @@ func (d *Daemon) reviewRefusals(store *Store, roomID string) {
 				st = d.members.UserState(r.User, nil)
 				states[r.User] = st
 			}
-			counts = st.Counts(r.Signer, roomID, r.Sequence)
+			counts = st.Counts(d.members.machineOfSigner(r.User, r.Signer), roomID, r.Sequence)
 		}
 		if !counts {
 			continue

@@ -393,6 +393,9 @@ func (m *Membership) JoinFromList(id *Identity, roomID string, v roomEntry, show
 			return err
 		}
 	}
+	if err := m.recordColleagueRoomMachines(id, roomID); err != nil {
+		return err
+	}
 	if v.OfferedBy != "" {
 		if !m.Knows(v.OfferedBy) {
 			if err := m.Allow(v.OfferedBy, ""); err != nil {
@@ -531,6 +534,29 @@ func (m *Membership) applyRoom(id *Identity, roomID string, v roomEntry) error {
 			continue
 		}
 		if err := m.RecordRoomMachine(roomID, k, id.User); err != nil {
+			return err
+		}
+	}
+	return m.recordColleagueRoomMachines(id, roomID)
+}
+
+// recordColleagueRoomMachines makes, in a cloud session, each colleague the user's
+// lists give an address for a place to ask for a room, under the colleague's own
+// identifier as an invitation's host is recorded until the colleague's machine names
+// itself. A room's sync targets are only the machines of guests its list admits, so a
+// colleague who is no guest of the room is never asked. A cloud session then syncs
+// with its user's colleagues directly, and not only through one of its user's
+// machines, on which it would then depend for every exchange (D-216, a cloud session
+// signs with a key of its own that the user's shared key vouches for).
+func (m *Membership) recordColleagueRoomMachines(id *Identity, roomID string) error {
+	if !id.HasUser() || id.Chain.Session == nil {
+		return nil
+	}
+	for peer, v := range m.lists(id.User).colleagues {
+		if v.Forgotten || peer == id.User || len(m.PeerEndpointsOf(peer)) == 0 {
+			continue
+		}
+		if err := m.RecordRoomMachine(roomID, peer, peer); err != nil {
 			return err
 		}
 	}

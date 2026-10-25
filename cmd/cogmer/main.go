@@ -550,7 +550,7 @@ func runDaemon() {
 
 	rooms, _ := members.Rooms()
 	log.Printf("cogmer daemon  peer=%s (%s)  serving %d room(s)",
-		id.UserDisplayName, id.PeerName, len(rooms))
+		d.id.UserDisplayName, d.id.PeerName, len(rooms))
 	if len(rooms) > 0 {
 		for _, r := range rooms {
 			g, _ := members.Guests(r.RoomID)

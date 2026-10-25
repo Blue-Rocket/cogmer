@@ -538,6 +538,20 @@ func (e *Event) signerKey() string {
 	return e.PeerID
 }
 
+// machineKey is the key the user's records certify for the event's signer: the cloud
+// key a session's certificate names for a cloud session's event, and the signer itself
+// otherwise. A session key has no machine certificate of its own, so its events stand
+// or fall with its cloud key, removed or suspended (D-216, a cloud session signs with a
+// key of its own that the user's shared key vouches for). The chain was verified when
+// the event was taken, so its session certificate names the signer's cloud key.
+func (e *Event) machineKey() string {
+	s := e.signerKey()
+	if e.SigVersion == 4 && e.Chain != nil && e.Chain.Session != nil && e.Chain.Session.Session == s {
+		return e.Chain.Machine.Machine
+	}
+	return s
+}
+
 // Conflict is a quarantined event, kept for diagnosis.
 type Conflict struct {
 	DetectedAt      string `json:"detectedAt"`

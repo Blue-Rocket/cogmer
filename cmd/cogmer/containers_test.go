@@ -220,6 +220,7 @@ type box struct {
 	image     string
 	oldLogs   string // what earlier containers of this machine logged
 	running   bool
+	extraEnv  []string // set for this machine beside env's, such as a cloud value
 
 	mu       sync.Mutex
 	sessions map[string]*boxSession
@@ -236,7 +237,14 @@ type boxSession struct {
 // daemon answers.
 func (c *cluster) start(name, img string) *box {
 	c.t.Helper()
-	m := &box{c: c, name: name, container: c.id + "-" + name, volume: c.id + "-" + name, sessions: map[string]*boxSession{}}
+	return c.startWith(name, img)
+}
+
+// startWith is start with variables set in the daemon's environment beside the
+// machine's own, as a cloud environment sets COGMER_CLOUD_KEY.
+func (c *cluster) startWith(name, img string, extraEnv ...string) *box {
+	c.t.Helper()
+	m := &box{c: c, name: name, container: c.id + "-" + name, volume: c.id + "-" + name, sessions: map[string]*boxSession{}, extraEnv: extraEnv}
 	if out, err := exec.Command("docker", "volume", "create", "--label", "cogmer-harness="+c.id, m.volume).CombinedOutput(); err != nil {
 		c.t.Fatalf("docker volume create: %v\n%s", err, out)
 	}
@@ -269,10 +277,10 @@ func (m *box) run(img string) {
 // env is the machine's environment: its state under /h, no relay, no behavior checks,
 // a peer address other containers can reach, and Claude Code as the host.
 func (m *box) env() []string {
-	return []string{
+	return append([]string{
 		"HOME=/h", "COGMER_HOME=/h/.cogmer", "COGMER_TAILCAT=off", "COGMER_PREFLIGHT=off",
 		"COGMER_PEER_ADDR=0.0.0.0:4783", "COGMER_PEER_ENDPOINT=" + m.name + ":4783", "COGMER_HOST=claude",
-	}
+	}, m.extraEnv...)
 }
 
 func (m *box) waitHealthy() {

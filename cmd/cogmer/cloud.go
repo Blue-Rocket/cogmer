@@ -847,6 +847,25 @@ func (m *Membership) listsVersion(user string) (uint64, error) {
 	return version, tx.Commit()
 }
 
+// machineOfSigner is the key user's records certify for signer: the cloud key of a
+// session certificate this machine holds for signer, kept from the chain of an event or
+// a request, and signer itself otherwise.
+func (m *Membership) machineOfSigner(user, signer string) string {
+	rows, err := m.db.Query(`SELECT body FROM identity_records WHERE user = ? AND kind = ?`, user, RecordSession)
+	if err != nil {
+		return signer
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var body string
+		var c SessionCert
+		if rows.Scan(&body) == nil && json.Unmarshal([]byte(body), &c) == nil && c.Session == signer && c.CloudKey != "" {
+			return c.CloudKey
+		}
+	}
+	return signer
+}
+
 // listsHeaderHeld is the highest header version a cloud session has taken from
 // machine, 0 for none.
 func (m *Membership) listsHeaderHeld(machine string) uint64 {

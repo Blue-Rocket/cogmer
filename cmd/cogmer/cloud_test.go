@@ -313,6 +313,24 @@ func TestAReceiverRefusesAnExpiredSessionAndARemovedCloudKey(t *testing.T) {
 	}
 }
 
+func TestASessionsEventStandsWithItsCloudKey(t *testing.T) {
+	k := testIDKeys(t)
+	ev := &Event{EventID: "e1", PeerID: k.master.id, PeerSequence: 1, RoomID: "r", Timestamp: "2026-10-25T00:00:00Z", EventType: "PROMPT"}
+	ev.SignV4(k.session.priv, k.cloudChain(), nil)
+	if got := ev.machineKey(); got != k.cloud.id {
+		t.Errorf("a session's event stands with %s, want its cloud key", got)
+	}
+	ev.SignV4(k.machine.priv, k.machineChain(), nil)
+	if got := ev.machineKey(); got != k.machine.id {
+		t.Errorf("a machine's event stands with %s, want the machine", got)
+	}
+	// A chain whose session certificate names another key gives no cloud key.
+	ev.SignV4(k.machine.priv, k.cloudChain(), nil)
+	if got := ev.machineKey(); got != k.machine.id {
+		t.Errorf("an event whose chain names another session stands with %s", got)
+	}
+}
+
 func TestACloudSessionTakesItsUsersListsFromAMachine(t *testing.T) {
 	a, b := twoMachines(t)
 	carol := testIdentity(t).PeerID
@@ -330,7 +348,9 @@ func TestACloudSessionTakesItsUsersListsFromAMachine(t *testing.T) {
 	if c.d.members.IsVerified(carol) {
 		t.Fatal("the session knows carol before it fetched anything")
 	}
-	if err := c.d.fetchUserLists(); err != nil {
+	// From the machine that holds the change, since the second machine learns of carol
+	// only at its next exchange with the first.
+	if err := c.d.fetchListsFrom(cloudMachine{Machine: a.d.id.PeerID, Endpoint: a.addr}); err != nil {
 		t.Fatalf("fetching the lists: %v", err)
 	}
 	if !c.d.members.IsVerified(carol) || c.d.members.Label(carol) != "carol" {
