@@ -296,6 +296,9 @@ environment hides a variable's value from other people who can edit the environm
 known, and matters only for an environment shared with others, since the maintainer creates
 theirs at a personal level, said on 2026-10-24.
 
+`docs/work/cloud-run.md` is the run that would show it, on the maintainer's machine and in a new
+cloud session.
+
 `docs/work/cloud-network-probe.sh` tests, from a cloud session, whether cogmer's transport
 opens a tunnel through the public relay and whether SSH over port 443 reaches GitHub. It writes
 each run to a dated file beside it, and the script and its runs are deleted with this item.
