@@ -1146,6 +1146,10 @@ Inviting a revoked colleague again lets them back in only when it is done after 
 revocation was seen, so that a colleague revoked by mistake can be let back in, and an
 invitation made at the same moment as a revocation never quietly overrides it.
 
+A revoked colleague can change the list only as far as the turns of theirs that still
+count, so that a colleague who is expelled cannot expel the guests who remain in revenge,
+or admit somebody who would let them back in.
+
 When two guests revoke each other at the same time, both are out of the room, and either
 can be invited back, so that no rule has to pick one of them arbitrarily.
 
