@@ -1,0 +1,40 @@
+cloud-run part 2, a cloud session in a room with wonka through the relay, 20261025T171545Z
+date: 2026-10-25, 17:15:45Z to 17:21Z
+machine: a Claude Code cloud session (CLAUDE_CODE_REMOTE=true), with COGMER_CLOUD_KEY set in its environment for the cloud environment cloud-test, added on the page at wonka-test in part 1
+build: user-identity branch at bab2408, go1.27.1 linux/amd64, go build -tags ts_debug_websockets -o /tmp/cogmer-cloud ./cmd/cogmer, so the relay connection is a WebSocket (D-217)
+other side: wonka's test daemon, machine wonka-test of the test user wonka111, which made the room balmy-shoal in part 1; this run saw it only through the relay
+commands, with C_ENV="COGMER_HOME=/tmp/cogmer-cloud-home COGMER_ADDR=127.0.0.1:4792 COGMER_PEER_ADDR=127.0.0.1:4793 COGMER_HOST=claude COGMER_PREFLIGHT=off":
+  test -n "$COGMER_CLOUD_KEY" && echo set                      -> set; the value was never printed
+  env $C_ENV /tmp/cogmer-cloud daemon > /tmp/cogmer-cloud.log 2>&1 &    (17:15:45)
+  env $C_ENV /tmp/cogmer-cloud whoami
+  env $C_ENV CLAUDE_CODE_SESSION_ID=cloud-test-1 /tmp/cogmer-cloud rooms    (17:16:30)
+  env $C_ENV CLAUDE_CODE_SESSION_ID=cloud-test-1 /tmp/cogmer-cloud join balmy-shoal    (17:16:30)
+  hook prompt, then hook stop, under session cloud-test-1, as m.turn in cmd/cogmer/containers_test.go: a UserPromptSubmit payload with the prompt "cloud-test says hello from the cloud session" and prompt_id ea7a35f3bf38ce58, a transcript holding that user record, and a Stop payload with last_assistant_message "noted, from the cloud"    (17:16:48)
+  curl http://127.0.0.1:4792/events?room=balmy-shoal and /stream?room=balmy-shoal; the lists_headers row of membership.db, read only
+  a first attempt at the turn sent both hooks empty input, through a mistake in the script; both exited 0 and recorded nothing
+seen:
+  lists: arrived about 5s after the daemon started; the header stored is version 1 from wonka-test, signed 2026-10-25T17:15:50Z, the second the relay connected; at 17:17:07 the view said lists from wonka-test, age 1m
+  whoami: the display name wonka111, the machine cloud-test (#2, "reach not known; the daemon did not answer") beside wonka-test (#1), and an outside connection reaching the session through the relay at nyc in 589ms
+  rooms: "No rooms", although the user's room list held balmy-shoal
+  join: succeeded by name from the user's room list (D-228), "joined balmy-shoal"
+  sync: one event received from wonka-test at 17:16:31, its GUEST_INVITE of 17:03:29Z
+  turn: both hooks exited 0; the prompt hook injected nothing; the room holds USER_PROMPT and ASSISTANT_MESSAGE at 17:16:48Z, machineId cloud-test, peerSequence 1 and 2, signed by the session key under the chain shared key, cloud-test (kind cloud, serial 2), session key expiring 2026-10-26T17:15:45Z
+  userId: "someone" on the cloud session's events and "david" on wonka-test's, the container having no USER
+daemon log, the relay:
+  17:15:45 cloud: this session speaks for calm-nuthatch as cloud-test, with a key certified until 2026-10-26T17:15:45Z
+  17:15:49   relay connection carried as a WebSocket (TS_DEBUG_DERP_WS_CLIENT=1; it takes effect only in a build with the ts_debug_websockets tag)
+  17:15:49   reachable at  tc://tco2FwWCBvXb… (186 chars)
+  17:15:49 derphttp.Client.Connect: connecting websocket to https://tc302a.ipn.dev/derp
+  17:15:50 websocket: connected to https://tc302a.ipn.dev/derp
+  17:15:50 magicsock: new contact: peer=[tC4T8] usec=690346 cached=false via=derp
+  17:15:52 netcheck: netcheck: UDP is blocked, trying HTTPS
+  17:15:54 websocket: connected to https://tc301a.ipn.dev/derp
+  17:16:05 and 17:16:49 a new WireGuard engine each time, then connecting websocket to https://tc301a.ipn.dev/derp, connected within 1s
+  17:16:50 http: TLS handshake error from [fd7a:115c:a1e0:c2d4:b059:514d:8297:e908]:30219: EOF
+daemon log, the fetch:
+  no line; cloudRound in cmd/cogmer/cloud.go logs a fetch only when it fails, and none failed
+  17:15:50 [v1] Accept: TCP{[fd7a:115c:a1e0:b42e:13f2:e269:9996:f39b]:4783 > [fd7a:115c:a1e0:5dea:57cd:6343:e7a9:f06f]:23038} 80 tcp non-syn, the second the header was signed
+  17:16:31 sync: received 1 event(s) from tc://tco2FwWCC0Lh… (189 chars)
+  17:16:48 USER_PROMPT room=balmy-shoal session=cloud-te offered=0 events
+  17:16:48 ASSISTANT_MESSAGE session=cloud-te chars=21 tools=0
+not shown: that the cloud session's turn reached wonka-test, since this daemon logs no sync it answers; how the turn is marked in wonka-test's view; a turn from wonka-test reaching the cloud session's prompt hook; the removal of cloud-test and its cutoff (D-250); which connection the 17:15:50 Accept line and the 17:16:50 handshake error belong to; and a fetch time closer than the second, since a successful fetch writes no log line
