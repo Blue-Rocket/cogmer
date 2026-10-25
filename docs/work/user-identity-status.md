@@ -54,7 +54,7 @@ invites the guests of its own `room_guests` (D-243, `carryRoom` in `carryover.go
 work bounds a revoked user's revocations by their cutoff, drops a list change that shares its
 sequence, caps the rounds of `ResolveGuests`, raises `wireVersion` to 3, and keeps a label
 `Allow` is not given. D-219 to D-225 and D-228 to D-243 are active.
-Slice 6, cloud sessions, is built on its own branch, awaiting merge: the machines page adds a
+Slice 6, cloud sessions, is merged: the machines page adds a
 cloud environment and shows its value once (D-246, `cloud.go`), a daemon with
 `COGMER_CLOUD_KEY` certifies a session key for 24 hours and replaces it with a new key two hours
 before expiry (D-216, D-247), it fetches the user's records from one of the user's machines over
@@ -69,13 +69,14 @@ shown (`1d2b505`), and the maintainer's cloud environment is personal.
 What slice 6 leaves open:
 
 - No real cloud session has run this build; the container tests give the session's daemon the
-  value as an environment variable, with no relay, and the three probes the brief names did not
-  run.
+  value as an environment variable, with no relay. `docs/work/cloud-run.md` is the run that
+  would show it through the relay with wonka.
 - A cloud session appears in the room status of the user's own machines as one of the user's
   machines, under its session key's derived name rather than the cloud environment's name,
-  observed in a container test on 2026-10-25. The maintainer withdrew the snapshot repo on
-2026-10-25 (D-226 and D-227 are tombstones), so where a cloud session places an added repo no
-longer matters.
+  observed in a container test on 2026-10-25.
+
+The maintainer withdrew the snapshot repo on 2026-10-25 (D-226 and D-227 are tombstones), so
+where a cloud session places an added repo does not matter.
 
 What slice 3 leaves open:
 
