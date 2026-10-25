@@ -277,12 +277,6 @@ could start nothing there, since the Cowork route is the bridge on the user's ma
 A user in a Claude Code cloud session, such as one started from the iPhone app, shares a
 conversation with colleagues without a daemon on their own computer being reachable.
 
-**Removing a cloud environment that was not stolen marks every turn its sessions wrote.** A
-removal names, for each room, the last sequence of the removed key that counts, and a cloud key
-signs no event, so the removal page proposes 0, read from the code on 2026-10-25. D-250 (a
-removal of a cloud key names a cutoff for each of its session keys in each room) decides the
-fix, and is not built.
-
 **The decisions that make the user the peer leave details undecided.** Each is needed by a
 slice of the second run, and none has a choice taken yet:
 
