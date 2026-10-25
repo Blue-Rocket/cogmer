@@ -63,7 +63,9 @@ What slice 3 leaves open:
 - `COGMER_IDENTITY_PAGE=off` turns off the page's gate, for tests that create and join with no
   daemon, and ships in the binary as `COGMER_PREFLIGHT=off` does.
 - A machine with rooms from before it made a user identity is not migrated: its colleagues'
-  guest lists hold its machine key, and under D-240 those rooms are created again.
+  guest lists hold its machine key. D-242 (a machine key from before the user identity
+  carries its verification, label and turns) and D-243 (a room from before user identities
+  takes one guest list) carry them over, and are not built.
 
 What the later slices need to know from slice 2b:
 

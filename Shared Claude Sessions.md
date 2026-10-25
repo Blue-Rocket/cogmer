@@ -674,6 +674,13 @@ phrase is known to be kept before anything depends on it.
 A user who has another machine at hand adds this machine from it. A user who has no
 machine left recovers from the phrase.
 
+A machine that used cogmer before its user had an identity carries its colleagues'
+verifications, its rooms and their history into the user's identity, so that upgrading
+costs a user no room, no turn and no pairing.
+
+A room from before user identities ends with one guest list that every guest holds, as
+every other room has, so that its guests never disagree about who is in it.
+
 ## Adding a machine
 
 A machine is added from a machine the user already has, and never by typing the

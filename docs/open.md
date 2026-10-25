@@ -272,6 +272,13 @@ sending a new pairing string, how a cloud session's hooks load, and whether a co
 shares of the recovery phrase could recover a user who has lost it, which no decision has
 examined.
 
+**A user's identity, once made, breaks every room the machine joined before it.** Making
+one changes no room and no colleague, read in `becomeUser` on 2026-10-25, so a colleague's
+machine refuses the upgraded machine's requests as from a user not on the room's list, and
+shows its turns as unverified. D-242 (a machine key from before the user identity carries its
+verification, label and turns) and D-243 (a room from before user identities takes one guest
+list) decide the fix, and neither is built.
+
 **The decisions that make the user the peer leave details undecided.** Each is needed by a
 slice of the second run, and none has a choice taken yet:
 
