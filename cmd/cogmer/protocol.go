@@ -13,7 +13,14 @@ import "encoding/json"
 // Nothing here mentions the agent that produced an event. A session identifier is
 // an opaque string naming where a turn came from; its host-specific format is a
 // fact about the adapter, not about the protocol.
-const wireVersion = 2
+//
+// Version 3 carries events signed for a user (D-239, an event a machine signs for
+// its user names the signing key) and sync requests signed under v5 with a chain,
+// which a version 2 reader cannot judge, so a machine on version 2 is told to upgrade
+// rather than handed events it would refuse one by one. A version 2 request is
+// still read, so a machine not yet upgraded is answered and reads that it is the
+// older side.
+const wireVersion = 3
 
 // minWireVersion is the oldest a peer may speak and still be read.
 //

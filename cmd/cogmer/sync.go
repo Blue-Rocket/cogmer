@@ -406,6 +406,16 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 		d.noteRoomRefused(room.RoomID)
 		return 0, nil
 	}
+	if resp.StatusCode == http.StatusBadRequest {
+		// An older build refuses a protocol newer than it reads with a sentence that
+		// says so, and the person who can act on it is told which side to upgrade
+		// (D-065, the daemon reads a range of wire versions).
+		why, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		if strings.Contains(string(why), "reads protocol") {
+			return 0, fmt.Errorf("peer %s — upgrade the older side", strings.TrimSpace(string(why)))
+		}
+		return 0, fmt.Errorf("peer refused the request: %s", strings.TrimSpace(string(why)))
+	}
 
 	var out syncResponse
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
