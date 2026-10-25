@@ -345,6 +345,7 @@ type cloudSession struct {
 	fetchedAt         time.Time
 	failingSince      time.Time
 	failure           string
+	answered          bool // whether any fetch has succeeded since the daemon started
 }
 
 // isCloudSession reports whether this daemon serves a cloud session: one whose
@@ -517,7 +518,7 @@ func (d *Daemon) cloudRound(now time.Time) {
 	if !due {
 		return
 	}
-	err := d.fetchUserLists()
+	from, err := d.fetchUserLists()
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if err != nil {
@@ -529,6 +530,12 @@ func (d *Daemon) cloudRound(now time.Time) {
 		c.nextFetch = now.Add(c.retry)
 		return
 	}
+	// Said once after a start and once after a failure, so the log shows that the
+	// session has its lists and from where, and stays quiet while nothing changes.
+	if !c.answered || !c.failingSince.IsZero() {
+		log.Printf("cloud: your lists arrived from %s", from)
+	}
+	c.answered = true
 	c.failingSince, c.failure = time.Time{}, ""
 	c.nextFetch = now.Add(c.listsEvery)
 }
@@ -561,22 +568,24 @@ func (d *Daemon) cloudTargets() []cloudMachine {
 	return out
 }
 
-// fetchUserLists asks each of the user's machines in turn until one answers.
-func (d *Daemon) fetchUserLists() error {
+// fetchUserLists asks each of the user's machines in turn until one answers, and
+// gives the name of the machine that did.
+func (d *Daemon) fetchUserLists() (string, error) {
 	var errs []string
 	for _, m := range d.cloudTargets() {
+		name := firstNonEmpty(m.Name, PeerName(m.Machine))
 		if err := d.fetchListsFrom(m); err != nil {
 			d.markPeerUnreachable(m.Endpoint, err)
-			errs = append(errs, fmt.Sprintf("%s: %v", firstNonEmpty(m.Name, PeerName(m.Machine)), err))
+			errs = append(errs, fmt.Sprintf("%s: %v", name, err))
 			continue
 		}
 		d.markPeerSeen(m.Endpoint)
-		return nil
+		return name, nil
 	}
 	if len(errs) == 0 {
-		return errors.New("no machine of yours has an address")
+		return "", errors.New("no machine of yours has an address")
 	}
-	return errors.New(strings.Join(errs, "; "))
+	return "", errors.New(strings.Join(errs, "; "))
 }
 
 // selfFetchTag is the purpose tag of a cloud session's request for its user's lists.

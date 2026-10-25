@@ -1485,6 +1485,10 @@ A session on another of the user's machines joins a room the user is a guest of 
 room's name, with no new invitation, because a colleague who admitted the user
 admitted every machine of theirs.
 
+The list of rooms on a machine shows the user's rooms that no session there has joined, with
+the command that joins each, so that a user on a newly added machine is told a room of
+theirs is waiting rather than that there are none.
+
 ## Joining a different room
 
 A session enters a room only by creating it or by joining it, and a session that has

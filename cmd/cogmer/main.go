@@ -1004,13 +1004,17 @@ func runForget(args []string) {
 }
 
 func runRooms() {
-	withMembership(func(m *Membership, _ *Identity) {
+	withMembership(func(m *Membership, id *Identity) {
 		cur, hasCur := m.RoomForSession(sessionID())
 		rooms, err := m.Rooms()
 		if err != nil {
 			log.Fatalf("rooms: %v", err)
 		}
-		if len(rooms) == 0 {
+		var toJoin []listedRoom
+		if id.HasUser() {
+			toJoin = m.RoomsToJoin(id.User)
+		}
+		if len(rooms) == 0 && len(toJoin) == 0 {
 			if len(m.Offers()) == 0 {
 				fmt.Println(commandText("no rooms. /cogmer:room-create in an agent session makes one."))
 				return
@@ -1038,6 +1042,14 @@ func runRooms() {
 			for _, o := range offers {
 				fmt.Printf(commandText("  %-24s from %-20s  /cogmer:room-join %s\n"),
 					o.RoomName, firstNonEmpty(m.Label(o.Host), PeerName(o.Host)), o.RoomName)
+			}
+		}
+		// Rooms of yours that a session on another of your machines joined, which a
+		// session here joins by name.
+		if len(toJoin) > 0 {
+			fmt.Println("\non your room list, not joined on this machine:")
+			for _, r := range toJoin {
+				fmt.Printf(commandText("  %-24s /cogmer:room-join %s\n"), r.Name, r.Name)
 			}
 		}
 	})

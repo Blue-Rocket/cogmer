@@ -819,3 +819,24 @@ func TestTheIdentityPagesRoutesRefuseARequestWithoutTheGuardHeader(t *testing.T)
 		}
 	}
 }
+
+// A room on the user's room list that no session here has joined is listed as one to
+// join, so `rooms` on a newly added machine or in a cloud session does not say there are
+// none (D-228), and a room this machine holds is not listed again.
+func TestARoomOnTheUsersListNotJoinedHereIsListedToJoin(t *testing.T) {
+	a, b := twoMachines(t)
+	room := foundAndSay(t, a, "SAID BEFORE THE SECOND MACHINE JOINS")
+	a.d.exchangeSelfLists()
+	b.d.exchangeSelfLists()
+	if got := a.d.members.RoomsToJoin(a.d.id.User); len(got) != 0 {
+		t.Errorf("the machine that holds the room lists it to join: %+v", got)
+	}
+	got := b.d.members.RoomsToJoin(b.d.id.User)
+	if len(got) != 1 || got[0].RoomID != room.RoomID || got[0].Name != room.RoomName {
+		t.Fatalf("the second machine lists %+v to join, want only %s", got, room.RoomName)
+	}
+	joinByName(t, b, room.RoomName, "b-session")
+	if got := b.d.members.RoomsToJoin(b.d.id.User); len(got) != 0 {
+		t.Errorf("a room joined here is still listed to join: %+v", got)
+	}
+}

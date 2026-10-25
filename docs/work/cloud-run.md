@@ -101,8 +101,8 @@ drives a daemon built from the branch by hand, as the container tests do.
    `CLAUDE_CODE_REMOTE` is `true` there, so the daemon carries its relay connection as a WebSocket
    (D-217, a cloud session's daemon carries its relay connection as a WebSocket).
 
-3. Wait for the daemon to fetch the user's lists from `wonka-test`, which its log and the view's
-   lists age show (D-245, a cloud session takes its user's lists only from one of the user's
+3. Wait for the daemon to fetch the user's lists from `wonka-test`, which its log shows as
+   "cloud: your lists arrived from wonka-test" and the view shows as the lists' age (D-245, a cloud session takes its user's lists only from one of the user's
    machines). `env $C_ENV /tmp/cogmer-cloud whoami` names the test user, without printing any key.
 
 4. Join the room by name from part 1, with a session identifier of its own, and send one turn

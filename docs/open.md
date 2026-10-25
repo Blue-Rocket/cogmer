@@ -162,18 +162,6 @@ run that path.
 
 What a room, and the sessions in it, do as people create, leave, return and join from more than one session.
 
-**`rooms` says there are no rooms while the user's room list holds one to join by name.** On
-2026-10-25 a cloud session's `rooms` printed "No rooms. /cogmer:room-create in an agent session
-makes one.", and the same session then joined balmy-shoal by name from the user's room list
-(`243df61`). `runRooms` in `cmd/cogmer/main.go` lists the rooms recorded on this machine and the
-offers, and not the rooms on the user's room list that no session here has joined, read on
-2026-10-25. A user on a newly added machine, or in a cloud session, is told to create a room
-while one of theirs waits to be joined.
-
-Listing those rooms in a section of their own, with the command that joins one, would fix it.
-`joinFromList` in `cmd/cogmer/selfcommands.go` already reads the list, so the cost is that
-section of output.
-
 **A room records only prompts and responses, so nobody sees a session join or
 leave.** The specification's event model listed session-joined, session-left and
 status events as a minimum, and `cmd/cogmer/store.go` defines only a user's prompt
@@ -300,17 +288,6 @@ slice of the second run, and none has a choice taken yet:
 - How a cloud session's hooks load.
 - Whether a colleague holding shares of the recovery phrase could recover a user who has lost
   it, which no decision has examined.
-
-**A cloud session's daemon log never says that its lists arrived.** `cloudRound` in
-`cmd/cogmer/cloud.go` logs a fetch of the user's lists only when it fails, read on 2026-10-25.
-Step 3 of `docs/work/cloud-run.md` waits for the log to show the fetch, which a successful fetch
-never does, and that run could time the fetch only to the second the lists were signed
-(`243df61`). A user whose cloud session shares nothing finds out from the log that a fetch
-failed, but not that a later one succeeded.
-
-Logging the first fetch that succeeds after a start or a failure, naming the machine that
-answered, would cost one line each time. Pointing the run at the age of the lists shown on the
-daemon's room page instead costs no code, and leaves the log silent on success.
 
 **No cloud session has shared a room with a paired machine, and one fact about where the
 cloud key is kept is unknown.** D-246 (a cloud environment is added from the machines page)
