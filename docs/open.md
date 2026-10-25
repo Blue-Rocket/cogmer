@@ -303,12 +303,6 @@ same day: after joining, `peers` shows the inviter as "none given" and the invit
 no label. The same code is on `main`. `Allow` should keep an existing name when it is given
 none.
 
-**An older program run on a machine's upgraded state can damage it.** The program on `main`
-rewrites `identity.json` without the user and the chain when its user renames themselves, and
-cannot read the room databases the user identity migrates, read on 2026-10-25. D-244 (the data
-in the state directory carries one version) stops a program from touching newer data, from the
-first release that carries it, and is not built.
-
 **A revoked guest can revoke every guest who remains.** `ResolveGuests` counts every
 revocation by a user who was ever invited, read on 2026-10-25, so a revoked guest's
 revocations made past their cutoff empty the room. D-235 (a room's one guest list) bounds them
