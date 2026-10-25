@@ -130,7 +130,12 @@ func rebuildLists(merged map[string]ListChange) userLists {
 			v := l.rooms[id]
 			switch {
 			case field == fieldName:
-				json.Unmarshal([]byte(c.Value), &v.Name)
+				// A name another machine wrote is held to the form a room's name
+				// takes, and one of any other form leaves the field unwritten
+				// (D-134, a room's name is generated from two word lists).
+				var name string
+				json.Unmarshal([]byte(c.Value), &name)
+				v.Name = sanitizeRoomName(name)
 			case field == fieldOffer:
 				var o roomOffer
 				if json.Unmarshal([]byte(c.Value), &o) == nil {
@@ -364,7 +369,7 @@ func (m *Membership) RoomOnList(user, nameOrID string) (string, roomEntry, bool)
 // joined by any of the user's machines is fetched from the machine that offered it,
 // as an offer accepted here would be.
 func (m *Membership) JoinFromList(id *Identity, roomID string, v roomEntry, showOnly bool) error {
-	if err := m.RecordRoom(roomID, v.Name, showOnly); err != nil {
+	if err := m.RecordRoom(roomID, firstNonEmpty(v.Name, roomID), showOnly); err != nil {
 		return err
 	}
 	if err := m.Invite(roomID, id.User); err != nil {
@@ -466,7 +471,7 @@ func (m *Membership) applyRoom(id *Identity, roomID string, v roomEntry) error {
 	if _, joined := m.RoomByID(roomID); !joined {
 		if v.OfferedBy != "" && len(v.Machines) == 0 {
 			if _, ok := m.FindOffer(roomID); !ok {
-				return m.RecordOffer(Offer{RoomID: roomID, RoomName: v.Name, Host: v.OfferedBy, Endpoint: v.Endpoint})
+				return m.RecordOffer(Offer{RoomID: roomID, RoomName: firstNonEmpty(v.Name, roomID), Host: v.OfferedBy, Endpoint: v.Endpoint})
 			}
 		}
 		return nil

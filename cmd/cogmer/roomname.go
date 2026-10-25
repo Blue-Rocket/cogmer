@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"strings"
 )
 
 // Room names are generated, never chosen (§12).
@@ -61,3 +62,41 @@ func NewRoomName() string {
 // RoomNameSpace bounds accidental collision, not impersonation: a room name is
 // never a credential (§12).
 func RoomNameSpace() int { return len(roomSky) * len(roomLand) }
+
+// receivedRoomName is a room name that arrived from another machine, in an offer or a
+// change to the user's lists, and whether it is one NewRoomName could have made: two
+// lowercase words joined by a hyphen, no longer than a peer's name may be. A room's
+// name is generated and never chosen (D-134, a room's name is generated from two word
+// lists, never chosen), so a name of any other form was written by hand, and it is
+// printed into prompts and lists where text that reads as an instruction would be
+// read as one. Such a name is refused, and the room is known by its identifier.
+func receivedRoomName(s string) (string, bool) {
+	sky, land, ok := strings.Cut(s, "-")
+	if !ok || len(s) > maxRoomNameLen || !lowerWord(sky) || !lowerWord(land) {
+		return "", false
+	}
+	return s, true
+}
+
+// maxRoomNameLen bounds a room's name as sanitizeName bounds a peer's.
+const maxRoomNameLen = 32
+
+func lowerWord(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < 'a' || r > 'z' {
+			return false
+		}
+	}
+	return true
+}
+
+// sanitizeRoomName is a room name for printing: one that arrived in a form
+// NewRoomName could not have made is printed as nothing, so that a caller shows the
+// room's identifier instead.
+func sanitizeRoomName(s string) string {
+	n, _ := receivedRoomName(s)
+	return n
+}
