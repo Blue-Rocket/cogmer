@@ -36,12 +36,12 @@ type revocationRefusal struct {
 
 // revokedIn reports whether a room whose list is kept as events has revoked user,
 // who was invited and is not on the list now.
-func revokedIn(store *Store, roomID, user string) bool {
-	gevs, err := store.GuestEvents(roomID)
-	if err != nil || len(gevs) == 0 {
+func (d *Daemon) revokedIn(store *Store, roomID, user string) bool {
+	g, _, err := d.resolveRoomGuests(store, roomID)
+	if err != nil {
 		return false
 	}
-	admitted, ever := ResolveGuests(roomID, gevs).Admitted[user]
+	admitted, ever := g.Admitted[d.userOf(user)]
 	return ever && !admitted
 }
 
@@ -62,7 +62,7 @@ func guestListEvents(store *Store, roomID string) ([]Event, error) {
 // room is none of their business.
 func (d *Daemon) refuseNonGuest(w http.ResponseWriter, room Room, user string) {
 	if d.members.EventListed(room.RoomID) {
-		if store, err := d.storeFor(room.RoomID); err == nil && revokedIn(store, room.RoomID, user) {
+		if store, err := d.storeFor(room.RoomID); err == nil && d.revokedIn(store, room.RoomID, user) {
 			if evs, err := guestListEvents(store, room.RoomID); err == nil && len(evs) > 0 {
 				out := revocationRefusal{Protocol: wireVersion, RoomID: room.RoomID}
 				for _, e := range evs {

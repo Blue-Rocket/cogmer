@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strings"
 )
 
 // --- a room's guest list as events in the room ---
@@ -22,9 +23,10 @@ import (
 // and membership.db caches it, so that every check on a hot path reads a table.
 //
 // A room with no valid founding self-invitation among its events, which is every
-// room a machine with no user identity made, keeps room_guests as its list, exactly
-// as before. Rooms made before the user identity are not carried into it (D-240, a
-// room's identifier is the hash of its creator and a random value).
+// room a machine with no user identity made, keeps room_guests as its list on a
+// machine that speaks for no user. A machine that speaks for a user carries such a
+// room into one list kept as events, founded by the users whose machines wrote its
+// turns (carryRoom; D-243, a room from before user identities takes one guest list).
 
 // guestFormat is the version of the content a guest event carries. Every guest
 // event names it, and a format this build does not know is not a guest event to it,
@@ -104,9 +106,12 @@ func guestEventFrom(ev Event) (GuestEvent, bool) {
 
 // GuestEvents is every change to a room's guest list this store holds, read as
 // guest events. An event of a guest type that does not read as one is left out, as
-// ResolveGuests would discard it.
+// ResolveGuests would discard it, and so is one whose machine and sequence a
+// different event also arrived with, which counts for nobody (D-235, a change to the
+// list that shares its machine's sequence with a different event counts for nobody).
 func (s *Store) GuestEvents(room string) ([]GuestEvent, error) {
-	rows, err := s.db.Query(`SELECT `+selectCols+` FROM events WHERE room_id = ? AND event_type IN (?, ?) `+orderBy,
+	rows, err := s.db.Query(`SELECT `+selectCols+` FROM events WHERE room_id = ? AND event_type IN (?, ?)
+		AND event_id NOT IN (SELECT held_event_id FROM event_conflicts) `+orderBy,
 		room, GuestInvite, GuestRevoke)
 	if err != nil {
 		return nil, err
@@ -127,10 +132,18 @@ func (s *Store) GuestEvents(room string) ([]GuestEvent, error) {
 // lastSequences is, for each machine that signed an event of user in the room, the
 // highest of its sequences this store holds, which a revocation names as its cutoff
 // (D-236, a revocation names the last turn that counts, as the revoking machine saw
-// it).
-func (s *Store) lastSequences(room, user string) (map[string]int64, error) {
+// it). keys are the machine keys that signed for user before user existed, whose
+// earlier events name the key as their peer (D-242).
+func (s *Store) lastSequences(room, user string, keys ...string) (map[string]int64, error) {
+	ids := append([]string{user}, keys...)
+	args := []any{room}
+	marks := make([]string, len(ids))
+	for i, id := range ids {
+		args = append(args, id)
+		marks[i] = "?"
+	}
 	rows, err := s.db.Query(`SELECT COALESCE(signer, peer_id), MAX(peer_sequence) FROM events
-		WHERE room_id = ? AND peer_id = ? GROUP BY COALESCE(signer, peer_id)`, room, user)
+		WHERE room_id = ? AND peer_id IN (`+strings.Join(marks, ",")+`) GROUP BY COALESCE(signer, peer_id)`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -153,11 +166,10 @@ func (s *Store) lastSequences(room, user string) (map[string]int64, error) {
 // keeps room_guests. Called with d.mu held when a guest event has just been written,
 // since it reads what the write left.
 func (d *Daemon) refreshGuestList(store *Store, roomID string) (*GuestList, error) {
-	evs, err := store.GuestEvents(roomID)
+	g, evs, err := d.resolveRoomGuests(store, roomID)
 	if err != nil {
 		return nil, err
 	}
-	g := ResolveGuests(roomID, evs)
 	if err := d.members.CacheGuestList(g); err != nil {
 		return nil, err
 	}
@@ -172,6 +184,9 @@ func (d *Daemon) guestList(roomID string) *GuestList {
 	if err != nil {
 		log.Printf("guests: could not read the cached list of %s: %v", roomID, err)
 		return nil
+	}
+	if g != nil {
+		g.Aliases = d.aliases()
 	}
 	return g
 }
@@ -280,14 +295,14 @@ func (d *Daemon) InviteUser(roomID, user string) error {
 	if err != nil {
 		return err
 	}
+	user = d.userOf(user)
 	if user == d.id.User {
 		return errors.New("you cannot invite yourself; another guest can invite you back")
 	}
-	evs, err := store.GuestEvents(roomID)
+	g, _, err := d.resolveRoomGuests(store, roomID)
 	if err != nil {
 		return err
 	}
-	g := ResolveGuests(roomID, evs)
 	if !g.Admitted[d.id.User] {
 		return fmt.Errorf("you are not on the guest list of %s, so an invitation of yours would not count", room.RoomName)
 	}
@@ -317,7 +332,8 @@ func (d *Daemon) RevokeUser(roomID, user string) error {
 	if err != nil {
 		return err
 	}
-	cutoffs, err := store.lastSequences(roomID, user)
+	user = d.userOf(user)
+	cutoffs, err := store.lastSequences(roomID, user, d.members.linkedKeys(user)...)
 	if err != nil {
 		return err
 	}

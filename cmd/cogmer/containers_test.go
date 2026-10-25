@@ -926,7 +926,6 @@ func TestContainerUsersMachineAddedWithWordsSharesTheRoom(t *testing.T) {
 // so the room keeps working without pairing again, and nothing is lost while only one
 // side is upgraded.
 func TestContainerUpgradeKeepsAPairedRoom(t *testing.T) {
-	t.Skip("D-242 and D-243 are not built")
 	c := newCluster(t)
 	r := pairedRoom(t, c, harnessImage(t, imageMain), false)
 	handOver(t, r.name, r.alice, r.aliceS, r.bob, r.bobS, "before: alice")
@@ -940,9 +939,13 @@ func TestContainerUpgradeKeepsAPairedRoom(t *testing.T) {
 	r.bob.createUser("Bob", "bob-desktop")
 	r.bob.turn(r.bobS, "during: bob, upgraded", "noted")
 	r.alice.turn(r.aliceS, "during: alice, not upgraded", "noted")
+	// main logs a peer's failure when it starts and every ten minutes after, so the
+	// reason is read where the room status reads it, the daemon's answer about its
+	// peers, as well as in the log.
 	eventually(t, 60*time.Second, "alice's machine saying to upgrade", func() (bool, string) {
-		l := r.alice.logs()
-		return strings.Contains(l, "upgrade the older side") || strings.Contains(l, "upgrade rather than discard it"), "not in alice's log"
+		peers, _ := r.alice.drive("get", "/peers", nil)
+		l := r.alice.logs() + peers
+		return strings.Contains(l, "upgrade the older side") || strings.Contains(l, "upgrade rather than discard it"), "not in alice's log or peer status"
 	})
 
 	// Alice upgrades and makes hers; nobody pairs again, and neither turn from while

@@ -206,8 +206,12 @@ func (d *Daemon) pinTrust() pinTrust {
 		knows: d.members.Knows,
 		self:  self,
 		live: func(user, signer string, c Chain) error {
-			_, err := d.members.checkLiveChain(user, signer, c, time.Now())
-			return err
+			if _, err := d.members.checkLiveChain(user, signer, c, time.Now()); err != nil {
+				return err
+			}
+			// The handshake proves the key signs for the user, so a key known here as
+			// a colleague's carries what it had to the user (D-242).
+			return d.carryMachineKey(signer, user, false)
 		},
 	}
 	// A machine whose page is waiting to be added has no user yet and knows nobody,

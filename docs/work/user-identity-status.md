@@ -45,7 +45,15 @@ the user confirms (D-220, D-234), suspended machines' turns hidden from the view
 injection, marked turns past a cutoff, machine names and the user's own turns in the view and
 the injected block (D-232, D-233), reachability per colleague and per own machine (D-194), and
 the notice of an expulsion (D-241). A follow-up stops a machine serving a suspended
-machine's events or images to others (D-234). D-219 to D-225 and D-228 to D-241 are active.
+machine's events or images to others (D-234). The carry-over is merged: a machine key known
+as a colleague that signs a v5 request, an identity request or a TLS handshake for a user
+links to that user in `machine_links`, the first user being final, and the colleague's record,
+addresses and joined rooms move to the user (D-242); a machine with a user identity carries each
+room from before user identities into one list founded by the authors of its v3 turns, and
+invites the guests of its own `room_guests` (D-243, `carryRoom` in `carryover.go`). The same
+work bounds a revoked user's revocations by their cutoff, drops a list change that shares its
+sequence, caps the rounds of `ResolveGuests`, raises `wireVersion` to 3, and keeps a label
+`Allow` is not given. D-219 to D-225 and D-228 to D-243 are active.
 Slice 6, cloud sessions, is next: D-216, D-226 and D-227, which are not built. Of the three
 facts it depends on, a cloud session's TLS handshake with a user's daemon through the relay is
 shown (`1d2b505`), the maintainer's cloud environment is personal, and where a repo added to a
@@ -62,10 +70,8 @@ What slice 3 leaves open:
   route was not on its base; it should ask colleagues for the user's versions.
 - `COGMER_IDENTITY_PAGE=off` turns off the page's gate, for tests that create and join with no
   daemon, and ships in the binary as `COGMER_PREFLIGHT=off` does.
-- A machine with rooms from before it made a user identity is not migrated: its colleagues'
-  guest lists hold its machine key. D-242 (a machine key from before the user identity
-  carries its verification, label and turns) and D-243 (a room from before user identities
-  takes one guest list) carry them over, and are not built.
+- A colleague's machine key is linked only when it signs something to this machine; a key
+  seen only in relayed v4 events stays a bare key here until it does.
 
 What the later slices need to know from slice 2b:
 
