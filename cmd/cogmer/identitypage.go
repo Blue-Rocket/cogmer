@@ -414,6 +414,10 @@ func (d *Daemon) becomeUser(user, display string, chain Chain, shared ed25519.Pr
 	}
 	d.id = &next
 	d.tls.reset()
+	// The rooms this machine joined before it had a user identity are carried into it,
+	// so that upgrading costs no room (D-243, a room from before user identities takes
+	// one guest list, founded by the users whose machines wrote its turns).
+	d.carryRooms()
 	return nil
 }
 

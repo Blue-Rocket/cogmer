@@ -190,11 +190,13 @@ type uiGuest struct {
 // guestView is the room's list as its events compute it, for a room that keeps its
 // list as events, with who invited and who revoked each guest.
 func (d *Daemon) guestView(store *Store, roomID string) []uiGuest {
-	gevs, err := store.GuestEvents(roomID)
-	if err != nil || len(gevs) == 0 {
+	if !d.members.EventListed(roomID) {
 		return nil
 	}
-	g := ResolveGuests(roomID, gevs)
+	g, _, err := d.resolveRoomGuests(store, roomID)
+	if err != nil {
+		return nil
+	}
 	self := d.id.Peer()
 	name := func(u string) string {
 		if u == self {
@@ -211,7 +213,9 @@ func (d *Daemon) guestView(store *Store, roomID string) []uiGuest {
 				continue
 			}
 			switch {
-			case c.Kind == GuestInvite && c.Author == u && len(c.Nonce) > 0:
+			case c.Kind == GuestInvite && c.Author == u:
+				// A founding self-invitation, or a founder of a room from before user
+				// identities (D-243), since no other self-invitation counts.
 				v.Founder = true
 			case c.Kind == GuestInvite:
 				v.InvitedBy = appendOnce(v.InvitedBy, name(c.Author))
@@ -259,6 +263,10 @@ type removalSummary struct {
 	// Resuming is a room an admitted guest has offered again since, which is coming
 	// back once the invitation that lifts the revocation arrives (D-241).
 	Resuming bool `json:"resuming,omitempty"`
+	// FromBeforeUsers is a room made before user identities, whose guests' machines
+	// refuse this one until they count its user as a guest (D-243, a room from before
+	// user identities takes one guest list).
+	FromBeforeUsers bool `json:"fromBeforeUsers,omitempty"`
 	// key names the revocations the summary is of, so a notice is given once for them.
 	key string
 }
@@ -275,12 +283,12 @@ func (d *Daemon) removalFrom(roomID string) (removalSummary, bool) {
 	if err != nil || g == nil {
 		return removalSummary{}, false
 	}
-	gevs, err := store.GuestEvents(roomID)
+	resolved, _, err := d.resolveRoomGuests(store, roomID)
 	if err != nil {
 		return removalSummary{}, false
 	}
 	counted := map[string]bool{}
-	for _, c := range ResolveGuests(roomID, gevs).Changes {
+	for _, c := range resolved.Changes {
 		counted[c.EventID] = true
 	}
 	out := removalSummary{Expelled: true}

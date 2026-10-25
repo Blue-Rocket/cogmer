@@ -219,6 +219,11 @@ func (d *Daemon) verifyRequest(req syncRequest, roomID string) error {
 		if err := d.members.StoreChain(*req.Chain); err != nil {
 			log.Printf("sync: could not keep the chain of %s: %v", PeerName(req.Signer), err)
 		}
+		// A key known here as a colleague's that now signs for a user carries what it
+		// had to that user, or, linked to another user first, is refused (D-242).
+		if err := d.carryMachineKey(req.Signer, req.PeerID, true); err != nil {
+			return err
+		}
 	}
 
 	// Who is established. Whether they may is a separate question, and answering

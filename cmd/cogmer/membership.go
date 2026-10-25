@@ -240,6 +240,9 @@ func OpenMembership() (*Membership, error) {
 	if _, err := db.Exec(propagationSchema); err != nil {
 		return nil, fmt.Errorf("init propagation: %w", err)
 	}
+	if _, err := db.Exec(machineLinksSchema); err != nil {
+		return nil, fmt.Errorf("init machine links: %w", err)
+	}
 	return &Membership{db: db}, nil
 }
 
@@ -441,14 +444,39 @@ func (m *Membership) RecordMachineAddress(machineKey, user, endpoint string) err
 // to its user once the user's master key is known (D-219, a user is a master key
 // that certifies machines through a shared key). SetMachineEndpoint refuses to move
 // a machine between users, and so does this: only a row whose user is its own key
-// changes, and a machine already given to a user stays with that user.
+// changes, and a machine already given to a user stays with that user. A key that
+// has proved it belongs to another user first is given to nobody else (D-242, a
+// machine key from before the user identity carries its verification, label and turns
+// to the first user it proves it belongs to). The rooms the machine joined move with
+// it, so that a room whose sync targets are its joined machines keeps it as one.
 func (m *Membership) AssignMachineUser(machineKey, user string) error {
 	if machineKey == "" || user == "" {
 		return errors.New("a machine to assign needs the machine and its user")
 	}
-	_, err := m.db.Exec(`UPDATE machines SET user = ? WHERE machine_key = ? AND user = machine_key`,
-		user, machineKey)
-	return err
+	if first, ok := m.LinkedUser(machineKey); ok && first != user {
+		return nil
+	}
+	tx, err := m.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := assignMachineUserIn(tx, machineKey, user); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func assignMachineUserIn(tx *sql.Tx, machineKey, user string) error {
+	for _, q := range []string{
+		`UPDATE machines SET user = ? WHERE machine_key = ? AND user = machine_key`,
+		`UPDATE room_machines SET user = ? WHERE machine_key = ? AND user = machine_key`,
+	} {
+		if _, err := tx.Exec(q, user, machineKey); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // PeerEndpoint is the address recorded most recently for any machine of one peer.
@@ -537,6 +565,7 @@ func (m *Membership) EndpointOwners() map[string]string {
 // reporting it as one would present a machine-made word pair as somebody's
 // decision.
 func (m *Membership) Label(peerID string) string {
+	peerID = m.colleagueOf(peerID)
 	var name string
 	if err := m.db.QueryRow(`SELECT name FROM known_peers WHERE peer_id = ?`, peerID).Scan(&name); err != nil {
 		return ""
@@ -565,6 +594,13 @@ func (m *Membership) Labels() map[string]string {
 			out[p.PeerID] = p.Name
 		}
 	}
+	// A turn a colleague's machine signed before its user existed carries the label
+	// the user has (D-242).
+	for key, user := range m.Links() {
+		if name, ok := out[user]; ok {
+			out[key] = name
+		}
+	}
 	return out
 }
 
@@ -580,11 +616,20 @@ func (m *Membership) NameFree(name, peerID string) error {
 	return nil
 }
 
+// Allow records a peer, under name. A peer already recorded and given no name keeps
+// the name it has, so that recording the inviter of a room joined from an invitation
+// leaves the label the user gave them. A machine key linked to its user records the
+// user (D-242, a machine key from before the user identity carries its verification,
+// label and turns to the first user it proves it belongs to).
 func (m *Membership) Allow(peerID, name string) error {
 	if _, err := PublicFromPeerID(peerID); err != nil {
 		return fmt.Errorf("refusing to record an identifier that names no key: %w", err)
 	}
+	peerID = m.colleagueOf(peerID)
 	if name == "" {
+		if m.Knows(peerID) {
+			return nil
+		}
 		name = PeerName(peerID)
 	}
 	if err := m.NameFree(name, peerID); err != nil {
@@ -627,6 +672,7 @@ func (m *Membership) Knows(peerID string) bool {
 // they named, and only a person can say that the voice on the call was the
 // colleague rather than somebody in their place (§25).
 func (m *Membership) MarkVerified(peerID string) error {
+	peerID = m.colleagueOf(peerID)
 	res, err := m.db.Exec(`UPDATE known_peers SET verified_at = ? WHERE peer_id = ?`,
 		time.Now().UTC().Format(time.RFC3339), peerID)
 	if err != nil {
@@ -642,6 +688,7 @@ func (m *Membership) MarkVerified(peerID string) error {
 // so that "already paired" can say since when, which is the difference between an
 // assertion and something a person can check against their memory.
 func (m *Membership) VerifiedAt(peerID string) string {
+	peerID = m.colleagueOf(peerID)
 	var at string
 	if err := m.db.QueryRow(`SELECT COALESCE(verified_at,'') FROM known_peers WHERE peer_id = ?`,
 		peerID).Scan(&at); err != nil {
@@ -650,7 +697,10 @@ func (m *Membership) VerifiedAt(peerID string) string {
 	return at
 }
 
+// IsVerified reports whether a peer has been verified. A machine key linked to its
+// user is verified as the user is (D-242).
 func (m *Membership) IsVerified(peerID string) bool {
+	peerID = m.colleagueOf(peerID)
 	var at string
 	if err := m.db.QueryRow(`SELECT COALESCE(verified_at,'') FROM known_peers WHERE peer_id = ?`, peerID).Scan(&at); err != nil {
 		return false
@@ -980,9 +1030,14 @@ func (m *Membership) IssuedSequence(roomID string) int64 {
 // it). A machine of a user the list has expelled is not asked, so the room's
 // identifier is not sent to them.
 func (m *Membership) RoomPeers(roomID, self string) []string {
+	// A guest named by a machine key that has since been given to its user is that
+	// user, so the key's own machine and the user's are found through the link
+	// (D-242, a machine key from before the user identity carries every guest-list
+	// entry naming it to its user).
 	q := `
 		SELECT DISTINCT mc.endpoint FROM room_guests g
-		JOIN machines mc ON mc.user = g.peer_id
+		JOIN machines mc ON mc.user = g.peer_id OR mc.machine_key = g.peer_id
+			OR mc.user = (SELECT l.user FROM machine_links l WHERE l.machine_key = g.peer_id)
 		WHERE g.room_id = ? AND mc.machine_key <> ? AND mc.endpoint IS NOT NULL AND mc.endpoint <> ''`
 	if m.EventListed(roomID) {
 		q = `
@@ -1128,7 +1183,13 @@ func (m *Membership) SessionIDsInRoom(roomID string) []string {
 // A room whose guest list is computed from its events asks that list, by user, and
 // nothing else: room_guests holds no admission to it (D-235, a room's one guest list
 // decides whose events count; D-045, admission is enforced).
+//
+// A machine key linked to its user is the user, and in a room whose list is
+// room_guests the user is a guest wherever a key linked to them is one (D-242, a
+// machine key from before the user identity carries every guest-list entry naming it
+// to its user).
 func (m *Membership) IsGuest(roomID, peerID string) bool {
+	peerID = m.colleagueOf(peerID)
 	if m.EventListed(roomID) {
 		var admitted int
 		err := m.db.QueryRow(`SELECT admitted FROM room_guests_cache WHERE room_id = ? AND user = ?`,
@@ -1136,8 +1197,9 @@ func (m *Membership) IsGuest(roomID, peerID string) bool {
 		return err == nil && admitted == 1
 	}
 	var n int
-	err := m.db.QueryRow(`SELECT COUNT(*) FROM room_guests WHERE room_id = ? AND peer_id = ?`,
-		roomID, peerID).Scan(&n)
+	err := m.db.QueryRow(`SELECT COUNT(*) FROM room_guests WHERE room_id = ? AND (peer_id = ?
+		OR peer_id IN (SELECT machine_key FROM machine_links WHERE user = ?))`,
+		roomID, peerID, peerID).Scan(&n)
 	return err == nil && n > 0
 }
 

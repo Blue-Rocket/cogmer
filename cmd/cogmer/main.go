@@ -460,6 +460,11 @@ func runDaemon() {
 	// identity.json (D-219, a user is a master key that certifies machines through a
 	// shared key).
 	d.storeOwnChain()
+	// A room left uncarried by a machine that stopped while becoming its user's is
+	// carried now (D-243, a room from before user identities takes one guest list).
+	d.mu.Lock()
+	d.carryRooms()
+	d.mu.Unlock()
 
 	if !isLoopback(addr()) {
 		log.Fatalf("refusing to serve hooks on %s: the hook API publishes into the room "+
@@ -842,7 +847,11 @@ func explainNameTaken(err error) {
 	fmt.Println("That is what an interception looks like after the fact, so check with them on")
 	fmt.Println("a call before recording it.")
 	fmt.Print(commandText("\nIf they really do have a new key, /cogmer:peer-forget the old one first.\n"))
-	fmt.Printf("That discards its admissions too, so you will invite them again deliberately.\n\n")
+	fmt.Println("Forgetting leaves every room's guest list as it is, so invite the new key to")
+	fmt.Println("their rooms on purpose; the old key stays on the lists it was on.")
+	fmt.Println("A colleague who made a user identity in cogmer does not come here: their machine")
+	fmt.Println("proves the new identity with the key you verified, and keeps the name you gave them.")
+	fmt.Println()
 }
 
 func resolvePeer(m *Membership, arg string) (string, error) {
@@ -923,6 +932,11 @@ func runPeers() {
 				unfinished = append(unfinished, p.Name)
 			}
 			fmt.Print(formatPeer(p, reported[p.PeerID]))
+		}
+		// A key that proved it belongs to a second user carried nothing to them, and
+		// only a pairing says who that user is (D-242).
+		for _, c := range m.LinkConflicts() {
+			fmt.Printf("\n%s\n", c.Error())
 		}
 		// Named, not counted. The usual room has two people in it, so a tally is
 		// always one and says nothing; what a person can act on is which
@@ -1304,7 +1318,7 @@ func runGuests() {
 		if err != nil {
 			log.Fatalf("guests: %v", err)
 		}
-		reach, self, up, refusing := fetchPeers(r.RoomID)
+		reach, self, up, refusing, fromBefore := fetchPeers(r.RoomID)
 		var rows []guestRow
 		for _, p := range g {
 			rows = append(rows, guestRow{Name: firstNonEmpty(m.Label(p), PeerName(p)), ID: p, Self: p == id.Peer()})
@@ -1316,6 +1330,7 @@ func runGuests() {
 			rows = append([]guestRow{{Name: "you", ID: id.Peer(), Self: true}}, rows...)
 		}
 		renderGuests(os.Stdout, r.RoomName, rows, reach, self, up)
+		removal.FromBeforeUsers = fromBefore
 		renderRemoval(os.Stdout, removal, removed, refusing)
 		if line := coworkLine(m.SessionIDsInRoom(r.RoomID), fetchHostCalls(), up); line != "" {
 			fmt.Println()
@@ -1387,6 +1402,14 @@ func renderRemoval(w io.Writer, s removalSummary, removed, refusing bool) {
 		if s.Resuming {
 			fmt.Fprintln(w, "A guest has offered the room to you again, so it is coming back once their invitation arrives.")
 		}
+	case refusing && s.FromBeforeUsers:
+		// A room made before user identities is refused by a guest's machine that does
+		// not count this user yet, which is the ordinary state while its guests upgrade,
+		// and not a removal (D-242; D-243).
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "The room's guests are refusing this machine. The room was made before user identities, and a")
+		fmt.Fprintln(w, "guest's machine refuses yours until it counts you as a guest: once it has heard from this machine")
+		fmt.Fprintln(w, "since you made your identity, and a guest whose earlier list admitted you has upgraded and made theirs.")
 	case refusing:
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "The room's guests are refusing this machine, which usually means you were removed from the room.")
@@ -1395,28 +1418,30 @@ func renderRemoval(w io.Writer, s removalSummary, removed, refusing bool) {
 
 // fetchPeers asks the running daemon whom it can reach for one room: its colleagues,
 // one line each, the user's own machines that joined it, one line each, and whether
-// its guests are refusing this machine (D-194; D-241). The answer lives in the daemon,
+// its guests are refusing this machine (D-194; D-241), and whether the room was made
+// before user identities, which such a refusal usually means (D-243). The answer lives in the daemon,
 // which is the process that tries, so a command that is a separate process has to ask
 // it. The third result is false when no daemon answered.
-func fetchPeers(roomID string) ([]uiPeer, *uiSelf, bool, bool) {
+func fetchPeers(roomID string) (peers []uiPeer, self *uiSelf, up, refusing, fromBeforeUsers bool) {
 	c := &http.Client{Timeout: 2 * time.Second}
 	resp, err := c.Get("http://" + addr() + "/peers?room=" + url.QueryEscape(roomID))
 	if err != nil {
-		return nil, nil, false, false
+		return nil, nil, false, false, false
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, nil, false, false
+		return nil, nil, false, false, false
 	}
 	var body struct {
-		Peers    []uiPeer `json:"peers"`
-		Self     *uiSelf  `json:"self"`
-		Refusing bool     `json:"refusing"`
+		Peers      []uiPeer `json:"peers"`
+		Self       *uiSelf  `json:"self"`
+		Refusing   bool     `json:"refusing"`
+		FromBefore bool     `json:"fromBeforeUsers"`
 	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&body); err != nil {
-		return nil, nil, false, false
+		return nil, nil, false, false, false
 	}
-	return body.Peers, body.Self, true, body.Refusing
+	return body.Peers, body.Self, true, body.Refusing, body.FromBefore
 }
 
 type guestRow struct {

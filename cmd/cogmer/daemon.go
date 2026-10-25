@@ -298,8 +298,9 @@ func (d *Daemon) storeFor(roomID string) (*Store, error) {
 	// from the room's events here, before anything asks it (D-235, a room's one guest
 	// list decides whose events count).
 	if !d.members.EventListed(roomID) {
-		if evs, err := s.GuestEvents(roomID); err == nil && len(evs) > 0 {
-			if err := d.members.CacheGuestList(ResolveGuests(roomID, evs)); err != nil {
+		if evs, founders, err := d.guestInputs(s, roomID); err == nil && len(evs)+len(founders) > 0 {
+			g := ResolveGuests(roomID, evs, founders...)
+			if err := d.members.CacheGuestList(g); err != nil {
 				log.Printf("guests: could not cache the list of %s: %v", roomID, err)
 			}
 		}

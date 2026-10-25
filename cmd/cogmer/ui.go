@@ -793,7 +793,8 @@ func (d *Daemon) handlePeers(w http.ResponseWriter, r *http.Request) {
 	if roomID := r.URL.Query().Get("room"); roomID != "" {
 		if _, ok := d.members.RoomByID(roomID); ok {
 			writeJSON(w, map[string]any{"peers": d.roomPeerStatus(roomID), "self": d.selfStatus(),
-				"hostCalls": d.hostCalls.ages(), "refusing": d.roomRefusing(roomID)})
+				"hostCalls": d.hostCalls.ages(), "refusing": d.roomRefusing(roomID),
+				"fromBeforeUsers": d.fromBeforeUsers(roomID)})
 			return
 		}
 	}
