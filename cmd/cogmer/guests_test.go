@@ -360,15 +360,16 @@ func guestCycle() *guestRoom {
 func TestARecordThatNeverSettlesKeepsOutEveryoneNotAdmittedInEveryState(t *testing.T) {
 	g := guestCycle()
 	l := g.resolve()
-	// The two states are {alice, carol} on the list with Bob revoked, and
-	// {alice, bob, dave} with Carol's standing gone; only Alice is in both.
+	// In some states of the loop Carol's revocation counts and Bob is out, and in
+	// others Bob's invitation of her does not and she and Dave are out; only Alice
+	// is in every one.
 	wantOnList(t, l, map[string]bool{"alice": true, "bob": false, "carol": false, "dave": false})
 	for _, user := range []string{"bob", "carol", "dave"} {
 		if _, ever := l.Admitted[user]; !ever {
 			t.Errorf("%s, invited in some state of the cycle, is absent from the list", user)
 		}
 	}
-	// The state with fewer admitted users gives the cutoffs: Bob's revocation.
+	// Bob's cutoff is the lowest any state of the loop gives him: Carol's revocation.
 	if got := l.Cutoffs["bob"]; !reflect.DeepEqual(got, map[string]int64{"bob/laptop": 1}) {
 		t.Fatalf("Bob's cutoffs = %v, want those of the state that revokes him", got)
 	}
@@ -384,5 +385,157 @@ func TestARecordThatNeverSettlesKeepsOutEveryoneNotAdmittedInEveryState(t *testi
 		if got := ResolveGuests(g.room, shuffled); !reflect.DeepEqual(got, want) {
 			t.Fatalf("order %d resolved the cycle differently:\n got %+v\nwant %+v", i, got, want)
 		}
+	}
+}
+
+// A guest who is revoked and then revokes every guest who remains, from past the
+// cutoff, with cutoffs that show they saw the revocation, changes nothing (D-235, an
+// invitation or a revocation by a revoked user counts only within that user's cutoff).
+func TestARevokedGuestsRevengeRevocationsChangeNothing(t *testing.T) {
+	g := newGuestRoom("alice")
+	g.invite("alice", 2, "bob")
+	g.invite("alice", 3, "carol")
+	g.revoke("alice", 4, "bob", map[string]int64{"bob/laptop": 3})
+	ofAlice := g.revoke("bob", 5, "alice", map[string]int64{"alice/laptop": 4})
+	ofCarol := g.revoke("bob", 6, "carol", nil)
+	l := g.resolve()
+	wantOnList(t, l, map[string]bool{"alice": true, "bob": false, "carol": true})
+	wantGuestDiscarded(t, l, ofAlice, "after the cutoff")
+	wantGuestDiscarded(t, l, ofCarol, "after the cutoff")
+	if _, ok := l.Cutoffs["alice"]; ok {
+		t.Fatal("the revenge revocation set a cutoff for the creator")
+	}
+
+	// A revocation within the cutoff counts as any guest's does.
+	g.revoke("bob", 2, "carol", map[string]int64{"carol/laptop": 1})
+	wantOnList(t, g.resolve(), map[string]bool{"alice": true, "carol": false})
+}
+
+// Two guests who revoke each other at once, each past the cutoff the other's
+// revocation gives them, are both out through the rule for a record that never
+// settles, and what each wrote up to the other's cutoff still counts.
+func TestTwoGuestsRevokingEachOtherPastTheirCutoffsAreBothOut(t *testing.T) {
+	g := newGuestRoom("alice")
+	g.invite("alice", 2, "bob")
+	g.invite("alice", 3, "carol")
+	g.revoke("bob", 5, "carol", map[string]int64{"carol/laptop": 3})
+	g.revoke("carol", 4, "bob", map[string]int64{"bob/laptop": 4})
+	l := g.resolve()
+	wantOnList(t, l, map[string]bool{"alice": true, "bob": false, "carol": false})
+	if !l.Counts("bob", "bob/laptop", 4) || l.Counts("bob", "bob/laptop", 5) {
+		t.Fatal("bob's turns do not stop at the cutoff carol's revocation gives")
+	}
+	if !l.Counts("carol", "carol/laptop", 3) || l.Counts("carol", "carol/laptop", 4) {
+		t.Fatal("carol's turns do not stop at the cutoff bob's revocation gives")
+	}
+}
+
+// A change that shares its machine's sequence with a different change counts for
+// nobody, so a revoked guest cannot sign a revocation under a sequence inside the
+// cutoff (D-027, a sequence conflict is quarantined).
+func TestAChangeSharingItsMachinesSequenceCountsForNobody(t *testing.T) {
+	g := newGuestRoom("alice")
+	g.invite("alice", 2, "bob")
+	g.invite("alice", 3, "carol")
+	g.revoke("alice", 4, "bob", map[string]int64{"bob/laptop": 2})
+	honest := g.invite("bob", 2, "dave")
+	forged := g.revoke("bob", 2, "carol", map[string]int64{"carol/laptop": 0})
+	l := g.resolve()
+	wantOnList(t, l, map[string]bool{"alice": true, "carol": true, "bob": false})
+	if _, ever := l.Admitted["dave"]; ever {
+		t.Fatal("an invitation sharing its sequence with another change counted")
+	}
+	wantGuestDiscarded(t, l, honest, "shares its machine's sequence")
+	wantGuestDiscarded(t, l, forged, "shares its machine's sequence")
+}
+
+// A room from before user identities is founded by the users given as its founders,
+// each admitted as a founding self-invitation admits its creator, and a founder
+// lifts no revocation (D-243, a room from before user identities takes one guest list).
+func TestFoundersOfARoomFromBeforeUserIdentities(t *testing.T) {
+	var evs []GuestEvent
+	add := func(e GuestEvent) string {
+		e.EventID = fmt.Sprintf("ev%03d", len(evs))
+		evs = append(evs, e)
+		return e.EventID
+	}
+	add(GuestEvent{Author: "alice", Machine: "alice/laptop", Sequence: 7, Kind: GuestInvite, Subject: "carol"})
+	l := ResolveGuests("an-old-room", evs, "alice", "bob")
+	wantOnList(t, l, map[string]bool{"alice": true, "bob": true, "carol": true})
+	if l := ResolveGuests("an-old-room", evs); len(l.Admitted) != 0 {
+		t.Fatalf("a room with no founders and no founding invitation admits %v", l.Admitted)
+	}
+
+	r := add(GuestEvent{Author: "alice", Machine: "alice/laptop", Sequence: 8, Kind: GuestRevoke, Subject: "bob",
+		Cutoffs: map[string]int64{"bob/laptop": 3}})
+	wantOnList(t, ResolveGuests("an-old-room", evs, "alice", "bob"), map[string]bool{"bob": false})
+	add(GuestEvent{Author: "alice", Machine: "alice/laptop", Sequence: 9, Kind: GuestInvite, Subject: "bob", Lifts: []string{r}})
+	wantOnList(t, ResolveGuests("an-old-room", evs, "alice", "bob"), map[string]bool{"bob": true})
+}
+
+// settleRounds stops at its cap, and judges the rounds by their later half, when
+// no state repeats before it.
+func TestSettleRoundsStopsAtItsCap(t *testing.T) {
+	step := func(n int) (int, string) { return n + 1, fmt.Sprint(n + 1) }
+	loop, rounds := settleRounds(0, "0", step, 10)
+	if rounds != 10 || !reflect.DeepEqual(loop, []int{5, 6, 7, 8, 9}) {
+		t.Fatalf("ran %d rounds and kept %v; want 10 rounds and the later half", rounds, loop)
+	}
+	loop, rounds = settleRounds(0, "0", func(n int) (int, string) { return (n + 1) % 3, fmt.Sprint((n + 1) % 3) }, 10)
+	if rounds != 3 || !reflect.DeepEqual(loop, []int{0, 1, 2}) {
+		t.Fatalf("a loop of three ran %d rounds and kept %v", rounds, loop)
+	}
+}
+
+// A record contrived from loops of different lengths, each a chain of invitations
+// whose last guest revokes its first with a cutoff before the invitation that leads
+// to them, returns to a state only after the least common multiple of the loops'
+// lengths, which grows faster than any power of the number of changes. The rounds
+// stop at the cap, a number proportional to the changes, and every machine computes
+// the same list from them.
+func TestAContrivedRecordStopsAtTheRoundCap(t *testing.T) {
+	g := newGuestRoom("alice")
+	n := 0
+	for _, length := range []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13} {
+		users := make([]string, length)
+		for i := range users {
+			users[i] = fmt.Sprintf("u%d-%d", length, i)
+		}
+		g.invite("alice", int64(2+n), users[0])
+		for i := 0; i+1 < length; i++ {
+			g.invite(users[i], 1, users[i+1])
+		}
+		g.revoke(users[length-1], 2, users[0], nil)
+		n++
+	}
+	l, rounds := resolveGuests(g.room, g.events, nil)
+	if cap := guestRoundCap(len(g.events) - 1); rounds != cap {
+		t.Fatalf("ran %d rounds; want the cap of %d, which a record this contrived reaches", rounds, cap)
+	}
+	wantOnList(t, l, map[string]bool{"alice": true, "u5-0": false})
+	rng := rand.New(rand.NewSource(3))
+	shuffled := append([]GuestEvent{}, g.events...)
+	rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
+	if got := ResolveGuests(g.room, shuffled); !reflect.DeepEqual(got, l) {
+		t.Fatal("the contrived record resolved differently in another order")
+	}
+}
+
+// An honest chain of invitations far longer than any room holds settles before the
+// cap, with every guest on the list.
+func TestALongChainOfInvitationsSettlesBeforeTheCap(t *testing.T) {
+	g := newGuestRoom("alice")
+	prev := "alice"
+	for i := 0; i < 200; i++ {
+		next := fmt.Sprintf("guest%03d", i)
+		g.invite(prev, int64(2+i), next)
+		prev = next
+	}
+	l, rounds := resolveGuests(g.room, g.events, nil)
+	if rounds >= guestRoundCap(len(g.events)-1) {
+		t.Fatalf("an honest chain reached the cap after %d rounds", rounds)
+	}
+	if !l.Admitted["guest199"] {
+		t.Fatal("the last guest of the chain is not on the list")
 	}
 }
