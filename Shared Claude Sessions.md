@@ -1150,8 +1150,10 @@ A revoked colleague can change the list only as far as the turns of theirs that 
 count, so that a colleague who is expelled cannot expel the guests who remain in revenge,
 or admit somebody who would let them back in.
 
-When two guests revoke each other at the same time, both are out of the room, and either
-can be invited back, so that no rule has to pick one of them arbitrarily.
+When two guests revoke each other at the same time, the one fewer invitations away from
+whoever founded the room stays, and two equally far are both out, so that a colleague who is
+expelled can never undo the expulsion by claiming to have revoked at the same moment. A guest
+who is out can be invited back.
 
 Both lists can be inspected and changed:
 

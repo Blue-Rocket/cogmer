@@ -289,18 +289,6 @@ sending a new pairing string, how a cloud session's hooks load, and whether a co
 shares of the recovery phrase could recover a user who has lost it, which no decision has
 examined.
 
-**Of two guests who revoke each other at once, the one fewer invitations away from a
-founder stays in.** `ResolveGuests` counts changes in rounds from the founders, and a guest's
-revocation first counts in the round after the guest's invitation does, read on 2026-10-25.
-Two guests invited by one founder revoke each other in the same round, and both end out, as
-D-235 (a room's one guest list) says. When one of them is further from a founder, the nearer
-one's revocation counts a round earlier and puts the other's past its cutoff, so the nearer
-stays in, and a founder always stays in against a guest. D-235 rejects a tie-break that keeps
-one of two such guests in. One fix counts a revocation of the user who revoked its author,
-made without seeing that revocation, as though it were within the author's cutoff; its cost
-is that a revoked guest can name an early cutoff to make a revenge revocation look like one
-made at once, which the rounds already allow two guests invited by one founder.
-
 **The decisions that make the user the peer leave details undecided.** Each is needed by a
 slice of the second run, and none has a choice taken yet:
 
