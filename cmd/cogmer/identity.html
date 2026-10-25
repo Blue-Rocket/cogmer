@@ -69,6 +69,13 @@ function errorBox(msg){ return msg ? `<p class="err">${esc(msg)}</p>` : ''; }
 
 async function load(){
   try { state = await post('/identity/state'); } catch(e){ show(errorBox(e.message)); return; }
+  if(state.cloud && !state.hasUser){
+    show(`<div class="card stop"><h2>No identity yet</h2><p style="margin:0">This is a cloud session. It takes its
+      identity from the value in its environment's <code>COGMER_CLOUD_KEY</code>, which is missing or does not read,
+      and it never takes your recovery phrase. Add a cloud environment from <code>/cogmer:self-machines</code> on one
+      of your own machines, and paste the value it shows into this environment.</p></div>`);
+    return;
+  }
   state.hasUser ? machines() : ask();
 }
 
@@ -212,11 +219,19 @@ function recoverForm(msg){
 function reachText(m){
   if(m.self) return 'this machine';
   if(!m.current) return 'suspended until it is added again';
+  if(m.kind === 'cloud') return 'a cloud environment';
   if(m.reach === 'not reachable') return 'not reachable' + (m.trying ? ' (tried for ' + m.trying + ')' : '');
   return m.reach || '';
 }
 
 function machines(msg){
+  if(state.cloud){
+    show(`<p class="lead">This is a cloud session of ${esc(state.displayName)} (${esc(state.userName)}).</p>
+      <div class="card"><p style="margin:0">A cloud session takes its identity from the value in its
+      environment, and your colleagues, rooms and machines from one of your own machines. Add, rename and
+      remove machines and cloud environments on one of your own machines.</p></div>`);
+    return;
+  }
   const rows = (state.machines||[]).map(m => `<tr><td><b>${esc(m.name)}</b> <span class="hint">#${esc(m.serial)}</span></td>
       <td class="hint">${esc(reachText(m))}</td>
       <td><button data-rename="${esc(m.machine)}">Rename</button>
@@ -229,6 +244,14 @@ function machines(msg){
       <input id="string" autocomplete="off" spellcheck="false" placeholder="ed25519:…@…">
       <div class="row"><button class="yes" id="add">Add</button></div>`
       : `<p class="hint" style="margin:0">This machine holds no shared key, so it cannot add a machine.</p>`}</div>
+    <div class="card" id="cloud"><h2>Add a cloud environment</h2>
+      ${state.canCertify ? `<p style="margin:0 0 6px">A cloud session, such as Claude Code on the web, speaks as you with a key
+      of its own. Name the environment, and this page shows one value to paste into the environment's variable
+      <code>COGMER_CLOUD_KEY</code>.</p>
+      <label for="cloudName">The environment's name</label>
+      <input id="cloudName" autocomplete="off">
+      <div class="row"><button class="yes" id="addCloud">Add a cloud environment</button></div>`
+      : `<p class="hint" style="margin:0">This machine holds no shared key, so it cannot add a cloud environment.</p>`}</div>
     <div class="card"><h2>A new shared key</h2><p class="hint" style="margin:0 0 6px">If one of your machines was stolen,
       a new shared key, certified with your recovery phrase, vouches again for the machines you keep, and any
       machine you do not keep, such as one a thief added, stops speaking as you.</p>
@@ -236,7 +259,35 @@ function machines(msg){
   document.querySelectorAll('[data-rename]').forEach(b => b.onclick = () => rename(b.dataset.rename));
   document.querySelectorAll('[data-remove]').forEach(b => b.onclick = () => removeAsk(b.dataset.remove));
   if(el('add')) el('add').onclick = addStart;
+  if(el('addCloud')) el('addCloud').onclick = addCloud;
   el('newkey').onclick = newKeyForm;
+}
+
+// --- adding a cloud environment (D-246) ---
+
+// The value holds the cloud key, so it is shown here once and goes nowhere else: this
+// machine keeps the certificate and not the key.
+async function addCloud(){
+  const name = el('cloudName').value;
+  const res = await post('/machines/cloud/add', {name}).catch(e => ({error:e.message}));
+  if(res.error){ machines(res.error); return; }
+  show(`<p class="lead">Paste this value into the cloud environment's <code>COGMER_CLOUD_KEY</code>.</p>
+    <div class="card"><textarea id="cloudValue" rows="6" readonly spellcheck="false"></textarea>
+      <div class="row"><button class="yes" id="copy">Copy</button><button id="doneCloud">Done</button></div>
+      <p class="hint">This is the only time it is shown, and this machine does not keep it: it keeps only the
+      certificate that names ${esc(res.name)} as one of yours. Whoever holds the value speaks as you in every room
+      you are in, so paste it only into the environment's settings, never into a session or a chat. If it is
+      lost or exposed, remove ${esc(res.name)} from your machines and add a cloud environment again.</p></div>`);
+  el('cloudValue').value = res.value;
+  el('copy').onclick = async () => {
+    try { await navigator.clipboard.writeText(el('cloudValue').value); el('copy').textContent = 'Copied'; }
+    catch(e){ el('cloudValue').select(); document.execCommand('copy'); el('copy').textContent = 'Copied'; }
+  };
+  el('doneCloud').onclick = async () => {
+    el('cloudValue').value = '';
+    state = await post('/identity/state');
+    machines();
+  };
 }
 
 // --- removing a machine (D-220) ---

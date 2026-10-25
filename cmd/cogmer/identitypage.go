@@ -91,6 +91,9 @@ func (d *Daemon) selfLocalRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/machines/add/start", guardLocal(d.handleAddStart))
 	mux.HandleFunc("/machines/add/confirm", guardLocal(d.handleAddConfirm))
 	mux.HandleFunc("/machines/rename", guardLocal(d.handleMachineRename))
+	// Adding a cloud environment, whose value is shown only in this route's response
+	// (D-246, a cloud environment is added from the machines page).
+	mux.HandleFunc("/machines/cloud/add", guardLocal(d.handleCloudAdd))
 	// Removing a machine, and certifying a new shared key with the phrase typed into
 	// the page (D-220; D-223, the recovery phrase is typed only into the daemon's
 	// browser page).
@@ -103,6 +106,7 @@ func (d *Daemon) selfLocalRoutes(mux *http.ServeMux) {
 func (d *Daemon) selfPeerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/self/add", d.handleMachineAdd)
 	mux.HandleFunc("/self/lists", d.handleSelfLists)
+	mux.HandleFunc("/self/fetch", d.handleSelfFetch)
 }
 
 func (d *Daemon) handleIdentityPage(w http.ResponseWriter, r *http.Request) {
@@ -121,7 +125,9 @@ type machineView struct {
 	Machine string `json:"machine"`
 	Name    string `json:"name"`
 	Serial  uint64 `json:"serial"`
-	Self    bool   `json:"self,omitempty"`
+	// Kind is "machine", or "cloud" for a cloud environment's key (D-246).
+	Kind string `json:"kind"`
+	Self bool   `json:"self,omitempty"`
 	// Current is false for a machine not certified under the user's current shared
 	// key, which is suspended until it is certified again (D-234).
 	Current bool `json:"current"`
@@ -132,14 +138,16 @@ type machineView struct {
 }
 
 type identityState struct {
-	HasUser     bool          `json:"hasUser"`
-	User        string        `json:"user,omitempty"`
-	UserName    string        `json:"userName,omitempty"`
-	DisplayName string        `json:"displayName,omitempty"`
-	Hostname    string        `json:"hostname"`
-	Machine     string        `json:"machine"`
-	CanCertify  bool          `json:"canCertify"`
-	Machines    []machineView `json:"machines,omitempty"`
+	HasUser     bool   `json:"hasUser"`
+	User        string `json:"user,omitempty"`
+	UserName    string `json:"userName,omitempty"`
+	DisplayName string `json:"displayName,omitempty"`
+	Hostname    string `json:"hostname"`
+	Machine     string `json:"machine"`
+	CanCertify  bool   `json:"canCertify"`
+	// Cloud is true in a cloud session, whose page adds, removes and certifies nothing.
+	Cloud    bool          `json:"cloud,omitempty"`
+	Machines []machineView `json:"machines,omitempty"`
 }
 
 func hostname() string {
@@ -153,7 +161,7 @@ func (d *Daemon) handleIdentityState(w http.ResponseWriter, r *http.Request) {
 
 func (d *Daemon) identityState() identityState {
 	id := d.id
-	st := identityState{Hostname: hostname(), Machine: id.PeerID}
+	st := identityState{Hostname: hostname(), Machine: id.PeerID, Cloud: d.isCloudSession()}
 	if !id.HasUser() {
 		return st
 	}
@@ -171,8 +179,9 @@ func (d *Daemon) machineViews() []machineView {
 	certs, current := d.members.displayCerts(id.User)
 	var out []machineView
 	for key, c := range certs {
-		v := machineView{Machine: key, Name: c.Name, Serial: c.Serial, Self: key == id.PeerID, Current: current[key]}
-		if !v.Self {
+		v := machineView{Machine: key, Name: c.Name, Serial: c.Serial, Kind: c.Kind, Self: key == id.PeerID, Current: current[key]}
+		// A cloud key listens nowhere, since each of its sessions has a key of its own.
+		if !v.Self && c.Kind == KindMachine {
 			v.Reach = "not tried"
 			if ep, _ := d.members.MachineEndpoint(key); ep != "" {
 				p := d.statusOf([]string{ep})[0]
@@ -243,6 +252,10 @@ type phraseResponse struct {
 // handleIdentityPhrase draws the phrase of a new user and shows it. This response
 // is the only one that ever carries the words.
 func (d *Daemon) handleIdentityPhrase(w http.ResponseWriter, r *http.Request) {
+	if d.isCloudSession() {
+		writeJSON(w, phraseResponse{Error: cloudNoPhrase})
+		return
+	}
 	if d.id.HasUser() {
 		writeJSON(w, phraseResponse{Error: "this machine already speaks for a user"})
 		return
@@ -318,6 +331,12 @@ type identityResult struct {
 	User   string `json:"user,omitempty"`
 	Error  string `json:"error,omitempty"`
 }
+
+// cloudNoPhrase is the page's answer, in a cloud session, to anything that would take
+// or show the recovery phrase or make an identity, since a cloud session's container
+// is not a place the user controls (D-223) and its identity comes from its cloud value
+// (D-246).
+const cloudNoPhrase = "This is a cloud session, which never takes your recovery phrase and takes its identity from the cloud value in its environment."
 
 // handleIdentityCreate makes the user once the words typed back match the phrase:
 // the master key certifies shared key 1, the shared key certifies this machine, and
@@ -470,6 +489,11 @@ func (d *Daemon) handleIdentityRecover(w http.ResponseWriter, r *http.Request) {
 	var req recoverRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	if d.isCloudSession() {
+		req.Phrase = ""
+		writeJSON(w, identityResult{Error: cloudNoPhrase})
 		return
 	}
 	p, err := ParsePhrase(req.Phrase)

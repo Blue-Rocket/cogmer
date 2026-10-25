@@ -118,6 +118,9 @@ type uiState struct {
 	// Removed is this user's removal from the room, when the room's list expels them
 	// (D-241).
 	Removed *removalSummary `json:"removed,omitempty"`
+	// Lists is, in a cloud session, which of the user's machines its lists came from
+	// and how old they are (D-245, a cloud session shows the header's age in the view).
+	Lists *listsView `json:"lists,omitempty"`
 }
 
 // subscribe registers a channel woken whenever the room changes.
@@ -184,6 +187,7 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 	st := uiState{Room: cur.RoomID, RoomName: cur.RoomName, SelfPeerID: self, Peers: d.roomPeerStatus(cur.RoomID),
 		SessionsInRoom: len(d.members.SessionIDsInRoom(cur.RoomID))}
 	st.Guests = d.guestView(store, cur.RoomID)
+	st.Lists = d.cloudListsView()
 	if s, ok := d.removalFrom(cur.RoomID); ok {
 		st.Removed = &s
 	}

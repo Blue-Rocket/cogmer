@@ -400,12 +400,12 @@ func TestAReservationIsSpentEvenIfNothingIsWritten(t *testing.T) {
 	const roomID = "room-reserve"
 	p := newOfflinePeer(t, roomID, "spent-reach")
 
-	first, err := p.d.members.ReserveSequence(roomID)
+	first, err := p.d.members.ReserveSequence(roomID, p.d.id.PeerID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Nothing is written with `first` -- the crash.
-	second, err := p.d.members.ReserveSequence(roomID)
+	second, err := p.d.members.ReserveSequence(roomID, p.d.id.PeerID)
 	if err != nil {
 		t.Fatal(err)
 	}

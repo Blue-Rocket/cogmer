@@ -363,6 +363,11 @@ func (d *Daemon) handleNewKey(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+	if d.isCloudSession() {
+		req.Phrase = ""
+		writeJSON(w, newKeyResult{Error: cloudNoPhrase})
+		return
+	}
 	p, err := ParsePhrase(req.Phrase)
 	req.Phrase = ""
 	if err != nil {
@@ -502,7 +507,9 @@ func (d *Daemon) giftFor(machine string, theirs uint64) *sharedKeyGift {
 		return nil
 	}
 	ms, ok := st.Machines[machine]
-	if !ok || !ms.Current || ms.Removed {
+	// A cloud key never holds the shared key (D-219, every machine the user adds holds
+	// the shared key, and a cloud key never does).
+	if !ok || !ms.Current || ms.Removed || ms.Cert.Kind != KindMachine {
 		return nil
 	}
 	return &sharedKeyGift{Version: version, Key: base64.RawURLEncoding.EncodeToString(shared)}

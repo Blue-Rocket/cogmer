@@ -139,6 +139,12 @@ type Daemon struct {
 	newPhrase func() (Phrase, error)
 	advertise string
 
+	// cloud is a cloud session's setup and the state of its lists, nil on a machine of
+	// the user's own (D-216, D-245). cloudEnv says the environment holds a cloud value,
+	// whether or not it read, since a cloud session never takes the recovery phrase.
+	cloud    *cloudSession
+	cloudEnv bool
+
 	// selfCheck asks whether this daemon can be reached through its relay. Nil when
 	// the daemon runs no overlay. It lives in tailcat.go, which is the only place
 	// that knows what the overlay is (D-068).
@@ -865,7 +871,10 @@ func onlyCounting(evs []Event, g *GuestList) []Event {
 // uses it (D-029, §23). Reserving first is what makes a crash between the two
 // lose a number rather than reissue one.
 func (d *Daemon) appendLocal(store *Store, room Room, sessionID, kind, content string, meta map[string]any) (*Event, error) {
-	seq, err := d.members.ReserveSequence(room.RoomID)
+	// One identity for the reservation and the signature, since a cloud session's key
+	// can be replaced between two reads of d.id (D-247).
+	id := d.id
+	seq, err := d.members.ReserveSequence(room.RoomID, id.PeerID)
 	if err != nil {
 		return nil, err
 	}
@@ -874,10 +883,10 @@ func (d *Daemon) appendLocal(store *Store, room Room, sessionID, kind, content s
 	// (D-221, an event whose identity version the receiver lacks is withheld until
 	// fetched). A machine with no user identity names none and signs as it always has.
 	var removals []string
-	if d.id.HasUser() {
-		removals = d.members.RemovalsSeen(d.id.User)
+	if id.HasUser() {
+		removals = d.members.RemovalsSeen(id.User)
 	}
-	return store.AppendAs(seq, d.id, removals, room.RoomID, sessionID, kind, content, meta)
+	return store.AppendAs(seq, id, removals, room.RoomID, sessionID, kind, content, meta)
 }
 
 // reportLostState compares what a room holds against what this peer recorded
@@ -892,11 +901,12 @@ func (d *Daemon) appendLocal(store *Store, room Room, sessionID, kind, content s
 // rather than in the room. What is lost is history, and anti-entropy refetches it
 // from any member still holding it.
 func (d *Daemon) reportLostState(room Room, store *Store) {
-	issued := d.members.IssuedSequence(room.RoomID)
+	signer := d.id.PeerID
+	issued := d.members.IssuedSequenceFor(room.RoomID, signer)
 	if issued == 0 {
 		return
 	}
-	held, err := store.HighestSequence(d.id.PeerID)
+	held, err := store.HighestSequence(signer)
 	if err != nil || held >= issued {
 		return
 	}

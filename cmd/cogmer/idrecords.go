@@ -475,6 +475,12 @@ func (c Chain) Verify(user, signer string) (ChainLink, error) {
 		if ss.CloudKey != m.Machine {
 			return ChainLink{}, errors.New("session certificate is from a cloud key other than the one the machine certificate names")
 		}
+		// A session key that is the cloud key itself would have the cloud key sign
+		// as a session, which it never does (D-216, a cloud session signs with a key of
+		// its own that the user's shared key vouches for).
+		if ss.Session == m.Machine {
+			return ChainLink{}, errors.New("session certificate names the cloud key itself as the session's key")
+		}
 		cloudPub, _ := PublicFromPeerID(m.Machine)
 		if err := ss.VerifyBy(cloudPub); err != nil {
 			return ChainLink{}, fmt.Errorf("session certificate: %w", err)
@@ -575,6 +581,75 @@ func (c ListChange) VerifyBy(pub ed25519.PublicKey) error {
 		return errors.New("list change names a signer other than the key checking it")
 	}
 	return checkID(pub, msg, c.Signature, "the signer the list change names")
+}
+
+// ListsHeader is what one of a user's machines signs over its answer when a cloud
+// session fetches the user's lists from it (D-245, a cloud session takes its user's
+// lists only from one of the user's machines). Version is a counter the machine keeps
+// and raises whenever the user's records it holds change, so that a session refuses
+// an answer from that machine older than one it already took, and Time is when the
+// machine answered, which the session shows as the age of its lists. The records the
+// answer carries sign themselves; the header says which machine answered, and when.
+type ListsHeader struct {
+	Scheme    int    `json:"scheme"`
+	User      string `json:"user"`
+	Machine   string `json:"machine"`
+	Version   uint64 `json:"version"`
+	Time      string `json:"time"`
+	Signature string `json:"signature"`
+}
+
+// SignListsHeader signs a header for an answer the machine gives at the time at,
+// written in UTC to the second so that every reader takes the same instant from the
+// same bytes.
+func SignListsHeader(machine ed25519.PrivateKey, user string, version uint64, at time.Time) ListsHeader {
+	h := ListsHeader{
+		Scheme:  idRecordScheme,
+		User:    user,
+		Machine: PeerIDFromPublic(machine.Public().(ed25519.PublicKey)),
+		Version: version,
+		Time:    at.UTC().Format(time.RFC3339),
+	}
+	msg, _ := h.signingBytes()
+	h.Signature = signID(machine, msg)
+	return h
+}
+
+func (h ListsHeader) signingBytes() ([]byte, error) {
+	switch h.Scheme {
+	case 1:
+		var b idBytes
+		b.str(protocolNamespace + "/lists-header/v1")
+		b.str(h.User)
+		b.str(h.Machine)
+		b.num(h.Version)
+		b.str(h.Time)
+		return b, nil
+	default:
+		return nil, unknownScheme("lists header", h.Scheme)
+	}
+}
+
+func (h ListsHeader) Hash() [32]byte { return recordHash(h.signingBytes()) }
+
+// VerifyBy checks that pub, the machine the header names, signed it, and that its
+// version and time read. Whether that machine speaks for the user is its chain's
+// question, which the caller answers.
+func (h ListsHeader) VerifyBy(pub ed25519.PublicKey) error {
+	msg, err := h.signingBytes()
+	if err != nil {
+		return err
+	}
+	if h.Version == 0 {
+		return errors.New("lists header has version 0; versions start at 1")
+	}
+	if _, err := time.Parse(time.RFC3339, h.Time); err != nil {
+		return fmt.Errorf("lists header time %.32q is not RFC 3339", h.Time)
+	}
+	if h.Machine != PeerIDFromPublic(pub) {
+		return errors.New("lists header names a machine other than the key checking it")
+	}
+	return checkID(pub, msg, h.Signature, "the machine the lists header names")
 }
 
 // RoomIDFor is the identifier of the room creator founds with nonce. It is a

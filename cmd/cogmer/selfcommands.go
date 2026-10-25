@@ -35,8 +35,24 @@ func needsUserIdentity(id *Identity) bool {
 	if id.HasUser() || userIdentityGateOff() {
 		return false
 	}
+	if os.Getenv(cloudKeyVar) != "" {
+		writeCloudIdentityNeeded(os.Stdout)
+		return true
+	}
 	writeIdentityNeeded(os.Stdout)
 	return true
+}
+
+// writeCloudIdentityNeeded is the gate's word in a cloud session, which never takes the
+// recovery phrase (D-223) and takes its identity from the cloud value its daemon reads
+// (D-246). It never repeats any part of the value.
+func writeCloudIdentityNeeded(w io.Writer) {
+	fmt.Fprintln(w, "Nothing was done yet: this cloud session has no cogmer identity yet. Its daemon")
+	fmt.Fprintf(w, "takes one from the value in %s when it starts, and has not, either because it\n", cloudKeyVar)
+	fmt.Fprintln(w, "is still starting or because the value does not read. A cloud session never asks")
+	fmt.Fprintln(w, "for your recovery phrase. If this goes on, add the cloud environment again from")
+	fmt.Fprint(w, commandText("/cogmer:self-machines on one of your own machines, and paste the value its page shows\n"))
+	fmt.Fprintf(w, "into this environment's %s.\n", cloudKeyVar)
 }
 
 func writeIdentityNeeded(w io.Writer) {

@@ -457,6 +457,13 @@ func runDaemon() {
 
 	d := &Daemon{id: id, members: members}
 	defer d.closeStores()
+	// A cloud session's daemon speaks for its user with a session key the cloud key in
+	// its environment certifies (D-216, D-247). The variable is dropped from this
+	// process's environment once read, so that nothing the daemon starts inherits it.
+	if v, ok := os.LookupEnv(cloudKeyVar); ok {
+		_ = os.Unsetenv(cloudKeyVar)
+		d.startCloud(v)
+	}
 	// The machine's own chain is kept with the user's records, so that its own state
 	// and the removals its events name include its own certificates, whatever wrote
 	// identity.json (D-219, a user is a master key that certifies machines through a
@@ -569,6 +576,9 @@ func runDaemon() {
 	go d.RunImages(2 * time.Second)
 	go d.RunIdentity(5 * time.Second)
 	go d.RunSelfLists(10 * time.Second)
+	if d.cloud != nil {
+		go d.RunCloud(5 * time.Second)
+	}
 	// One set of routes over both listeners. Every check a request passes is the
 	// same whichever carried it, which is the point of the listener interface
 	// rather than a happy accident.

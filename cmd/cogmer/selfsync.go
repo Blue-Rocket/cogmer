@@ -76,13 +76,19 @@ type selfListsRequest struct {
 // selfListsBytes is what a request's signature covers: the fields that say who asks
 // and where it listens, and the hash of the payload, length-prefixed behind the tag.
 func selfListsBytes(user, signer, ts, nonce, endpoint string, payload []byte) []byte {
+	return selfRequestBytes(selfListsTag, user, signer, ts, nonce, endpoint, payload)
+}
+
+// selfRequestBytes is selfListsBytes under the purpose tag of the route the request
+// is for, so that a request signed for one route is taken by no other.
+func selfRequestBytes(tag, user, signer, ts, nonce, endpoint string, payload []byte) []byte {
 	sum := sha256.Sum256(payload)
 	var b []byte
 	put := func(s string) {
 		b = binary.BigEndian.AppendUint32(b, uint32(len(s)))
 		b = append(b, s...)
 	}
-	put(selfListsTag)
+	put(tag)
 	put(user)
 	put(signer)
 	put(ts)
@@ -244,6 +250,18 @@ func (d *Daemon) handleSelfLists(w http.ResponseWriter, r *http.Request) {
 // checkSelfListsRequest establishes that a machine of this machine's own user, on
 // the other end of the pinned connection, sent the request now.
 func (d *Daemon) checkSelfListsRequest(req selfListsRequest, r *http.Request) error {
+	// A cloud session takes the user's lists from the user's machines and gives them
+	// none, so it fetches over its own route and never exchanges here (D-245, a cloud
+	// session takes its user's lists only from one of the user's machines).
+	if req.Chain != nil && req.Chain.Session != nil {
+		return errors.New("a cloud session fetches the user's lists and does not exchange them")
+	}
+	return d.checkSelfRequest(selfListsTag, req, r)
+}
+
+// checkSelfRequest establishes that a key whose chain leads to this machine's own
+// user, on the other end of the pinned connection, signed the request under tag now.
+func (d *Daemon) checkSelfRequest(tag string, req selfListsRequest, r *http.Request) error {
 	if req.User != d.id.User || req.Chain == nil {
 		return errors.New("not a machine of this machine's user")
 	}
@@ -255,7 +273,7 @@ func (d *Daemon) checkSelfListsRequest(req selfListsRequest, r *http.Request) er
 	if err != nil {
 		return err
 	}
-	if !ed25519.Verify(pub, selfListsBytes(req.User, req.Signer, req.Timestamp, req.Nonce, req.Endpoint, req.Payload), sig) {
+	if !ed25519.Verify(pub, selfRequestBytes(tag, req.User, req.Signer, req.Timestamp, req.Nonce, req.Endpoint, req.Payload), sig) {
 		return errors.New("signature does not match the machine presenting it")
 	}
 	if r.TLS != nil && len(r.TLS.PeerCertificates) > 0 {
@@ -283,7 +301,8 @@ func (d *Daemon) checkSelfListsRequest(req selfListsRequest, r *http.Request) er
 // machine has an address for. A machine that does not answer is tried at the next
 // round, and its records stay unacknowledged until it does.
 func (d *Daemon) exchangeSelfLists() {
-	if !d.id.HasUser() {
+	// A cloud session fetches the user's lists instead (D-245).
+	if !d.id.HasUser() || d.id.Chain.Session != nil {
 		return
 	}
 	ms, err := d.members.UserMachines(d.id.User)
@@ -297,7 +316,7 @@ func (d *Daemon) exchangeSelfLists() {
 		if m.MachineKey == d.id.PeerID || m.Endpoint == "" {
 			continue
 		}
-		if _, ok := certs[m.MachineKey]; !ok || !current[m.MachineKey] {
+		if c, ok := certs[m.MachineKey]; !ok || !current[m.MachineKey] || c.Kind != KindMachine {
 			continue
 		}
 		if err := d.exchangeWith(m.MachineKey, m.Endpoint); err != nil {

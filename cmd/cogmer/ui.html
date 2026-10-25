@@ -89,6 +89,7 @@
   <div class="status">
     <span id="conn"><span class="dot" id="connDot"></span><span id="connText">connecting</span></span>
     <span id="peers"></span>
+    <span id="lists" hidden></span>
     <a class="export" id="export" download>Export</a>
   </div>
 </header>
@@ -228,8 +229,21 @@ const ROOM = decodeURIComponent(location.pathname.replace(/^\/room\//, ''));
     notice.replaceChildren(p);
   }
 
+  // In a cloud session, which of the user's machines its colleagues, rooms and machines
+  // came from, and how old they are, or how long it has waited for one to answer.
+  const listsEl=document.getElementById('lists');
+  function showLists(state){
+    const l=state.lists;
+    listsEl.hidden=!l;
+    if(!l) return;
+    let t=l.from?'your lists from '+l.from+(l.age?', '+l.age+' old':''):'your lists: none of your machines has answered yet';
+    if(l.waiting) t+=' · waiting '+l.waiting+' for one of your machines';
+    listsEl.textContent=t;
+  }
+
   function draw(state){
     roomTitle=state.roomName||state.room;
+    showLists(state);
     showNotice(state);
     showRemoved(state);
     showGuests(state);

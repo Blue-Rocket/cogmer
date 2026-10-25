@@ -218,5 +218,16 @@
     "nonceB": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI",
     "words": "nightbird consulting",
     "commitmentA": "qFif8WU7o3QKvgqhjIHwUtQj_-9xf0ip3bRDQ_0Rsmc"
+  },
+  "listsHeader": {
+    "record": {
+      "scheme": 1,
+      "user": "ed25519:vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "machine": "ed25519:1AS8RFZa7buJkVDlsLOzK5RBvwy3iEwzEw2o28J90s8",
+      "version": 12,
+      "time": "2026-11-01T00:00:00Z",
+      "signature": "lliiosm2yfiSP2xP8cR3HQxRFGfc1Tp1fdr-6FmxC6DjpS71cJTiI7__BWeTpidCygj9UbRqtQiI3h53GOE4Bw"
+    },
+    "hash": "984d87830c57bce47288b884810326cfde7e635b98d48c81051f605b8a29e94d"
   }
 }

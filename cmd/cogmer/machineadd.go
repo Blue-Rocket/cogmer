@@ -65,6 +65,10 @@ type joinStartResponse struct {
 // drawn and committed to, and the page is given the string to enter on the other
 // machine.
 func (d *Daemon) handleJoinStart(w http.ResponseWriter, r *http.Request) {
+	if d.isCloudSession() {
+		writeJSON(w, joinStartResponse{Error: cloudNoPhrase})
+		return
+	}
 	if d.id.HasUser() {
 		writeJSON(w, joinStartResponse{Error: "this machine already speaks for a user"})
 		return

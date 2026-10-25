@@ -153,6 +153,10 @@ CREATE TABLE IF NOT EXISTS rooms (
   room_name       TEXT NOT NULL,
   state           TEXT NOT NULL,
   issued_sequence INTEGER NOT NULL DEFAULT 0,
+  -- The key issued_sequence counts for. A key numbers its own events, so a cloud
+  -- session's new key starts its count afresh (D-216, each session's key numbers its
+  -- own events). Empty on a row from before the column, whose count is the machine's.
+  issued_signer   TEXT NOT NULL DEFAULT '',
   created_at      TEXT NOT NULL,
   -- Whether this machine gives the room's conversation to its own agent sessions.
   -- Chosen when the room is created or joined here and fixed from then on (D-200).
@@ -243,6 +247,9 @@ func OpenMembership() (*Membership, error) {
 	if _, err := db.Exec(machineLinksSchema); err != nil {
 		return nil, fmt.Errorf("init machine links: %w", err)
 	}
+	if _, err := db.Exec(cloudSchema); err != nil {
+		return nil, fmt.Errorf("init lists versions: %w", err)
+	}
 	return &Membership{db: db}, nil
 }
 
@@ -279,6 +286,7 @@ func migrateMembership(db *sql.DB) error {
 		{"known_peers", "endpoint_at", "TEXT"},
 		{"session_rooms", "left_at", "TEXT"},
 		{"rooms", "show_only", "INTEGER NOT NULL DEFAULT 0"},
+		{"rooms", "issued_signer", "TEXT NOT NULL DEFAULT ''"},
 	} {
 		if err := addColumnIfMissing(db, c.table, c.column, c.typ); err != nil {
 			return err
@@ -315,11 +323,12 @@ func migrateMembership(db *sql.DB) error {
 		  room_name       TEXT NOT NULL,
 		  state           TEXT NOT NULL,
 		  issued_sequence INTEGER NOT NULL DEFAULT 0,
+		  issued_signer   TEXT NOT NULL DEFAULT '',
 		  created_at      TEXT NOT NULL,
 		  show_only       INTEGER NOT NULL DEFAULT 0
 		)`,
-		`INSERT INTO rooms_new (room_id, room_name, state, issued_sequence, created_at, show_only)
-		   SELECT room_id, room_name, state, issued_sequence, created_at, show_only FROM rooms`,
+		`INSERT INTO rooms_new (room_id, room_name, state, issued_sequence, issued_signer, created_at, show_only)
+		   SELECT room_id, room_name, state, issued_sequence, issued_signer, created_at, show_only FROM rooms`,
 		`DROP TABLE rooms`,
 		`ALTER TABLE rooms_new RENAME TO rooms`,
 	} {
@@ -979,7 +988,14 @@ func (m *Membership) CheckShowOnly(roomID string, want bool) error {
 // It also survives losing the room. The record of what was issued lives with the
 // identity, so a peer that loses a room database resumes above its high-water mark
 // instead of restarting at 1 and colliding with everything it ever sent.
-func (m *Membership) ReserveSequence(roomID string) (int64, error) {
+//
+// The count belongs to the key that signs, signer. A key numbers its own events, so a
+// key other than the one the count was kept for starts at 1, in the same transaction
+// that records it as the count's key: a cloud session that certifies a new key keeps
+// no gap behind it, which receivers would hold open, and no key ever reissues its own
+// number (D-216, each session's key numbers its own events). A count kept before the
+// key was recorded is the machine's own, and is taken as signer's.
+func (m *Membership) ReserveSequence(roomID, signer string) (int64, error) {
 	tx, err := m.db.Begin()
 	if err != nil {
 		return 0, err
@@ -987,11 +1003,15 @@ func (m *Membership) ReserveSequence(roomID string) (int64, error) {
 	defer tx.Rollback()
 
 	var issued int64
-	if err := tx.QueryRow(`SELECT issued_sequence FROM rooms WHERE room_id = ?`, roomID).Scan(&issued); err != nil {
+	var owner string
+	if err := tx.QueryRow(`SELECT issued_sequence, issued_signer FROM rooms WHERE room_id = ?`, roomID).Scan(&issued, &owner); err != nil {
 		return 0, fmt.Errorf("no record of room %s to reserve a sequence in: %w", roomID, err)
 	}
+	if owner != "" && owner != signer {
+		issued = 0
+	}
 	issued++
-	if _, err := tx.Exec(`UPDATE rooms SET issued_sequence = ? WHERE room_id = ?`, issued, roomID); err != nil {
+	if _, err := tx.Exec(`UPDATE rooms SET issued_sequence = ?, issued_signer = ? WHERE room_id = ?`, issued, signer, roomID); err != nil {
 		return 0, err
 	}
 	return issued, tx.Commit()
@@ -1002,6 +1022,18 @@ func (m *Membership) ReserveSequence(roomID string) (int64, error) {
 func (m *Membership) IssuedSequence(roomID string) int64 {
 	var issued int64
 	_ = m.db.QueryRow(`SELECT issued_sequence FROM rooms WHERE room_id = ?`, roomID).Scan(&issued)
+	return issued
+}
+
+// IssuedSequenceFor is IssuedSequence for the key signer: 0 when the count was kept
+// for another key, which signer's events never follow.
+func (m *Membership) IssuedSequenceFor(roomID, signer string) int64 {
+	var issued int64
+	var owner string
+	_ = m.db.QueryRow(`SELECT issued_sequence, issued_signer FROM rooms WHERE room_id = ?`, roomID).Scan(&issued, &owner)
+	if owner != "" && owner != signer {
+		return 0
+	}
 	return issued
 }
 

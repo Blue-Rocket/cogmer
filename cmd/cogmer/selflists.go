@@ -163,7 +163,10 @@ func rebuildLists(merged map[string]ListChange) userLists {
 // records certify under the current shared key and do not remove. ListChange says
 // which key signed it, and only the user's records say whether that key speaks for
 // the user; a suspended machine speaks for nobody until it is certified again
-// (D-234, a machine not certified under the current shared key is suspended).
+// (D-234, a machine not certified under the current shared key is suspended). A cloud
+// key writes no change, since a cloud session takes the user's lists from the user's
+// machines and gives them none (D-245, a cloud session takes its user's lists only
+// from one of the user's machines).
 func (m *Membership) trustedListChanges(user string) []ListChange {
 	rs, changes, err := m.IdentityRecords(user)
 	if err != nil {
@@ -172,7 +175,7 @@ func (m *Membership) trustedListChanges(user string) []ListChange {
 	st := Resolve(user, rs)
 	var out []ListChange
 	for _, c := range changes {
-		if ms, ok := st.Machines[c.Signer]; ok && ms.Current && !ms.Removed {
+		if ms, ok := st.Machines[c.Signer]; ok && ms.Current && !ms.Removed && ms.Cert.Kind == KindMachine {
 			out = append(out, c)
 		}
 	}
@@ -210,7 +213,9 @@ func (m *Membership) listCounter(user, entry string) uint64 {
 // machine sends its records to every machine of the user until each has
 // acknowledged).
 func (m *Membership) writeListChange(id *Identity, entry string, v any) error {
-	if !id.HasUser() || id.private == nil {
+	// A cloud session writes no change to the user's lists, since no machine takes one
+	// from it (D-245).
+	if !id.HasUser() || id.private == nil || id.Chain.Session != nil {
 		return nil
 	}
 	raw, err := json.Marshal(v)

@@ -115,6 +115,21 @@ func LoadIdentity() (*Identity, error) {
 		if err := json.Unmarshal(data, &id); err != nil {
 			return nil, fmt.Errorf("parse %s: %w", path, err)
 		}
+		// A cloud session signs with its session key, kept in session.key, and the
+		// file names that key as the end of its chain (D-216, a cloud session signs with
+		// a key of its own). The daemon writes both; until it has written a key that
+		// matches, the session speaks for nobody, and the file is left for the daemon.
+		if id.Chain != nil && id.Chain.Session != nil {
+			id.private = priv
+			if sk, ok := loadSessionKeyIn(homeDir()); ok && PeerIDFromPublic(sk.Public().(ed25519.PublicKey)) == id.Chain.Session.Session {
+				id.private = sk
+				id.PeerID = id.Chain.Session.Session
+			} else {
+				id.PeerID, id.User, id.Chain = derived, "", nil
+			}
+			id.PeerName = PeerName(id.PeerID)
+			return &id, nil
+		}
 		// An identifier that is not this key names an identity nothing can verify.
 		// Adopt the key's identifier rather than keep a claim we cannot support.
 		if id.PeerID != derived {
