@@ -28,6 +28,23 @@ downloaded. Shipping binaries inside the plugin removes the download entirely bu
 commits about 150MB per release into the history everybody clones, and is ruled
 out.
 
+**Nothing checks that a program accepts the hooks and commands of an older plugin on the
+same machine.** One program in `~/.cogmer/bin` serves every host, and the installer and the
+daemon replace it only with a newer one (D-215, the installer and the daemon replace a program
+only with a newer version), so a host whose plugin lags runs its older hook lines, handler
+scripts and command files against a newer program, read from `common.sh` and `install.sh` on
+2026-10-25. This happens whenever one host updates its plugin from a newer marketplace listing
+than another host holds. A release that renames a subcommand, or changes what a hook sends,
+makes the lagging host's hooks fail open: its sessions show no error and silently stop
+capturing and receiving turns until its plugin updates, and its command files lack any new
+command.
+
+A test that runs the current program through the previous release's `hooks.json`,
+`codex-hooks.json`, handler scripts and command files would catch it, with the previous
+release's plugin directory read from git by its tag. A release that has to break that
+interface would then say so in the plugin's version and in what a lagging host's session
+reports.
+
 ## Somebody else uses it
 
 A colleague who did not write cogmer installs it, pairs, joins a room and works in it.
