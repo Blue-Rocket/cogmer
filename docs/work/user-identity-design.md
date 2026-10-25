@@ -9,9 +9,10 @@ until fetched), D-222 (a machine tells every machine it knows of each machine it
 D-223 (the recovery phrase is typed only into the daemon's browser page), D-224 (a conflict
 between identity records goes to the higher level, then to a removal, then to the lowest
 hash), D-225 (a machine sends each removal and new shared key to every colleague until each
-acknowledges), D-226 (a cloud session takes the highest valid snapshot from any source),
-D-227 (the daemon pushes a new snapshot to the user's repo once the user has opted in) and
-D-216 (a cloud session signs with a key of its own that the user's shared key vouches for).
+acknowledges), D-216 (a cloud session signs with a key of its own that the user's shared key
+vouches for), D-245 (a cloud session takes its user's lists only from one of the user's
+machines), D-246 (a cloud environment is added from the machines page) and D-247 (a cloud
+session's key is certified for twenty-four hours).
 
 It also builds the decisions that make the user, and not the machine, the peer: D-228 to
 D-239, which section 7 names.
@@ -416,8 +417,8 @@ dependencies, and at most three slices run at once.
    view shows it without implying that user is a guest. Tests: the phrase reaches no command, argument
    or log; a suspended machine's turn appears in no view, export or hook output; an event
    past a cutoff never reaches a hook's output.
-6. Cloud, after 3 and 4, beside 5. The cloud key and session key (D-216), the snapshot and
-   its sources (D-226), the push to the user's repo (D-227), the setup command, and
+6. Cloud, after 3 and 4, beside 5. The cloud key and session key (D-216, D-247), the user's
+   lists fetched from a machine (D-245), adding a cloud environment on the page (D-246), and
    fail-open behavior under `CLAUDE_CODE_REMOTE`. The three probes the brief names run in
    this slice.
 

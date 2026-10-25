@@ -559,6 +559,14 @@ others.
 A session in a cloud environment speaks as its user as a machine does, and never asks
 for the recovery phrase, because its container is not a place the user controls.
 
+A cloud environment is added from the daemon's page, which shows the value to paste into
+the environment, and that value is never shown to an assistant, because whoever holds it
+speaks as the user in every room the user is in.
+
+A session in a cloud environment learns its user's colleagues and rooms from one of the
+user's machines, and shares nothing until it reaches one, so that the user's lists are kept
+only on the user's own machines.
+
 ## Peer names
 
 A peer has two identifiers, for the same reason a room does: an identifier derived

@@ -54,10 +54,11 @@ invites the guests of its own `room_guests` (D-243, `carryRoom` in `carryover.go
 work bounds a revoked user's revocations by their cutoff, drops a list change that shares its
 sequence, caps the rounds of `ResolveGuests`, raises `wireVersion` to 3, and keeps a label
 `Allow` is not given. D-219 to D-225 and D-228 to D-243 are active.
-Slice 6, cloud sessions, is next: D-216, D-226 and D-227, which are not built. Of the three
-facts it depends on, a cloud session's TLS handshake with a user's daemon through the relay is
-shown (`1d2b505`), the maintainer's cloud environment is personal, and where a repo added to a
-cloud session is placed, and whether it is there when the session-start hook runs, is unknown.
+Slice 6, cloud sessions, is next: D-216, D-245, D-246 and D-247, which are not built. A
+cloud session's TLS handshake with a user's daemon through the relay is shown (`1d2b505`), and
+the maintainer's cloud environment is personal. The maintainer withdrew the snapshot repo on
+2026-10-25 (D-226 and D-227 are tombstones), so where a cloud session places an added repo no
+longer matters.
 
 What slice 3 leaves open:
 

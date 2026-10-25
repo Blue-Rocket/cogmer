@@ -278,10 +278,10 @@ A user in a Claude Code cloud session, such as one started from the iPhone app, 
 conversation with colleagues without a daemon on their own computer being reachable.
 
 **A cloud session has no identity of its own to sign with.** D-216 (a cloud session signs with
-a key of its own that the user's shared key vouches for), D-226 (a cloud session takes the
-highest valid snapshot of its user's colleagues and rooms from any source) and D-227 (the daemon
-pushes a new snapshot to the user's repo when the user's list changes, once the user has opted
-in) decide it, and none of the three is built. They build on D-219 (a user is a master key that
+a key of its own that the user's shared key vouches for), D-245 (a cloud session takes its
+user's lists only from one of the user's machines), D-246 (a cloud environment is added from
+the machines page) and D-247 (a cloud session's key is certified for twenty-four hours) decide
+it, and none of the four is built. They build on D-219 (a user is a master key that
 certifies machines through a shared key).
 
 Not decided: how a user who has lost every machine reaches colleagues, since the user could reach each colleague only by
@@ -296,17 +296,12 @@ slice of the second run, and none has a choice taken yet:
   since every machine a user adds has had a browser and a cloud session needs no phrase
   (D-223, the recovery phrase is typed only into the daemon's browser page).
 
-**A user has no way to set up a cloud session's key, snapshot and repo, and two facts the setup
-depends on are unknown.** D-226 and D-227 need a cloud key, a first snapshot and a private repo
-added to the cloud environment. The setup would be one command that creates the repo with the `gh`
-command when it is installed and signed in, makes and certifies the cloud key, writes and pushes
-the first snapshot, and prints the value to paste into the environment. The unknown facts are
-where a cloud session places a repo added to it and whether the repo is on disk when the
-session-start hook runs, and whether a cloud environment hides the value of an environment
-variable from other people who can edit the environment, which matters only for an environment
-shared with others, since the maintainer creates theirs at a personal level, said on 2026-10-24. A
-cloud session's clone of this repo was shallow, with 50 commits, on 2026-10-19, which limits the
-history check in D-226 to the commits a clone holds.
+**No cloud session has shared a room with a paired machine, and one fact about where the
+cloud key is kept is unknown.** D-246 (a cloud environment is added from the machines page)
+keeps the cloud key in an environment variable of the cloud environment. Whether a cloud
+environment hides a variable's value from other people who can edit the environment is not
+known, and matters only for an environment shared with others, since the maintainer creates
+theirs at a personal level, said on 2026-10-24.
 
 `docs/work/cloud-network-probe.sh` tests, from a cloud session, whether cogmer's transport
 opens a tunnel through the public relay and whether SSH over port 443 reaches GitHub. It writes
