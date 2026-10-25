@@ -188,6 +188,12 @@ func (c SharedKeyCert) Hash() [32]byte { return recordHash(c.signingBytes()) }
 
 // Verify checks the certificate against the master key its user names, which is
 // the only key a shared-key certificate can be signed by.
+// maxSharedVersion bounds a shared key's version. A new shared key takes a version
+// one above every version its user's records hold, so a version at the top of its
+// range would leave none to follow it, and one far above any a user reaches by
+// certifying new keys is refused at verification.
+const maxSharedVersion = uint64(1) << 62
+
 func (c SharedKeyCert) Verify() error {
 	msg, err := c.signingBytes()
 	if err != nil {
@@ -195,6 +201,9 @@ func (c SharedKeyCert) Verify() error {
 	}
 	if c.Version == 0 {
 		return errors.New("shared key version is 0; versions start at 1")
+	}
+	if c.Version >= maxSharedVersion {
+		return fmt.Errorf("shared key version %d is at or above %d, so no version could follow it", c.Version, maxSharedVersion)
 	}
 	if _, err := PublicFromPeerID(c.SharedKey); err != nil {
 		return fmt.Errorf("shared key: %w", err)
@@ -251,6 +260,9 @@ func (c MachineCert) VerifyBy(shared ed25519.PublicKey) error {
 	}
 	if c.SharedVersion == 0 {
 		return errors.New("shared key version is 0; versions start at 1")
+	}
+	if c.SharedVersion >= maxSharedVersion {
+		return fmt.Errorf("shared key version %d is at or above %d, so no version could follow it", c.SharedVersion, maxSharedVersion)
 	}
 	if c.Kind != KindMachine && c.Kind != KindCloud {
 		return fmt.Errorf("kind %.16q is neither %q nor %q", c.Kind, KindMachine, KindCloud)

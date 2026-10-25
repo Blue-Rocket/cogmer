@@ -57,7 +57,7 @@ type syncResponse struct {
 // rather than by anyone having to remember what it missed.
 func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 	var req syncRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBody)).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -81,6 +81,11 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 	// room's other guests hold its history (D-241, an expelled user's machines stop
 	// serving the room).
 	if d.expelledFrom(room.RoomID) {
+		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		return
+	}
+	if err := connectedAs(r, req.requestMachine()); err != nil {
+		log.Printf("sync: refused a request for %s — %v", room.RoomName, err)
 		http.Error(w, "unauthenticated", http.StatusUnauthorized)
 		return
 	}
@@ -473,6 +478,14 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 		// way a sequence conflict is. There is no benign reading of it.
 		if err := ev.Verify(); err != nil {
 			log.Printf("sync: REJECTED event %.12s from %s — %v", ev.EventID, addr, err)
+			rejected++
+			continue
+		}
+		// The room is a signed field, so an event signed for another room is that
+		// room's, and stored here it would take the slot of this room's event with
+		// the same signer and sequence.
+		if ev.RoomID != room.RoomID {
+			log.Printf("sync: REJECTED event %.12s from %s — it is signed for another room", ev.EventID, addr)
 			rejected++
 			continue
 		}

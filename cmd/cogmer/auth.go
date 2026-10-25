@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -165,6 +166,24 @@ func (g *replayGuard) admit(nonce string, now time.Time) bool {
 	}
 	g.seen[nonce] = now
 	return true
+}
+
+// connectedAs refuses a request signed by a machine other than the one whose key the
+// connection's client certificate holds: the key that signed a v5 request, and the
+// peer for v4, where a peer is one machine. A signed request carries a timestamp and
+// a nonce, and each machine remembers the nonces it has seen, so without this a
+// request captured on its way to one machine could be presented to another within
+// the tolerance (D-143, admission is proved by a signed request bound to the
+// connection). A connection with no client certificate, which only a test makes,
+// binds nothing.
+func connectedAs(r *http.Request, machine string) error {
+	if r == nil || r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+		return nil
+	}
+	if k, ok := r.TLS.PeerCertificates[0].PublicKey.(ed25519.PublicKey); !ok || PeerIDFromPublic(k) != machine {
+		return errors.New("the request is signed by a machine other than the one connected")
+	}
+	return nil
 }
 
 // verifyRequest establishes WHO is asking. It does not decide whether they may:

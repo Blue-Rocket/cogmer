@@ -276,7 +276,7 @@ func signerText(r Removal) string {
 func newKeyVersion(rs RecordSet, st *UserState) uint64 {
 	v := st.Current + 1
 	for _, c := range rs.Shared {
-		if c.Version+1 > v {
+		if c.Version < maxSharedVersion && c.Version+1 > v {
 			v = c.Version + 1
 		}
 	}

@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 )
 
 // --- how a stored turn stands for the reader, and who the room's people are ---
@@ -135,9 +137,30 @@ func (d *Daemon) imageOnlyHidden(store *Store, roomID, sha string) bool {
 // machine it came from, as a field the user asserts).
 func turnMachine(e Event) string {
 	if e.SigVersion == 4 && e.Chain != nil && e.Chain.Machine.Name != "" {
-		return e.Chain.Machine.Name
+		return shownName(e.Chain.Machine.Name)
 	}
-	return e.MachineID
+	return shownName(e.MachineID)
+}
+
+// maxShownName is the longest a name another machine asserts, a turn's speaker or its
+// machine, is shown or given to an assistant.
+const maxShownName = 64
+
+// shownName is a name another machine asserts, as it is shown and injected: without
+// characters that break a line, hide or reorder text, and cut to maxShownName bytes.
+// The event keeps the name as it was signed; only what is shown of it is bounded.
+func shownName(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if !unicode.IsPrint(r) {
+			continue
+		}
+		if b.Len()+utf8.RuneLen(r) > maxShownName {
+			break
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
 }
 
 // receivingFacts is what this machine knows of a turn's author that the author does

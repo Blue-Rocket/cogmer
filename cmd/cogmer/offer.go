@@ -100,7 +100,7 @@ func (d *Daemon) signOffer(r Room, endpoint string) (offerRequest, error) {
 // agreed to before the revocation.
 func (d *Daemon) handleOffer(w http.ResponseWriter, r *http.Request) {
 	var req offerRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBody)).Decode(&req); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
@@ -120,7 +120,7 @@ func (d *Daemon) handleOffer(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	pub, err := PublicFromPeerID(signer)
-	if err != nil {
+	if err != nil || connectedAs(r, signer) != nil {
 		http.Error(w, "unauthenticated", http.StatusUnauthorized)
 		return
 	}
@@ -141,6 +141,13 @@ func (d *Daemon) handleOffer(w http.ResponseWriter, r *http.Request) {
 	}
 	if !d.replay.admit(req.Nonce, time.Now().UTC()) {
 		http.Error(w, "replayed", http.StatusUnauthorized)
+		return
+	}
+	// The name is stored, copied to the user's lists and printed into prompts, so one
+	// NewRoomName could not have made is refused (D-134, a room's name is generated
+	// from two word lists, never chosen).
+	if _, ok := receivedRoomName(req.RoomName); !ok {
+		http.Error(w, "the room's name is not one cogmer generates", http.StatusBadRequest)
 		return
 	}
 	// Only from somebody this machine has verified. A host withholds until then

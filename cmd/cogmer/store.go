@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
@@ -8,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -433,38 +435,37 @@ func (s *Store) Insert(ev *Event) (InsertResult, error) {
 	defer tx.Rollback()
 
 	signer := ev.signerKey()
-	var heldID string
-	err = tx.QueryRow(`SELECT event_id FROM events WHERE signer = ? AND peer_sequence = ?`,
-		signer, ev.PeerSequence).Scan(&heldID)
-	switch {
-	case err == sql.ErrNoRows:
-		// nothing holds this slot; fall through to insert
-	case err != nil:
+	// An event is a redelivery only when the event held under its slot, or under its
+	// identifier, is the same in every signed field. One that differs is a conflict,
+	// whichever of the two it shares: an identifier is chosen by its signer, so a
+	// signed event can carry another's, and treating it as a redelivery would drop
+	// whichever arrived second (D-027, a sequence conflict is quarantined).
+	held, err := heldEvent(tx, `signer = ? AND peer_sequence = ?`, signer, ev.PeerSequence)
+	if err != nil {
 		return InsertStored, err
-	case heldID == ev.EventID:
-		return InsertDuplicate, nil
-	default:
+	}
+	if held == nil {
+		if held, err = heldEvent(tx, `event_id = ?`, ev.EventID); err != nil {
+			return InsertStored, err
+		}
+	}
+	if held != nil {
+		if sameSignedEvent(held, ev) {
+			return InsertDuplicate, nil
+		}
 		raw, _ := json.Marshal(ev)
 		if _, err := tx.Exec(`
 			INSERT INTO event_conflicts
 			  (detected_at, room_id, peer_id, peer_sequence, held_event_id, incoming_event_id, incoming, signer)
-			VALUES (?,?,?,?,?,?,?,?)`,
+			SELECT ?,?,?,?,?,?,?,?
+			WHERE NOT EXISTS (SELECT 1 FROM event_conflicts
+			  WHERE signer = ? AND peer_sequence = ? AND held_event_id = ? AND incoming = ?)`,
 			time.Now().UTC().Format(time.RFC3339Nano), ev.RoomID, ev.PeerID, ev.PeerSequence,
-			heldID, ev.EventID, string(raw), signer); err != nil {
+			held.EventID, ev.EventID, string(raw), signer,
+			signer, ev.PeerSequence, held.EventID, string(raw)); err != nil {
 			return InsertConflict, err
 		}
 		return InsertConflict, tx.Commit()
-	}
-
-	// A different event id may still collide on event_id alone if the same event
-	// arrives having been assigned a different sequence somewhere. Treat that as
-	// redelivery too rather than writing it twice.
-	var exists int
-	if err := tx.QueryRow(`SELECT COUNT(*) FROM events WHERE event_id = ?`, ev.EventID).Scan(&exists); err != nil {
-		return InsertStored, err
-	}
-	if exists > 0 {
-		return InsertDuplicate, nil
 	}
 
 	// The v4 fields are stored only for a v4 event, where they are signed or, for
@@ -495,6 +496,35 @@ func (s *Store) Insert(ev *Event) (InsertResult, error) {
 		return InsertStored, err
 	}
 	return InsertStored, tx.Commit()
+}
+
+// heldEvent is the event the condition finds, or nil when none does.
+func heldEvent(tx *sql.Tx, where string, args ...any) (*Event, error) {
+	rows, err := tx.Query(`SELECT `+selectCols+` FROM events WHERE `+where+` LIMIT 1`, args...)
+	if err != nil {
+		return nil, err
+	}
+	evs, err := scanEvents(rows)
+	if err != nil || len(evs) == 0 {
+		return nil, err
+	}
+	return &evs[0], nil
+}
+
+// sameSignedEvent reports whether two events agree in their scheme and in every
+// field a scheme signs. The signature itself is not compared, since two encodings of
+// one signature are the same event.
+func sameSignedEvent(a, b *Event) bool {
+	if a.SigVersion != b.SigVersion || a.signerKey() != b.signerKey() {
+		return false
+	}
+	if !bytes.Equal(a.eventBytes(""), b.eventBytes("")) {
+		return false
+	}
+	if a.SigVersion != 4 {
+		return true
+	}
+	return a.IdentityVersion == b.IdentityVersion && slices.Equal(a.RemovalsSeen, b.RemovalsSeen)
 }
 
 // signerKey is the key that signed an event, which is what its sequence numbers
@@ -756,12 +786,16 @@ func (s *Store) commitPendingRow(sessionID, promptID, idsJSON string) (int, erro
 // counts as held, so that it is not asked for again on every poll and a cut-off
 // machine's later events do not leave a gap that keeps everything after it on offer
 // (D-236, a revocation names the last turn that counts). A refusal is cleared when the
-// event would count, and the sequence is then asked for again.
+// event would count, and the sequence is then asked for again. A quarantined
+// conflict counts as held too, so that an event whose identifier another event holds
+// is quarantined once rather than asked for on every poll (D-027, a sequence
+// conflict is quarantined).
 func (s *Store) SyncState(room string) (map[string]int64, error) {
 	rows, err := s.db.Query(`SELECT k, seq FROM (
 		  SELECT COALESCE(signer, peer_id) AS k, peer_sequence AS seq FROM events WHERE room_id = ?
-		  UNION SELECT signer, peer_sequence FROM refused_events)
-		ORDER BY k, seq`, room)
+		  UNION SELECT signer, peer_sequence FROM refused_events
+		  UNION SELECT COALESCE(signer, peer_id), peer_sequence FROM event_conflicts WHERE room_id = ?)
+		ORDER BY k, seq`, room, room)
 	if err != nil {
 		return nil, err
 	}

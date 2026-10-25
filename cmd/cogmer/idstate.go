@@ -469,11 +469,13 @@ func (s *UserState) CheckEvent(c Chain, signer string) (ChainLink, error) {
 // user's machines). A change for another user or one that does not verify
 // against the key it names is ignored. Whether that key speaks for the user is
 // its chain's question, which the caller has answered for each change it passes.
+// A change whose counter is at or above maxListCounter is ignored, since nothing
+// could outrank it and its entry would keep its value for good.
 func MergeListChanges(user string, changes []ListChange) map[string]ListChange {
 	out := map[string]ListChange{}
 	hashes := map[string][32]byte{}
 	for _, c := range changes {
-		if c.User != user {
+		if c.User != user || c.Counter >= maxListCounter {
 			continue
 		}
 		pub, err := PublicFromPeerID(c.Signer)
@@ -508,6 +510,12 @@ func MergeListChanges(user string, changes []ListChange) map[string]ListChange {
 	}
 	return out
 }
+
+// maxListCounter bounds a list change's counter. A change is written one above the
+// highest counter seen for its entry, so a counter at the top of its range could
+// never be outranked, and one far above any a machine reaches by counting changes
+// is refused rather than allowed to hold its entry forever.
+const maxListCounter = uint64(1) << 62
 
 // Lacks reports whether an event naming this shared version and these removals
 // names records this state does not hold, which is the test for withholding it

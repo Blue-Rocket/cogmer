@@ -211,7 +211,7 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 		}
 		ue := uiEvent{
 			EventID: e.EventID, PeerID: e.PeerID, PeerName: PeerName(e.PeerID),
-			Display: e.UserDisplayName, Label: labels[e.PeerID],
+			Display: shownName(e.UserDisplayName), Label: labels[e.PeerID],
 			Verified:  e.PeerID == self || d.members.IsVerified(e.PeerID),
 			EventType: e.EventType, Content: e.Content, Clock: ts,
 			// §6 and D-139 require the identifier be shown for any peer whose identity

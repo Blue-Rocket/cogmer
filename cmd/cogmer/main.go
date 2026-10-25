@@ -22,6 +22,7 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+	"unicode"
 )
 
 // version is stamped at build time with -ldflags "-X main.version=...". It is how
@@ -569,7 +570,7 @@ func runDaemon() {
 	routes := d.PeerRoutes()
 	if tcListener != nil {
 		go func() {
-			if err := http.Serve(tcListener, routes); err != nil && !errors.Is(err, net.ErrClosed) {
+			if err := peerServer(routes).Serve(tcListener); err != nil && !errors.Is(err, net.ErrClosed) {
 				log.Printf("tailcat server stopped: %v", err)
 			}
 		}()
@@ -594,7 +595,7 @@ func runDaemon() {
 		}
 	}()
 	go func() {
-		if err := http.Serve(peer, routes); err != nil && !stopping.Load() {
+		if err := peerServer(routes).Serve(peer); err != nil && !stopping.Load() {
 			log.Fatalf("peer server: %v", err)
 		}
 	}()
@@ -795,27 +796,21 @@ func runSeed() {
 func runLog() {
 	store, _, room := openLocal()
 	defer store.Close()
+	m, err := OpenMembership()
+	if err != nil {
+		log.Fatalf("membership: %v", err)
+	}
+	defer m.Close()
 
 	evs, err := store.ListRoom(room.RoomID)
 	if err != nil {
 		log.Fatalf("log: %v", err)
 	}
-	fmt.Printf("ROOM %s -- %d events\n\n", strings.ToUpper(room.RoomName), len(evs))
-	for _, e := range evs {
-		speaker := e.UserDisplayName
-		if e.EventType == EventAssistantMessage {
-			speaker = "Assistant — " + e.UserDisplayName
-		}
-		ts := e.Timestamp
-		if t, err := time.Parse(time.RFC3339Nano, e.Timestamp); err == nil {
-			ts = t.Local().Format("15:04:05")
-		}
-		content := e.Content
-		if len(content) > 400 {
-			content = content[:400] + " …"
-		}
-		fmt.Printf("%-22s %s  [%s/%d]\n%s\n\n", speaker, ts, PeerName(e.PeerID), e.PeerSequence, content)
-	}
+	// Judged as the view judges them, from this machine's records (D-234, a machine not
+	// certified under the current shared key is suspended).
+	list, _ := m.CachedGuestList(room.RoomID)
+	judge := &standings{members: m, room: room.RoomID, list: list, states: map[string]*UserState{}}
+	fmt.Print(formatRoomLog(room, evs, judge.of, randomID()))
 }
 
 // runConflicts surfaces quarantined events. A conflict means a peer's sequence
@@ -1851,6 +1846,8 @@ func sanitizeName(s string) string {
 			continue // would break the format, or is not printable
 		case r == ' ' || r == '\t':
 			space = true
+		case !unicode.IsPrint(r):
+			continue // a line or paragraph separator, a direction override, or invisible
 		default:
 			if space && b.Len() > 0 {
 				b.WriteRune(' ')

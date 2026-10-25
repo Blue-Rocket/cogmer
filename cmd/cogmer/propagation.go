@@ -301,9 +301,12 @@ func (d *Daemon) mayExchangeIdentity(peer string) bool {
 
 // verifyIdentityRequest establishes who signed a request to one of the identity
 // routes, and that this machine exchanges records with them.
-func (d *Daemon) verifyIdentityRequest(scope string, cred syncRequest) error {
+func (d *Daemon) verifyIdentityRequest(scope string, cred syncRequest, r *http.Request) error {
 	if cred.RoomID != scope {
 		return errors.New("the request is not signed for this route")
+	}
+	if err := connectedAs(r, cred.requestMachine()); err != nil {
+		return err
 	}
 	// No room: verifyRequest skips admission and verification for an empty room,
 	// and the scope stands in the signed room field.
@@ -332,7 +335,7 @@ func (d *Daemon) handleIdentityFetch(w http.ResponseWriter, r *http.Request) {
 	}
 	cred := syncRequest{PeerID: req.PeerID, RoomID: req.RoomID, Timestamp: req.Timestamp, Nonce: req.Nonce,
 		Signature: req.Signature, Endpoint: req.Endpoint, Signer: req.Signer, Chain: req.Chain}
-	if err := d.verifyIdentityRequest(identityFetchScope, cred); err != nil {
+	if err := d.verifyIdentityRequest(identityFetchScope, cred, r); err != nil {
 		log.Printf("identity: refused a fetch: %v", err)
 		http.Error(w, "unauthenticated", http.StatusUnauthorized)
 		return
@@ -593,6 +596,52 @@ type identityPushResponse struct {
 // certificate, which change whose events count (D-225).
 func pushedKind(kind string) bool { return kind == RecordRemoval || kind == RecordShared }
 
+// maxPushedRecords is how many pushed records, removals and shared-key certificates
+// together, this machine keeps for one user. A user makes one of either only when a
+// machine is lost or removed, so a count near this is a machine pushing records to
+// fill this one's disk.
+const maxPushedRecords = 1024
+
+// pushedRecordSigned refuses a pushed record whose signature does not verify against
+// the key it names: the master key for a shared-key certificate, and the signer for a
+// removal. Whether that key speaks for the user is Resolve's question, and needs the
+// user's other records; a record no key signed is refused before it is kept.
+func pushedRecordSigned(kind string, body []byte) error {
+	switch kind {
+	case RecordShared:
+		var c SharedKeyCert
+		if err := json.Unmarshal(body, &c); err != nil {
+			return err
+		}
+		return c.Verify()
+	case RecordRemoval:
+		var r Removal
+		if err := json.Unmarshal(body, &r); err != nil {
+			return err
+		}
+		pub, err := PublicFromPeerID(r.Signer)
+		if err != nil {
+			return err
+		}
+		return r.VerifyBy(pub)
+	}
+	return fmt.Errorf("%q is not a record that is pushed", kind)
+}
+
+// pushedRecordsFull reports whether this machine keeps as many pushed records of user
+// as maxPushedRecords allows and does not already hold the one hash names.
+func (m *Membership) pushedRecordsFull(user string, hash [32]byte) bool {
+	var held, n int
+	if err := m.db.QueryRow(`SELECT COUNT(*) FROM identity_records WHERE hash = ?`, hex.EncodeToString(hash[:])).Scan(&held); err != nil || held > 0 {
+		return false
+	}
+	if err := m.db.QueryRow(`SELECT COUNT(*) FROM identity_records WHERE user = ? AND kind IN (?, ?)`,
+		user, RecordRemoval, RecordShared).Scan(&n); err != nil {
+		return true
+	}
+	return n >= maxPushedRecords
+}
+
 // handleIdentityPush stores a removal or a shared-key certificate a colleague or
 // another of this user's machines sent, acknowledges it by its hash, and, when it came
 // from a colleague and is new here, owes it to each of this user's other machines
@@ -611,7 +660,7 @@ func (d *Daemon) handleIdentityPush(w http.ResponseWriter, r *http.Request) {
 	}
 	cred := syncRequest{PeerID: req.PeerID, RoomID: req.RoomID, Timestamp: req.Timestamp, Nonce: req.Nonce,
 		Signature: req.Signature, Endpoint: req.Endpoint, Signer: req.Signer, Chain: req.Chain}
-	if err := d.verifyIdentityRequest(identityPushScope, cred); err != nil {
+	if err := d.verifyIdentityRequest(identityPushScope, cred, r); err != nil {
 		log.Printf("identity: refused a push: %v", err)
 		http.Error(w, "unauthenticated", http.StatusUnauthorized)
 		return
@@ -627,6 +676,14 @@ func (d *Daemon) handleIdentityPush(w http.ResponseWriter, r *http.Request) {
 	}
 	if !d.mayExchangeIdentity(user) {
 		http.Error(w, "a record of a user this machine does not know", http.StatusForbidden)
+		return
+	}
+	if err := pushedRecordSigned(req.Kind, req.Record); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if d.members.pushedRecordsFull(user, hash) {
+		http.Error(w, "this machine holds as many pushed records of that user as it keeps", http.StatusInsufficientStorage)
 		return
 	}
 	_, isNew, err := d.members.PutIdentityRecord(req.Kind, user, req.Record)
