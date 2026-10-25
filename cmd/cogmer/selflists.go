@@ -458,7 +458,9 @@ func (m *Membership) revertUntrusted(id *Identity, trusted userLists) error {
 			errs = append(errs, m.setVerifiedAt(peer, ""))
 		}
 		if was.Label != "" && m.Label(peer) == was.Label {
-			errs = append(errs, m.Allow(peer, ""))
+			// The derived name, given outright, since Allow keeps a name it is
+			// given none for.
+			errs = append(errs, m.Allow(peer, PeerName(peer)))
 		}
 	}
 	for roomID, was := range all.rooms {
