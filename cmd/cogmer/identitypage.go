@@ -500,7 +500,7 @@ func (d *Daemon) handleIdentityRecover(w http.ResponseWriter, r *http.Request) {
 	rs, _, _ := d.members.IdentityRecords(user)
 	version := uint64(2)
 	for _, c := range rs.Shared {
-		if c.Version+1 > version {
+		if c.Version < maxSharedVersion && c.Version+1 > version {
 			version = c.Version + 1
 		}
 	}

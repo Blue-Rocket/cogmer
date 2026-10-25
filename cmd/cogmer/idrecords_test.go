@@ -307,6 +307,28 @@ func TestASharedVersionOfZeroIsRefused(t *testing.T) {
 	}
 }
 
+// A version no version could follow is refused, so that the next shared key's
+// version, one above every version held, never wraps to 0.
+func TestASharedVersionThatCannotBeIncrementedIsRefused(t *testing.T) {
+	k := testIDKeys(t)
+	for _, v := range []uint64{^uint64(0), maxSharedVersion} {
+		if err := CertifySharedKey(k.master.priv, v, k.shared.pub).Verify(); err == nil {
+			t.Errorf("a shared-key certificate for version %d verified", v)
+		}
+		if err := CertifyMachine(k.shared.priv, k.master.id, v, k.machine.pub, KindMachine, "m", 1).VerifyBy(k.shared.pub); err == nil {
+			t.Errorf("a machine certificate under version %d verified", v)
+		}
+	}
+	if err := CertifySharedKey(k.master.priv, maxSharedVersion-1, k.shared.pub).Verify(); err != nil {
+		t.Errorf("the highest allowed version was refused: %v", err)
+	}
+	rs := RecordSet{Shared: []SharedKeyCert{CertifySharedKey(k.master.priv, 3, k.shared.pub),
+		CertifySharedKey(k.master.priv, ^uint64(0)-1, k.shared.pub)}}
+	if v := newKeyVersion(rs, Resolve(k.master.id, rs)); v != 4 {
+		t.Errorf("the next version is %d, want 4", v)
+	}
+}
+
 func TestSignRemovalSortsCutoffsAndRefusesARoomTwice(t *testing.T) {
 	k := testIDKeys(t)
 	r := k.removal(t)
