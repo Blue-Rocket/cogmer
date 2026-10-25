@@ -156,8 +156,10 @@ func rebuildLists(merged map[string]ListChange) userLists {
 }
 
 // trustedListChanges is every change to user's lists signed by a machine the user's
-// records certify and do not remove. ListChange says which key signed it, and only
-// the user's records say whether that key speaks for the user.
+// records certify under the current shared key and do not remove. ListChange says
+// which key signed it, and only the user's records say whether that key speaks for
+// the user; a suspended machine speaks for nobody until it is certified again
+// (D-234, a machine not certified under the current shared key is suspended).
 func (m *Membership) trustedListChanges(user string) []ListChange {
 	rs, changes, err := m.IdentityRecords(user)
 	if err != nil {
@@ -166,7 +168,7 @@ func (m *Membership) trustedListChanges(user string) []ListChange {
 	st := Resolve(user, rs)
 	var out []ListChange
 	for _, c := range changes {
-		if ms, ok := st.Machines[c.Signer]; ok && !ms.Removed {
+		if ms, ok := st.Machines[c.Signer]; ok && ms.Current && !ms.Removed {
 			out = append(out, c)
 		}
 	}
@@ -184,16 +186,15 @@ func (m *Membership) lists(user string) userLists {
 	return rebuildLists(m.UserLists(user))
 }
 
-// listCounter is the highest counter this machine has seen for an entry, from any
-// signer, so that its next change is one more and outranks every change it has seen.
+// listCounter is the highest counter of a trusted change this machine holds for an
+// entry, so that its next change is one more and outranks every change that counts.
+// A change from a machine that speaks for nobody, or one at or above maxListCounter,
+// counts for nothing, and counting it would let it push this machine's counters
+// toward the bound.
 func (m *Membership) listCounter(user, entry string) uint64 {
-	_, changes, err := m.IdentityRecords(user)
-	if err != nil {
-		return 0
-	}
 	var top uint64
-	for _, c := range changes {
-		if c.Entry == entry && c.Counter > top {
+	for _, c := range m.trustedListChanges(user) {
+		if c.Entry == entry && c.Counter < maxListCounter && c.Counter > top {
 			top = c.Counter
 		}
 	}
@@ -424,6 +425,44 @@ func (m *Membership) ApplyUserLists(id *Identity) error {
 	for roomID, v := range l.rooms {
 		if err := m.applyRoom(id, roomID, v); err != nil {
 			errs = append(errs, err)
+		}
+	}
+	errs = append(errs, m.revertUntrusted(id, l))
+	return errors.Join(errs...)
+}
+
+// revertUntrusted undoes here what a change applied earlier made, once no trusted
+// change holds its entry: the change's machine was suspended or removed after it was
+// applied. Every change this machine holds is merged, and an entry whose settled
+// value the trusted lists lack is taken back where taking it back loses nothing the
+// user chose on this machine: a colleague's verification and label, and an offer of
+// a room. A colleague forgotten by such a change stays forgotten, since forgetting
+// keeps nothing to restore, and a machine recorded as having joined a room stays
+// recorded, since a machine that speaks for nobody is refused whatever is recorded.
+func (m *Membership) revertUntrusted(id *Identity, trusted userLists) error {
+	_, changes, err := m.IdentityRecords(id.User)
+	if err != nil {
+		return err
+	}
+	all := rebuildLists(MergeListChanges(id.User, changes))
+	var errs []error
+	for peer, was := range all.colleagues {
+		if _, ok := trusted.colleagues[peer]; ok || peer == id.User || !m.Knows(peer) {
+			continue
+		}
+		if was.Verified != "" && m.IsVerified(peer) {
+			errs = append(errs, m.setVerifiedAt(peer, ""))
+		}
+		if was.Label != "" && m.Label(peer) == was.Label {
+			errs = append(errs, m.Allow(peer, ""))
+		}
+	}
+	for roomID, was := range all.rooms {
+		if was.OfferedBy == "" || trusted.rooms[roomID].OfferedBy == was.OfferedBy {
+			continue
+		}
+		if o, ok := m.FindOffer(roomID); ok && o.RoomID == roomID && o.Host == was.OfferedBy {
+			errs = append(errs, m.DropOffer(roomID))
 		}
 	}
 	return errors.Join(errs...)
