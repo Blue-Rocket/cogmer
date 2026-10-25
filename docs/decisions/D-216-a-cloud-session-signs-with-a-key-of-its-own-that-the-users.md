@@ -1,6 +1,6 @@
 # D-216 — A cloud session signs with a key of its own that the user's shared key vouches for
 
-**Date:** 2026-10-18 · **Status:** not built · **Areas:** identity, sync, admission
+**Date:** 2026-10-18 · **Status:** active · **Areas:** identity, sync, admission
 
 **Decision.** A cloud session signs its events, its admission proofs and its connections with a key it generates when it starts, and that key carries a chain of certificates to the user (D-219, a user is a master key that certifies machines through a shared key). The shared key certifies a cloud key, as it certifies any machine's key, with no expiry and without the right to hold the shared key. The cloud key is the one secret stored in the cloud environment, and it certifies each session's key with an expiry. A receiver accepts a key whose chain ends at a master key it has verified, and refuses one whose chain does not, so that a colleague verifies the user once (§25), never each session, and sees a cloud session's turns under the user's name with the cloud key's label. Each session's key numbers its own events, so cloud sessions that run at the same time never claim the same sequence number. A removal of the cloud key (D-220, a removal names the last event of a machine that counts) revokes it, and a receiver that holds the removal refuses every event and connection under that cloud key that reaches it afterwards.
 

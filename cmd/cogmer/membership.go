@@ -154,8 +154,9 @@ CREATE TABLE IF NOT EXISTS rooms (
   state           TEXT NOT NULL,
   issued_sequence INTEGER NOT NULL DEFAULT 0,
   -- The key issued_sequence counts for. A key numbers its own events, so a cloud
-  -- session's new key starts its count afresh (D-216, each session's key numbers its
-  -- own events). Empty on a row from before the column, whose count is the machine's.
+  -- session's new key starts its count afresh (D-249, each key that signs in a room
+  -- counts its own sequence from 1). Empty on a row from before the column, whose
+  -- count is the machine's.
   issued_signer   TEXT NOT NULL DEFAULT '',
   created_at      TEXT NOT NULL,
   -- Whether this machine gives the room's conversation to its own agent sessions.
@@ -993,8 +994,9 @@ func (m *Membership) CheckShowOnly(roomID string, want bool) error {
 // key other than the one the count was kept for starts at 1, in the same transaction
 // that records it as the count's key: a cloud session that certifies a new key keeps
 // no gap behind it, which receivers would hold open, and no key ever reissues its own
-// number (D-216, each session's key numbers its own events). A count kept before the
-// key was recorded is the machine's own, and is taken as signer's.
+// number (D-249, each key that signs in a room counts its own sequence from 1). A
+// count kept before the key was recorded is the machine's own, and is taken as
+// signer's.
 func (m *Membership) ReserveSequence(roomID, signer string) (int64, error) {
 	tx, err := m.db.Begin()
 	if err != nil {

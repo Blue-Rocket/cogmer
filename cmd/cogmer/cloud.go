@@ -406,7 +406,8 @@ func (d *Daemon) ensureSessionKey(now time.Time) error {
 // container could take each new certificate from the next event and never stop
 // working (D-247, a session key copied out of a container stops working within a day).
 // The key is written before the identity that names it, and the new key numbers its
-// own events from 1 (Membership.ReserveSequence).
+// own events from 1 (D-249, each key that signs in a room counts its own sequence
+// from 1).
 func (d *Daemon) renewSession(now time.Time) error {
 	c := d.cloud
 	pub, key, err := ed25519.GenerateKey(nil)

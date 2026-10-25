@@ -546,8 +546,8 @@ func (m *Membership) applyRoom(id *Identity, roomID string, v roomEntry) error {
 // itself. A room's sync targets are only the machines of guests its list admits, so a
 // colleague who is no guest of the room is never asked. A cloud session then syncs
 // with its user's colleagues directly, and not only through one of its user's
-// machines, on which it would then depend for every exchange (D-216, a cloud session
-// signs with a key of its own that the user's shared key vouches for).
+// machines, on which it would then depend for every exchange (D-248, a cloud session
+// asks its user's colleagues for a room at the addresses its user's lists hold).
 func (m *Membership) recordColleagueRoomMachines(id *Identity, roomID string) error {
 	if !id.HasUser() || id.Chain.Session == nil {
 		return nil

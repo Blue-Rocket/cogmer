@@ -277,17 +277,16 @@ could start nothing there, since the Cowork route is the bridge on the user's ma
 A user in a Claude Code cloud session, such as one started from the iPhone app, shares a
 conversation with colleagues without a daemon on their own computer being reachable.
 
-**A cloud session has no identity of its own to sign with.** D-216 (a cloud session signs with
-a key of its own that the user's shared key vouches for), D-245 (a cloud session takes its
-user's lists only from one of the user's machines), D-246 (a cloud environment is added from
-the machines page) and D-247 (a cloud session's key is certified for twenty-four hours) decide
-it, and none of the four is built. They build on D-219 (a user is a master key that
-certifies machines through a shared key).
-
-Not decided: how a user who has lost every machine reaches colleagues, since the user could reach each colleague only by
-sending a new pairing string, how a cloud session's hooks load, and whether a colleague holding
-shares of the recovery phrase could recover a user who has lost it, which no decision has
-examined.
+**Removing a cloud environment that was not stolen marks every turn its sessions wrote.** A
+removal names, for each room, the last sequence of the removed key that counts (D-220, a
+removal names the last event of a machine that counts, room by room), and a cloud key signs no
+event: each of its sessions signs with a key of its own and numbers its events from 1 (D-249,
+each key that signs in a room counts its own sequence from 1). The removal page finds no turn of
+the cloud key in any room, read from the code on 2026-10-25, so it proposes 0, and once the
+removal reaches a colleague every turn of every session of that environment is marked and kept
+from assistants. A removal after a theft, which proposes 0 anyway, is unaffected. A fix needs a
+cutoff that can name a session's key, which a removal's signed fields cannot carry under scheme
+v1, so it is a new removal scheme or a decision that a cloud key's removal always marks all.
 
 **The decisions that make the user the peer leave details undecided.** Each is needed by a
 slice of the second run, and none has a choice taken yet:
@@ -295,6 +294,11 @@ slice of the second run, and none has a choice taken yet:
 - Adding a machine or pairing on a machine with no browser, which the second run leaves out,
   since every machine a user adds has had a browser and a cloud session needs no phrase
   (D-223, the recovery phrase is typed only into the daemon's browser page).
+- How a user who has lost every machine reaches colleagues, since the user could reach each
+  colleague only by sending a new pairing string.
+- How a cloud session's hooks load.
+- Whether a colleague holding shares of the recovery phrase could recover a user who has lost
+  it, which no decision has examined.
 
 **No cloud session has shared a room with a paired machine, and one fact about where the
 cloud key is kept is unknown.** D-246 (a cloud environment is added from the machines page)

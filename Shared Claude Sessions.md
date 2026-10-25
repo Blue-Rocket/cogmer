@@ -563,9 +563,17 @@ A cloud environment is added from the daemon's page, which shows the value to pa
 the environment, and that value is never shown to an assistant, because whoever holds it
 speaks as the user in every room the user is in.
 
+The machine that adds a cloud environment keeps the certificate that names it and not the
+key the value holds, so that the value the user pastes is the only copy, and a machine
+taken later gives a thief no cloud environment of the user's.
+
 A session in a cloud environment learns its user's colleagues and rooms from one of the
 user's machines, and shares nothing until it reaches one, so that the user's lists are kept
 only on the user's own machines.
+
+The room's view in a cloud session says which of the user's machines its lists came from
+and how old they are, so that a user can tell when a colleague or a removal made since may
+not have reached it.
 
 ## Peer names
 
@@ -2317,8 +2325,8 @@ the check is that the key inside belongs to a machine vouched for by a user this
 machine knows, and, for a connection aimed at one named user, that the machine is that
 user's. A connection's certificate authorities, hostname and the expiry of its TLS
 certificate are never consulted, because none of them means anything here. A cloud
-session's key is vouched for only until a time its user set, and a connection from it
-after that time is refused, so a copied session key stops working on its own. A client certificate is required, not requested, because a machine
+session's key is vouched for only for a day, and a connection from it after that is
+refused, so a copied session key stops working on its own. A client certificate is required, not requested, because a machine
 with nothing to pin has no business completing a handshake.
 
 So the transport's identity and the event's identity are the same machine key, vouched
