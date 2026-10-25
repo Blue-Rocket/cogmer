@@ -42,6 +42,7 @@ func main() {
 		usage()
 		os.Exit(2)
 	}
+	guardStateDirectory(os.Args[1])
 	switch os.Args[1] {
 	case "daemon":
 		runDaemon()

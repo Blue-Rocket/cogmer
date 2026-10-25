@@ -40,6 +40,10 @@ import (
 const (
 	imageWork = "cogmer-harness-work"
 	imageMain = "cogmer-harness-main"
+	// imageOlderData is the working tree built to know data version 0, to stand for a
+	// program older than the data it finds (D-244, a program that finds a newer data
+	// version touches nothing).
+	imageOlderData = "cogmer-harness-older-data"
 )
 
 var (
@@ -90,6 +94,7 @@ func repoRoot(t *testing.T) string {
 
 // image returns the image of repo, building it the first time this process asks.
 // imageWork is built from the working tree, and imageMain from the commit main names.
+// imageOlderData is the working tree with the tag that lowers its data version.
 func harnessImage(t *testing.T, repo string) string {
 	t.Helper()
 	imagesMu.Lock()
@@ -128,8 +133,12 @@ func harnessImage(t *testing.T, repo string) string {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(ctx)
-	goBuild(t, src, filepath.Join(ctx, "cogmer"), "./cmd/cogmer")
-	goBuild(t, root, filepath.Join(ctx, "containerdriver"), "./cmd/cogmer/testdata/containerdriver")
+	tags := "ts_debug_websockets"
+	if repo == imageOlderData {
+		tags += " olderdataversion"
+	}
+	goBuild(t, src, filepath.Join(ctx, "cogmer"), "./cmd/cogmer", tags)
+	goBuild(t, root, filepath.Join(ctx, "containerdriver"), "./cmd/cogmer/testdata/containerdriver", "ts_debug_websockets")
 	dockerfile := "FROM scratch\nCOPY cogmer /cogmer\nCOPY containerdriver /containerdriver\nENTRYPOINT [\"/cogmer\"]\n"
 	if err := os.WriteFile(filepath.Join(ctx, "Dockerfile"), []byte(dockerfile), 0o644); err != nil {
 		t.Fatal(err)
@@ -141,9 +150,9 @@ func harnessImage(t *testing.T, repo string) string {
 	return repo + ":" + runTag
 }
 
-func goBuild(t *testing.T, dir, out, pkg string) {
+func goBuild(t *testing.T, dir, out, pkg, tags string) {
 	t.Helper()
-	cmd := exec.Command("go", "build", "-tags", "ts_debug_websockets", "-o", out, pkg)
+	cmd := exec.Command("go", "build", "-tags", tags, "-o", out, pkg)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS=linux")
 	if b, err := cmd.CombinedOutput(); err != nil {
