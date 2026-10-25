@@ -289,30 +289,23 @@ sending a new pairing string, how a cloud session's hooks load, and whether a co
 shares of the recovery phrase could recover a user who has lost it, which no decision has
 examined.
 
-**A user's identity, once made, breaks every room the machine joined before it.** Making
-one changes no room and no colleague, read in `becomeUser` on 2026-10-25, so a colleague's
-machine refuses the upgraded machine's requests as from a user not on the room's list, and
-shows its turns as unverified. D-242 (a machine key from before the user identity carries its
-verification, label and turns) and D-243 (a room from before user identities takes one guest
-list) decide the fix, and neither is built.
-
-**Joining a room from an invitation erases the label the user gave the inviter.** `runJoin`
-records the inviting machine with `Allow(host, "")`, and `Allow` writes the derived name over
-an existing name when it is given none, read on 2026-10-25 and seen in a container test the
-same day: after joining, `peers` shows the inviter as "none given" and the inviter's turns carry
-no label. The same code is on `main`. `Allow` should keep an existing name when it is given
-none.
-
 **An older program run on a machine's upgraded state can damage it.** The program on `main`
 rewrites `identity.json` without the user and the chain when its user renames themselves, and
 cannot read the room databases the user identity migrates, read on 2026-10-25. D-244 (the data
 in the state directory carries one version) stops a program from touching newer data, from the
 first release that carries it, and is not built.
 
-**A revoked guest can revoke every guest who remains.** `ResolveGuests` counts every
-revocation by a user who was ever invited, read on 2026-10-25, so a revoked guest's
-revocations made past their cutoff empty the room. D-235 (a room's one guest list) bounds them
-by the cutoff, and that is not built.
+**Of two guests who revoke each other at once, the one fewer invitations away from a
+founder stays in.** `ResolveGuests` counts changes in rounds from the founders, and a guest's
+revocation first counts in the round after the guest's invitation does, read on 2026-10-25.
+Two guests invited by one founder revoke each other in the same round, and both end out, as
+D-235 (a room's one guest list) says. When one of them is further from a founder, the nearer
+one's revocation counts a round earlier and puts the other's past its cutoff, so the nearer
+stays in, and a founder always stays in against a guest. D-235 rejects a tie-break that keeps
+one of two such guests in. One fix counts a revocation of the user who revoked its author,
+made without seeing that revocation, as though it were within the author's cutoff; its cost
+is that a revoked guest can name an early cutoff to make a revenge revocation look like one
+made at once, which the rounds already allow two guests invited by one founder.
 
 **The decisions that make the user the peer leave details undecided.** Each is needed by a
 slice of the second run, and none has a choice taken yet:
