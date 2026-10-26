@@ -312,6 +312,23 @@ Logging the first fetch that succeeds after a start or a failure, naming the mac
 answered, would cost one line each time. Pointing the run at the age of the lists shown on the
 daemon's room page instead costs no code, and leaves the log silent on success.
 
+**A cloud session whose cloud key is removed is never told, and goes on recording turns that no
+machine receives.** On 2026-10-26, after the maintainer removed a cloud environment as not stolen,
+the user's machine rejected the session's certificate in both directions, and the session's next
+turn was recorded in its own room store and reached nobody (`e85170d`). The session learns the
+user's records only from the lists, and the machine that removed the key refuses to send them,
+so the only sign is the session daemon's room page saying the lists are waiting. A user who removes an environment
+while a session there is still open gets no message in that session that its turns are no longer
+shared.
+
+Options:
+- A machine answers a removed cloud key's fetch of the lists with a signed statement of the
+  removal, rather than rejecting the connection. This needs a decision on what a removed key may
+  still be told, since the answer goes to whoever holds the key, a thief included.
+- The session reads a run of refused fetches from every machine it knows as a sign that it may
+  have been removed, and says so at its next prompt. This costs no change on the machines, and
+  cannot tell a removal from a suspension or a machine that is down.
+
 **No cloud session has shared a room with a paired machine, and one fact about where the
 cloud key is kept is unknown.** D-246 (a cloud environment is added from the machines page)
 keeps the cloud key in an environment variable of the cloud environment. Whether a cloud
@@ -338,8 +355,9 @@ opened and dialed inside the session as a WebSocket, and timed out without it. A
 2026-10-24, opened a TCP connection through the tunnel to the maintainer's daemon in 113ms and
 completed a TLS handshake with it in 132ms, with the key its pairing string names, and the
 daemon refused the run's unrecorded client certificate (`1d2b505`). Part 2 of
-`docs/work/cloud-run.md` ran on 2026-10-25 (`243df61`). Whether the cloud session's turn reached
-the maintainer's test machine, and the checks on that machine afterwards, are not shown.
+`docs/work/cloud-run.md` ran on 2026-10-25 and 2026-10-26 (`243df61`, `e85170d`). How the cloud
+session's turns appear on the maintainer's test machine, and which of them that machine counts
+after the cloud key's removal, are not shown.
 
 A cloud session with 0.10.4 reached the relay, observed on 2026-10-18. The user's claude.ai copy of
 the plugin stayed at 0.10.3 after 0.10.4 reached `main`, until the user forced a sync in Manage
