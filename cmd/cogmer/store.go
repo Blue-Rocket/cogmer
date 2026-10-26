@@ -336,6 +336,49 @@ func (s *Store) HighestSequence(signer string) (int64, error) {
 	return seq.Int64, nil
 }
 
+// heldTurn is one turn of a signer as this store holds it, shown to a person who
+// is choosing the last of the signer's turns that counts: its sequence, which is
+// the number a cutoff names, when its author stated it was written, and the start
+// of its text.
+type heldTurn struct {
+	Sequence int64  `json:"sequence"`
+	At       string `json:"at"`
+	Kind     string `json:"kind"`
+	Text     string `json:"text"`
+}
+
+// recentTurnsBy is the newest n turns of signer this store holds, a prompt or an
+// answer, newest first, each with the first 100 characters of its text on one line.
+func (s *Store) recentTurnsBy(signer string, n int) []heldTurn {
+	rows, err := s.db.Query(`SELECT peer_sequence, timestamp, event_type, COALESCE(content, '') FROM events
+		WHERE signer = ? AND event_type IN (?, ?) ORDER BY peer_sequence DESC LIMIT ?`,
+		signer, EventUserPrompt, EventAssistantMessage, n)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var out []heldTurn
+	for rows.Next() {
+		var t heldTurn
+		if err := rows.Scan(&t.Sequence, &t.At, &t.Kind, &t.Text); err != nil {
+			return out
+		}
+		t.Text = oneLine(t.Text, 100)
+		out = append(out, t)
+	}
+	return out
+}
+
+// oneLine is the start of text on one line: whitespace runs become single spaces
+// and the result is at most limit characters, ending in an ellipsis when it was cut.
+func oneLine(text string, limit int) string {
+	text = strings.Join(strings.Fields(text), " ")
+	if r := []rune(text); len(r) > limit {
+		return string(r[:limit]) + "…"
+	}
+	return text
+}
+
 // sessionStarted is the earliest timestamp this store holds of any event of the
 // agent sessions signer wrote turns for, under the same peer, as their author stated
 // it, or "" when it holds none. It is for a person telling sessions apart, never for

@@ -34,6 +34,10 @@ type removalRoom struct {
 	RoomName string `json:"roomName"`
 	Last     int64  `json:"last"`
 	Proposed int64  `json:"proposed"`
+	// Turns is the newest of the machine's turns this machine holds in the room, so
+	// that a person who remembers when a machine was lost can find the last turn
+	// they trust by its time and its words, since the cutoff is a sequence number.
+	Turns []heldTurn `json:"turns,omitempty"`
 }
 
 // removalSession is one session key's cutoff in one room, as the page proposes it for
@@ -86,11 +90,15 @@ func (d *Daemon) lastHeldTurns(machine string) []removalRoom {
 		}
 		d.mu.Lock()
 		last, err := store.HighestSequence(machine)
+		var turns []heldTurn
+		if err == nil {
+			turns = store.recentTurnsBy(machine, 30)
+		}
 		d.mu.Unlock()
 		if err != nil {
 			continue
 		}
-		out = append(out, removalRoom{Room: r.RoomID, RoomName: r.RoomName, Last: last})
+		out = append(out, removalRoom{Room: r.RoomID, RoomName: r.RoomName, Last: last, Turns: turns})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Room < out[j].Room })
 	return out

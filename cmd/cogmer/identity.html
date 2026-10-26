@@ -389,13 +389,36 @@ async function removeWithNewKey(machine){
   newKeyForm(undefined, {machine, name: p.name, rooms: p.rooms || []});
 }
 
+// The cutoff is a sequence number, which nobody remembers, so each room lists the newest of the
+// machine's turns with the time and the words of each, and a click on one makes it the last that
+// counts.
+function turnTime(at){
+  const d = new Date(at);
+  return isNaN(d) ? at : d.toLocaleString([], {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+}
+function turnList(r, i){
+  if(!(r.turns||[]).length) return '';
+  const items = r.turns.map(t => `<tr class="turn" data-room="${i}" data-seq="${esc(t.sequence)}" style="cursor:pointer">
+      <td class="hint" style="white-space:nowrap">${esc(turnTime(t.at))}</td>
+      <td class="hint">${t.kind === 'USER_PROMPT' ? 'you' : 'assistant'}</td><td>${esc(t.text)}</td></tr>`).join('');
+  return `<tr><td colspan="3"><details><summary class="hint">Choose the last turn that counts by its time and words</summary>
+    <table>${items}</table></details></td></tr>`;
+}
+function wireTurns(){
+  document.querySelectorAll('tr.turn').forEach(tr => tr.onclick = () => {
+    el('c' + tr.dataset.room).value = tr.dataset.seq;
+    tr.closest('table').querySelectorAll('tr.turn').forEach(x => x.style.fontWeight = '');
+    tr.style.fontWeight = '700';
+  });
+}
+
 async function removePropose(machine, stolen, msg, note){
   const p = await post('/machines/remove/propose', {machine, stolen}).catch(e => ({error:e.message}));
   if(p.error){ machines(p.error); return; }
   if(p.cloud){ removeCloudPropose(machine, stolen, p, msg); return; }
   const rows = (p.rooms||[]).map((r, i) => `<tr><td>${esc(r.roomName)}</td>
       <td class="hint">its last turn here: ${esc(r.last)}</td>
-      <td><input id="c${i}" type="number" min="0" max="${esc(r.last)}" value="${esc(r.proposed)}" style="width:7em"></td></tr>`).join('');
+      <td><input id="c${i}" type="number" min="0" max="${esc(r.last)}" value="${esc(r.proposed)}" style="width:7em"></td></tr>${turnList(r, i)}`).join('');
   show(`<p class="lead">Remove ${esc(p.name)}: the last of its turns that counts, room by room.</p>
     <div class="card">
       ${note ? `<p class="hint" style="margin:0 0 6px">${esc(note)}</p>` : ''}
@@ -406,6 +429,7 @@ async function removePropose(machine, stolen, msg, note){
       <div class="row"><button class="no" id="confirm">Remove ${esc(p.name)}</button><button id="back">Back</button></div>
       ${errorBox(msg)}</div>`);
   el('back').onclick = () => machines();
+  wireTurns();
   el('confirm').onclick = async () => {
     const cutoffs = {};
     (p.rooms||[]).forEach((r, i) => { cutoffs[r.room] = parseInt(el('c'+i).value, 10) || 0; });
@@ -472,7 +496,7 @@ async function newKeyForm(msg, rm){
       <td class="hint">${m.self ? 'this machine' : (being(m) ? 'being removed' : (m.removed ? 'removed' : (m.current ? '' : 'suspended')))}</td></tr>`).join('');
   const rows = rm ? (rm.rooms||[]).map((r, i) => `<tr><td>${esc(r.roomName)}</td>
       <td class="hint">its last turn here: ${esc(r.last)}</td>
-      <td><input id="c${i}" type="number" min="0" max="${esc(r.last)}" value="${esc(r.proposed)}" style="width:7em"></td></tr>`).join('') : '';
+      <td><input id="c${i}" type="number" min="0" max="${esc(r.last)}" value="${esc(r.proposed)}" style="width:7em"></td></tr>${turnList(r, i)}`).join('') : '';
   const removal = rm ? `<div class="card"><h2>Remove ${esc(rm.name)}</h2>
       <p class="hint" style="margin:0 0 6px">Nothing it wrote counts unless you name a turn. Name a later one only if you are sure that turn was yours.
         A cutoff can never be moved later.</p>
@@ -493,6 +517,7 @@ async function newKeyForm(msg, rm){
       <div class="row"><button class="yes" id="go">${rm ? 'Remove it and certify the new key' : 'Certify the new key'}</button><button id="back">Back</button></div>
       ${errorBox(typeof msg === 'string' ? msg : '')}</div>`);
   el('back').onclick = () => machines();
+  wireTurns();
   el('go').onclick = async () => {
     const keep = (p.removals||[]).filter((r, i) => r.carried && el('r'+i).checked).map(r => r.hash);
     const kept = (p.machines||[]).filter((m, i) => el('m'+i).checked).map(m => m.machine);

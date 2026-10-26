@@ -929,3 +929,66 @@ func TestAMachineRemovesItselfFromItsOwnPage(t *testing.T) {
 		t.Errorf("after removing itself the machine is %+v", ms)
 	}
 }
+
+// The cutoff is a sequence number, so the page lists the machine's newest turns in
+// each room with their time and the start of their words, and the number a click on
+// one fills in is that turn's sequence.
+func TestARemovalProposalListsTheMachinesNewestTurnsByTheirWords(t *testing.T) {
+	a, b := twoMachines(t)
+	room := sharedWith(t, a, b, "FIRST")
+	say1(t, b, room, "ONE\n   spread over   lines")
+	say1(t, b, room, strings.Repeat("LONG ", 40))
+	say1(t, b, room, "THREE")
+	pullOn(t, a, b.addr)
+
+	var p removeProposeResponse
+	a.local(t, "/machines/remove/propose", removeProposeRequest{Machine: b.d.id.PeerID}, &p)
+	if len(p.Rooms) != 1 {
+		t.Fatalf("rooms: %+v", p.Rooms)
+	}
+	turns := p.Rooms[0].Turns
+	if len(turns) != 3 || turns[0].Text != "THREE" || turns[0].Sequence != p.Rooms[0].Last {
+		t.Fatalf("the newest turn should come first and carry the last sequence, got %+v", turns)
+	}
+	if turns[2].Text != "ONE spread over lines" || turns[2].Sequence != turns[0].Sequence-2 || turns[2].At == "" {
+		t.Errorf("the oldest turn is shown on one line with its time: %+v", turns[2])
+	}
+	if got := []rune(turns[1].Text); len(got) != 101 || got[100] != '…' {
+		t.Errorf("a long turn is cut to 100 characters and says so: %q", turns[1].Text)
+	}
+	// choosing a turn from the list is a cutoff this machine takes
+	var res identityResult
+	a.local(t, "/machines/remove", removeRequest{Machine: b.d.id.PeerID,
+		Cutoffs: map[string]int64{room.RoomID: turns[2].Sequence}}, &res)
+	if res.Status != "removed" {
+		t.Fatalf("removing at a listed turn: %+v", res)
+	}
+}
+
+func TestOnlyAMachinesPromptsAndAnswersAreListedAsTurns(t *testing.T) {
+	a, b := twoMachines(t)
+	room := sharedWith(t, a, b, "FIRST")
+	say1(t, b, room, "A PROMPT")
+	b.use(t)
+	store, err := b.d.storeFor(room.RoomID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b.d.mu.Lock()
+	_, err = b.d.appendLocal(store, room, "s-b", EventUserImage, "IMAGE BYTES", nil)
+	b.d.mu.Unlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pullOn(t, a, b.addr)
+	var p removeProposeResponse
+	a.local(t, "/machines/remove/propose", removeProposeRequest{Machine: b.d.id.PeerID}, &p)
+	for _, turn := range p.Rooms[0].Turns {
+		if strings.Contains(turn.Text, "IMAGE") {
+			t.Errorf("an image was listed as a turn: %+v", turn)
+		}
+	}
+	if len(p.Rooms[0].Turns) != 1 {
+		t.Errorf("turns: %+v", p.Rooms[0].Turns)
+	}
+}

@@ -765,6 +765,11 @@ never given to an assistant, so that a thief's turns never reach a model as the 
 The last turn a removal lets count can only move earlier, so that whoever holds a
 removed machine, or later obtains the phrase, cannot make its marked turns count.
 
+The page that removes a machine lists the machine's newest turns in each room by when each
+was written and how each begins. Choosing a turn from the list names that turn as the last
+that counts, so that a user who remembers when a machine was lost need not know a turn's
+number.
+
 Removing a cloud environment marks, for each of the environment's sessions, every turn that
 session sent after the last of that session's turns the user names as counting, so that
 retiring an environment the user has stopped using withdraws nothing its sessions wrote.
