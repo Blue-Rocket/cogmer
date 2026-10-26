@@ -300,6 +300,9 @@ func TestTheBridgeKeepsARealDaemonForACoworkUser(t *testing.T) {
 	if _, err := exec.LookPath("lsof"); err != nil {
 		t.Skip("no lsof on this machine")
 	}
+	// It starts daemons on ports and in a state directory of its own and gives each program its own
+	// environment, so it can run beside the others.
+	t.Parallel()
 	dir := t.TempDir()
 	bin := buildVersion(t, dir, "0.0.9")
 	hooks, peer := freeAddr(t), freeAddr(t)
