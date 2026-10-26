@@ -94,7 +94,7 @@ function ask(){
       </div>
     </div>`);
   el('first').onclick = create;
-  el('athand').onclick = joinStart;
+  el('athand').onclick = joinName;
   el('none').onclick = recoverForm;
 }
 
@@ -146,6 +146,21 @@ function done(text){
 
 // --- adding this machine from another of yours ---
 
+// The name is asked for before the string and the words, as a question of its own, so that a
+// user who adds several machines is not left to notice a field beside the words (D-229).
+let joinMachineName = '';
+function joinName(){
+  show(`<p class="lead">What should this machine be called?</p>
+    <div class="card">
+      <label for="machine">This machine's name</label>
+      <input id="machine" autocomplete="off" value="${esc(state.hostname)}">
+      <p class="hint">The name is shown beside your turns and in the list of your machines, so that you and your
+      colleagues can tell your machines apart. Keep the computer's own name or give it one, and give each of
+      your machines a different one.</p>
+      <div class="row"><button class="yes" id="named">Continue</button></div></div>`);
+  el('named').onclick = () => { joinMachineName = el('machine').value; joinStart(); };
+}
+
 async function joinStart(){
   let res;
   try { res = await post('/identity/join/start'); } catch(e){ show(errorBox(e.message)); return; }
@@ -176,14 +191,13 @@ async function pollJoin(){
 function joinCompare(words, msg){
   show(`<p class="lead">Compare these two words with the other machine's page.</p>
     <div class="card"><div class="words">${esc(words)}</div>
-      <label for="machine">This machine's name</label>
-      <input id="machine" autocomplete="off" value="${esc(state.hostname)}">
+      <p class="hint" style="margin:0 0 6px">This machine will be called <b>${esc(joinMachineName)}</b>.</p>
       <div class="row">
         <button class="yes" id="same">The other page shows the same two words</button>
         <button class="no" id="diff">It shows something different</button>
       </div>${errorBox(msg)}</div>`);
   el('same').onclick = async () => {
-    const res = await post('/identity/join/confirm', {matched:true, machineName: el('machine').value}).catch(e => ({error:e.message}));
+    const res = await post('/identity/join/confirm', {matched:true, machineName: joinMachineName}).catch(e => ({error:e.message}));
     if(res.error){ joinCompare(words, res.error); return; }
     show(`<p class="lead"><span class="spin"></span>Waiting for you to confirm on the other machine…</p>`);
     pollJoin();

@@ -708,6 +708,10 @@ every other room has, so that its guests never disagree about who is in it.
 A machine is added from a machine the user already has, and never by typing the
 recovery phrase into it, so that the phrase is typed only to recover.
 
+The new machine's page first asks what the machine is to be called, offering the
+computer's own name and saying that each of the user's machines needs a different one,
+so that the user can tell their machines apart.
+
 The new machine's page shows its pairing string with a button that copies it whole, so
 that a character lost in copying never fails the exchange.
 
