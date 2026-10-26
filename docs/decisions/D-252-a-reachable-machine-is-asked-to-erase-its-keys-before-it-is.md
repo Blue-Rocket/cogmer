@@ -1,6 +1,6 @@
 # D-252 — A reachable machine is asked to erase its keys before it is removed
 
-**Date:** 2026-10-26 · **Status:** not built · **Areas:** identity, sync
+**Date:** 2026-10-26 · **Status:** active · **Areas:** identity, sync
 
 **Decision.** When the user says a machine is in their hands, the removing machine first asks the machine being removed, over a connection that its certificate still allows, to erase its private keys, including its copy of the shared key, and to acknowledge, and signs the removal only after the acknowledgement. The acknowledgement is what lets a machine count as wiped without the user's word (D-251, removing a machine that someone other than the user could still use always certifies a new shared key), and a machine that does not answer is treated as one that someone other than the user could still use. No connection from a removed machine is ever accepted for this, since a connection from a removed machine is refused (D-101, peer connections are TLS pinned to a key this machine has recorded).
 

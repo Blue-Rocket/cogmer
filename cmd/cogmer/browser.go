@@ -15,6 +15,9 @@ var noBrowser string
 
 var errNoPersonAtTheScreen = errors.New("a test has no person at the screen")
 
+// inTestBinary reports whether this process is a test binary, which has the test flags.
+func inTestBinary() bool { return flag.Lookup("test.v") != nil }
+
 // openInBrowser puts a page in front of the person at this machine.
 //
 // This is the only channel from here to a person's eyes that does not pass through
@@ -27,7 +30,7 @@ var errNoPersonAtTheScreen = errors.New("a test has no person at the screen")
 // over SSH, a container, a server has no browser, and pairing has to remain possible
 // there -- so the terminal ceremony is not dead code, it is the other branch.
 func openInBrowser(url string) error {
-	if noBrowser != "" || flag.Lookup("test.v") != nil {
+	if noBrowser != "" || inTestBinary() {
 		return fmt.Errorf("could not open a browser (%w)", errNoPersonAtTheScreen)
 	}
 	var cmd *exec.Cmd

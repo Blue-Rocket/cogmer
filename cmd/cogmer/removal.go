@@ -459,6 +459,21 @@ type newKeyRequest struct {
 	// Machines is the keys of the user's machines to certify again under the new key.
 	// This machine is certified whether or not it is named.
 	Machines []string `json:"machines"`
+	// Remove is the machines to remove in the same act, each with the cutoffs the user
+	// confirmed. The master key signs each removal, so it counts under the new key and
+	// under any other, and the machine is certified again under the new key so that the
+	// turns up to its cutoff count (D-251, removing a machine that someone other than the
+	// user could still use always certifies a new shared key).
+	Remove []newKeyRemoval `json:"remove,omitempty"`
+}
+
+// newKeyRemoval is one machine removed as the new key is certified.
+type newKeyRemoval struct {
+	Machine string `json:"machine"`
+	// Cutoffs maps a room to the last of the machine's turns there that counts, as the
+	// user confirmed it. A room left out takes what the page proposed, which for a
+	// machine someone else could use is none.
+	Cutoffs map[string]int64 `json:"cutoffs"`
 }
 
 type newKeyResult struct {
@@ -466,6 +481,7 @@ type newKeyResult struct {
 	Version   uint64 `json:"version,omitempty"`
 	Machines  int    `json:"machines,omitempty"`
 	Removals  int    `json:"removals,omitempty"`
+	Removed   int    `json:"removed,omitempty"`
 	Suspended int    `json:"suspended,omitempty"`
 	Error     string `json:"error,omitempty"`
 }
@@ -496,7 +512,7 @@ func (d *Daemon) handleNewKey(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, newKeyResult{Error: "The phrase does not read: " + err.Error() + "."})
 		return
 	}
-	res, err := d.certifyNewKey(p, req.Keep, req.Machines)
+	res, err := d.certifyNewKey(p, req.Keep, req.Machines, req.Remove)
 	p = Phrase{}
 	if err != nil {
 		writeJSON(w, newKeyResult{Error: err.Error()})
@@ -511,7 +527,7 @@ type pendingRecord struct {
 	body any
 }
 
-func (d *Daemon) certifyNewKey(p Phrase, keep, machines []string) (newKeyResult, error) {
+func (d *Daemon) certifyNewKey(p Phrase, keep, machines []string, remove []newKeyRemoval) (newKeyResult, error) {
 	id := d.id
 	if !id.HasUser() {
 		return newKeyResult{}, errors.New("this machine speaks for no user; recover instead")
@@ -526,14 +542,44 @@ func (d *Daemon) certifyNewKey(p Phrase, keep, machines []string) (newKeyResult,
 	st := Resolve(id.User, rs)
 	version := newKeyVersion(rs, st)
 
+	// The machines to remove in the same act are checked before the master key is
+	// made, so that a request that cannot be carried out never holds it. This machine
+	// is not removed here, since it takes the new key: it removes itself on its own.
+	// A cloud environment is removed on its own too, since its key never held the
+	// shared key and a new one gives its removal nothing (D-251).
+	type pendingRemoval struct {
+		machine string
+		cutoffs []RoomCutoff
+	}
+	var removals []pendingRemoval
+	removing := map[string]bool{}
+	for _, r := range remove {
+		cert, err := d.removableMachine(r.Machine)
+		switch {
+		case err != nil:
+			return newKeyResult{}, err
+		case removing[r.Machine]:
+			return newKeyResult{}, errors.New("a machine is named twice to be removed")
+		case r.Machine == id.PeerID:
+			return newKeyResult{}, errors.New("this machine takes the new key, so it cannot be removed in the same act; remove it from another of your machines")
+		case cert.Kind == KindCloud:
+			return newKeyResult{}, errors.New("a cloud environment is removed on its own, since its key never held the shared key")
+		}
+		cutoffs, err := cutoffsFor(d.proposeRemoval(r.Machine, true), r.Cutoffs)
+		if err != nil {
+			return newKeyResult{}, err
+		}
+		removing[r.Machine] = true
+		removals = append(removals, pendingRemoval{r.Machine, cutoffs})
+	}
+
 	master := p.MasterKey()
+	defer zero(master)
 	sharedPub, shared, err := ed25519.GenerateKey(nil)
 	if err != nil {
-		zero(master)
 		return newKeyResult{}, err
 	}
 	sharedCert := CertifySharedKey(master, version, sharedPub)
-	zero(master)
 
 	// The removals the user confirmed, signed again so that they count under the new
 	// key; one the user did not confirm is left to count for nothing (D-220).
@@ -542,6 +588,16 @@ func (d *Daemon) certifyNewKey(p Phrase, keep, machines []string) (newKeyResult,
 		kept[h] = true
 	}
 	records := []pendingRecord{{RecordShared, sharedCert}}
+	for _, r := range removals {
+		rem, err := SignRemoval(master, LevelMaster, 0, id.User, r.machine, r.cutoffs)
+		if err != nil {
+			return newKeyResult{}, err
+		}
+		records = append(records, pendingRecord{RecordRemoval, rem})
+	}
+	// Nothing below signs with the master key, so it is dropped here, and the deferred
+	// call only covers a return before this line.
+	zero(master)
 	carried, done := 0, map[[32]byte]bool{}
 	for _, r := range rs.Removals {
 		h := r.Hash()
@@ -562,6 +618,9 @@ func (d *Daemon) certifyNewKey(p Phrase, keep, machines []string) (newKeyResult,
 	// turns count for nothing and a removed one's count up to its cutoff.
 	want := map[string]bool{id.PeerID: true}
 	for _, m := range machines {
+		want[m] = true
+	}
+	for m := range removing {
 		want[m] = true
 	}
 	var own MachineCert
@@ -597,9 +656,10 @@ func (d *Daemon) certifyNewKey(p Phrase, keep, machines []string) (newKeyResult,
 	if err := d.becomeUser(id.User, "", Chain{Shared: sharedCert, Machine: own}, shared, version); err != nil {
 		return newKeyResult{}, err
 	}
-	log.Printf("identity: certified shared key version %d, %d machine(s) certified again, %d removal(s) carried", version, certified, carried)
+	log.Printf("identity: certified shared key version %d, %d machine(s) certified again, %d removal(s) carried, %d machine(s) removed",
+		version, certified, carried, len(removals))
 	d.notify()
-	return newKeyResult{Status: "certified", Version: version, Machines: certified, Removals: carried, Suspended: suspended}, nil
+	return newKeyResult{Status: "certified", Version: version, Machines: certified, Removals: carried, Removed: len(removals), Suspended: suspended}, nil
 }
 
 // --- the new shared key reaching the user's other machines ---

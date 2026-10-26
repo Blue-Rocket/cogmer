@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -346,6 +347,12 @@ type cloudSession struct {
 	failingSince      time.Time
 	failure           string
 	answered          bool // whether any fetch has succeeded since the daemon started
+	// refused is whether every machine asked for the lists answered with a refusal, since
+	// refusedSince, and told the sessions already told of that refusal (D-253, a cloud
+	// session says its turns are not being shared when every machine it asks refuses it).
+	refused      bool
+	refusedSince time.Time
+	told         map[string]bool
 }
 
 // isCloudSession reports whether this daemon serves a cloud session: one whose
@@ -522,14 +529,26 @@ func (d *Daemon) cloudRound(now time.Time) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if err != nil {
+		var le *listsError
+		all := errors.As(err, &le) && le.allRefused
+		if all && !c.refused {
+			c.refused, c.refusedSince, c.told = true, now, nil
+			log.Printf("cloud: every machine of yours refused this session's requests, so its turns are not being shared: %v", err)
+		}
+		if !all {
+			c.refused = false
+		}
 		if c.failingSince.IsZero() {
 			c.failingSince = now
-			log.Printf("cloud: none of your machines answered for your lists, so this session waits for one: %v", err)
+			if !all {
+				log.Printf("cloud: none of your machines answered for your lists, so this session waits for one: %v", err)
+			}
 		}
 		c.failure = err.Error()
 		c.nextFetch = now.Add(c.retry)
 		return
 	}
+	c.refused = false
 	// Said once after a start and once after a failure, so the log shows that the
 	// session has its lists and from where, and stays quiet while nothing changes.
 	if !c.answered || !c.failingSince.IsZero() {
@@ -572,11 +591,15 @@ func (d *Daemon) cloudTargets() []cloudMachine {
 // gives the name of the machine that did.
 func (d *Daemon) fetchUserLists() (string, error) {
 	var errs []string
+	refused := 0
 	for _, m := range d.cloudTargets() {
 		name := firstNonEmpty(m.Name, PeerName(m.Machine))
 		if err := d.fetchListsFrom(m); err != nil {
 			d.markPeerUnreachable(m.Endpoint, err)
 			errs = append(errs, fmt.Sprintf("%s: %v", name, err))
+			if isRefusal(err) {
+				refused++
+			}
 			continue
 		}
 		d.markPeerSeen(m.Endpoint)
@@ -585,7 +608,31 @@ func (d *Daemon) fetchUserLists() (string, error) {
 	if len(errs) == 0 {
 		return "", errors.New("no machine of yours has an address")
 	}
-	return "", errors.New(strings.Join(errs, "; "))
+	return "", &listsError{msg: strings.Join(errs, "; "), allRefused: refused == len(errs)}
+}
+
+// listsError is the failure of a round of asking the user's machines for the lists. It
+// says whether every machine answered with a refusal, which is a machine's answer and
+// not the silence of one that cannot be reached (D-253).
+type listsError struct {
+	msg        string
+	allRefused bool
+}
+
+func (e *listsError) Error() string { return e.msg }
+
+// refusedError is an answer that refuses the asker: a TLS alert the other end sent. A
+// machine that does not answer is not one, and nor is a request refused after the
+// connection was made, since a stale timestamp or a replay is refused that way as well and
+// says nothing of a removal.
+type refusedError struct{ err error }
+
+func (e *refusedError) Error() string { return e.err.Error() }
+func (e *refusedError) Unwrap() error { return e.err }
+
+func isRefusal(err error) bool {
+	var r *refusedError
+	return errors.As(err, &r)
 }
 
 // selfFetchTag is the purpose tag of a cloud session's request for its user's lists.
@@ -647,6 +694,12 @@ func (d *Daemon) fetchListsFrom(m cloudMachine) error {
 	}
 	resp, err := client.Post(peerURL("/self/fetch"), "application/json", bytes.NewReader(body))
 	if err != nil {
+		// "remote error" is the other end's TLS alert, which is its refusal of this session's
+		// certificate; every other failure is a failure to reach it or to trust it.
+		var op *net.OpError
+		if errors.As(err, &op) && op.Op == "remote error" {
+			return &refusedError{err}
+		}
 		return err
 	}
 	defer resp.Body.Close()
@@ -741,6 +794,8 @@ type listsView struct {
 	From    string `json:"from,omitempty"`
 	Age     string `json:"age,omitempty"`
 	Waiting string `json:"waiting,omitempty"`
+	// Refused is whether every machine asked for the lists has refused this session (D-253).
+	Refused bool `json:"refused,omitempty"`
 }
 
 func (d *Daemon) cloudListsView() *listsView {
@@ -760,7 +815,30 @@ func (d *Daemon) cloudListsView() *listsView {
 	if !c.failingSince.IsZero() {
 		v.Waiting = roughDuration(time.Since(c.failingSince))
 	}
+	v.Refused = c.refused
 	return v
+}
+
+// cloudRefusalNotice tells a cloud session, once for each run of refusals, that every machine
+// of its user refused its requests, so that the assistant says so to the user and does not go
+// on as if its turns were shared. It says that a removed or suspended cloud key meets this
+// refusal, and not which, since the session cannot tell (D-253).
+func (d *Daemon) cloudRefusalNotice(session string) string {
+	c := d.cloud
+	if c == nil {
+		return ""
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.refused || c.told[session] {
+		return ""
+	}
+	if c.told == nil {
+		c.told = map[string]bool{}
+	}
+	c.told[session] = true
+	return "<cogmer-notice>\nEvery machine of the user refused this session's requests, so this session's turns are not being shared." +
+		" A cloud environment that was removed or suspended meets this refusal, and the session cannot tell which. Say so to the user.\n</cogmer-notice>\n"
 }
 
 // --- the machine's side: answering a cloud session ---

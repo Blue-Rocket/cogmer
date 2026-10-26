@@ -138,6 +138,9 @@ type Daemon struct {
 	home      string
 	newPhrase func() (Phrase, error)
 	advertise string
+	// afterRetire runs once this machine has erased its keys at the request of another of the
+	// user's machines, which is to end the process unless a test replaces it (D-252).
+	afterRetire func()
 
 	// cloud is a cloud session's setup and the state of its lists, nil on a machine of
 	// the user's own (D-216, D-245). cloudEnv says the environment holds a cloud value,
@@ -415,7 +418,7 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 	// A session in a room its user was removed from is told so once, and keeps
 	// capturing its own turns (D-241, an expelled user is told; capture continues). A
 	// failure to read the room's list tells nothing and blocks nothing.
-	notice := d.expulsionNotice(room, req.SessionID)
+	notice := d.expulsionNotice(room, req.SessionID) + d.cloudRefusalNotice(req.SessionID)
 
 	meta := map[string]any{"cwd": req.CWD, "promptId": req.PromptID}
 	if refs := storeImages(store, pasted); len(refs) > 0 {

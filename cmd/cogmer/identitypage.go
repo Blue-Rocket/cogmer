@@ -97,6 +97,7 @@ func (d *Daemon) selfLocalRoutes(mux *http.ServeMux) {
 	// Removing a machine, and certifying a new shared key with the phrase typed into
 	// the page (D-220; D-223, the recovery phrase is typed only into the daemon's
 	// browser page).
+	mux.HandleFunc("/machines/retire/ask", guardLocal(d.handleRetireAsk))
 	mux.HandleFunc("/machines/remove/propose", guardLocal(d.handleRemovePropose))
 	mux.HandleFunc("/machines/remove", guardLocal(d.handleRemove))
 	mux.HandleFunc("/machines/newkey/preview", guardLocal(d.handleNewKeyPreview))
@@ -107,6 +108,7 @@ func (d *Daemon) selfPeerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/self/add", d.handleMachineAdd)
 	mux.HandleFunc("/self/lists", d.handleSelfLists)
 	mux.HandleFunc("/self/fetch", d.handleSelfFetch)
+	mux.HandleFunc("/self/retire", d.handleSelfRetire)
 }
 
 func (d *Daemon) handleIdentityPage(w http.ResponseWriter, r *http.Request) {

@@ -237,7 +237,8 @@ const ROOM = decodeURIComponent(location.pathname.replace(/^\/room\//, ''));
     listsEl.hidden=!l;
     if(!l) return;
     let t=l.from?'your lists from '+l.from+(l.age?', '+l.age+' old':''):'your lists: none of your machines has answered yet';
-    if(l.waiting) t+=' · waiting '+l.waiting+' for one of your machines';
+    if(l.refused) t+=' · every machine of yours refused this session, so its turns are not being shared';
+    else if(l.waiting) t+=' · waiting '+l.waiting+' for one of your machines';
     listsEl.textContent=t;
   }
 

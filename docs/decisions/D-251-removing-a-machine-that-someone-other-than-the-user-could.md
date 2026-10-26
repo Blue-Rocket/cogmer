@@ -1,6 +1,6 @@
 # D-251 — Removing a machine that someone other than the user could still use always certifies a new shared key
 
-**Date:** 2026-10-26 · **Status:** not built · **Areas:** identity, view
+**Date:** 2026-10-26 · **Status:** active · **Areas:** identity, view
 
 **Decision.** The page that removes a machine asks whether someone other than the user could still use it to act as the user. Someone other than the user could still use a machine when it works or could be made to work, has not been wiped, and is not in the user's hands. An answer of yes, or that the user does not know, removes the machine only together with a new shared key, which the recovery phrase certifies (D-220, a removal names the last event of a machine that counts, room by room). The page offers no plain removal of such a machine, so a user without the phrase leaves the machine as it is. The rule does not apply when the user says the machine was wiped or destroyed, or when the machine acknowledged erasing its keys (D-252, a reachable machine is asked to erase its keys before it is removed), and that removal needs no phrase. It does not apply to a cloud environment either, since a cloud key never holds the shared key (D-219, a user is a master key that certifies machines through a shared key), so removing the cloud key with a cutoff for each session key is the whole remedy (D-250, a removal of a cloud key names a cutoff for each of its session keys in each room).
 
