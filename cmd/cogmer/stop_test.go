@@ -170,7 +170,7 @@ var realGoCaches = func() []string {
 func buildVersion(t *testing.T, dir, v string) string {
 	t.Helper()
 	out := filepath.Join(dir, v, "cogmer")
-	cmd := exec.Command("go", "build", "-ldflags", "-X main.version="+v, "-o", out, ".")
+	cmd := exec.Command("go", "build", "-ldflags", "-X main.version="+v+" -X main.noBrowser=1", "-o", out, ".")
 	cmd.Env = append(os.Environ(), realGoCaches...)
 	b, err := cmd.CombinedOutput()
 	if err != nil {
