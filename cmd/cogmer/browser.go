@@ -1,10 +1,19 @@
 package main
 
 import (
+	"errors"
+	"flag"
 	"fmt"
 	"os/exec"
 	"runtime"
 )
+
+// noBrowser is set to a non-empty string when a test builds the binary, since a test has no
+// person at the screen and a page opened from one is a stray tab that points at a daemon
+// which has already exited. A test binary run in process is recognized by its flags.
+var noBrowser string
+
+var errNoPersonAtTheScreen = errors.New("a test has no person at the screen")
 
 // openInBrowser puts a page in front of the person at this machine.
 //
@@ -18,6 +27,9 @@ import (
 // over SSH, a container, a server has no browser, and pairing has to remain possible
 // there -- so the terminal ceremony is not dead code, it is the other branch.
 func openInBrowser(url string) error {
+	if noBrowser != "" || flag.Lookup("test.v") != nil {
+		return fmt.Errorf("could not open a browser (%w)", errNoPersonAtTheScreen)
+	}
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "darwin":
