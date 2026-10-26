@@ -780,7 +780,7 @@ func TestSelfMachinesExistsAndOpensThePageAtItsMachines(t *testing.T) {
 		return
 	}
 	dir := t.TempDir()
-	bin := buildVersion(t, dir, "self-machines-test")
+	bin := buildVersion(t, dir, testBuildVersion)
 	run := func(args ...string) (string, int) {
 		cmd := exec.Command(bin, args...)
 		cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + dir, "COGMER_HOME=" + filepath.Join(dir, "home"),

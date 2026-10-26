@@ -4,12 +4,14 @@ package main
 
 import (
 	"bufio"
+	"io"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -167,16 +169,85 @@ var realGoCaches = func() []string {
 	return []string{"GOMODCACHE=" + lines[0], "GOCACHE=" + lines[1]}
 }()
 
+// testBuildVersion is the version of a binary that a test builds without needing a particular one.
+// Tests that name a version of their own, because they compare versions, still get their own.
+const testBuildVersion = "test-build"
+
+// A build links the whole program and takes about 4.5s, and 17 tests wanted one, so the process
+// builds each version once, in a directory of its own, and hands every test a copy at the path it
+// asked for. A copy and not a link, since a test may write over its binary.
+var (
+	sharedBuildsMu  sync.Mutex
+	sharedBuildsDir string
+	sharedBuilds    = map[string]*sharedBuild{}
+)
+
+type sharedBuild struct {
+	once sync.Once
+	path string
+	err  string
+}
+
 func buildVersion(t *testing.T, dir, v string) string {
 	t.Helper()
+	sharedBuildsMu.Lock()
+	if sharedBuildsDir == "" {
+		d, err := os.MkdirTemp("", "cogmer-test-builds-")
+		if err != nil {
+			sharedBuildsMu.Unlock()
+			t.Fatal(err)
+		}
+		sharedBuildsDir = d
+	}
+	b := sharedBuilds[v]
+	if b == nil {
+		b = &sharedBuild{}
+		sharedBuilds[v] = b
+	}
+	root := sharedBuildsDir
+	sharedBuildsMu.Unlock()
+
+	b.once.Do(func() {
+		b.path = filepath.Join(root, v, "cogmer")
+		cmd := exec.Command("go", "build", "-ldflags", "-X main.version="+v+" -X main.noBrowser=1", "-o", b.path, ".")
+		cmd.Env = append(os.Environ(), realGoCaches...)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			b.err = err.Error() + "\n" + string(out)
+		}
+	})
+	if b.err != "" {
+		t.Fatalf("build %s: %s", v, b.err)
+	}
 	out := filepath.Join(dir, v, "cogmer")
-	cmd := exec.Command("go", "build", "-ldflags", "-X main.version="+v+" -X main.noBrowser=1", "-o", out, ".")
-	cmd.Env = append(os.Environ(), realGoCaches...)
-	b, err := cmd.CombinedOutput()
+	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	src, err := os.Open(b.path)
 	if err != nil {
-		t.Fatalf("build %s: %v\n%s", v, err, b)
+		t.Fatal(err)
+	}
+	defer src.Close()
+	dst, err := os.OpenFile(out, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := io.Copy(dst, src); err != nil {
+		dst.Close()
+		t.Fatal(err)
+	}
+	if err := dst.Close(); err != nil {
+		t.Fatal(err)
 	}
 	return out
+}
+
+// removeSharedBuilds deletes the binaries the process built, when the tests have finished.
+func removeSharedBuilds() {
+	sharedBuildsMu.Lock()
+	defer sharedBuildsMu.Unlock()
+	if sharedBuildsDir != "" {
+		_ = os.RemoveAll(sharedBuildsDir)
+	}
 }
 
 func waitForVersion(t *testing.T, addr, want string) {

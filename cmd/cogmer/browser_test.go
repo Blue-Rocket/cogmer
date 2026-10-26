@@ -45,7 +45,7 @@ func TestABinaryBuiltByATestOpensNoBrowser(t *testing.T) {
 		t.Skip("builds the binary")
 	}
 	dir := t.TempDir()
-	bin := buildVersion(t, dir, "no-browser-test")
+	bin := buildVersion(t, dir, testBuildVersion)
 	path, marker := fakeBrowsers(t)
 	hooks, peer := freeAddr(t), freeAddr(t)
 	env := []string{"PATH=" + path, "HOME=" + dir, "COGMER_HOME=" + filepath.Join(dir, "home"),
@@ -57,7 +57,7 @@ func TestABinaryBuiltByATestOpensNoBrowser(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = daemon.Process.Kill(); _ = daemon.Wait() }()
-	waitForVersion(t, hooks, "no-browser-test")
+	waitForVersion(t, hooks, testBuildVersion)
 
 	cmd := exec.Command(bin, "machines")
 	cmd.Env = env

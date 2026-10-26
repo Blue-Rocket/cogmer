@@ -240,7 +240,7 @@ func TestCodexCannotUseAClaudeDeliveryFallback(t *testing.T) {
 }
 
 func TestCodexHookOutputsValidContextAndFailsOpen(t *testing.T) {
-	bin := buildVersion(t, t.TempDir(), "codex-hook-test")
+	bin := buildVersion(t, t.TempDir(), testBuildVersion)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get(localGuardHeader) != localGuardValue {
 			t.Error("hook omitted the local guard")
@@ -283,7 +283,7 @@ func TestCodexHookOutputsValidContextAndFailsOpen(t *testing.T) {
 }
 
 func TestCodexCommandWrapperRequiresItsOwnSessionAndRendersItsCommands(t *testing.T) {
-	bin := buildVersion(t, t.TempDir(), "codex-command-test")
+	bin := buildVersion(t, t.TempDir(), testBuildVersion)
 	root, err := filepath.Abs("../../plugin")
 	if err != nil {
 		t.Fatal(err)

@@ -178,7 +178,7 @@ func TestAHookForAnUnsupportedHostFailsOpen(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds the binary")
 	}
-	bin := buildVersion(t, t.TempDir(), "host-flag-test")
+	bin := buildVersion(t, t.TempDir(), testBuildVersion)
 	cmd := exec.Command(bin, "hook", "--host", "emacs", "prompt")
 	cmd.Stdin = strings.NewReader(`{"session_id":"s","prompt":"x"}`)
 	cmd.Env = append(os.Environ(), "COGMER_ADDR=127.0.0.1:1")
@@ -343,7 +343,7 @@ func TestCreateAndJoinRefuseBeforeWritingWhenTheHostCannotBeTold(t *testing.T) {
 		t.Skip("builds the binary")
 	}
 	dir := t.TempDir()
-	bin := buildVersion(t, dir, "host-unclear-test")
+	bin := buildVersion(t, dir, testBuildVersion)
 	home := filepath.Join(dir, "home")
 	run := func(extra []string, args ...string) (string, int) {
 		cmd := exec.Command(bin, args...)
@@ -396,7 +396,7 @@ func TestCommandsNameTheNextCommandTheWayTheHostInvokesIt(t *testing.T) {
 		t.Skip("builds the binary")
 	}
 	dir := t.TempDir()
-	bin := buildVersion(t, dir, "command-text-test")
+	bin := buildVersion(t, dir, testBuildVersion)
 	run := func(home string, extra []string, args ...string) string {
 		cmd := exec.Command(bin, args...)
 		cmd.Env = append([]string{"PATH=/usr/bin:/bin", "HOME=" + dir, "COGMER_HOME=" + home,

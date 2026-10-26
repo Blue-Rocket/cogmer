@@ -62,6 +62,7 @@ func TestMain(m *testing.M) {
 		_ = exec.Command("docker", "image", "rm", "-f", repo+":"+tag).Run()
 	}
 	imagesMu.Unlock()
+	removeSharedBuilds()
 	os.Exit(code)
 }
 
