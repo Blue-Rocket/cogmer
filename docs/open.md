@@ -289,23 +289,30 @@ slice of the second run, and none has a choice taken yet:
 - Whether a colleague holding shares of the recovery phrase could recover a user who has lost
   it, which no decision has examined.
 
-**A cloud session whose cloud key is removed is never told, and goes on recording turns that no
-machine receives.** On 2026-10-26, after the maintainer removed a cloud environment as not stolen,
-the user's machine rejected the session's certificate in both directions, and the session's next
-turn was recorded in its own room store and reached nobody (`e85170d`). The session learns the
-user's records only from the lists, and the machine that removed the key refuses to send them,
-so the only signs are a line in the session daemon's log saying that none of the user's machines
-answered for the lists, and the daemon's room page saying the lists are waiting. A user who
-removes an environment while a session there is still open gets no message in that session that
-its turns are no longer shared.
+**A cloud session whose cloud key is removed says that none of the user's machines answered, though every one refused it.**
+On 2026-10-26, after the maintainer removed a cloud environment as not stolen, the user's machine rejected
+the session's certificate in both directions, and the session's next turn was recorded in its own room
+store and reached nobody (`e85170d`). The session daemon's log said that none of the user's machines
+answered for the lists, though each had answered with a refusal, and the room page said the lists were
+waiting, so a user who removed an environment while a session there was open got no sign in that session
+that its turns were no longer shared. D-253 (a cloud session says its turns are not being shared when every
+machine it asks refuses it) decides the wording, and the daemon and the page differ from it until it is built.
 
-Options:
-- A machine answers a removed cloud key's fetch of the lists with a signed statement of the
-  removal, rather than rejecting the connection. This needs a decision on what a removed key may
-  still be told, since the answer goes to whoever holds the key, a thief included.
-- The session reads a run of refused fetches from every machine it knows as a sign that it may
-  have been removed, and says so at its next prompt. This costs no change on the machines, and
-  cannot tell a removal from a suspension or a machine that is down.
+**The removal page lets a machine that someone other than the user could still use be removed without a
+new shared key.** On 2026-10-26, as `cmd/cogmer/identity.html` has it, choosing Remove asks "Was the
+machine stolen?", with the buttons "Stolen, or it may be in someone else's hands" and "Not stolen:
+retired, or lost where nobody will use it". Either answer changes only the cutoffs the page proposes.
+The new shared key is a separate card that nothing connects to the answer, so a user who answers that the
+machine was stolen has to know to use it, and a machine removed as lost still holds a live shared key,
+which whoever has the machine can use to add machines of their own. D-251 (removing a machine that someone
+other than the user could still use always certifies a new shared key) and D-252 (a reachable machine is
+asked to erase its keys before it is removed) decide the fix, and D-220 and the specification describe it,
+so they differ from the page until it is built.
+
+The page needs the question "could someone other than you still use this machine" in place of "stolen", a
+removal that certifies the new key in the same act and has no plain form for such a machine, and the erase
+request and its acknowledgement. The wording of the question, and what the page says to a user who has no
+phrase at hand, are not decided.
 
 **Two checks of a cloud session in a room with a paired machine are not shown, and one fact
 about where the cloud key is kept is unknown.** D-246 (a cloud environment is added from the machines page)

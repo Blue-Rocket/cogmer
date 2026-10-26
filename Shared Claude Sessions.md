@@ -575,6 +575,9 @@ The room's view in a cloud session says which of the user's machines its lists c
 and how old they are, so that a user can tell when a colleague or a removal made since may
 not have reached it.
 
+A session in a cloud environment says, when every machine it asks refuses it, that its turns are not
+being shared, so that a user whose environment was removed does not go on believing the session shares.
+
 ## Peer names
 
 A peer has two identifiers, for the same reason a room does: an identifier derived
@@ -765,6 +768,8 @@ the vouching that lets their machines speak as them. Every machine the user stil
 vouched for again, and any machine the user does not recognize, such as one a thief
 added, stops speaking as the user, so that a theft ends without the user having to find
 every machine the thief made.
+
+Removing a machine that someone other than the user could still use, because it works, has not been wiped and is not in the user's hands, always renews the vouching, so that a removed machine's copy of the key can never add machines of its own.
 
 The turns of a machine that is no longer vouched for appear nowhere: not in the room
 view, not in an export, and never to an assistant, so that a machine the user does not
