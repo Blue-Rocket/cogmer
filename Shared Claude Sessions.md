@@ -556,6 +556,9 @@ command or a terminal, because anything typed into an assistant reaches the mode
 the service that runs it, and a phrase held there is the user's identity held by
 others.
 
+A phrase copied from the page that shows it, with the numbers of the list before its
+words, is read as the same phrase, so that copying it takes no editing.
+
 A session in a cloud environment speaks as its user as a machine does, and never asks
 for the recovery phrase, because its container is not a place the user controls.
 

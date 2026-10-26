@@ -89,12 +89,19 @@ var phraseIndex = func() [2]map[string]byte {
 	return idx
 }()
 
-// ParsePhrase reads a phrase the user typed, ignoring case and any run of
-// whitespace. Its errors say what is wrong and where, and never quote the input:
-// an error is shown, logged and pasted into reports, and a word in it is part of
-// a phrase held by whoever reads it.
+// ParsePhrase reads a phrase the user typed, ignoring case, any run of whitespace
+// and a list number before a word, since a phrase copied from the numbered list
+// that shows it carries them (D-254, a recovery phrase is read with the list numbers
+// before its words ignored). Its errors say what is wrong and where, and never quote the
+// input: an error is shown, logged and pasted into reports, and a word in it is
+// part of a phrase held by whoever reads it.
 func ParsePhrase(s string) (Phrase, error) {
-	words := strings.Fields(s)
+	var words []string
+	for _, w := range strings.Fields(s) {
+		if !isListNumber(w) {
+			words = append(words, w)
+		}
+	}
 	if len(words) != phraseWords {
 		return Phrase{}, fmt.Errorf("the phrase has %d words, want %d", len(words), phraseWords)
 	}
@@ -148,4 +155,21 @@ func (p Phrase) GoString() string { return p.String() }
 // in whatever file, response or log that JSON reaches.
 func (p Phrase) MarshalJSON() ([]byte, error) {
 	return nil, errors.New("a recovery phrase is never marshalled")
+}
+
+// isListNumber says whether w is a list number such as "7", "7." or "7)". No word of
+// the list is made of digits, so dropping one never drops a word, and a number that
+// disagrees with its word's position is no loss, since the alternating halves and
+// the check words catch a swapped or wrong word.
+func isListNumber(w string) bool {
+	w = strings.TrimRight(w, ".):")
+	if w == "" {
+		return false
+	}
+	for _, r := range w {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }

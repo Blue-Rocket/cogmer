@@ -83,6 +83,31 @@ func TestAPhraseRoundTripsThroughItsWords(t *testing.T) {
 	}
 }
 
+// A phrase copied from the numbered list that shows it carries a number before each
+// word, in whatever form the browser or a note put it.
+func TestAPhraseCopiedWithItsListNumbersParses(t *testing.T) {
+	want, err := ParsePhrase(frozenPhraseWords)
+	if err != nil {
+		t.Fatal(err)
+	}
+	words := strings.Fields(frozenPhraseWords)
+	for _, form := range []string{"%d.", "%d)", "%d:", "%d"} {
+		var b strings.Builder
+		for i, w := range words {
+			fmt.Fprintf(&b, form+" %s\n", i+1, w)
+		}
+		got, err := ParsePhrase(b.String())
+		if err != nil || got != want {
+			t.Errorf("a phrase numbered as %q did not parse to the same phrase: %v", form, err)
+		}
+	}
+	// a number is never a word, so one left in place of a word is still a missing word
+	if _, err := ParsePhrase(strings.Join(append([]string{"7."}, words[1:]...), " ")); err == nil ||
+		!strings.Contains(err.Error(), "has 17 words, want 18") {
+		t.Errorf("a number standing in for a word was not reported as a missing word: %v", err)
+	}
+}
+
 func TestNewPhraseDrawsADifferentPhraseEachTime(t *testing.T) {
 	seen := map[Phrase]bool{}
 	for range 50 {
