@@ -708,10 +708,12 @@ every other room has, so that its guests never disagree about who is in it.
 A machine is added from a machine the user already has, and never by typing the
 recovery phrase into it, so that the phrase is typed only to recover.
 
-The new machine's page shows its pairing string, the user enters it in the page of
-the machine they already have, and both pages show two words, which the user compares
-and confirms, so that a string replaced on the way never adds someone else's machine
-as the user's.
+The new machine's page shows its pairing string with a button that copies it whole, so
+that a character lost in copying never fails the exchange.
+
+The user enters the string in the page of the machine they already have, and both pages
+show two words, which the user compares and confirms, so that a string replaced on the
+way never adds someone else's machine as the user's.
 
 The words for adding a machine can never be mistaken for the words of a pairing with a
 colleague, so that neither exchange can pass for the other.

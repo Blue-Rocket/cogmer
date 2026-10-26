@@ -153,8 +153,14 @@ async function joinStart(){
   show(`<p class="lead">Add this machine from the one you already have.</p>
     <div class="card"><p style="margin:0 0 6px">On that machine, run <code>/cogmer:self-machines</code>,
       choose to add a machine, and enter this:</p>
-      <code class="fp">${esc(res.string)}</code>
+      <code class="fp" id="fp">${esc(res.string)}</code>
+      <div class="row"><button class="yes" id="copyString">Copy</button></div>
       <p class="hint"><span class="spin"></span>Waiting for it. Both pages will then show two words.</p></div>`);
+  el('copyString').onclick = async () => {
+    try { await navigator.clipboard.writeText(res.string); }
+    catch(e){ const r = document.createRange(); r.selectNodeContents(el('fp')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); document.execCommand('copy'); }
+    el('copyString').textContent = 'Copied';
+  };
   pollJoin();
 }
 
