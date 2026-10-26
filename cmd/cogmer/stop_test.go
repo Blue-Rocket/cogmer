@@ -151,10 +151,28 @@ func TestADaemonOfAnotherVersionIsReplaced(t *testing.T) {
 	}
 }
 
+// realGoCaches names the module and build caches the way the test process was started. A test
+// that has pointed HOME at a temporary directory would otherwise make `go build` fill a new
+// module cache under it, which takes about a minute and cannot be deleted when the test
+// ends, since the module cache is read-only.
+var realGoCaches = func() []string {
+	out, err := exec.Command("go", "env", "GOMODCACHE", "GOCACHE").Output()
+	if err != nil {
+		return nil
+	}
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(lines) != 2 {
+		return nil
+	}
+	return []string{"GOMODCACHE=" + lines[0], "GOCACHE=" + lines[1]}
+}()
+
 func buildVersion(t *testing.T, dir, v string) string {
 	t.Helper()
 	out := filepath.Join(dir, v, "cogmer")
-	b, err := exec.Command("go", "build", "-ldflags", "-X main.version="+v, "-o", out, ".").CombinedOutput()
+	cmd := exec.Command("go", "build", "-ldflags", "-X main.version="+v, "-o", out, ".")
+	cmd.Env = append(os.Environ(), realGoCaches...)
+	b, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("build %s: %v\n%s", v, err, b)
 	}

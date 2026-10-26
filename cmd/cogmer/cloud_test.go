@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -498,5 +499,29 @@ func TestFrozenListsHeaderStillVerifiesAndHashesAsItDid(t *testing.T) {
 	h.Version++
 	if h.VerifyBy(k.machine.pub) == nil {
 		t.Error("an altered frozen header verified")
+	}
+}
+
+// The log says once that the lists arrived, naming the machine that answered, and is
+// quiet at the next fetch that succeeds.
+func TestACloudSessionLogsThatItsListsArrivedOnce(t *testing.T) {
+	a, _ := twoMachines(t)
+	value := addCloudEnv(t, a, "web")
+	c := newCloudMachine(t, value)
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
+
+	c.d.cloudRound(time.Now())
+	if n := strings.Count(buf.String(), "cloud: your lists arrived from "); n != 1 {
+		t.Fatalf("the first fetch logged its arrival %d times:\n%s", n, buf.String())
+	}
+	if !regexp.MustCompile(`your lists arrived from \S`).MatchString(buf.String()) {
+		t.Errorf("the line names no machine:\n%s", buf.String())
+	}
+	buf.Reset()
+	c.d.cloudRound(time.Now().Add(time.Hour))
+	if strings.Contains(buf.String(), "your lists arrived") {
+		t.Errorf("a later fetch that succeeded logged again:\n%s", buf.String())
 	}
 }

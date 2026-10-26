@@ -370,6 +370,36 @@ func (m *Membership) RoomOnList(user, nameOrID string) (string, roomEntry, bool)
 	return hits[0], found, true
 }
 
+// listedRoom is a room on the user's room list that this machine has not recorded.
+type listedRoom struct {
+	RoomID string
+	Name   string
+}
+
+// RoomsToJoin lists the rooms on the user's room list that this machine neither holds
+// nor has been offered, by name, so that a machine where no session has joined one
+// says it is there to join rather than that there are no rooms (D-228, a session on
+// another of the user's machines joins such a room by name).
+func (m *Membership) RoomsToJoin(user string) []listedRoom {
+	here := map[string]bool{}
+	if rooms, err := m.Rooms(); err == nil {
+		for _, r := range rooms {
+			here[r.RoomID] = true
+		}
+	}
+	for _, o := range m.Offers() {
+		here[o.RoomID] = true
+	}
+	var out []listedRoom
+	for id, v := range m.lists(user).rooms {
+		if !here[id] {
+			out = append(out, listedRoom{RoomID: id, Name: firstNonEmpty(v.Name, id)})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
 // JoinFromList records here a room found on the user's room list, so that this
 // machine fetches it. The user's machines that joined it are where its events are
 // fetched from (D-228, its machine then fetches the room's guest list and events from
