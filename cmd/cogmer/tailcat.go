@@ -123,7 +123,7 @@ func (d *tailcatDialer) clientFor(addr string) *tailcat.Client {
 	if c, ok := d.clients[addr]; ok {
 		return c
 	}
-	c := tailcat.NewClient(tailcat.Addr(addr))
+	c := newRelayClient(addr)
 	d.clients[addr] = c
 	return c
 }
@@ -205,7 +205,7 @@ func (d *tailcatDialer) Diagnose(ctx context.Context, e Endpoint) string {
 		diag.Region = fmt.Sprintf("relay region %d", info.RegionID)
 	}
 	held := d.clientFor(e.Value)
-	fresh := tailcat.NewClient(tailcat.Addr(e.Value))
+	fresh := newRelayClient(e.Value)
 	defer func() { go func() { _ = fresh.Close() }() }()
 
 	ping := func(c *tailcat.Client) pingOutcome {
@@ -451,7 +451,7 @@ func newSelfCheck(srv *tailcat.Server, endpoint string) func(context.Context) Se
 			return sc
 		}
 		start := time.Now()
-		c := tailcat.NewClient(tailcat.Addr(e.Value))
+		c := newRelayClient(e.Value)
 		defer c.Close()
 		conn, err := c.DialTCPPort(ctx, tailcatPort)
 		sc.TookMs = time.Since(start).Milliseconds()

@@ -449,6 +449,7 @@ func runDaemon() {
 	// A daemon that is running ends the user's stop, so the marker that says one stands
 	// is removed here, whoever started this daemon (D-208).
 	_ = os.Remove(stoppedMarker())
+	keepDaemonLogBounded(daemonLogPath(), daemonLogMax, daemonLogCheckEvery)
 	id, err := LoadIdentity()
 	if err != nil {
 		log.Fatalf("identity: %v", err)
