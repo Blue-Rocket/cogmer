@@ -106,12 +106,24 @@ async function create(){
   try { created = await post('/identity/phrase'); } catch(e){ show(errorBox(e.message)); return; }
   if(created.error){ show(errorBox(created.error)); return; }
   const words = created.words.map(w => `<li>${esc(w)}</li>`).join('');
-  show(`<p class="lead">Write down these eighteen words, in order.</p>
+  show(`<p class="lead">Save these eighteen words, in order.</p>
     <div class="card"><ol class="phrase">${words}</ol>
+      <div class="row"><button id="copyPhrase">Copy the words</button></div>
       <p class="hint">This is the only time they are shown. They are you: whoever holds them can
       speak as you, and with them you can get your identity back if you lose every machine.
-      Keep them on paper or in a password manager, never in a chat or a note an assistant can read.</p>
-      <div class="row"><button class="yes" id="wrote">I have written them down</button></div></div>`);
+      Copy them into your password manager as a secure note now. It survives the loss of every machine,
+      and no assistant reads it. Never put them in a chat or a note an assistant can read.
+      They stay on this computer's clipboard until you copy something else.</p>
+      <div class="row"><button class="yes" id="wrote">I have saved them</button></div></div>`);
+  el('copyPhrase').onclick = async () => {
+    const text = created.words.join(' ');
+    try { await navigator.clipboard.writeText(text); }
+    catch(e){
+      const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t);
+      t.select(); document.execCommand('copy'); t.remove();
+    }
+    el('copyPhrase').textContent = 'Copied';
+  };
   el('wrote').onclick = confirmForm;
 }
 

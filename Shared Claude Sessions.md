@@ -693,6 +693,10 @@ A user who has not is given a new identity. The page shows the recovery phrase, 
 the user confirm words from it, and takes the name colleagues will see, so that the
 phrase is known to be kept before anything depends on it.
 
+The page that shows the recovery phrase copies the phrase on request and says to keep it
+in a password manager, so that the user keeps the phrase where it survives the loss of
+every machine and no assistant reads it.
+
 A user who has another machine at hand adds this machine from it. A user who has no
 machine left recovers from the phrase.
 
@@ -2482,7 +2486,7 @@ and arguments with `$cogmer`, such as `$cogmer room-create`:
 # once, the first time a command needs your identity
 /cogmer:self-status
 → points to the daemon's page: have you used cogmer on another machine?
-→ no: write down the recovery phrase, confirm words from it, give your name
+→ no: save the recovery phrase, confirm words from it, give your name
 
 # once with each colleague, on a call with them, both at the same time
 /cogmer:peer-pair ed25519:M7Kd…4Fq2@198.51.100.7:4783#David
