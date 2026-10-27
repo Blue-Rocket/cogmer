@@ -61,6 +61,7 @@ every room, and `self-` commands act on you.
 | `room-conflicts` | events set aside because a peer's sequence counter went backwards |
 | `room-list` | the rooms on this machine, and any waiting for you to accept |
 | `peer-list` | the peers this machine knows, and whether each is verified |
+| `peer-rename <peer> <new name>` | change what you call a colleague, on all your machines; whether they are verified, and their place in rooms, are unchanged |
 | `peer-forget <peer>` | stop recognizing a colleague on all your machines; their place in rooms is unchanged |
 | `peer-pair [their pairing string] [what you call them]` | pair with a colleague by comparing two words in your browser |
 | `self-status` | who you are, what you send colleagues, whether they can reach you, and which versions are running |

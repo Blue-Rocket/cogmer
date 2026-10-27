@@ -46,6 +46,7 @@ var typedCommands = map[string][]commandStep{
 	"room-conflicts": {{"", "conflicts"}},
 	"peer-list":      {{"", "peers"}},
 	"peer-forget":    {{"", "forget"}},
+	"peer-rename":    {{"", "rename"}},
 	"peer-pair":      {{"", "pair"}},
 	"self-name":      {{"", "name"}},
 	"self-status":    {{"", "whoami"}},

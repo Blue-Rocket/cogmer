@@ -22,6 +22,7 @@ commands and ask which the user wants.
 | `self-cowork` | `cowork-setup` |
 | `peer-list` | `peers` |
 | `peer-pair` | `pair <pairing-string> [label]` |
+| `peer-rename` | `rename <peer> <new name>` |
 | `peer-forget` | `forget <peer>` |
 | `room-create` | `create [--show-only]` |
 | `room-join` | `join <room> [--show-only]` |

@@ -81,6 +81,8 @@ func main() {
 		runAllow(os.Args[2:])
 	case "forget":
 		runForget(os.Args[2:])
+	case "rename":
+		runRename(os.Args[2:])
 	case "verify":
 		runVerify(os.Args[2:])
 	case "rooms":
@@ -155,6 +157,7 @@ Peers — durable, above any room. Done once with each colleague:
   cogmer peers           List peers this machine knows
   cogmer verify <peer>   Re-run just the two-word check
   cogmer allow <id> [nm] Record a peer WITHOUT verifying (scripts, tests)
+  cogmer rename <peer> <name> Change what you call a peer
   cogmer forget <id>     Discard a peer entirely
 
 Rooms — per room, repeated as often as you like:
@@ -976,6 +979,59 @@ func runAllow(args []string) {
 		fmt.Printf("finish with:  %s verify %s\n", invocation(), firstNonEmpty(name, PeerName(args[0])))
 		fmt.Println(commandText("(/cogmer:peer-pair does both at once, in a browser, and is the ordinary way.)"))
 	})
+}
+
+func runRename(args []string) {
+	if len(args) < 2 {
+		log.Fatal(commandText("usage: /cogmer:peer-rename <peer> <new name>"))
+	}
+	withMembership(func(m *Membership, id *Identity) {
+		text, err := renamePeer(m, id, args[0], strings.Join(args[1:], " "))
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(text)
+	})
+}
+
+// renamePeer changes the name this user gives a colleague and nothing else: whether
+// they are verified, and every room, stay as they were (D-257, a user renames a
+// colleague with a command that changes the label and nothing else). The change goes
+// to the user's other machines as a label does (D-228). It returns what to tell the
+// user.
+func renamePeer(m *Membership, id *Identity, who, name string) (string, error) {
+	pid, err := resolvePeer(m, who)
+	if err != nil {
+		return "", err
+	}
+	pid = m.colleagueOf(pid)
+	if !m.Knows(pid) {
+		return "", fmt.Errorf(commandText("no peer known as %q; run /cogmer:peer-list"), who)
+	}
+	newName := sanitizeName(name)
+	if newName == "" {
+		return "", errors.New(commandText("usage: /cogmer:peer-rename <peer> <new name>"))
+	}
+	old := firstNonEmpty(m.Label(pid), PeerName(pid))
+	if newName == old {
+		return fmt.Sprintf("%s is already called %s.", PeerName(pid), newName), nil
+	}
+	if err := m.Allow(pid, newName); err != nil {
+		var taken *NameTakenError
+		if errors.As(err, &taken) {
+			return "", fmt.Errorf(commandText("you already call a different peer %q (%s), so %s is unchanged. Pick another name, or /cogmer:peer-forget the other one first."),
+				taken.Name, PeerName(taken.Existing), old)
+		}
+		return "", fmt.Errorf("rename: %w", err)
+	}
+	out := fmt.Sprintf("renamed %s to %s.", old, newName)
+	if newName != strings.TrimSpace(name) {
+		out += fmt.Sprintf(" (The name was shortened to what a label can hold: %q.)", newName)
+	}
+	if err := m.RecordColleague(id, pid); err != nil {
+		out += fmt.Sprintf("\nRenamed here, but your other machines were not told: %v", err)
+	}
+	return out, nil
 }
 
 func runForget(args []string) {

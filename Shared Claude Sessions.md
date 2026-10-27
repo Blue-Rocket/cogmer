@@ -740,6 +740,13 @@ Forgetting a colleague on one machine forgets them on every machine of the user,
 that a colleague the user meant to drop is not still trusted on a machine they forgot
 about.
 
+A user can change the name they give a colleague, and the new name is the name on every
+machine of the user, so that a colleague the user named in a hurry is not called two
+things.
+
+Renaming a colleague changes nothing about whether they are verified or which rooms they
+are in, so that a name never grants or removes trust.
+
 A user's room list holds each room the user is a guest of, with its name, its
 identifier and which of the user's machines have joined it, and holds none of its
 guests or turns, so that a session on any of the user's machines can join the room by
@@ -1206,6 +1213,7 @@ Both lists can be inspected and changed:
 ```
 /cogmer:peer-list                    list known peers
 /cogmer:peer-pair <string> [name]    record a peer and verify it
+/cogmer:peer-rename <peer> <name>    change what you call a peer
 /cogmer:peer-forget <peer>           discard a peer
 
 /cogmer:room-status                  this room, and who is in it
