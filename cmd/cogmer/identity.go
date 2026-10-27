@@ -114,7 +114,33 @@ func resolvedHomeDir() string {
 // state directory made by a shell script under a umask of 022, or by an older program,
 // is 0755, and nothing but this call would change that. Windows has no such bits, so
 // it only creates the directory there.
-func ensureStateDir() error { return ensureDir(homeDir()) }
+func ensureStateDir() error {
+	dir := homeDir()
+	if err := ensureDir(dir); err != nil {
+		return err
+	}
+	writeStateGitignore(dir)
+	return nil
+}
+
+// stateGitignore ignores everything in the state directory, itself included, so that a
+// bulk `git add` in a repository that holds the directory, such as a dotfiles repository
+// that adds the home folder, skips the keys and the rooms, and an explicit add of one is
+// refused unless forced (D-266, the state directory carries a .gitignore that ignores
+// everything).
+const stateGitignore = "# Made by cogmer. This folder holds your identity key and your rooms, and git must not track it.\n*\n"
+
+// writeStateGitignore makes the file when the directory has none, so one a user wrote is
+// left as it is, and does nothing about a failure, since the file is a protection and not
+// a requirement.
+func writeStateGitignore(dir string) {
+	f, err := os.OpenFile(filepath.Join(dir, ".gitignore"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return
+	}
+	_, _ = f.WriteString(stateGitignore)
+	_ = f.Close()
+}
 
 // ensureRoomsDir does the same for the folder of room databases.
 func ensureRoomsDir() error {
