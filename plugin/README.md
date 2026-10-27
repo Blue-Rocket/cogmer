@@ -1,7 +1,8 @@
 # cogmer
 
 This is the reference for the cogmer plugin once it is installed. What cogmer is,
-and how to install it, are in the repository's `README.md`.
+and how to install it, are in the repository's `README.md`. To install it on another
+machine, run `/plugin install cogmer --marketplace Blue-Rocket/cogmer`.
 
 ## What it adds to a session
 
