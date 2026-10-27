@@ -1,20 +1,20 @@
 ---
 description: Show the room this session is in, and who is in it
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" rooms:*), Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" guests:*), Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" where:*)
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" rooms:*), Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" guests:*), Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" where:*)
 disable-model-invocation: true
 ---
 
 ## Rooms
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" rooms`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" rooms`
 
 ## Guests of this session's room
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" guests`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" guests`
 
 ## Where to watch it
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" where`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" where`
 
 ## Your task
 

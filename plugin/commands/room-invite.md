@@ -1,13 +1,13 @@
 ---
 description: Admit a peer you have paired with to this room
 argument-hint: <peer>
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" invite:*)
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" invite:*)
 disable-model-invocation: true
 ---
 
 ## What happened
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" invite $ARGUMENTS`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" invite $ARGUMENTS`
 
 ## Your task
 

@@ -1,12 +1,12 @@
 ---
 description: Set this machine up for Claude Cowork
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" cowork-setup:*)
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" cowork-setup:*)
 disable-model-invocation: true
 ---
 
 ## What happened
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" cowork-setup`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" cowork-setup`
 
 ## Your task
 

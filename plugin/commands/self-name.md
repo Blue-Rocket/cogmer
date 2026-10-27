@@ -1,13 +1,13 @@
 ---
 description: Show or set the name other people see for you
 argument-hint: [what people should call you]
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" name:*)
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" name:*)
 disable-model-invocation: true
 ---
 
 ## What happened
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" name $ARGUMENTS`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" name $ARGUMENTS`
 
 ## Your task
 

@@ -1,12 +1,12 @@
 ---
 description: Rooms on this machine, and any waiting for you to accept
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" rooms:*)
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" rooms:*)
 disable-model-invocation: true
 ---
 
 ## What happened
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" rooms`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" rooms`
 
 ## Your task
 

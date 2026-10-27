@@ -1,13 +1,13 @@
 ---
 description: Discard a peer and every room admission it held
 argument-hint: <peer>
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" forget:*)
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" forget:*)
 disable-model-invocation: true
 ---
 
 ## What happened
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" forget $ARGUMENTS`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" forget $ARGUMENTS`
 
 ## Your task
 

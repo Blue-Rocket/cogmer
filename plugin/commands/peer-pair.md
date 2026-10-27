@@ -1,13 +1,13 @@
 ---
 description: Pair with a colleague: the two-word check, in your browser
 argument-hint: [their pairing string] [what you call them]
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" pair:*)
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" pair:*)
 disable-model-invocation: true
 ---
 
 ## What happened
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" pair $ARGUMENTS`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" pair $ARGUMENTS`
 
 ## Your task
 

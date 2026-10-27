@@ -1,12 +1,12 @@
 ---
 description: Restart the cogmer daemon on this machine
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" restart:*)
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" restart:*)
 disable-model-invocation: true
 ---
 
 ## What happened
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" restart`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" restart`
 
 ## Your task
 

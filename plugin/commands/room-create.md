@@ -1,13 +1,13 @@
 ---
 description: Create a room and put this session in it
 argument-hint: [--show-only]
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" create:*)
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" create:*)
 disable-model-invocation: true
 ---
 
 ## What happened
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" create $ARGUMENTS`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" create $ARGUMENTS`
 
 ## Your task
 

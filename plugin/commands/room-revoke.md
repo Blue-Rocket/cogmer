@@ -1,13 +1,13 @@
 ---
 description: Withdraw a peer's admission to this room
 argument-hint: <peer>
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" revoke:*)
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" revoke:*)
 disable-model-invocation: true
 ---
 
 ## What happened
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" revoke $ARGUMENTS`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" revoke $ARGUMENTS`
 
 ## Your task
 

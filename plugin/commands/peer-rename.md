@@ -1,13 +1,13 @@
 ---
 description: Change what you call a peer
 argument-hint: <peer> <new name>
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" rename:*)
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" rename:*)
 disable-model-invocation: true
 ---
 
 ## What happened
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" rename $ARGUMENTS`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" rename $ARGUMENTS`
 
 ## Your task
 

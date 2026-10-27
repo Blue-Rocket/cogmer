@@ -1,12 +1,12 @@
 ---
 description: Add, rename or remove your machines, or recover, in your browser
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" machines:*)
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" machines:*)
 disable-model-invocation: true
 ---
 
 ## What happened
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" machines`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" machines`
 
 ## Your task
 

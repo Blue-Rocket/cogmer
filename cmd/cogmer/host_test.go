@@ -307,7 +307,7 @@ func TestDeliveryWithoutEvidenceIsTrustedOnlyWhereThatHostsCheckFailed(t *testin
 	})
 }
 
-// The commands of the Claude plugin call cli.sh directly and Codex's go through
+// The commands of the Claude plugin call cli.sh and Codex's go through
 // codex-cli.sh, so cli.sh declares the host unless a wrapper already did.
 func TestCliDeclaresTheHostUnlessAWrapperAlreadyDid(t *testing.T) {
 	root, home := cliHarness(t)

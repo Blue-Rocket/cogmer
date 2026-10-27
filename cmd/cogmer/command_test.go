@@ -405,3 +405,57 @@ func TestOnlyAPromptThatIsACommandWaitsLongerAtTheBridge(t *testing.T) {
 		t.Error("the bridge gives up on a command before the daemon does")
 	}
 }
+
+// A command file runs cli.sh through bash, so a plugin copied without the execute bit
+// still works, and each shell line is allowed by a pattern naming that exact subcommand.
+// A line that does not start with the pattern's prefix is not allowed, and a pattern
+// wider than its line allows more than the command runs.
+func TestCommandFilesRunCliThroughBashAndAllowOnlyTheirOwnSubcommands(t *testing.T) {
+	files, _ := filepath.Glob("../../plugin/commands/*.md")
+	if len(files) < 10 {
+		t.Skip("plugin commands not readable")
+	}
+	const prefix = `bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" `
+	line := regexp.MustCompile("(?m)^!`(.*)`$")
+	for _, f := range files {
+		src, _ := os.ReadFile(f)
+		front, body, ok := splitFrontmatter(string(src))
+		if !ok {
+			t.Errorf("%s has no frontmatter", f)
+			continue
+		}
+		allowed := map[string]bool{}
+		for _, l := range strings.Split(front, "\n") {
+			rest, found := strings.CutPrefix(l, "allowed-tools: ")
+			if !found {
+				continue
+			}
+			for _, p := range strings.Split(rest, ", ") {
+				allowed[p] = true
+			}
+		}
+		lines := line.FindAllStringSubmatch(body, -1)
+		if len(lines) == 0 {
+			t.Errorf("%s runs no shell line", f)
+		}
+		used := map[string]bool{}
+		for _, m := range lines {
+			cmd, ok := strings.CutPrefix(m[1], prefix)
+			if !ok {
+				t.Errorf("%s runs %q, which does not run cli.sh through bash", f, m[1])
+				continue
+			}
+			sub, _, _ := strings.Cut(cmd, " ")
+			pat := "Bash(" + prefix + sub + ":*)"
+			used[pat] = true
+			if !allowed[pat] {
+				t.Errorf("%s runs %q and does not allow %s", f, m[1], pat)
+			}
+		}
+		for p := range allowed {
+			if !used[p] {
+				t.Errorf("%s allows %s, which none of its lines runs", f, p)
+			}
+		}
+	}
+}
