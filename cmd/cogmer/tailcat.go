@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -463,4 +464,12 @@ func newSelfCheck(srv *tailcat.Server, endpoint string) func(context.Context) Se
 		sc.Reached = true
 		return sc
 	}
+}
+
+// newRelayClient is a client of the relay library with its output filtered (the overlay is
+// confined to this file, D-068).
+func newRelayClient(addr string) *tailcat.Client {
+	c := tailcat.NewClient(tailcat.Addr(addr))
+	c.Logf = relayLibraryLogf(log.Printf)
+	return c
 }

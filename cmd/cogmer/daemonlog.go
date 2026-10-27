@@ -3,21 +3,11 @@ package main
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/tailscale/tailcat"
 )
-
-// newRelayClient is a client of the relay library with its output filtered.
-func newRelayClient(addr string) *tailcat.Client {
-	c := tailcat.NewClient(tailcat.Addr(addr))
-	c.Logf = relayLibraryLogf(log.Printf)
-	return c
-}
 
 // The daemon's log is bounded (D-261). The file is opened for appending by a shell redirect
 // in the plugin's scripts and by startDaemon, and the daemon's own output is that file, so the

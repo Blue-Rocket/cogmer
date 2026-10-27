@@ -18,3 +18,7 @@ dist/
 
 # Scratch material for one investigation, such as a colleague's log. Never committed.
 /tmp/
+
+# A binary built inside the package directory, and agents' worktrees
+/cmd/cogmer/cogmer
+.claude/worktrees/
