@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -516,6 +517,11 @@ func (d *Daemon) handleStop(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	turn, err := host.ReassembleTurn(req.TranscriptPath, req.LastAssistantMessage, req.TurnID)
+	if errors.Is(err, errTranscriptRefused) {
+		log.Printf("assistant: session %.8s sent a transcript path cogmer will not open (%v); the turn is not captured", req.SessionID, err)
+		writeJSON(w, map[string]any{"stored": false})
+		return
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

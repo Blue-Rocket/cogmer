@@ -3,9 +3,42 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
+
+// maxTranscriptBytes is the largest transcript cogmer reads. Claude Code and Codex write one
+// file per session and keep images in it, so a long session reaches hundreds of megabytes.
+const maxTranscriptBytes = 1 << 30
+
+// errTranscriptRefused marks a path from a hook that is not a transcript cogmer will open.
+// Its text never holds the path, which a hook chose.
+var errTranscriptRefused = errors.New("transcript path refused")
+
+// openTranscript opens the transcript a hook named, and only if it is a regular file with a
+// .jsonl name no larger than maxTranscriptBytes. It stats before it opens, because opening a
+// FIFO blocks until something writes to it. Claude Code names a transcript <session id>.jsonl
+// and Codex names one rollout-<time>-<thread id>.jsonl, and the probes write <hook>.jsonl.
+// A missing file returns the error os.Stat gives.
+func openTranscript(path string) (*os.File, error) {
+	if !strings.EqualFold(filepath.Ext(path), ".jsonl") {
+		return nil, fmt.Errorf("%w: not a .jsonl name", errTranscriptRefused)
+	}
+	fi, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	if !fi.Mode().IsRegular() {
+		return nil, fmt.Errorf("%w: not a regular file", errTranscriptRefused)
+	}
+	if fi.Size() > maxTranscriptBytes {
+		return nil, fmt.Errorf("%w: larger than %d bytes", errTranscriptRefused, maxTranscriptBytes)
+	}
+	return os.Open(path)
+}
 
 // transcriptRecord is the subset of a Claude Code transcript JSONL line that
 // turn reassembly needs. Field names verified empirically against Claude Code
@@ -55,7 +88,7 @@ type AssistantTurn struct {
 // carry no promptId, and the parentUuid chain contains gaps, so we take every
 // assistant record following the last human-sourced user record.
 func ReassembleLastTurn(path, lastMessage string) (*AssistantTurn, error) {
-	f, err := os.Open(path)
+	f, err := openTranscript(path)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +215,7 @@ func hasPersistedBlock(blocks []string) bool {
 // at its own Stop is still observable later. That is what makes confirmation
 // self-healing rather than single-shot.
 func InjectedBlocks(path string) ([]string, error) {
-	f, err := os.Open(path)
+	f, err := openTranscript(path)
 	if err != nil {
 		return nil, err
 	}

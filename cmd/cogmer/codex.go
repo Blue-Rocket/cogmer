@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -33,7 +32,7 @@ type codexRecord struct {
 }
 
 func readCodexRecords(path string) ([]codexRecord, error) {
-	f, err := os.Open(path)
+	f, err := openTranscript(path)
 	if err != nil {
 		return nil, err
 	}
