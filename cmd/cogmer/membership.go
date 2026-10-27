@@ -1127,6 +1127,19 @@ func (m *Membership) RoomForSession(sessionID string) (Room, bool) {
 	return m.RoomByID(roomID)
 }
 
+// SessionBinding reports the room a session has ever been put in and whether it has
+// left it. bound is false for a session that was never in a room.
+func (m *Membership) SessionBinding(sessionID string) (room Room, left, bound bool) {
+	var roomID string
+	var leftAt sql.NullString
+	if err := m.db.QueryRow(`SELECT room_id, left_at FROM session_rooms WHERE session_id = ?`,
+		sessionID).Scan(&roomID, &leftAt); err != nil {
+		return Room{}, false, false
+	}
+	room, _ = m.RoomByID(roomID)
+	return room, leftAt.Valid, true
+}
+
 // LeaveSession stops a session participating, without foreclosing its return.
 //
 // Two things it does not do (D-071): it does not foreclose rejoining the same room,
@@ -1136,6 +1149,9 @@ func (m *Membership) RoomForSession(sessionID string) (Room, bool) {
 func (m *Membership) LeaveSession(sessionID string) (Room, error) {
 	room, ok := m.RoomForSession(sessionID)
 	if !ok {
+		if was, left, bound := m.SessionBinding(sessionID); bound && left {
+			return Room{}, fmt.Errorf("this session already left %s", was.RoomName)
+		}
 		return Room{}, errors.New("this session is not in a room")
 	}
 	_, err := m.db.Exec(`UPDATE session_rooms SET left_at = ? WHERE session_id = ?`,

@@ -1113,13 +1113,20 @@ func runRooms() {
 
 func runCreateRoom(args []string) {
 	rest, showOnly := takeFlag(args, "--show-only")
+	rest, another := takeFlag(rest, "--another")
 	if len(rest) > 0 {
-		log.Fatalf("create takes no argument but --show-only, and was given %q", strings.Join(rest, " "))
+		log.Fatalf("create takes no argument but --show-only and --another, and was given %q", strings.Join(rest, " "))
 	}
 	refuseWhenTheHostIsUnclear()
 	withMembership(func(m *Membership, id *Identity) {
 		if needsUserIdentity(id) {
 			return
+		}
+		if !another {
+			if note := createRefusal(m, sessionID()); note != "" {
+				fmt.Print(note)
+				os.Exit(1)
+			}
 		}
 		r, err := createRoom(m, id, showOnly)
 		if err != nil {
@@ -1134,6 +1141,26 @@ func runCreateRoom(args []string) {
 		fmt.Println("\ninvite someone you have paired with:")
 		fmt.Println(commandText("  /cogmer:room-invite <name>"))
 	})
+}
+
+// createRefusal says why a session that already has a room should not make another, and
+// is empty for a session with none. A second room is a new room each time, and the
+// session cannot be put in it, so a repeated command is refused unless the user asks for
+// another with --another.
+func createRefusal(m *Membership, sid string) string {
+	if sid == "" {
+		return ""
+	}
+	room, left, bound := m.SessionBinding(sid)
+	if !bound {
+		return ""
+	}
+	if left {
+		return fmt.Sprintf("This session left %s and cannot be put in a different room, so a room made now would have no one of yours in it.\n"+
+			"Nothing was created. To make another room from here anyway, run the command again with --another.\n", room.RoomName)
+	}
+	return fmt.Sprintf("This session is already in %s. Nothing was created.\n"+
+		"A session cannot be moved to a second room, so a room made now could be entered only from another session. To make another room anyway, run the command again with --another.\n", room.RoomName)
 }
 
 // createRoom makes a room here. A machine that speaks for a user has the daemon found

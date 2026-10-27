@@ -24,7 +24,7 @@ commands and ask which the user wants.
 | `peer-pair` | `pair <pairing-string> [label]` |
 | `peer-rename` | `rename <peer> <new name>` |
 | `peer-forget` | `forget <peer>` |
-| `room-create` | `create [--show-only]` |
+| `room-create` | `create [--show-only] [--another]` |
 | `room-join` | `join <room> [--show-only]` |
 | `room-leave` | `leave` |
 | `room-list` | `rooms` |
@@ -38,6 +38,9 @@ Relay the command's result. If it says installation is in progress or a command
 failed, report that result and stop. Do not repeat a command that creates a room
 or changes membership. Pairing opens a browser where the users compare the words
 on their call; never read, compare or confirm those words through the model.
+
+`create` refuses a session that already has a room and says which. Ask the user before adding
+`--another`, which makes a second room anyway, and never add it yourself.
 
 Room creation and joining apply to this session. A session can never join a second
 room. `--show-only` is fixed for a room on this machine: the room appears in its

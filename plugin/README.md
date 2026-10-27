@@ -52,7 +52,7 @@ every room, and `self-` commands act on you.
 
 | command | what it does |
 |---|---|
-| `room-create [--show-only]` | create a room and put this session in it; with `--show-only` none of it is given to your agent, and that cannot change for the room |
+| `room-create [--show-only] [--another]` | create a room and put this session in it; a session that already has a room is refused, and `--another` makes a second room anyway, which this session cannot enter; with `--show-only` none of it is given to your agent, and that cannot change for the room |
 | `room-join <invitation> [--show-only]` | join a room you were invited to, optionally show-only |
 | `room-leave` | take this session out of its room; it may rejoin the same room later |
 | `room-invite <peer>` | admit a peer you have paired with to this room |

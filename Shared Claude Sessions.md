@@ -1490,6 +1490,9 @@ A session that leaves stops publishing to the room and stops receiving injected
 context from it. The events it published stay in the room, because published events
 are immutable, and a user who leaves does not unsay what they said.
 
+A session that has already left a room, and leaves again, is told that it left that room,
+and not that it was never in one.
+
 ## Joining and rejoining
 
 A session joins a room by accepting an invitation, or, when the room is already in the
@@ -1525,6 +1528,11 @@ theirs is waiting rather than that there are none.
 A session enters a room only by creating it or by joining it, and a session that has
 been in one room never joins a second. It may leave its room and rejoin it. A user who
 wants to work in a second room starts a second agent session.
+
+Creating a room from a session that already has one makes nothing and says which room the
+session has, because a repeated command otherwise leaves the user with two rooms and
+a session in only one. The user can ask for a second room explicitly, which the session
+cannot enter.
 
 Injected context cannot be withdrawn. Once a colleague's conversation has entered a
 session's context window, anything the session produces afterwards may be shaped by
