@@ -181,7 +181,7 @@ func TestAHookForAnUnsupportedHostFailsOpen(t *testing.T) {
 	bin := buildVersion(t, t.TempDir(), testBuildVersion)
 	cmd := exec.Command(bin, "hook", "--host", "emacs", "prompt")
 	cmd.Stdin = strings.NewReader(`{"session_id":"s","prompt":"x"}`)
-	cmd.Env = append(os.Environ(), "COGMER_ADDR=127.0.0.1:1")
+	cmd.Env = append(os.Environ(), "COGMER_ADDR=127.0.0.1:1", "COGMER_HOME="+filepath.Join(t.TempDir(), stateDirName))
 	out, err := cmd.Output()
 	if err != nil || len(out) != 0 {
 		t.Errorf("a hook for an unsupported host disturbed the session: %v %q", err, out)

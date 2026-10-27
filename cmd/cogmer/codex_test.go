@@ -241,6 +241,7 @@ func TestCodexCannotUseAClaudeDeliveryFallback(t *testing.T) {
 
 func TestCodexHookOutputsValidContextAndFailsOpen(t *testing.T) {
 	bin := buildVersion(t, t.TempDir(), testBuildVersion)
+	home := filepath.Join(t.TempDir(), stateDirName)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get(localGuardHeader) != localGuardValue {
 			t.Error("hook omitted the local guard")
@@ -255,7 +256,7 @@ func TestCodexHookOutputsValidContextAndFailsOpen(t *testing.T) {
 	run := func(addr, payload, kind string) []byte {
 		t.Helper()
 		cmd := exec.Command(bin, "hook", "--host", "codex", kind)
-		cmd.Env = append(os.Environ(), "COGMER_ADDR="+addr)
+		cmd.Env = append(os.Environ(), "COGMER_ADDR="+addr, "COGMER_HOME="+home)
 		cmd.Stdin = strings.NewReader(payload)
 		out, err := cmd.Output()
 		if err != nil {

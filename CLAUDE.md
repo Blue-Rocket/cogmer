@@ -95,6 +95,11 @@ every target cross-compiles with `CGO_ENABLED=0`.
 
 - **Build with `go build -o bin/cogmer ./cmd/cogmer`.** `bin/` is untracked, because
   the binary is 17MB and the build reproduces it.
+- **A build from source refuses the real `~/.cogmer`, and so does every test (D-265, a
+  development or test build never opens the account's real state directory).** Run one
+  with `COGMER_HOME` set to a directory made for the run, such as `COGMER_HOME=$(mktemp
+  -d)`. There is no override, and a fault in real data is looked at in a copy of it. `go
+  test ./...` panics in any test that resolves the real directory.
 - **Test with `go test ./...`.** To drive a real session, run `claude -p …
   --settings <file>` with a throwaway `COGMER_HOME` per run, and `< /dev/null`, or it
   waits on stdin.

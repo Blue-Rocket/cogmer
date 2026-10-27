@@ -85,6 +85,19 @@ const stateDirName = ".cogmer"
 // person who set it got a binary in one place and its state in another, and
 // nothing said so.
 func homeDir() string {
+	dir := resolvedHomeDir()
+	if err := refusedHome(dir); err != nil {
+		// A development build never reaches here from main, which refuses first
+		// (guardRealHome). In a test, a refusal is a test that forgot to name a
+		// directory of its own, and failing it loudly is what protects the real one.
+		panic(err)
+	}
+	return dir
+}
+
+// resolvedHomeDir is the state directory homeDir names, before the check that a
+// development build may use it.
+func resolvedHomeDir() string {
 	if v := strings.TrimSpace(os.Getenv("COGMER_HOME")); v != "" {
 		return v
 	}

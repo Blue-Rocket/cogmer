@@ -116,6 +116,7 @@ func TestTheRealHookIsSilentWithNoDaemon(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds the binary")
 	}
+	t.Setenv("COGMER_HOME", filepath.Join(t.TempDir(), stateDirName)) // the build a test made refuses the real directory (D-265)
 	if err := checkFailOpenWith(buildVersion(t, t.TempDir(), "0.0.1")); err != nil {
 		t.Errorf("the hook of a real build disturbs a prompt when the daemon is down: %v", err)
 	}

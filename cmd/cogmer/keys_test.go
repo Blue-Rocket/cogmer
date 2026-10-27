@@ -195,6 +195,7 @@ func TestStateDirectoryIsOverridable(t *testing.T) {
 		t.Errorf("homeDir() = %q, want the override", got)
 	}
 	t.Setenv("COGMER_HOME", "   ")
+	t.Setenv("HOME", t.TempDir()) // the default is under HOME, and a test never resolves the account's own
 	if got := homeDir(); !strings.HasSuffix(got, stateDirName) {
 		t.Errorf("a blank override was honored, giving %q", got)
 	}
