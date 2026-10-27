@@ -30,7 +30,8 @@ out.
 
 ## Before a wider audience
 
-People the maintainer has never met install cogmer, on machines, networks and settings the maintainer has not seen, and none of them is worse off for it.
+People the maintainer has never met install cogmer, on machines, networks and settings the
+maintainer has not seen, and none of them is worse off for it.
 
 **cogmer's Codex skill is loaded into Claude Code sessions, and gives the model a route to the
 commands.** `plugin/skills/cogmer/SKILL.md` is written for Codex and only
@@ -85,7 +86,13 @@ plugin's hooks show the error when the bridge has not started. A user whose brid
 see an error on every prompt.
 Either the check is made and the Cowork plugin's hooks are shown to be silent without the bridge, or Cowork is labeled experimental until it is.
 
-**A colleague's pasted image can be any pixel size, and nothing limits it before the browser decodes it.** `maxImageBytes` is 5 MB (`cmd/cogmer/images.go`), and no Go code reads an image's width or height, read on 2026-10-27, so a small file that holds a very large picture could stall the browser of every colleague who opens the room. Reading the width and height from the file's header and refusing an image past a limit costs a header parser for each format the hosts send. Whether images are labeled experimental until D-213 (a pasted image is sent to peers and each receiver stores it as a file) is seen working between two machines is not decided.
+**A colleague's pasted image can be any pixel size, and nothing limits it before the browser decodes
+it.** `maxImageBytes` is 5 MB (`cmd/cogmer/images.go`), and no Go code reads an image's width or
+height, read on 2026-10-27, so a small file that holds a very large picture could stall the browser
+of every colleague who opens the room. Reading the width and height from the file's header and
+refusing an image past a limit costs a header parser for each format the hosts send. Whether images
+are labeled experimental until D-213 (a pasted image is sent to peers and each receiver stores it as
+a file) is seen working between two machines is not decided.
 
 **Whether a cloud environment shows the cloud key to the people who can edit it is not known.** D-246 (a cloud environment is added from the machines page)
 keeps the cloud key in an environment variable of the cloud environment. Whether a cloud
@@ -205,11 +212,76 @@ That is the one place a non-idempotent command could cheaply refuse a mistake it
 now makes in silence. The command's documentation warns against retrying, which is
 the weakest possible form of the check.
 
-**The `user-identity` branch is 134 commits ahead of `main` and changes the wire and the data of every installed machine.** On 2026-10-27 it merges into `main` with no conflict (`git merge-tree`), `main` and the branch both carry plugin version 0.10.5, the wire version on the branch is 3, and the state directory carries data version 1 where `main` reads none. A program that finds newer data touches nothing (D-244, the data in the state directory carries one version, and a program that finds a newer one touches nothing), so a plugin that lags on a user's other host stops working against the migrated data, and the first start of the new program migrates the databases after copying them (D-256, the databases are copied before the state directory is migrated, and a program that cannot migrate it stops). The two beta users, the maintainer's own `~/.cogmer`, and each host's plugin all move together, and nothing yet says in what order. A release with its own version number, such as 0.11.0, a plan for each of the three machines, and the lagging-plugin test above, would cover it.
+**The `user-identity` branch is 134 commits ahead of `main` and changes the wire and the data of
+every installed machine.** On 2026-10-27 it merges into `main` with no conflict (`git merge-tree`),
+`main` and the branch both carry plugin version 0.10.5, the wire version on the branch is 3, and the
+state directory carries data version 1 where `main` reads none. A program that finds newer data
+touches nothing (D-244, the data in the state directory carries one version, and a program that
+finds a newer one touches nothing), so a plugin that lags on a user's other host stops working
+against the migrated data, and the first start of the new program migrates the databases after
+copying them (D-256, the databases are copied before the state directory is migrated, and a program
+that cannot migrate it stops). The two beta users, the maintainer's own `~/.cogmer`, and each host's
+plugin all move together, and nothing yet says in what order. A release with its own version number,
+such as 0.11.0, a plan for each of the three machines, and the lagging-plugin test above, would
+cover it.
 
-**A removal is pushed again and again to machines that can never acknowledge it.** D-225 (a machine sends each removal and new shared key to every colleague it knows until each acknowledges) sends each record until its receiver acknowledges. On 2026-10-26 the maintainer's test machine held, in `identity_push` in `~/.cogmer-test/membership.db`, one removal with 29 attempts and another with 6 to the key of a cloud session, and the second with 5 to a machine that had erased its keys, none acknowledged. Whether the attempts back off, and whether they ever stop, has not been read from the code. A limit on attempts or age, or a rule that a removed machine is never a target, would stop them, at the cost of a removal that is never delivered to a machine that was only asleep.
+**No Codex or Cowork session has run on the `user-identity` branch.** The container tests and the
+cloud run drive Claude Code, and the Codex and Cowork hooks, commands and bridge are covered by
+tests that call the daemon directly. A Codex session and a Cowork session each making an identity,
+pairing with a colleague, joining a room, renaming the colleague and removing a machine would show
+what the tests do not. The removal of a machine is the least likely to have been seen, since it ends
+the daemon that a host's hook starts again.
 
-**One colleague's machine flips between reachable and unreachable every 15 to 30 minutes.** Noticed on the maintainer's machine during the cloud run of 2026-10-25 and 2026-10-26, for the peer `drizzle-ravine`, and not investigated. A user who sees a colleague's status change on that rhythm cannot tell a fault from a quiet colleague. The daemon log and the room view's status history would show whether the cause is the relay, the address or the status check (D-194, a colleague this machine cannot reach is named, with how long, in the room status and the view).
+**A machine with no browser cannot make a user identity, and whether a Codex command can open the
+page is not known.** The identity page is the only place the recovery phrase is shown or typed
+(D-223, the recovery phrase is typed only into the daemon's browser page), and every pairing and
+room command stops at it until an identity exists (D-230, a user identity is made in the daemon's
+page the first time the user needs one). `openInBrowser` runs in the command's own process
+(`cmd/cogmer/selfcommands.go:77` and `main.go:2144`, read on 2026-10-27), which for Codex is a `bash
+codex-cli.sh` run in its shell tool, where a sandbox may refuse a window, and a Codex user on a
+machine with no browser has no other route, since pairing's terminal fallback sits behind the same
+gate. A Cowork command runs in the daemon on the user's own machine, so it is not affected. Printing
+the page's address for the user to open themselves, which holds no secret, costs the user opening
+it, and having the daemon open it costs a route on the daemon and the window of a daemon with a
+display (B23, a detached daemon can open a window). The item on details left undecided under "Cloud
+sessions in a room" already names a machine with no browser for adding a machine.
+
+**A user learns that an upgrade failed only by running a command, on every host.** D-256 (the
+databases are copied before the state directory is migrated, and a program that cannot migrate it
+stops) stops the daemon and prints its message to a command, and a hook fails open and says nothing
+(D-011, hooks fail open: exit 0, empty stdout), as the Cowork bridge does while it goes on trying to
+start a daemon (D-208, the bridge keeps a daemon running for a Cowork user, and runs a restart and a
+stop itself). The note the session-start hook gives the model, for Claude Code and Codex, that the
+daemon could not start reads a `daemon-state` mark that only a failed bind writes
+(`recordDaemonState` in `cmd/cogmer/main.go`, read on 2026-10-27), and the exit after a failed
+upgrade writes none. A user who never runs a command sees nothing capture or arrive and no reason.
+Writing the mark when the upgrade fails would reach Claude Code and Codex at no other cost, and the
+Cowork bridge has no session-start call to carry it, so it needs a note of its own.
+
+**A machine that was removed and erased starts again as a new unconnected machine when any host next
+starts a daemon.** D-252 (a reachable machine is asked to erase its keys before it is removed)
+erases the keys and ends the daemon, and the next Claude Code session, Codex hook or Cowork call
+starts one that makes a fresh machine key and no user (read from `retire.go` and the start code, not
+run). The user then meets the identity page again on that machine, which suits a machine given away
+and may surprise a user who only removed it from their list. D-208's mark that a user stopped the
+daemon does not apply, since nobody ran `stop`. Whether the machine should keep a mark that it was
+retired is not decided.
+
+**A removal is pushed again and again to machines that can never acknowledge it.** D-225 (a machine
+sends each removal and new shared key to every colleague it knows until each acknowledges) sends
+each record until its receiver acknowledges. On 2026-10-26 the maintainer's test machine held, in
+`identity_push` in `~/.cogmer-test/membership.db`, one removal with 29 attempts and another with 6
+to the key of a cloud session, and the second with 5 to a machine that had erased its keys, none
+acknowledged. Whether the attempts back off, and whether they ever stop, has not been read from the
+code. A limit on attempts or age, or a rule that a removed machine is never a target, would stop
+them, at the cost of a removal that is never delivered to a machine that was only asleep.
+
+**One colleague's machine flips between reachable and unreachable every 15 to 30 minutes.** Noticed
+on the maintainer's machine during the cloud run of 2026-10-25 and 2026-10-26, for the peer
+`drizzle-ravine`, and not investigated. A user who sees a colleague's status change on that rhythm
+cannot tell a fault from a quiet colleague. The daemon log and the room view's status history would
+show whether the cause is the relay, the address or the status check (D-194, a colleague this
+machine cannot reach is named, with how long, in the room status and the view).
 
 ## Somebody else uses it
 
@@ -383,6 +455,26 @@ member-created copies, David's at 0.10.3 and Arielle's at 0.7.4. The sandbox's e
 `CLAUDE_CODE_REMOTE`, whose value was not read. If it marks a remote sandbox, the plugin's session-start hook
 could start nothing there, since the Cowork route is the bridge on the user's machine (D-205).
 
+D-205's reason for rejecting a daemon in the sandbox, that it "cannot reach a relay or another
+machine" (`06749a0`, dated 2026-10-13), predates D-217 (a cloud session's daemon carries its relay
+connection as a WebSocket), which showed a Claude Code cloud container reaching the relay on
+2026-10-18. A daemon of 0.10.4 or later switches to WebSocket by itself when `CLAUDE_CODE_REMOTE` is
+`true` (`cmd/cogmer/tailcat.go`, read on 2026-10-27), so the sandbox's failed relay checks, made
+before that, may no longer hold, and nobody has run one there since. Reading the variable in the
+sandbox and running a relay ping from it would answer. If the sandbox does reach the relay, the
+daemon there is either stopped from starting, or the sandbox is made a cloud session, which needs a
+way to give it `COGMER_CLOUD_KEY` that Cowork may not offer. If it does not, the daemon there is
+stopped from starting.
+
+**A Cowork turn shows the user's computer as its machine, and Desktop's name for the computer and
+cogmer's name for the machine are two names.** Every turn carries the name of the machine that
+signed it (D-233, every turn carries the name of the machine it came from, as a field the user
+asserts), and a Cowork turn is signed by the machine that runs the bridge, so a colleague reads the
+laptop's name for a turn whose model ran in a remote sandbox. D-205 says a renamed computer needs
+the setup run again, and a machine's name is now a label the user chose and renames from the
+machines page (D-231, a user's machines are managed from one command that opens the daemon's page).
+Whether the two names can differ, and what a colleague sees when they do, has not been looked at.
+
 ## Cloud sessions in a room
 
 A user in a Claude Code cloud session, such as one started from the iPhone app, shares a
@@ -399,6 +491,16 @@ slice of the second run, and none has a choice taken yet:
 - How a cloud session's hooks load.
 - Whether a colleague holding shares of the recovery phrase could recover a user who has lost
   it, which no decision has examined.
+
+**Whether a Codex cloud task can be a cloud session is not known.** The cloud key, its session
+certificates and the fetch of the user's lists depend only on `COGMER_CLOUD_KEY` being set
+(`cmd/cogmer/cloud.go`, read on 2026-10-27), and so need nothing of a host. The WebSocket relay
+switch tests `CLAUDE_CODE_REMOTE`, the plugin reaches the cloud through claude.ai's marketplace
+sync, and the environment's variable is set in a Claude Code environment's settings, and each of
+those is a Claude Code fact. D-201 (Claude Code and Codex are supported hosts) covers Codex CLI and
+desktop sessions and not a cloud task, and nothing has shown whether a Codex cloud task loads the
+plugin's hooks, accepts an environment variable and reaches the relay. A run in one, as
+`docs/work/cloud-run.md` was run in a Claude Code environment, would answer it.
 
 **Two checks of a cloud session in a room with a paired machine are not shown.**
 
