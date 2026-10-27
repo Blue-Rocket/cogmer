@@ -60,24 +60,6 @@ release's plugin directory read from git by its tag. A release that has to break
 interface would then say so in the plugin's version and in what a lagging host's session
 reports.
 
-**One peer that is offline delays sync with every other, and rooms are asked of peers who
-are not in them.** `RunSync` in `cmd/cogmer/sync.go` asks each address one after another,
-and `syncTargets` returns every address this machine has recorded, so a peer paired once
-and never finished costs a dial that times out in about ten seconds on every round. In
-`~/.cogmer/daemon.log` on 2026-10-12 the first failure for such a peer and the first for
-the colleague a room was shared with are ten seconds apart. Each request to a peer also
-names a room it is not a guest of, in a signed request, so that peer learns the room's
-identifier. With one colleague the cost is about ten seconds in the view, and it grows
-with the number of peers ever paired who are offline: six pairings with four offline
-would lag the view by about forty seconds a round and could leave a colleague's last turn
-out of what a prompt injects.
-
-The fix has two parts. For each room, ask only that room's guests, which `RoomPeers`
-already maps to addresses, and ask the addresses in parallel so an unreachable one waits
-alone. Before changing which peers are asked, read whether relaying a third member's
-events (§13) relies on asking a peer that is not a guest of the room, since nothing has
-run that path.
-
 **A Cowork user whose bridge is down may see an error on every prompt.** An interactive Claude Code session on 2026-10-14 showed "Stop hook error: MCP server
 'remote-devices' not connected" for a Stop hook that names a server that is absent. B31 (a hook of type
 mcp_tool that names a server that is not there shows nothing) says nothing shows, and its check runs
@@ -112,41 +94,6 @@ preference.
 **Say when your own address changes.** Every pairing string and invitation already
 handed out is then stale, and only the daemon can know.
 
-**State files are created readable by every account on the machine.** `session-start.sh` and
-`common.sh` create `~/.cogmer` with `mkdir -p`, which gives mode 0755 under the usual umask of 022,
-and `identity.go` and `doctor.go` create it with 0755 in Go. Nothing tightens a directory that
-exists, so on a new user's machine the room databases (0644), the `rooms` folder (0755) and
-`daemon.log` (0644, created by the hook's redirect) are open to other accounts. The maintainer's
-own directory is 0700, which protects it. Claude HUD had the same class of fault in a cache file
-(CVE-2026-47091, read through a search summary). `umask 077` in the scripts, and one Go function that
-creates the directory and sets it to 0700 each time it is opened, fix it, at the cost of a chmod on
-every start.
-
-**The daemon's log grows without limit.** `~/.cogmer/daemon.log` is 100,809,353 bytes on the
-maintainer's machine after about five weeks, and nothing rotates or caps it. The five most common
-line prefixes (`netstack:`, `wg:`, `[v1]`, `magicsock:` and `netcheck:`, the relay library's own
-output) account for about 657,000 lines. Lowering that library's log level costs less to read when a
-connection fails, which is what the log is for. Capping the file by size and keeping one older copy
-costs the oldest lines. Doing both bounds the volume and the size.
-
-**A path in a hook's payload is opened without a check.** `ReassembleLastTurn` and `InjectedBlocks`
-(`cmd/cogmer/transcript.go:58` and `:185`) call `os.Open` on the `transcript_path` a hook sent, with
-no test that it is a regular file, no extension and no size limit, so a FIFO would hold the request
-open. Only a process of the same user that holds the guard header can send it (D-087, the local API
-requires a header that a web page cannot send), so the exposure is a hung request and not a web
-page's read. Claude HUD read arbitrary files through the same field (CVE-2026-47091). Requiring a
-regular file with a `.jsonl` name costs a host whose transcript is named otherwise, so each host
-needs checking. Requiring the path to sit under the host's transcript folder costs knowing that
-folder for a cloud session and for Cowork.
-
-**Every command stops working if the plugin loses its execute bit.** The 40 command-file lines run
-`"${CLAUDE_PLUGIN_ROOT}/cli.sh"` directly, and `cli.sh` is mode 100755 in git. Claude Code issues
-#38705, #39286 and #40050 report plugin installs and caches that copy scripts without the bit, so
-a user in that state would see "Permission denied" on every cogmer command while the hooks, which
-run `bash <script>`, go on working and give no sign. Running `bash "${CLAUDE_PLUGIN_ROOT}/cli.sh"`
-in the command files removes the dependency, as the Codex wrapper already does. It costs a change
-to each command's `allowed-tools` pattern, and the Cowork copies and the typed-command test follow.
-
 **Windows has never been run, and Claude Code is reported to break `bash` hooks there.** Claude
 Code issues #21878, #25832, #26389, #23295, #25399 and #68295 (June 2026, Claude Code 2.1.177) report
 `${CLAUDE_PLUGIN_ROOT}` expanding to a backslash path that Git Bash reads as escapes, and #70150,
@@ -173,13 +120,6 @@ keep, a verifier to ship and a signing step in `release.sh`.
 was not checked. Somebody who finds a fault would open a public issue. A `SECURITY.md` naming a
 channel, with private reporting enabled, fixes it at the cost of a channel the maintainer reads.
 
-**`claude plugin validate` warns about the plugin and the marketplace.** Run on Claude Code 2.1.312
-on 2026-10-27, it passes with warnings: the plugin has no icon, its README has no
-`/plugin install cogmer --marketplace <owner>/<repo>` line, and the marketplace manifest has no
-description. The command says the plugin directory also runs a safety scan and a policy review that
-it does not. A square PNG, the line and a description fix the warnings, and the icon is the only cost.
-Whether to submit cogmer to the directory is not decided.
-
 **A colleague's pairing string reaches a shell command line, and Claude Code's permission check is
 the only thing in the way.** `/cogmer:peer-pair` takes a string a colleague sent, and Claude Code
 substitutes it into the line `"${CLAUDE_PLUGIN_ROOT}/cli.sh" pair $ARGUMENTS` before bash runs it.
@@ -192,25 +132,6 @@ since the substitution happens before `cli.sh` runs. What cogmer can do is limit
 name its own pairing string carries, which costs names with other characters and stops no
 attacker. Running the same test with an allowed command, and with the Codex skill, would show how
 much the check covers.
-
-**`leave`, run twice, says "this session is not in a room."** True, and unhelpful
-to somebody who left it a moment ago: it reads as a failure and sends them looking
-for a problem. It should say it has already left. `LeaveSession` returns that error
-from `RoomForSession` finding nothing, so the distinction to draw is between never
-having been in one and having left it — the row is still there with `left_at` set,
-so both are answerable.
-
-**`create`, run twice, silently makes a second room.** Inherent — a room is a new
-thing each time — but it is the command where a mistaken repeat costs most, because
-the second room is indistinguishable from the first to everybody except its
-creator, who now has two and is talking in one of them.
-
-Nothing currently helps. The session invoking it is already bound to a room when
-this happens, and binding is what `BindSession` already knows about, so a second
-`create` from a session already in a room could say which room that is and ask.
-That is the one place a non-idempotent command could cheaply refuse a mistake it
-now makes in silence. The command's documentation warns against retrying, which is
-the weakest possible form of the check.
 
 **The `user-identity` branch is 134 commits ahead of `main` and changes the wire and the data of
 every installed machine.** On 2026-10-27 it merges into `main` with no conflict (`git merge-tree`),
@@ -246,17 +167,16 @@ it, and having the daemon open it costs a route on the daemon and the window of 
 display (B23, a detached daemon can open a window). The item on details left undecided under "Cloud
 sessions in a room" already names a machine with no browser for adding a machine.
 
-**A user learns that an upgrade failed only by running a command, on every host.** D-256 (the
-databases are copied before the state directory is migrated, and a program that cannot migrate it
-stops) stops the daemon and prints its message to a command, and a hook fails open and says nothing
-(D-011, hooks fail open: exit 0, empty stdout), as the Cowork bridge does while it goes on trying to
-start a daemon (D-208, the bridge keeps a daemon running for a Cowork user, and runs a restart and a
-stop itself). The note the session-start hook gives the model, for Claude Code and Codex, that the
-daemon could not start reads a `daemon-state` mark that only a failed bind writes
-(`recordDaemonState` in `cmd/cogmer/main.go`, read on 2026-10-27), and the exit after a failed
-upgrade writes none. A user who never runs a command sees nothing capture or arrive and no reason.
-Writing the mark when the upgrade fails would reach Claude Code and Codex at no other cost, and the
-Cowork bridge has no session-start call to carry it, so it needs a note of its own.
+**The Cowork bridge says nothing when an upgrade failed.** A failed upgrade or a failed copy now
+writes a `daemon-state` mark, and the session-start hook of Claude Code and of Codex tells the model
+that the daemon could not start (D-256, the databases are copied before the state directory is
+migrated, and a program that cannot migrate it stops). The Cowork bridge has no session-start call
+(D-205, Claude Cowork is a supported host through a bridge on the user's machine), so a Cowork user
+who runs no command sees nothing capture or arrive and no reason, while the bridge goes on trying to
+start a daemon that stops at once (D-208, the bridge keeps a daemon running for a Cowork user, and
+runs a restart and a stop itself). A note of its own, read from the same mark and given to Cowork's
+model with the bridge's reply to a prompt, would cover it, at the cost of a line in every prompt's
+reply while the fault lasts.
 
 **A machine that was removed and erased starts again as a new unconnected machine when any host next
 starts a daemon.** D-252 (a reachable machine is asked to erase its keys before it is removed)
