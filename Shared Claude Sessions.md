@@ -2113,7 +2113,9 @@ be undone.
 
 A cogmer that cannot finish upgrading a machine's stored state stops, and says where the copy is
 and that putting it back is safe only before cogmer has run again, so that nothing is written on
-databases that are partly upgraded.
+databases that are partly upgraded. In Claude Code and Codex the next session tells the model that
+the daemon did not start and that nothing is captured or shared until that is fixed, so that a
+user who runs no command still learns why.
 
 A room's database moves to the archive when the room closes. An archived room can be
 read and searched, and is never rejoined, synchronized or injected. Keeping the

@@ -2660,15 +2660,15 @@ func checkReachable(endpoint string) (ok bool, why, note string) {
 	return true, "", ""
 }
 
-// daemonBlockedReason is what the daemon wrote when it could not bind its address,
-// if it did (D-177).
+// daemonBlockedReason is what the daemon wrote when it could not start, whether it
+// could not bind its address (D-177) or could not bring the data to its version.
 func daemonBlockedReason() (string, bool) {
 	raw, err := os.ReadFile(daemonStateFile())
 	if err != nil {
 		return "", false
 	}
 	f := strings.SplitN(strings.TrimSpace(string(raw)), "\t", 3)
-	if len(f) == 3 && f[0] == "blocked" {
+	if len(f) == 3 && (f[0] == "blocked" || f[0] == upgradeFailedState) {
 		return f[2], true
 	}
 	return "", false

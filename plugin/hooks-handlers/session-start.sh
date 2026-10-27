@@ -74,9 +74,14 @@ fi
 # a daemon next serves successfully, but a machine that never ran one again would
 # otherwise keep repeating a fault that has since been fixed by hand.
 read -r dstate dage ddetail <<< "$(daemon_state)"
-if [ "$dstate" = blocked ] \
-   && ! curl -s -m 1 "http://${COGMER_ADDR:-127.0.0.1:4782}/healthz" > /dev/null 2>&1; then
-  ct_context="$ct_context cogmer is installed but its daemon could not start ${dage}s ago: $(json_safe "$ddetail"). Nothing is being captured or shared in any room until that address is free."
+if [ "$dstate" = blocked ] || [ "$dstate" = upgrade-failed ]; then
+  if ! curl -s -m 1 "http://${COGMER_ADDR:-127.0.0.1:4782}/healthz" > /dev/null 2>&1; then
+    case "$dstate" in
+      blocked)        dwhy="Nothing is being captured or shared in any room until that address is free." ;;
+      upgrade-failed) dwhy="Nothing is being captured or shared in any room until that is fixed." ;;
+    esac
+    ct_context="$ct_context cogmer is installed but its daemon could not start ${dage}s ago: $(json_safe "$ddetail"). ${dwhy}"
+  fi
 fi
 
 printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$(json_safe "$ct_context")"

@@ -154,7 +154,9 @@ func guardStateDirectory(sub string) {
 	}
 	if err := upgradeStateDirectory(stored); err != nil {
 		refuseFailedUpgrade(sub, stored, err)
+		return
 	}
+	clearUpgradeFailedMark()
 }
 
 // refuseFailedUpgrade ends the entry point after an upgrade that stopped partway, so
@@ -165,6 +167,7 @@ func refuseFailedUpgrade(sub string, stored int, err error) {
 	if sub == "stop" {
 		return
 	}
+	recordUpgradeFailed(err)
 	text := failedUpgradeText(stored, err)
 	if sub == "daemon" {
 		log.Print("not starting: " + strings.TrimSpace(text))
@@ -172,6 +175,34 @@ func refuseFailedUpgrade(sub string, stored int, err error) {
 		fmt.Fprint(os.Stderr, text)
 	}
 	os.Exit(1)
+}
+
+// upgradeFailedState is the daemon-state mark a failed upgrade writes. The
+// session-start hook reads it to tell the model, which is the only way a user who
+// runs no command learns why nothing is captured or shared.
+const upgradeFailedState = "upgrade-failed"
+
+// recordUpgradeFailed writes the mark for an upgrade or a copy that failed. The
+// detail is one of two fixed sentences, so it never quotes a database, the error, a
+// path or the phrase, and holds no character the hook's JSON string would have to
+// escape.
+func recordUpgradeFailed(err error) {
+	var noCopy *backupError
+	what := "an upgrade of its data stopped partway"
+	if errors.As(err, &noCopy) {
+		what = "a copy of its databases, made before an upgrade, could not be made"
+	}
+	recordDaemonState(upgradeFailedState, what+", so it did not start; any cogmer command says what to do")
+}
+
+// clearUpgradeFailedMark removes the mark once an entry point has brought the data
+// to this program's version, so that a fault fixed by hand is not repeated. It
+// leaves a mark of any other state, which belongs to a failed bind.
+func clearUpgradeFailedMark() {
+	raw, err := os.ReadFile(daemonStateFile())
+	if err == nil && strings.HasPrefix(string(raw), upgradeFailedState+"\t") {
+		clearDaemonState()
+	}
 }
 
 // refuseNewerData ends the entry point, except the bridge, which keeps answering its

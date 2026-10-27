@@ -56,7 +56,7 @@ restart_daemon() {
   echo "The daemon was started and is not answering on ${addr} yet."
   if [ -r "$state_file" ]; then
     IFS=$'\t' read -r state when detail < "$state_file"
-    if [ "$state" = blocked ] && [ -n "$detail" ]; then
+    if { [ "$state" = blocked ] || [ "$state" = upgrade-failed ]; } && [ -n "$detail" ]; then
       echo
       echo "It recorded why: $detail"
     fi
