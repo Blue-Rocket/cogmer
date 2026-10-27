@@ -28,6 +28,20 @@ downloaded. Shipping binaries inside the plugin removes the download entirely bu
 commits about 150MB per release into the history everybody clones, and is ruled
 out.
 
+## Before a wider audience
+
+People the maintainer has never met install cogmer, on machines, networks and settings the maintainer has not seen, and none of them is worse off for it.
+
+**cogmer's Codex skill is loaded into Claude Code sessions, and gives the model a route to the
+commands.** `plugin/skills/cogmer/SKILL.md` is written for Codex and only
+`.codex-plugin/plugin.json` declares it, but Claude Code loads a plugin's `skills/` directory by
+itself. On 2026-10-18 the model in a Claude Code cloud session followed it to `codex-cli.sh`,
+which refused for want of a Codex session, then ran `cli.sh` through its shell. D-119 (no slash
+command is reachable by the model) keeps the command files from the model, and the skill
+reaches the same commands. Moving the skill to a directory only the Codex manifest names would
+keep it out of Claude Code; whether Claude Code reads a skills field in its own manifest that
+could exclude it is unchecked.
+
 **Nothing checks that a program accepts the hooks and commands of an older plugin on the
 same machine.** One program in `~/.cogmer/bin` serves every host, and the installer and the
 daemon replace it only with a newer one (D-215, the installer and the daemon replace a program
@@ -45,6 +59,158 @@ release's plugin directory read from git by its tag. A release that has to break
 interface would then say so in the plugin's version and in what a lagging host's session
 reports.
 
+**One peer that is offline delays sync with every other, and rooms are asked of peers who
+are not in them.** `RunSync` in `cmd/cogmer/sync.go` asks each address one after another,
+and `syncTargets` returns every address this machine has recorded, so a peer paired once
+and never finished costs a dial that times out in about ten seconds on every round. In
+`~/.cogmer/daemon.log` on 2026-10-12 the first failure for such a peer and the first for
+the colleague a room was shared with are ten seconds apart. Each request to a peer also
+names a room it is not a guest of, in a signed request, so that peer learns the room's
+identifier. With one colleague the cost is about ten seconds in the view, and it grows
+with the number of peers ever paired who are offline: six pairings with four offline
+would lag the view by about forty seconds a round and could leave a colleague's last turn
+out of what a prompt injects.
+
+The fix has two parts. For each room, ask only that room's guests, which `RoomPeers`
+already maps to addresses, and ask the addresses in parallel so an unreachable one waits
+alone. Before changing which peers are asked, read whether relaying a third member's
+events (§13) relies on asking a peer that is not a guest of the room, since nothing has
+run that path.
+
+**A Cowork user whose bridge is down may see an error on every prompt.** An interactive Claude Code session on 2026-10-14 showed "Stop hook error: MCP server
+'remote-devices' not connected" for a Stop hook that names a server that is absent. B31 (a hook of type
+mcp_tool that names a server that is not there shows nothing) says nothing shows, and its check runs
+with `claude -p`. Find out whether an interactive session differs, and if it does, whether the Cowork
+plugin's hooks show the error when the bridge has not started. A user whose bridge is down would then
+see an error on every prompt.
+Either the check is made and the Cowork plugin's hooks are shown to be silent without the bridge, or Cowork is labeled experimental until it is.
+
+**A colleague's pasted image can be any pixel size, and nothing limits it before the browser decodes it.** `maxImageBytes` is 5 MB (`cmd/cogmer/images.go`), and no Go code reads an image's width or height, read on 2026-10-27, so a small file that holds a very large picture could stall the browser of every colleague who opens the room. Reading the width and height from the file's header and refusing an image past a limit costs a header parser for each format the hosts send. Whether images are labeled experimental until D-213 (a pasted image is sent to peers and each receiver stores it as a file) is seen working between two machines is not decided.
+
+**Whether a cloud environment shows the cloud key to the people who can edit it is not known.** D-246 (a cloud environment is added from the machines page)
+keeps the cloud key in an environment variable of the cloud environment. Whether a cloud
+environment hides a variable's value from other people who can edit the environment is not
+known, and matters only for an environment shared with others, since the maintainer creates
+theirs at a personal level, said on 2026-10-24.
+For an environment shared with a team, whoever can read the value speaks as the user. A check from a second account that can edit the environment would answer it, and until then the documentation can say that a cloud environment holding the key is not shared.
+
+**NAT to NAT, with a real colleague on a real home router.** The last unknown in the
+transport, and not testable alone.
+
+**Re-pick the overlay relay when it cannot be reached.** D-187 pins it so the
+address is stable. Nothing re-picks, so a machine that relocates past its pinned
+relay is unreachable and nothing says so. Change driven by failure, never by
+preference.
+
+**Say when your own address changes.** Every pairing string and invitation already
+handed out is then stale, and only the daemon can know.
+
+**State files are created readable by every account on the machine.** `session-start.sh` and
+`common.sh` create `~/.cogmer` with `mkdir -p`, which gives mode 0755 under the usual umask of 022,
+and `identity.go` and `doctor.go` create it with 0755 in Go. Nothing tightens a directory that
+exists, so on a new user's machine the room databases (0644), the `rooms` folder (0755) and
+`daemon.log` (0644, created by the hook's redirect) are open to other accounts. The maintainer's
+own directory is 0700, which protects it. Claude HUD had the same class of fault in a cache file
+(CVE-2026-47091, read through a search summary). `umask 077` in the scripts, and one Go function that
+creates the directory and sets it to 0700 each time it is opened, fix it, at the cost of a chmod on
+every start.
+
+**The daemon's log grows without limit.** `~/.cogmer/daemon.log` is 100,809,353 bytes on the
+maintainer's machine after about five weeks, and nothing rotates or caps it. The five most common
+line prefixes (`netstack:`, `wg:`, `[v1]`, `magicsock:` and `netcheck:`, the relay library's own
+output) account for about 657,000 lines. Lowering that library's log level costs less to read when a
+connection fails, which is what the log is for. Capping the file by size and keeping one older copy
+costs the oldest lines. Doing both bounds the volume and the size.
+
+**A path in a hook's payload is opened without a check.** `ReassembleLastTurn` and `InjectedBlocks`
+(`cmd/cogmer/transcript.go:58` and `:185`) call `os.Open` on the `transcript_path` a hook sent, with
+no test that it is a regular file, no extension and no size limit, so a FIFO would hold the request
+open. Only a process of the same user that holds the guard header can send it (D-087, the local API
+requires a header that a web page cannot send), so the exposure is a hung request and not a web
+page's read. Claude HUD read arbitrary files through the same field (CVE-2026-47091). Requiring a
+regular file with a `.jsonl` name costs a host whose transcript is named otherwise, so each host
+needs checking. Requiring the path to sit under the host's transcript folder costs knowing that
+folder for a cloud session and for Cowork.
+
+**Every command stops working if the plugin loses its execute bit.** The 40 command-file lines run
+`"${CLAUDE_PLUGIN_ROOT}/cli.sh"` directly, and `cli.sh` is mode 100755 in git. Claude Code issues
+#38705, #39286 and #40050 report plugin installs and caches that copy scripts without the bit, so
+a user in that state would see "Permission denied" on every cogmer command while the hooks, which
+run `bash <script>`, go on working and give no sign. Running `bash "${CLAUDE_PLUGIN_ROOT}/cli.sh"`
+in the command files removes the dependency, as the Codex wrapper already does. It costs a change
+to each command's `allowed-tools` pattern, and the Cowork copies and the typed-command test follow.
+
+**Windows has never been run, and Claude Code is reported to break `bash` hooks there.** Claude
+Code issues #21878, #25832, #26389, #23295, #25399 and #68295 (June 2026, Claude Code 2.1.177) report
+`${CLAUDE_PLUGIN_ROOT}` expanding to a backslash path that Git Bash reads as escapes, and #70150,
+still open, reports the same for exec-form hook arguments. Their current status may differ. Our
+hooks run `bash "${CLAUDE_PLUGIN_ROOT}/hooks-handlers/..."`, the form those reports describe, and
+the installer builds and accepts a Windows binary (`install.sh`), but nobody has run either on
+Windows and the README does not say so. One run on Windows 11 with Git Bash shows whether it
+fails. If it does, the choices are converting the path in a first command, which costs a `cygpath`
+dependency, or stating that Windows is unsupported.
+
+**Nothing independent of the repository vouches for a release.** On 2026-10-27 the GitHub API
+showed `main` without branch protection and secret scanning and push protection disabled.
+`plugin/checksums.txt`, which authorizes the downloaded binary, sits in the same repository as the
+hook scripts, so whoever can push can change both, and a plugin runs with the user's privileges
+and updates without a review of what changed (Anthropic's plugin security page, and the
+cc-plugin-audit project that hashes plugin directories for that reason). Protecting `main` against
+force pushes and requiring status checks, two-factor on every account that can push, and
+secret scanning with push protection cost nothing on a public repository. Signing
+`checksums.txt` with a key kept off the repository and checked by `install.sh` costs a key to
+keep, a verifier to ship and a signing step in `release.sh`.
+
+**There is no way to report a vulnerability privately.** The repository has no `SECURITY.md` and no
+`.github` directory, checked on 2026-10-27, and whether GitHub's private vulnerability reporting is on
+was not checked. Somebody who finds a fault would open a public issue. A `SECURITY.md` naming a
+channel, with private reporting enabled, fixes it at the cost of a channel the maintainer reads.
+
+**`claude plugin validate` warns about the plugin and the marketplace.** Run on Claude Code 2.1.312
+on 2026-10-27, it passes with warnings: the plugin has no icon, its README has no
+`/plugin install cogmer --marketplace <owner>/<repo>` line, and the marketplace manifest has no
+description. The command says the plugin directory also runs a safety scan and a policy review that
+it does not. A square PNG, the line and a description fix the warnings, and the icon is the only cost.
+Whether to submit cogmer to the directory is not decided.
+
+**A colleague's pairing string reaches a shell command line, and Claude Code's permission check is
+the only thing in the way.** `/cogmer:peer-pair` takes a string a colleague sent, and Claude Code
+substitutes it into the line `"${CLAUDE_PLUGIN_ROOT}/cli.sh" pair $ARGUMENTS` before bash runs it.
+The name after `#` can hold `;`, `$` and backticks, because `sanitizeName` strips only `#`, `@`, control
+and unprintable characters. A throwaway plugin of the same shape, run on Claude Code 2.1.312 in
+default permission mode on 2026-10-27, had both `x;touch <file>` and `x$(touch <file>)` refused by the
+permission check and no file created. Not tried: a user who has allowed other commands, a mode that
+skips the check, other Claude Code versions, and the Codex skill. Cogmer cannot check the string,
+since the substitution happens before `cli.sh` runs. What cogmer can do is limit the characters in the
+name its own pairing string carries, which costs names with other characters and stops no
+attacker. Running the same test with an allowed command, and with the Codex skill, would show how
+much the check covers.
+
+**`leave`, run twice, says "this session is not in a room."** True, and unhelpful
+to somebody who left it a moment ago: it reads as a failure and sends them looking
+for a problem. It should say it has already left. `LeaveSession` returns that error
+from `RoomForSession` finding nothing, so the distinction to draw is between never
+having been in one and having left it — the row is still there with `left_at` set,
+so both are answerable.
+
+**`create`, run twice, silently makes a second room.** Inherent — a room is a new
+thing each time — but it is the command where a mistaken repeat costs most, because
+the second room is indistinguishable from the first to everybody except its
+creator, who now has two and is talking in one of them.
+
+Nothing currently helps. The session invoking it is already bound to a room when
+this happens, and binding is what `BindSession` already knows about, so a second
+`create` from a session already in a room could say which room that is and ask.
+That is the one place a non-idempotent command could cheaply refuse a mistake it
+now makes in silence. The command's documentation warns against retrying, which is
+the weakest possible form of the check.
+
+**The `user-identity` branch is 134 commits ahead of `main` and changes the wire and the data of every installed machine.** On 2026-10-27 it merges into `main` with no conflict (`git merge-tree`), `main` and the branch both carry plugin version 0.10.5, the wire version on the branch is 3, and the state directory carries data version 1 where `main` reads none. A program that finds newer data touches nothing (D-244, the data in the state directory carries one version, and a program that finds a newer one touches nothing), so a plugin that lags on a user's other host stops working against the migrated data, and the first start of the new program migrates the databases after copying them (D-256, the databases are copied before the state directory is migrated, and a program that cannot migrate it stops). The two beta users, the maintainer's own `~/.cogmer`, and each host's plugin all move together, and nothing yet says in what order. A release with its own version number, such as 0.11.0, a plan for each of the three machines, and the lagging-plugin test above, would cover it.
+
+**A removal is pushed again and again to machines that can never acknowledge it.** D-225 (a machine sends each removal and new shared key to every colleague it knows until each acknowledges) sends each record until its receiver acknowledges. On 2026-10-26 the maintainer's test machine held, in `identity_push` in `~/.cogmer-test/membership.db`, one removal with 29 attempts and another with 6 to the key of a cloud session, and the second with 5 to a machine that had erased its keys, none acknowledged. Whether the attempts back off, and whether they ever stop, has not been read from the code. A limit on attempts or age, or a rule that a removed machine is never a target, would stop them, at the cost of a removal that is never delivered to a machine that was only asleep.
+
+**One colleague's machine flips between reachable and unreachable every 15 to 30 minutes.** Noticed on the maintainer's machine during the cloud run of 2026-10-25 and 2026-10-26, for the peer `drizzle-ravine`, and not investigated. A user who sees a colleague's status change on that rhythm cannot tell a fault from a quiet colleague. The daemon log and the room view's status history would show whether the cause is the relay, the address or the status check (D-194, a colleague this machine cannot reach is named, with how long, in the room status and the view).
+
 ## Somebody else uses it
 
 A colleague who did not write cogmer installs it, pairs, joins a room and works in it.
@@ -60,9 +226,6 @@ somebody quietly not using it again.
 Two things to watch for, because both have been argued about without evidence:
 whether the two-word comparison is performed or skipped, and whether the browser view
 is consulted or forgotten.
-
-**NAT to NAT, with a real colleague on a real home router.** The last unknown in the
-transport, and not testable alone.
 
 **What a person actually notices in the view.** D-090 left this open: the display
 name and the derived name are separate elements but carry similar weight, and
@@ -91,14 +254,6 @@ restored by evidence. `known_peers` holds one endpoint per peer with the time it
 recorded, replaced when the peer advertises another (read on 2026-09-28). D-103 (an
 address belongs to a machine, and is stored in one place) gave each address the owner
 the lifecycle needs, and nothing past that is built.
-
-**Re-pick the overlay relay when it cannot be reached.** D-187 pins it so the
-address is stable. Nothing re-picks, so a machine that relocates past its pinned
-relay is unreachable and nothing says so. Change driven by failure, never by
-preference.
-
-**Say when your own address changes.** Every pairing string and invitation already
-handed out is then stale, and only the daemon can know.
 
 **Whether to rebuild the post-quantum hedge.** D-104 removed the pre-shared key,
 which was the only quantum-resistant element in the stack. It could be rebuilt at
@@ -140,24 +295,6 @@ two of three peers, and checking that each one's events arrive attributed to the
 origin, would answer it. Pairs are the case that exists, so this waits until somebody
 wants a third member.
 
-**One peer that is offline delays sync with every other, and rooms are asked of peers who
-are not in them.** `RunSync` in `cmd/cogmer/sync.go` asks each address one after another,
-and `syncTargets` returns every address this machine has recorded, so a peer paired once
-and never finished costs a dial that times out in about ten seconds on every round. In
-`~/.cogmer/daemon.log` on 2026-10-12 the first failure for such a peer and the first for
-the colleague a room was shared with are ten seconds apart. Each request to a peer also
-names a room it is not a guest of, in a signed request, so that peer learns the room's
-identifier. With one colleague the cost is about ten seconds in the view, and it grows
-with the number of peers ever paired who are offline: six pairings with four offline
-would lag the view by about forty seconds a round and could leave a colleague's last turn
-out of what a prompt injects.
-
-The fix has two parts. For each room, ask only that room's guests, which `RoomPeers`
-already maps to addresses, and ask the addresses in parallel so an unreachable one waits
-alone. Before changing which peers are asked, read whether relaying a third member's
-events (§13) relies on asking a peer that is not a guest of the room, since nothing has
-run that path.
-
 ## Rooms and sessions
 
 What a room, and the sessions in it, do as people create, leave, return and join from more than one session.
@@ -174,25 +311,6 @@ is part of the same question.
 has a closed room kept as an archive that can be read but never rejoined, and the
 specification freezes a room's sequences at that point. Membership ends per person
 through `leave` and `revoke`; the room itself has no closed state.
-
-**`leave`, run twice, says "this session is not in a room."** True, and unhelpful
-to somebody who left it a moment ago: it reads as a failure and sends them looking
-for a problem. It should say it has already left. `LeaveSession` returns that error
-from `RoomForSession` finding nothing, so the distinction to draw is between never
-having been in one and having left it — the row is still there with `left_at` set,
-so both are answerable.
-
-**`create`, run twice, silently makes a second room.** Inherent — a room is a new
-thing each time — but it is the command where a mistaken repeat costs most, because
-the second room is indistinguishable from the first to everybody except its
-creator, who now has two and is talking in one of them.
-
-Nothing currently helps. The session invoking it is already bound to a room when
-this happens, and binding is what `BindSession` already knows about, so a second
-`create` from a session already in a room could say which room that is and ask.
-That is the one place a non-idempotent command could cheaply refuse a mistake it
-now makes in silence. The command's documentation warns against retrying, which is
-the weakest possible form of the check.
 
 **A notice when a second session from this machine joins a room — not thought
 through.** `SessionsInRoom` already counts this machine's live sessions in a room
@@ -252,13 +370,6 @@ output reaches the model, that the empty text block the bridge returns for a cal
 raises nothing, that the plugin's name does not collide with another of the same name, and that a
 computer's rename needs only the command again.
 
-An interactive Claude Code session on 2026-10-14 showed "Stop hook error: MCP server
-'remote-devices' not connected" for a Stop hook that names a server that is absent. B31 (a hook of type
-mcp_tool that names a server that is not there shows nothing) says nothing shows, and its check runs
-with `claude -p`. Find out whether an interactive session differs, and if it does, whether the Cowork
-plugin's hooks show the error when the bridge has not started. A user whose bridge is down would then
-see an error on every prompt.
-
 When a Cowork session has been seen to work with them, D-205 and D-207 become active. The probe left an
 entry named `cogmer-host-probe` in the user's Claude Desktop configuration, the probe plugin installed in
 Cowork, and the files `~/.cogmer-host-probe.*`, to be removed by the user.
@@ -289,12 +400,7 @@ slice of the second run, and none has a choice taken yet:
 - Whether a colleague holding shares of the recovery phrase could recover a user who has lost
   it, which no decision has examined.
 
-**Two checks of a cloud session in a room with a paired machine are not shown, and one fact
-about where the cloud key is kept is unknown.** D-246 (a cloud environment is added from the machines page)
-keeps the cloud key in an environment variable of the cloud environment. Whether a cloud
-environment hides a variable's value from other people who can edit the environment is not
-known, and matters only for an environment shared with others, since the maintainer creates
-theirs at a personal level, said on 2026-10-24.
+**Two checks of a cloud session in a room with a paired machine are not shown.**
 
 `docs/work/cloud-run.md` is the run that shows a cloud session in a room with a paired machine,
 on the maintainer's machine and in a cloud session. The end of the next paragraph cites its results
@@ -336,16 +442,6 @@ colleague, which no run has tried.
 ## Tidying the commands
 
 The plugin's commands sit in the layout Claude Code prefers, and each has a reason to exist.
-
-**cogmer's Codex skill is loaded into Claude Code sessions, and gives the model a route to the
-commands.** `plugin/skills/cogmer/SKILL.md` is written for Codex and only
-`.codex-plugin/plugin.json` declares it, but Claude Code loads a plugin's `skills/` directory by
-itself. On 2026-10-18 the model in a Claude Code cloud session followed it to `codex-cli.sh`,
-which refused for want of a Codex session, then ran `cli.sh` through its shell. D-119 (no slash
-command is reachable by the model) keeps the command files from the model, and the skill
-reaches the same commands. Moving the skill to a directory only the Codex manifest names would
-keep it out of Claude Code; whether Claude Code reads a skills field in its own manifest that
-could exclude it is unchecked.
 
 **Move `plugin/commands/*.md` to the `skills/<name>/SKILL.md` layout.** The
 documentation calls `commands/` legacy and says the two are loaded identically. D-119
@@ -400,11 +496,10 @@ read as the terminal.
 
 D-213 becomes active when a colleague on another machine sees a picture sent from each host that sends one.
 
-Three questions are left. The relay speed for large transfers has not been measured, and a fetch may take
+Two questions are left. The relay speed for large transfers has not been measured, and a fetch may take
 20 seconds plus one second for each 50 KB. Image files stay with a room's database, and nothing removes
 either today, so D-132 (a closed room's log is archived, which is not built) has to say what becomes of a
-closed room's images. And a 5 MB image can hold a very large picture, and no limit on its pixel size is
-checked before the browser decodes it.
+closed room's images.
 
 **A colleague's pasted image never reaches the model.** Context is injected as text in a hook's output,
 under a budget of 9,000 characters (D-170, injected context has a character budget for the whole block),
