@@ -2092,6 +2092,13 @@ A cogmer that finds a machine's stored state in a form newer than it can read ne
 nor changes it, and says that the plugin needs updating, so that running an older cogmer never
 damages a user's rooms or identity.
 
+A cogmer copies a machine's databases before it upgrades them, so that an upgrade that fails can
+be undone.
+
+A cogmer that cannot finish upgrading a machine's stored state stops, and says where the copy is
+and that putting it back is safe only before cogmer has run again, so that nothing is written on
+databases that are partly upgraded.
+
 A room's database moves to the archive when the room closes. An archived room can be
 read and searched, and is never rejoined, synchronized or injected. Keeping the
 archive is what lets membership end without discarding the conversation.

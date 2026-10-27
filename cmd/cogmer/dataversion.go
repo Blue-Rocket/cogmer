@@ -61,8 +61,10 @@ func storedDataVersion() (int, error) {
 	return n, nil
 }
 
-// upgradeStateDirectory runs every migration this program has on the state directory
-// below its version, and then records the version. Room stores are otherwise
+// upgradeStateDirectory copies the databases (D-256, the databases are copied before
+// the state directory is migrated, and a program that cannot migrate it stops), runs
+// every migration this program has on the state directory below its version, and then
+// records the version. Room stores are otherwise
 // migrated only when something opens them, so every store under rooms/ is opened
 // here, and a store nothing would open for months is not left in an older format
 // behind a version that says otherwise. A migration that fails leaves the version as
@@ -70,6 +72,9 @@ func storedDataVersion() (int, error) {
 func upgradeStateDirectory(stored int) error {
 	if stored >= dataVersion {
 		return nil
+	}
+	if _, err := backupStateDirectory(stored); err != nil {
+		return &backupError{err}
 	}
 	m, err := OpenMembership()
 	if err != nil {
@@ -147,10 +152,26 @@ func guardStateDirectory(sub string) {
 	case "hook", "bridge":
 		return
 	}
-	if err := upgradeStateDirectory(stored); err != nil && sub == "daemon" {
-		log.Printf("the data in %s could not be brought to version %d, so its version stays %d: %v",
-			homeDir(), dataVersion, stored, err)
+	if err := upgradeStateDirectory(stored); err != nil {
+		refuseFailedUpgrade(sub, stored, err)
 	}
+}
+
+// refuseFailedUpgrade ends the entry point after an upgrade that stopped partway, so
+// that nothing is written on top of databases that are partly new (D-256). It says
+// where the copy is and when it is safe to put it back. The stop command goes on,
+// since a user is told to stop cogmer before restoring the copy.
+func refuseFailedUpgrade(sub string, stored int, err error) {
+	if sub == "stop" {
+		return
+	}
+	text := failedUpgradeText(stored, err)
+	if sub == "daemon" {
+		log.Print("not starting: " + strings.TrimSpace(text))
+	} else {
+		fmt.Fprint(os.Stderr, text)
+	}
+	os.Exit(1)
 }
 
 // refuseNewerData ends the entry point, except the bridge, which keeps answering its
