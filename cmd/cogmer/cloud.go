@@ -295,7 +295,7 @@ func loadSessionKeyIn(dir string) (ed25519.PrivateKey, bool) {
 // account alone, through a temporary file renamed over the old one, so that a crash
 // leaves one whole key (D-153, the private key is kept in a file of its own).
 func saveSessionKeyIn(dir string, key ed25519.PrivateKey) error {
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	if err := ensureDir(dir); err != nil {
 		return err
 	}
 	tmp, err := os.CreateTemp(dir, "session.key.*")

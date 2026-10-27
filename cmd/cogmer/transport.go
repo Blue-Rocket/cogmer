@@ -177,7 +177,7 @@ func AdvertisedEndpoint() string {
 // because `whoami` may read it while the daemon is starting.
 func recordEndpoint(e string) error {
 	dir := homeDir()
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	if err := ensureStateDir(); err != nil {
 		return err
 	}
 	tmp := filepath.Join(dir, endpointFile+".tmp")

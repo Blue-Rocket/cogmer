@@ -40,7 +40,8 @@ say() { ct_say install.log "$*"; }
 # Defined BEFORE this, so that failing to create the install directory is not the
 # one step that exits without saying anything. It is load-bearing -- nothing is
 # installed without it -- and it used to be the quietest line in the file (D-084).
-if ! mkdir -p "$bin_dir" 2>/dev/null; then
+ct_state_dir
+if ! (umask 077; mkdir -p "$bin_dir") 2>/dev/null; then
   say "cannot create $bin_dir; nothing can be installed"
   exit 0
 fi

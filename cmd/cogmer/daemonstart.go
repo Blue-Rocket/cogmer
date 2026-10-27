@@ -26,7 +26,7 @@ func startDaemon() error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(homeDir(), 0o700); err != nil {
+	if err := ensureStateDir(); err != nil {
 		return err
 	}
 	logFile, err := os.OpenFile(filepath.Join(homeDir(), "daemon.log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
@@ -65,7 +65,7 @@ func (localDaemon) Stopped() bool             { _, err := os.Stat(stoppedMarker(
 
 func (localDaemon) SetStopped(stopped bool) {
 	if stopped {
-		_ = os.MkdirAll(homeDir(), 0o700)
+		_ = ensureStateDir()
 		_ = os.WriteFile(stoppedMarker(), []byte(time.Now().UTC().Format(time.RFC3339)+"\n"), 0o600)
 		return
 	}

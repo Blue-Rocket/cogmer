@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -228,7 +227,7 @@ func scanRoom(r rowScanner) (Room, error) {
 }
 
 func OpenMembership() (*Membership, error) {
-	if err := os.MkdirAll(homeDir(), 0o700); err != nil {
+	if err := ensureStateDir(); err != nil {
 		return nil, err
 	}
 	path := filepath.Join(homeDir(), "membership.db")

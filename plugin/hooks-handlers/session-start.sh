@@ -22,7 +22,8 @@
 # completely, which is the same failure that cost an hour over a missing setsid
 # (D-084). Never to stdout: stdout here is injected into the user's turn.
 ct_install_log="${COGMER_HOME:-$HOME/.cogmer}/install.log"
-mkdir -p "$(dirname "$ct_install_log")" 2>/dev/null
+ct_state_dir
+(umask 077; : >> "$ct_install_log") 2>/dev/null
 if command -v setsid > /dev/null 2>&1; then
   setsid nohup bash "$(dirname "$0")/install.sh" >> "$ct_install_log" 2>&1 < /dev/null &
 else

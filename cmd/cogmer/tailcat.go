@@ -261,7 +261,7 @@ func loadTailcatKey() (key.NodePrivate, error) {
 	if err != nil {
 		return k, err
 	}
-	if err := os.MkdirAll(homeDir(), 0o700); err != nil {
+	if err := ensureStateDir(); err != nil {
 		return k, err
 	}
 	// 0600, like identity.key: holding it is holding the tunnel.
@@ -392,7 +392,7 @@ func loadTailcatRegion() (*tailcfg.DERPRegion, error) {
 	}
 	r := ci.Region[0]
 	if buf, err := json.MarshalIndent(r, "", "  "); err == nil {
-		_ = os.MkdirAll(homeDir(), 0o700)
+		_ = ensureStateDir()
 		_ = os.WriteFile(path, buf, 0o600)
 	}
 	return r, nil

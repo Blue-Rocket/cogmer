@@ -460,7 +460,7 @@ func saveIdentityIn(dir string, id *Identity) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	if err := ensureDir(dir); err != nil {
 		return err
 	}
 	return os.WriteFile(filepath.Join(dir, "identity.json"), buf, 0o600)

@@ -2479,7 +2479,7 @@ func reportDaemonBlocked(what, address string, cause error) {
 // recordDaemonState mirrors the install-state format -- state, when, detail -- so
 // the shell side has one shape to read rather than two.
 func recordDaemonState(state, detail string) {
-	_ = os.MkdirAll(homeDir(), 0o700)
+	_ = ensureStateDir()
 	line := fmt.Sprintf("%s\t%d\t%s\n", state, time.Now().Unix(), strings.ReplaceAll(detail, "\t", " "))
 	_ = os.WriteFile(daemonStateFile(), []byte(line), 0o600)
 }

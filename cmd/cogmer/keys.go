@@ -73,7 +73,7 @@ func loadOrCreateKey() (ed25519.PrivateKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(homeDir(), 0o700); err != nil {
+	if err := ensureStateDir(); err != nil {
 		return nil, err
 	}
 	enc := base64.RawStdEncoding.EncodeToString(priv)

@@ -27,6 +27,15 @@ cogmer_binary() {
   return 1
 }
 
+# ct_state_dir creates the state directory with mode 0700 and tightens one that exists, so
+# the databases and logs in it are not readable by other accounts whatever the umask is.
+# The umask is set in a subshell, so the caller's files keep the mode they had.
+ct_state_dir() {
+  local d="${COGMER_HOME:-$HOME/.cogmer}"
+  (umask 077; mkdir -p "$d") 2>/dev/null
+  chmod 700 "$d" 2>/dev/null
+}
+
 # ct_say appends one timestamped line to a log under the state directory.
 #
 # §3.1 requires failure to be silent TO THE PERSON AT THE KEYBOARD. It does not require silence
@@ -36,8 +45,8 @@ cogmer_binary() {
 ct_say() {
   local f
   f="${COGMER_HOME:-$HOME/.cogmer}/$1"; shift
-  mkdir -p "$(dirname "$f")" 2>/dev/null
-  printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >> "$f" 2>/dev/null
+  ct_state_dir
+  (umask 077; printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >> "$f") 2>/dev/null
 }
 
 # json_safe strips what would break a JSON string literal.
@@ -87,7 +96,8 @@ start_daemon_if_needed() {
   fi
 
   log="${COGMER_HOME:-$HOME/.cogmer}/daemon.log"
-  mkdir -p "$(dirname "$log")" 2>/dev/null
+  ct_state_dir
+  (umask 077; : >> "$log") 2>/dev/null
 
   # Detached, so the daemon outlives the session that started it: a room may have
   # members in several sessions, and starting it repeatedly is worse than leaving
@@ -143,8 +153,8 @@ install_state_file() { printf '%s' "${COGMER_HOME:-$HOME/.cogmer}/install-state"
 # set_install_state <installing|failed> <detail>
 set_install_state() {
   local f; f="$(install_state_file)"
-  mkdir -p "$(dirname "$f")" 2>/dev/null
-  printf '%s\t%s\t%s\n' "$1" "$(date +%s)" "${2:-}" > "$f" 2>/dev/null
+  ct_state_dir
+  (umask 077; printf '%s\t%s\t%s\n' "$1" "$(date +%s)" "${2:-}" > "$f") 2>/dev/null
 }
 
 clear_install_state() { rm -f "$(install_state_file)" 2>/dev/null; }

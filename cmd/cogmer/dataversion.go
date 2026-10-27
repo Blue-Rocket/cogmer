@@ -100,7 +100,7 @@ func upgradeStateDirectory(stored int) error {
 // old version or the new one and never a partial file. It never lowers the version a
 // program that started at the same moment recorded.
 func writeDataVersion(v int) error {
-	if err := os.MkdirAll(homeDir(), 0o700); err != nil {
+	if err := ensureStateDir(); err != nil {
 		return err
 	}
 	tmp, err := os.CreateTemp(homeDir(), "."+dataVersionFile+"-*")

@@ -45,7 +45,7 @@ func loadVerifications() map[string]verification {
 func saveVerification(v verification) {
 	m := loadVerifications()
 	m[v.Version] = v
-	if err := os.MkdirAll(homeDir(), 0o755); err != nil {
+	if err := ensureStateDir(); err != nil {
 		return
 	}
 	b, _ := json.MarshalIndent(m, "", "  ")

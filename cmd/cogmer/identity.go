@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -94,6 +95,39 @@ func homeDir() string {
 	return filepath.Join(h, stateDirName)
 }
 
+// ensureStateDir creates the state directory with mode 0700 and tightens one that
+// exists with group or other bits, so the databases, logs and keys inside it are not
+// readable by other accounts whatever the umask was when something first made it. A
+// state directory made by a shell script under a umask of 022, or by an older program,
+// is 0755, and nothing but this call would change that. Windows has no such bits, so
+// it only creates the directory there.
+func ensureStateDir() error { return ensureDir(homeDir()) }
+
+// ensureRoomsDir does the same for the folder of room databases.
+func ensureRoomsDir() error {
+	if err := ensureStateDir(); err != nil {
+		return err
+	}
+	return ensureDir(filepath.Join(homeDir(), "rooms"))
+}
+
+func ensureDir(dir string) error {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	fi, err := os.Stat(dir)
+	if err != nil {
+		return err
+	}
+	if fi.Mode().Perm()&0o077 != 0 {
+		return os.Chmod(dir, 0o700)
+	}
+	return nil
+}
+
 func randomID() string {
 	b := make([]byte, 10)
 	_, _ = rand.Read(b)
@@ -166,7 +200,7 @@ func LoadIdentity() (*Identity, error) {
 		NameChosen:      false, // guessed, and said so
 		MachineID:       host,
 	}
-	if err := os.MkdirAll(homeDir(), 0o755); err != nil {
+	if err := ensureStateDir(); err != nil {
 		return nil, err
 	}
 	buf, _ := json.MarshalIndent(id, "", "  ")
