@@ -170,12 +170,20 @@ and may surprise a user who only removed it from their list. D-208's mark that a
 daemon does not apply, since nobody ran `stop`. Whether the machine should keep a mark that it was
 retired is not decided.
 
-**One colleague's machine flips between reachable and unreachable every 15 to 30 minutes.** Noticed
-on the maintainer's machine during the cloud run of 2026-10-25 and 2026-10-26, for the peer
-`drizzle-ravine`, and not investigated. A user who sees a colleague's status change on that rhythm
-cannot tell a fault from a quiet colleague. The daemon log and the room view's status history would
-show whether the cause is the relay, the address or the status check (D-194, a colleague this
-machine cannot reach is named, with how long, in the room status and the view).
+**One colleague's machine goes unreachable about 45 times a day, and the cause is probably that
+their computer sleeps and wakes.** The maintainer's `~/.cogmer/daemon.log` on 2026-10-28 holds 216
+outages of the peer `drizzle-ravine` between 2026-10-22 and 2026-10-27, a median of 17.6 minutes
+between the starts of two (10th percentile 9.7, 90th 52.1), each lasting a median of 10 minutes and
+at most 150 (D-210, the daemon says where a connection to a peer fails, and discards a connection
+that is stuck, logs the outage). Fifty-five requests from the same peer were refused for a timestamp
+20 to 48 minutes from now, against a tolerance of two minutes, which is what a request signed before
+a computer slept and sent after it woke would carry. That fits a laptop that wakes for a few minutes
+at a time, and does not fit a fault in the relay or in the address, which would not delay a signed
+request by half an hour. Nothing from the colleague's side has been read. Asking the colleague
+whether the machine sleeps, and reading their power log for wake times, would settle it. If it does,
+no change is needed in the code, and a user who sees the status change on that rhythm is told by the
+room status how long the colleague has been out of reach (D-194, a colleague this machine cannot
+reach is named, with how long, in the room status and the view).
 
 ## Somebody else uses it
 
