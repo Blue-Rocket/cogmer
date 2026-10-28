@@ -485,7 +485,7 @@ func MarkdownReport() string {
 	b.WriteString("## Codex session checks\n\n")
 	b.WriteString("`cogmer doctor --host codex` checks these against the installed Codex runtime.\n")
 	b.WriteString("Set `COGMER_CODEX_BIN` to check another executable, such as a desktop runtime.\n")
-	b.WriteString("These checks use an isolated turn, with real hook output and a shell tool.\n")
+	b.WriteString("These checks use an isolated turn, with real hook output and a shell tool, and one loads a probe plugin into a Codex home of its own and asks the app server for its skills, with no turn.\n")
 	b.WriteString("Codex compaction behavior is not checked.\n\n")
 	for _, bh := range CodexBehaviors {
 		fmt.Fprintf(&b, "### %s: %s\n\n%s\n\n", bh.ID, bh.Title, bh.Reliance)

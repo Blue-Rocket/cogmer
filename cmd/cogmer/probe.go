@@ -63,6 +63,9 @@ type Probe struct {
 	// PluginSkills is the skills a session offered when it loaded a plugin with one skill in
 	// skills/ and one in another folder of the plugin (B35).
 	PluginSkills []string
+	// CodexPluginSkills is the skills Codex offered when it loaded a plugin whose manifest names
+	// a skills folder of its own (B36).
+	CodexPluginSkills []string
 
 	// What the Cowork check saw: the model's answer, whether the session failed, the events
 	// the probe server was called with, and the words and server name the hooks used.

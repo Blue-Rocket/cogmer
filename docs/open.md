@@ -134,7 +134,6 @@ tests that call the daemon directly. A Codex session and a Cowork session each m
 pairing with a colleague, joining a room, renaming the colleague and removing a machine would show
 what the tests do not. The removal of a machine is the least likely to have been seen, since it ends
 the daemon that a host's hook starts again.
-The Codex skill is in `plugin/codex-skills/` and the Codex manifest names that path, which Claude Code does not read, but no Codex session has loaded the plugin from the new path, and a session that offers the `cogmer` skill would show that Codex honors it.
 
 **A machine with no browser cannot make a user identity, and whether a Codex command can open the
 page is not known.** The identity page is the only place the recovery phrase is shown or typed

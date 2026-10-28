@@ -31,6 +31,7 @@ Codex manifest names, and `plugin/skills/` does not exist, since Claude Code loa
   defect it guards is the command added later by somebody who does not know the frontmatter matters.
   `cmd/cogmer/commandinvocation_test.go`, `TestNoCommandIsModelInvocable`.
 - Claude Code offers the skills in a plugin's `skills/` folder and in no other folder of the plugin, so a skill kept in `plugin/codex-skills/` is not a route to the commands for its model, and a skill in `plugin/skills/` would be. B35 (Claude Code offers the skills in a plugin's skills/ folder and in no other folder of the plugin), `cmd/cogmer/commandinvocation_test.go`, `TestTheCodexSkillIsOutsideTheDirectoryClaudeCodeLoads`.
+- Codex offers the skills in the folder a plugin's manifest names, so the Codex manifest reaches the skill in `plugin/codex-skills/` and Codex users keep every command. B36 (Codex offers the skills in the folder a plugin's manifest names), `cmd/cogmer/behaviors_test.go`, `TestCodexOffersTheCogmerSkillFromThePluginAsShipped`.
 - The Cowork plugin's command files carry the frontmatter too, and a test requires it. `cmd/cogmer/cowork_setup_test.go`, `TestNoCoworkCommandIsModelInvocableOrRunsAShell`.
 
 **Rejected.**

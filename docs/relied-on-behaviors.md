@@ -117,7 +117,7 @@ If this changes, a session counts a colleague's turns as delivered after a compa
 
 `cogmer doctor --host codex` checks these against the installed Codex runtime.
 Set `COGMER_CODEX_BIN` to check another executable, such as a desktop runtime.
-These checks use an isolated turn, with real hook output and a shell tool.
+These checks use an isolated turn, with real hook output and a shell tool, and one loads a probe plugin into a Codex home of its own and asks the app server for its skills, with no turn.
 Codex compaction behavior is not checked.
 
 ### B25: Codex prompt and Stop hooks carry matching session and turn identifiers
@@ -131,6 +131,10 @@ If this changes, the room records an incomplete response or counts no tools. Rea
 ### B27: Codex records injected context as a hook-marked message and the model receives it
 
 If this changes, a colleague's turns are never confirmed as delivered and are offered again. An altered or truncated block cannot confirm delivery of the complete block.
+
+### B36: Codex offers the skills in the folder a plugin's manifest names
+
+If this changes so that Codex offers only a fixed folder of the plugin, or none, the cogmer skill that gives a Codex user every command is not offered, `$cogmer` finds nothing, and a Codex user has no way to run a room command. The skill sits in plugin/codex-skills so that Claude Code does not offer it (D-119), which depends on the manifest's skills path being honored. It fails visibly, since the commands do not exist, but nothing says why.
 
 ### B28: CODEX_THREAD_ID in a shell tool equals the hook session identifier
 

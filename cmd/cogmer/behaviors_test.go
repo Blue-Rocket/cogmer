@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -278,4 +280,98 @@ func TestInitSkillsReadsTheFirstEventOfAStream(t *testing.T) {
 	if got := initSkills([]byte("not json\n")); got != nil {
 		t.Errorf("a stream with no init event gave %v", got)
 	}
+}
+
+func TestB36DetectsACodexThatDoesNotOfferTheSkillInTheNamedFolder(t *testing.T) {
+	check := func(p *Probe) error {
+		for _, b := range CodexBehaviors {
+			if b.ID == "B36" {
+				return b.Check(p)
+			}
+		}
+		t.Fatal("B36 is not in the Codex behaviors")
+		return nil
+	}
+	if err := check(&Probe{CodexPluginSkills: []string{"imagegen", "cogmerskillprobe:seen"}}); err != nil {
+		t.Errorf("a skill from the named folder was offered and the check failed: %v", err)
+	}
+	for name, skills := range map[string][]string{
+		"the system skills only": {"imagegen", "openai-docs"},
+		"nothing":                nil,
+		"another plugin's skill": {"other:seen2"},
+	} {
+		if check(&Probe{CodexPluginSkills: skills}) == nil {
+			t.Errorf("%s was not detected", name)
+		}
+	}
+}
+
+func TestSkillNamesReadsASkillsListResult(t *testing.T) {
+	got := skillNames([]byte(`{"data":[{"cwd":"/x","skills":[{"name":"a:seen","path":"/p"},{"name":"imagegen"}],"errors":[]}]}`))
+	if len(got) != 2 || got[0] != "a:seen" || got[1] != "imagegen" {
+		t.Errorf("names = %v", got)
+	}
+	if skillNames([]byte("not json")) != nil || skillNames(nil) != nil {
+		t.Error("a result that is no list gave names")
+	}
+}
+
+// The real Codex, with no model turn: the probe plugin is installed into a Codex home made for
+// the test, and the app server is asked for its skills.
+func TestTheRealCodexOffersTheSkillInTheFolderAPluginsManifestNames(t *testing.T) {
+	if testing.Short() {
+		t.Skip("starts the user's own codex")
+	}
+	if _, err := exec.LookPath(codexExecutable()); err != nil {
+		t.Skip("no codex on this machine")
+	}
+	skills := runCodexSkillProbe(t.TempDir())
+	t.Logf("Codex offered %d skills: %v", len(skills), skills)
+	for _, b := range CodexBehaviors {
+		if b.ID == "B36" {
+			if err := b.Check(&Probe{CodexPluginSkills: skills}); err != nil {
+				t.Errorf("%v", err)
+			}
+		}
+	}
+}
+
+// The plugin this repository ships, installed into a Codex home made for the test: Codex offers
+// the cogmer skill from the folder its manifest names, which Claude Code does not read (D-119).
+func TestCodexOffersTheCogmerSkillFromThePluginAsShipped(t *testing.T) {
+	if testing.Short() {
+		t.Skip("starts the user's own codex")
+	}
+	if _, err := exec.LookPath(codexExecutable()); err != nil {
+		t.Skip("no codex on this machine")
+	}
+	root := t.TempDir()
+	src := filepath.Join(root, "src")
+	for _, dir := range []string{"plugin", ".agents"} {
+		from := filepath.Join("..", "..", dir)
+		if err := filepath.WalkDir(from, func(p string, d os.DirEntry, err error) error {
+			if err != nil || d.Name() == ".DS_Store" {
+				return err
+			}
+			rel, _ := filepath.Rel(filepath.Join("..", ".."), p)
+			to := filepath.Join(src, rel)
+			if d.IsDir() {
+				return os.MkdirAll(to, 0o755)
+			}
+			b, err := os.ReadFile(p)
+			if err != nil {
+				return err
+			}
+			return os.WriteFile(to, b, 0o755)
+		}); err != nil {
+			t.Skipf("the plugin is not readable from here: %v", err)
+		}
+	}
+	skills := codexSkillsOfPlugin(root, src, "cogmer", "blue-rocket")
+	for _, s := range skills {
+		if s == "cogmer:cogmer" {
+			return
+		}
+	}
+	t.Errorf("Codex offered %v and not cogmer:cogmer, so the Codex manifest does not reach the skill in plugin/codex-skills", skills)
 }
