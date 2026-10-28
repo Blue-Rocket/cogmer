@@ -145,6 +145,22 @@ plugin all move together, and nothing yet says in what order. A release with its
 such as 0.11.0, a plan for each of the three machines, and the lagging-plugin test above, would
 cover it.
 
+**Codex's shell tool cannot start on Ubuntu 24.04 with its default kernel settings, so `doctor`
+reports B28 failed and a Codex user's commands would fail there.** On 2026-10-28, on a droplet with
+Ubuntu 24.04 and codex-cli 0.160.0, `kernel.apparmor_restrict_unprivileged_userns` is 1, and a shell
+tool run with `-s workspace-write` answered `bwrap: loopback: Failed RTM_NEWADDR: Operation not
+permitted` and did not run. `cogmer doctor --host codex` there passed B25, B26, B27 and B36 and
+failed B28 with `CODEX_THREAD_ID ""`, because the probe's tool wrote no file. That failure is the
+sandbox, and does not show a change in what Codex exports, which was not determined: a second
+attempt, with the sandbox kept and network allowed, ran no tool, and a run with the sandbox off was
+not made. A Codex user's `$cogmer` command runs `bash codex-cli.sh` in the same tool, so it fails
+the same way on such a machine, while the hooks, which run outside the tool, still capture and
+inject (B25 and B27 passed). The message for B28 could name this cause when the tool wrote nothing,
+at the cost of a sentence and a test, and the README could tell a Codex user on such a machine that
+the sandbox needs that setting changed or turned off, which is their own decision. Whether the probe
+can allow network (`-c sandbox_workspace_write.network_access=true`) and so run there has not been
+shown.
+
 **No Codex or Cowork session has run on the `user-identity` branch.** The container tests and the
 cloud run drive Claude Code, and the Codex and Cowork hooks, commands and bridge are covered by
 tests that call the daemon directly. A Codex session and a Cowork session each making an identity,
