@@ -56,7 +56,7 @@ are grouped by section, with gaps, so that a new rule never renumbers an old one
 | W-42 | evidence is cited by the commit that recorded it | judgment |
 | W-50 | an `open.md` item names the problem | judgment |
 | W-51 | a long `open.md` item holds detail of another kind | judgment |
-| W-52 | delete a finished `open.md` item | judgment |
+| W-52 | delete a finished `open.md` item, and say in the deleting commit what it found | judgment |
 | W-53 | `open.md` groups items by milestone, and a finished one leaves no record | judgment |
 | W-55 | a pattern applies beyond this project, and this project follows it | judgment |
 | W-56 | a pattern names nothing in this repository | checked |
@@ -387,11 +387,17 @@ If something is unknown, say what would answer it.>
 W-50. The opening sentence names the problem, not the fix: "`/cogmer:self-status`
 on first use fails instead of answering", not "Make cli.sh exit 0".
 
-W-51. An item past about 25 lines usually holds detail of another kind: what
-happened on the way belongs in a commit message, and the reasoning for a choice in a
-decision.
+W-51. An item past about 25 lines usually holds detail of another kind: the record
+of a run belongs in a commit message (W-42), and the reasoning for a choice in a
+decision. A finding is something learned that bears on the item's problem, whether
+from a run, a document, the code or reasoning. A finding that says why the item is
+open, why a path is blocked or what an option costs stays in the item, with its
+source.
 
-W-52. Delete an item when it is done; never mark it done.
+W-52. Delete an item when it is done; never mark it done. The commit that deletes an
+item says what the item's findings were and what ended the item, and cites the
+commits that recorded the runs those findings rest on. A decision the item produced
+cites the deleting commit.
 
 W-53. `docs/open.md` groups its items by milestone: a set of related functionality,
 named in a sentence that opens the milestone's section. The section is deleted with
