@@ -60,6 +60,9 @@ type Probe struct {
 	// as the daemon's block budget, and BudgetSize how many that was (B34).
 	BudgetBlock string
 	BudgetSize  int
+	// PluginSkills is the skills a session offered when it loaded a plugin with one skill in
+	// skills/ and one in another folder of the plugin (B35).
+	PluginSkills []string
 
 	// What the Cowork check saw: the model's answer, whether the session failed, the events
 	// the probe server was called with, and the words and server name the hooks used.
@@ -271,6 +274,7 @@ func RunProbe(deep bool) (*Probe, error) {
 	p.freezeSessionEvidence()
 	p.FailingLineOutput, p.ControlLineOutput, p.ControlPrompt, p.BudgetBlock = runCommandProbe(claude, dir)
 	p.BudgetSize = defaultMaxInjectedBlock
+	p.PluginSkills = runSkillProbe(claude, dir)
 
 	if deep {
 		if _, err := run("-p", "/compact", "--resume", p.SessionID, "--settings", settings); err != nil {
@@ -504,6 +508,51 @@ func runCommandProbe(claude, dir string) (failing, control, controlPrompt, budge
 		}
 	}
 	return failing, control, controlPrompt, budgetBlock
+}
+
+// runSkillProbe loads a plugin with one skill in skills/ and one in another folder of the
+// plugin, and returns the skills the session offered, which Claude Code lists in the first
+// event of a stream (B35). It starts one session and needs no answer from the model.
+func runSkillProbe(claude, dir string) []string {
+	work := filepath.Join(dir, "skillprobe")
+	plug := filepath.Join(work, "plug")
+	for name, folder := range map[string]string{"seen": "skills", "hidden": "other-skills"} {
+		d := filepath.Join(plug, folder, name)
+		if os.MkdirAll(d, 0o700) != nil {
+			return nil
+		}
+		body := "---\nname: " + name + "\ndescription: probe skill\n---\nprobe\n"
+		if os.WriteFile(filepath.Join(d, "SKILL.md"), []byte(body), 0o600) != nil {
+			return nil
+		}
+	}
+	meta := filepath.Join(plug, ".claude-plugin")
+	if os.MkdirAll(meta, 0o700) != nil ||
+		os.WriteFile(filepath.Join(meta, "plugin.json"), []byte(`{"name":"cogmerskillprobe","version":"0.0.1","description":"a probe"}`), 0o600) != nil {
+		return nil
+	}
+	cmd := exec.Command(claude, claudeArgs("-p", "Reply with the single word OK.", "--plugin-dir", plug,
+		"--output-format", "stream-json", "--verbose")...)
+	cmd.Dir = work
+	cmd.Stdin = strings.NewReader("")
+	cmd.Env = append(os.Environ(), "COGMER_ADDR=127.0.0.1:1")
+	out, _ := cmd.Output()
+	return initSkills(out)
+}
+
+// initSkills is the skills listed in the init event of a stream-json run.
+func initSkills(stream []byte) []string {
+	for _, line := range strings.Split(string(stream), "\n") {
+		var m struct {
+			Type    string   `json:"type"`
+			Subtype string   `json:"subtype"`
+			Skills  []string `json:"skills"`
+		}
+		if json.Unmarshal([]byte(line), &m) == nil && m.Type == "system" && m.Subtype == "init" {
+			return m.Skills
+		}
+	}
+	return nil
 }
 
 // budgetProbeMark opens the output of the budget probe's hook.

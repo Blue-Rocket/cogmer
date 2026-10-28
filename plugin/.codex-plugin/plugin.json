@@ -3,6 +3,6 @@
   "version": "0.10.5",
   "description": "Share a conversation between Claude Code and Codex sessions, peer to peer.",
   "author": { "name": "David Foote" },
-  "skills": "./skills/",
+  "skills": "./codex-skills/",
   "hooks": "./hooks/codex-hooks.json"
 }

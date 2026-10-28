@@ -260,3 +260,22 @@ func TestTheProbeHookWritesAnOutputOfTheLengthItIsGiven(t *testing.T) {
 		t.Errorf("the hook wrote %d characters beginning %q", len(b), string(b)[:20])
 	}
 }
+
+func TestB35DetectsAHostThatOffersASkillFromAnotherFolderOfAPlugin(t *testing.T) {
+	mustPass(t, "B35", &Probe{PluginSkills: []string{"cogmerskillprobe:seen", "frontend-design:frontend-design"}})
+	mustDetect(t, "B35", &Probe{PluginSkills: []string{"cogmerskillprobe:seen", "cogmerskillprobe:hidden"}}, "a skill from another folder")
+	mustDetect(t, "B35", &Probe{PluginSkills: []string{"cogmerskillprobe:hidden"}}, "a skill from another folder")
+	mustDetect(t, "B35", &Probe{}, "a session that offered nothing")
+}
+
+func TestInitSkillsReadsTheFirstEventOfAStream(t *testing.T) {
+	stream := []byte(`{"type":"system","subtype":"hook_started"}` + "\n" +
+		`{"type":"system","subtype":"init","skills":["a:seen","b"],"plugins":[]}` + "\n" +
+		`{"type":"result","subtype":"success"}` + "\n")
+	if got := initSkills(stream); len(got) != 2 || got[0] != "a:seen" {
+		t.Errorf("skills = %v", got)
+	}
+	if got := initSkills([]byte("not json\n")); got != nil {
+		t.Errorf("a stream with no init event gave %v", got)
+	}
+}

@@ -33,16 +33,6 @@ out.
 People the maintainer has never met install cogmer, on machines, networks and settings the
 maintainer has not seen, and none of them is worse off for it.
 
-**cogmer's Codex skill is loaded into Claude Code sessions, and gives the model a route to the
-commands.** `plugin/skills/cogmer/SKILL.md` is written for Codex and only
-`.codex-plugin/plugin.json` declares it, but Claude Code loads a plugin's `skills/` directory by
-itself. On 2026-10-18 the model in a Claude Code cloud session followed it to `codex-cli.sh`,
-which refused for want of a Codex session, then ran `cli.sh` through its shell. D-119 (no slash
-command is reachable by the model) keeps the command files from the model, and the skill
-reaches the same commands. Moving the skill to a directory only the Codex manifest names would
-keep it out of Claude Code; whether Claude Code reads a skills field in its own manifest that
-could exclude it is unchecked.
-
 **Nothing checks that a program accepts the hooks and commands of an older plugin on the
 same machine.** One program in `~/.cogmer/bin` serves every host, and the installer and the
 daemon replace it only with a newer one (D-215, the installer and the daemon replace a program
@@ -152,6 +142,7 @@ tests that call the daemon directly. A Codex session and a Cowork session each m
 pairing with a colleague, joining a room, renaming the colleague and removing a machine would show
 what the tests do not. The removal of a machine is the least likely to have been seen, since it ends
 the daemon that a host's hook starts again.
+The Codex skill is in `plugin/codex-skills/` and the Codex manifest names that path, which Claude Code does not read, but no Codex session has loaded the plugin from the new path, and a session that offers the `cogmer` skill would show that Codex honors it.
 
 **A machine with no browser cannot make a user identity, and whether a Codex command can open the
 page is not known.** The identity page is the only place the recovery phrase is shown or typed

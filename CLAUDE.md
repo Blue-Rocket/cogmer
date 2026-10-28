@@ -124,7 +124,7 @@ every target cross-compiles with `CGO_ENABLED=0`.
   nothing declared is refused. `COGMER_CODEX_BIN` names a Codex executable other than
   the one on `PATH`.
 - **`cogmer doctor` checks the behaviors we rely on** in each installed host, in
-  about 13s and two Claude turns for Claude Code and one turn for Codex, and
+  about 18s and two Claude turns for Claude Code and one turn for Codex, and
   `--host` picks one, and `--host cowork` checks what Cowork relies on in the Claude Code on this machine, in one turn. `--deep` adds a Claude Code compaction, in about 40s. It runs
   by itself when a room is formed under a Claude Code version this machine has not
   checked, and `COGMER_PREFLIGHT=off` turns that off for CI.

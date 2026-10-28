@@ -3,7 +3,9 @@
 **Date:** 2026-09-22 · **Status:** active · **Areas:** commands, trust
 
 **Decision.** Every file in `plugin/commands/` carries `disable-model-invocation: true`, and a test
-requires it.
+requires it. The skill that gives Codex the commands sits in `plugin/codex-skills/`, which only the
+Codex manifest names, and `plugin/skills/` does not exist, since Claude Code loads every skill in
+`plugin/skills/` and one there would be a route to the commands for its model. A test requires both.
 
 **Support.**
 - A command file is loaded as a skill is, so every command would be a skill the model can
@@ -28,6 +30,7 @@ requires it.
 - The test requires the frontmatter on every file and fails if the directory is empty, because the
   defect it guards is the command added later by somebody who does not know the frontmatter matters.
   `cmd/cogmer/commandinvocation_test.go`, `TestNoCommandIsModelInvocable`.
+- Claude Code offers the skills in a plugin's `skills/` folder and in no other folder of the plugin, so a skill kept in `plugin/codex-skills/` is not a route to the commands for its model, and a skill in `plugin/skills/` would be. B35 (Claude Code offers the skills in a plugin's skills/ folder and in no other folder of the plugin), `cmd/cogmer/commandinvocation_test.go`, `TestTheCodexSkillIsOutsideTheDirectoryClaudeCodeLoads`.
 - The Cowork plugin's command files carry the frontmatter too, and a test requires it. `cmd/cogmer/cowork_setup_test.go`, `TestNoCoworkCommandIsModelInvocableOrRunsAShell`.
 
 **Rejected.**
