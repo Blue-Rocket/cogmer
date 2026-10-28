@@ -41,7 +41,7 @@ var outboundCalls = map[site]struct {
 	{"codex_probe.go", "exec.Command"}:        {1, "asks the user's own codex for its version"},
 	{"codex_probe.go", "exec.CommandContext"}: {1, "runs the user's own codex on a fixed behavior probe"},
 	{"doctor.go", "exec.Command"}:             {1, "asks the user's own claude for its version"},
-	{"probe.go", "exec.Command"}:              {4, "runs the user's own claude and this binary on fixed test prompts, and launchctl"},
+	{"probe.go", "exec.Command"}:              {5, "runs the user's own claude and this binary on fixed test prompts, and launchctl"},
 	{"stop_unix.go", "exec.Command"}:          {2, "lsof and ps, which read this machine's processes"},
 	{"stop_windows.go", "exec.Command"}:       {2, "netstat and tasklist, which read this machine's processes"},
 	{"bridge.go", "http.Client"}:              {1, "the daemon on loopback, for the Cowork bridge's relay of a hook's call"},
