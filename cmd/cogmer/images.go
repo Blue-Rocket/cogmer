@@ -41,9 +41,11 @@ func sniffImageType(head []byte) (string, bool) {
 
 // Reasons an image named in a turn has no bytes to show.
 const (
-	imageTooLarge    = "too-large"
-	imageMissing     = "missing"
-	imageUnsupported = "unsupported"
+	imageTooLarge = "too-large"
+	// imageTooManyPixels is an image within the byte limit whose header puts it past the pixel limit.
+	imageTooManyPixels = "too-many-pixels"
+	imageMissing       = "missing"
+	imageUnsupported   = "unsupported"
 )
 
 // imageRef is how a turn's event names one pasted image. The metadata is signed, so the hash
@@ -162,6 +164,11 @@ func prepareImage(f pastedFile) preparedImage {
 		return preparedImage{ref: ref}
 	}
 	data = append(data, rest...)
+	if !imageWithinLimits(typ, data) {
+		ref.Note = imageTooManyPixels
+		ref.SHA256 = ""
+		return preparedImage{ref: ref}
+	}
 	sum := sha256.Sum256(data)
 	ref.SHA256 = hex.EncodeToString(sum[:])
 	ref.Size = int64(len(data))

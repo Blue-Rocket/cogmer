@@ -312,6 +312,10 @@ func finishImage(row imageRow, part, final string) error {
 		_ = os.Remove(part)
 		return fmt.Errorf("the bytes are %q, not the %s the event names", typ, row.Type)
 	}
+	if !imageWithinLimits(row.Type, data) {
+		_ = os.Remove(part)
+		return errors.New("the image has more pixels than cogmer stores")
+	}
 	if err := os.Chmod(part, 0o600); err != nil {
 		return err
 	}

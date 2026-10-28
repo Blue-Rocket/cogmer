@@ -315,6 +315,8 @@ func imagesHTML(room string, refs []imageRef, held map[string]imageRow) string {
 		switch {
 		case r.Note == imageTooLarge:
 			fmt.Fprintf(&b, `<p class="imagenote">image %d is %.1f MB, which is more than cogmer sends</p>`, r.N, float64(r.Size)/(1<<20))
+		case r.Note == imageTooManyPixels:
+			fmt.Fprintf(&b, `<p class="imagenote">image %d has more pixels than cogmer sends</p>`, r.N)
 		case r.Note == imageMissing:
 			fmt.Fprintf(&b, `<p class="imagenote">image %d could not be read on its sender's machine</p>`, r.N)
 		case r.Note == imageUnsupported:

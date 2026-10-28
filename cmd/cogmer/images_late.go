@@ -146,6 +146,10 @@ func prepareData(n int, data []byte) preparedImage {
 		ref.Type = typ
 		ref.Note = imageTooLarge
 		return preparedImage{ref: ref}
+	case !imageWithinLimits(typ, data):
+		ref.Type = typ
+		ref.Note = imageTooManyPixels
+		return preparedImage{ref: ref}
 	}
 	sum := sha256.Sum256(data)
 	ref.Type, ref.SHA256 = typ, hex.EncodeToString(sum[:])

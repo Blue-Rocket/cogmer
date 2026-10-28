@@ -58,14 +58,6 @@ plugin's hooks show the error when the bridge has not started. A user whose brid
 see an error on every prompt.
 Either the check is made and the Cowork plugin's hooks are shown to be silent without the bridge, or Cowork is labeled experimental until it is.
 
-**A colleague's pasted image can be any pixel size, and nothing limits it before the browser decodes
-it.** `maxImageBytes` is 5 MB (`cmd/cogmer/images.go`), and no Go code reads an image's width or
-height, read on 2026-10-27, so a small file that holds a very large picture could stall the browser
-of every colleague who opens the room. Reading the width and height from the file's header and
-refusing an image past a limit costs a header parser for each format the hosts send. Whether images
-are labeled experimental until D-213 (a pasted image is sent to peers and each receiver stores it as
-a file) is seen working between two machines is not decided.
-
 **Whether a cloud environment shows the cloud key to the people who can edit it is not known.** D-246 (a cloud environment is added from the machines page)
 keeps the cloud key in an environment variable of the cloud environment. Whether a cloud
 environment hides a variable's value from other people who can edit the environment is not

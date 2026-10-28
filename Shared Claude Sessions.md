@@ -1644,6 +1644,9 @@ asked about.
 An image over 5 MB is not sent, and the turn says it was too large, so that one huge image cannot fill a
 colleague's disk or hold up the room.
 
+An image with more pixels than a screen of a few thousand pixels on a side is not sent, shown or kept, and the
+turn says so, so that a small file holding an enormous picture cannot stall a colleague's browser.
+
 A colleague's daemon fetches an image from any machine that holds it, so the image is available while its
 author is offline.
 
