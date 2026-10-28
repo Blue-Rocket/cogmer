@@ -170,15 +170,6 @@ and may surprise a user who only removed it from their list. D-208's mark that a
 daemon does not apply, since nobody ran `stop`. Whether the machine should keep a mark that it was
 retired is not decided.
 
-**A removal is pushed again and again to machines that can never acknowledge it.** D-225 (a machine
-sends each removal and new shared key to every colleague it knows until each acknowledges) sends
-each record until its receiver acknowledges. On 2026-10-26 the maintainer's test machine held, in
-`identity_push` in `~/.cogmer-test/membership.db`, one removal with 29 attempts and another with 6
-to the key of a cloud session, and the second with 5 to a machine that had erased its keys, none
-acknowledged. Whether the attempts back off, and whether they ever stop, has not been read from the
-code. A limit on attempts or age, or a rule that a removed machine is never a target, would stop
-them, at the cost of a removal that is never delivered to a machine that was only asleep.
-
 **One colleague's machine flips between reachable and unreachable every 15 to 30 minutes.** Noticed
 on the maintainer's machine during the cloud run of 2026-10-25 and 2026-10-26, for the peer
 `drizzle-ravine`, and not investigated. A user who sees a colleague's status change on that rhythm

@@ -697,3 +697,69 @@ func TestARevokedMachineStopsServingTheRoom(t *testing.T) {
 		t.Errorf("the room it is still a guest of has targets %v", got)
 	}
 }
+
+// A record is owed to no removed machine and for no more than a week of failed attempts
+// (D-268, a record is owed to no removed machine and for no more than a week of failed
+// attempts).
+func TestARemovedMachineIsOwedNothingAndWhatWasOwedItIsDropped(t *testing.T) {
+	a, b := twoMachines(t)
+	keep := b.d.id.PeerID
+	owed := func() int {
+		var n int
+		_ = a.d.members.db.QueryRow(`SELECT COUNT(*) FROM identity_push WHERE target = ?`, keep).Scan(&n)
+		return n
+	}
+	if err := a.d.members.owePushes(a.d.id); err != nil {
+		t.Fatal(err)
+	}
+	if owed() == 0 {
+		t.Fatal("a machine that is not removed is owed nothing, so the test shows nothing")
+	}
+	var res identityResult
+	a.local(t, "/machines/remove", removeRequest{Machine: keep}, &res)
+	if res.Status != "removed" {
+		t.Fatalf("removing: %+v", res)
+	}
+	if err := a.d.members.owePushes(a.d.id); err != nil {
+		t.Fatal(err)
+	}
+	if n := owed(); n != 0 {
+		t.Errorf("%d records are still owed to a machine that was removed", n)
+	}
+	// and a record made after the removal is owed to it no more than what was owed before
+	if err := a.d.members.oweToOwnMachines("deadbeef", RecordRemoval, a.d.id, ""); err != nil {
+		t.Fatal(err)
+	}
+	if n := owed(); n != 0 {
+		t.Errorf("a new record was owed to the removed machine (%d rows)", n)
+	}
+}
+
+func TestARecordIsNotSentAfterAWeekOfFailedAttempts(t *testing.T) {
+	a, _ := twoMachines(t)
+	insert := func(hash string, attempts int) {
+		t.Helper()
+		if _, err := a.d.members.db.Exec(`INSERT INTO identity_push (hash, kind, target, target_kind, attempts)
+			VALUES (?, ?, 'ed25519:someone', ?, ?)`, hash, RecordRemoval, pushToMachine, attempts); err != nil {
+			t.Fatal(err)
+		}
+	}
+	insert("under", pushAttemptLimit-1)
+	insert("at", pushAttemptLimit)
+	insert("past", pushAttemptLimit+100)
+	due, err := a.d.members.duePushes(time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]bool{}
+	for _, p := range due {
+		got[p.Hash] = true
+	}
+	if !got["under"] || got["at"] || got["past"] {
+		t.Errorf("due after a week of attempts: %v", got)
+	}
+	// the backoff means the limit is about a week: ten minutes at the longest wait
+	if weeks := time.Duration(pushAttemptLimit) * propagationBackoff(1000); weeks < 6*24*time.Hour || weeks > 8*24*time.Hour {
+		t.Errorf("the limit of %d attempts is %s of waiting at the longest backoff, not about a week", pushAttemptLimit, weeks)
+	}
+}

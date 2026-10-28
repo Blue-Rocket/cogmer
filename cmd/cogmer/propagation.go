@@ -79,6 +79,15 @@ const (
 	maxFetchHashes = 256
 )
 
+// pushAttemptLimit is how many failed attempts a record owed to a target gets before it is no
+// longer sent: a week of attempts at the longest backoff. A machine that has been away longer
+// learns of the record from a machine that is ahead of it when it returns (D-221, an event
+// whose identity version the receiver lacks is withheld from the assistant until fetched),
+// and a record owed to a machine that can never answer, such as a cloud session that ended,
+// would otherwise be sent every ten minutes for good (D-268, a record is owed to no removed
+// machine and for no more than a week of failed attempts).
+const pushAttemptLimit = 7 * 24 * 6
+
 // propagationBackoff is the wait after the nth failed attempt to fetch or to push,
 // doubling from 5s to 10 minutes, so a colleague offline for a day costs a request
 // every ten minutes and one back after an hour is reached within ten.
@@ -705,15 +714,33 @@ func (d *Daemon) handleIdentityPush(w http.ResponseWriter, r *http.Request) {
 
 // --- pushing ---
 
+// notRemoved is an SQL condition, with its arguments, that leaves out each machine of user
+// that a removal removes, since a removed machine is told nothing (D-252, a reachable machine
+// is asked to erase its keys before it is removed). It is empty when none is removed.
+func (m *Membership) notRemoved(user, column string) (string, []any) {
+	st := m.UserState(user, nil)
+	var args []any
+	for key, ms := range st.Machines {
+		if ms.Removed {
+			args = append(args, key)
+		}
+	}
+	if len(args) == 0 {
+		return "", nil
+	}
+	return " AND " + column + " NOT IN (?" + strings.Repeat(",?", len(args)-1) + ")", args
+}
+
 // oweToOwnMachines records that each of this user's other machines is owed a record,
 // apart from the machine it came from.
 func (m *Membership) oweToOwnMachines(hash, kind string, id *Identity, from string) error {
 	if !id.HasUser() {
 		return nil
 	}
+	cond, extra := m.notRemoved(id.User, "machine_key")
 	_, err := m.db.Exec(`INSERT OR IGNORE INTO identity_push (hash, kind, target, target_kind)
-		SELECT ?, ?, machine_key, ? FROM machines WHERE user = ? AND machine_key <> ? AND machine_key <> ?`,
-		hash, kind, pushToMachine, id.User, id.PeerID, from)
+		SELECT ?, ?, machine_key, ? FROM machines WHERE user = ? AND machine_key <> ? AND machine_key <> ?`+cond,
+		append([]any{hash, kind, pushToMachine, id.User, id.PeerID, from}, extra...)...)
 	return err
 }
 
@@ -733,11 +760,20 @@ func (m *Membership) owePushes(id *Identity) error {
 		pushToUser, id.User, RecordRemoval, RecordShared, id.User, id.PeerID); err != nil {
 		return err
 	}
-	_, err := m.db.Exec(`INSERT OR IGNORE INTO identity_push (hash, kind, target, target_kind)
+	cond, extra := m.notRemoved(id.User, "mc.machine_key")
+	if _, err := m.db.Exec(`INSERT OR IGNORE INTO identity_push (hash, kind, target, target_kind)
 		SELECT r.hash, r.kind, mc.machine_key, ? FROM identity_records r, machines mc
-		WHERE r.user = ? AND r.kind IN (?, ?) AND mc.user = ? AND mc.machine_key <> ?`,
-		pushToMachine, id.User, RecordRemoval, RecordShared, id.User, id.PeerID)
-	return err
+		WHERE r.user = ? AND r.kind IN (?, ?) AND mc.user = ? AND mc.machine_key <> ?`+cond,
+		append([]any{pushToMachine, id.User, RecordRemoval, RecordShared, id.User, id.PeerID}, extra...)...); err != nil {
+		return err
+	}
+	// What was owed to a machine before a removal removed it is owed no more.
+	for _, key := range extra {
+		if _, err := m.db.Exec(`DELETE FROM identity_push WHERE target = ? AND target_kind = ? AND acked_at IS NULL`, key, pushToMachine); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type owedPush struct {
@@ -747,8 +783,8 @@ type owedPush struct {
 
 func (m *Membership) duePushes(now time.Time) ([]owedPush, error) {
 	rows, err := m.db.Query(`SELECT hash, kind, target, target_kind, attempts FROM identity_push
-		WHERE acked_at IS NULL AND (next_try = '' OR next_try <= ?) ORDER BY target, hash`,
-		now.UTC().Format(time.RFC3339Nano))
+		WHERE acked_at IS NULL AND attempts < ? AND (next_try = '' OR next_try <= ?) ORDER BY target, hash`,
+		pushAttemptLimit, now.UTC().Format(time.RFC3339Nano))
 	if err != nil {
 		return nil, err
 	}
