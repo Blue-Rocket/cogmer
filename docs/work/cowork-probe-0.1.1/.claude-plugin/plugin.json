@@ -1,0 +1,8 @@
+{
+  "name": "cogmer-probe",
+  "version": "0.1.1",
+  "description": "A throwaway probe: records whether a merged Claude conversation fires plugin hooks, and where. It runs commands only in a sandbox, touches no cogmer room and sends nothing anywhere. It has no Stop call to the user's machine.",
+  "author": {
+    "name": "David Foote"
+  }
+}
