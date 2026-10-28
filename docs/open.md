@@ -33,6 +33,28 @@ out.
 People the maintainer has never met install cogmer, on machines, networks and settings the
 maintainer has not seen, and none of them is worse off for it.
 
+**Another account on the same machine can read and drive a user's daemon, because the daemon's local
+address is open to every account.** On 2026-10-28, on a droplet (Ubuntu 24.04) with two accounts,
+the `codex` account fetched the transcript of a room belonging to the `claude` account, with no
+credential, from `/export?room=<name>` and `/events?room=<name>` on the daemon's loopback address,
+and `/healthz` and the identity page answered 200 as well. The room held fabricated turns in a
+throwaway home. The daemon leaves those reads unguarded because only a web page was considered, and
+a cross-origin page cannot read their answers (the comment before `LocalRoutes` returns,
+`cmd/cogmer/daemon.go`, read on 2026-10-28). The routes that change something check a method, an
+Origin and a header whose value is a constant, so any account that sends it passes (D-087, the local
+API requires a header that a web page cannot send, read from `cmd/cogmer/localguard.go`; not tried
+across accounts). A second account's cogmer also treats the first's daemon as its own: with the
+default addresses, its daemon logged "a cogmer daemon is already serving 127.0.0.1:4782; leaving it
+to it" and exited 0, its commands then reached the other account's daemon, and `cogmer stop` as the
+second account said nothing was listening, since it cannot see another account's process. This
+affects any machine with more than one account, such as a shared workstation or a build server. A
+secret in a file of mode 0600 in the state directory, which hooks and commands send and which the
+page receives in the address `cogmer machines` opens, as Jupyter does, closes the reading and the
+driving, at the cost of a token in an address and a read of the file by each caller. A Unix socket
+for commands and hooks, with the TCP listener serving only the page, costs a second listener and
+does not exist on Windows. A port chosen from the account stops the sharing and not the reading.
+Which to choose is a decision, and D-087 does not cover it.
+
 **A release that has to break the interface an older plugin uses has no way to tell a lagging host's
 session.** One program in `~/.cogmer/bin` serves every host, so a host whose plugin has not updated
 runs its older hook lines, handler scripts and command files against a newer program (D-269, the
@@ -143,6 +165,18 @@ the page's address for the user to open themselves, which holds no secret, costs
 it, and having the daemon open it costs a route on the daemon and the window of a daemon with a
 display (B23, a detached daemon can open a window). The item on details left undecided under "Cloud
 sessions in a room" already names a machine with no browser for adding a machine.
+
+On the droplet on 2026-10-28, `cogmer machines` on a machine with no screen printed "could not open
+a browser (exit status 3). Open this address in a browser on this machine", though `xdg-open` is
+installed, and the address is of no use from another computer. An SSH tunnel from the user's
+computer reached the page only when its local port was the daemon's own: a tunnel on the same port
+answered 200 to the page and to a guarded POST, and a tunnel on another local port answered 403,
+"this address is not served here", to both, because the Host check names the daemon's own port
+(`isOwnHost`, `cmd/cogmer/localguard.go`). A user whose own computer already runs a daemon on that
+port cannot use the same one. Telling the user to forward the daemon's own port, in the message,
+costs a sentence. Accepting any loopback port in the Host check and the Origin check would make a
+page of any local web server acceptable to the daemon, so it is not offered here; an explicit
+setting that names the one port a tunnel uses, read at the daemon's start, would not.
 
 **The Cowork bridge says nothing when an upgrade failed.** A failed upgrade or a failed copy now
 writes a `daemon-state` mark, and the session-start hook of Claude Code and of Codex tells the model
