@@ -1,11 +1,11 @@
-# D-275 — On macOS and Linux the launcher is a shell script and a test requires its execute bit
+# D-275 — On macOS and Linux the dock is a shell script and a test requires its execute bit
 
 **Date:** 2026-10-28 · **Status:** not built · **Areas:** release, commands
 
-**Decision.** On macOS and Linux `plugin/bin/cogmer-launch` is a `#!/bin/sh` script that picks a handler by its first argument and runs the existing scripts by `bash`, so those systems run what they run today. On Windows with Git the same script hands every call to `cogmer-launch.exe`, so Windows has one implementation whether or not Git is installed. A test requires the repository's mode for `plugin/bin/cogmer-launch` to be 100755, because an exec-form hook fails without the execute bit, and a bare name on the PATH would.
+**Decision.** On macOS and Linux `plugin/bin/cogmer-dock`, the dock of D-272 (a dock in the plugin's bin folder passes calls to the installed program), is a `#!/bin/sh` script that picks a handler by its first argument and runs the existing scripts by `bash`, so those systems run what they run today. On Windows with Git the same script hands every call to `cogmer-dock.exe`, so Windows has one implementation whether or not Git is installed. A test requires the repository's mode for `plugin/bin/cogmer-dock` to be 100755, because an exec-form hook fails without the execute bit, and a bare name on the PATH would.
 
 **Rejected.**
-- *A native launcher for each system under one file name.* A hook line names one path, and four builds cannot share it.
+- *A native dock for each system under one file name.* A hook line names one path, and four builds cannot share it.
 - *Changing the macOS and Linux hooks to call the program's subcommands.* It changes hooks that work for every current user to give the release one implementation it does not need.
 - *`bash` on the script in each line, as D-263 has it.* Windows without Git has no `bash`.
 
