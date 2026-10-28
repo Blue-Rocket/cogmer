@@ -93,23 +93,13 @@ preference.
 **Say when your own address changes.** Every pairing string and invitation already
 handed out is then stale, and only the daemon can know.
 
-**Windows has never been run, and Claude Code is reported to break `bash` hooks there.** Claude
-Code issues #21878, #25832, #26389, #23295, #25399 and #68295 (June 2026, Claude Code 2.1.177) report
-`${CLAUDE_PLUGIN_ROOT}` expanding to a backslash path that Git Bash reads as escapes, and #70150,
-still open, reports the same for exec-form hook arguments. Their current status may differ. Our
-hooks run `bash "${CLAUDE_PLUGIN_ROOT}/hooks-handlers/..."`, the form those reports describe, and
-the installer builds and accepts a Windows binary (`install.sh`), but nobody has run either on
-Windows and the README does not say so. One run on Windows 11 with Git Bash shows whether it
-fails. If it does, the choices are converting the path in a first command, which costs a `cygpath`
-dependency, or stating that Windows is unsupported.
+**The hook lines and command files call `bash`, which no host is known to require on Windows, and nothing has been run there.** Claude Code's hooks reference (read on 2026-10-28) says a shell-form hook runs through Git Bash on Windows, or through PowerShell when Git Bash is not installed. Codex's hooks page (read the same day) does not say which shell runs a hook. It documents `commandWindows` as an optional Windows-only command override, and the Codex 0.160.0 binary on the droplet contains that string. A Cowork plugin's hooks are `mcp_tool` calls to the bridge that `cowork-setup` registers in Claude Desktop, so Cowork needs no shell. All six hook lines in `plugin/hooks/hooks.json` and `plugin/hooks/codex-hooks.json`, and the `allowed-tools` and `!` lines of the files in `plugin/commands/`, start with `bash`. On a Windows machine without Git Bash they would run where `bash` does not exist. The hooks then fail open (D-011, hooks fail open), and what a command shows was not observed. On 2026-10-28 the test machine had Claude Code 2.1.312 and Codex 0.165.0 installed for the `cogmer-test` account, neither logged in, and Git on its PATH, so no end-to-end run has happened.
 
-On a Windows 11 ARM64 machine on 2026-10-28, with PortableGit 2.56.0.4 for ARM64, Git Bash reported
-`uname -m` as `x86_64` and `PROCESSOR_ARCHITECTURE` as `AMD64`, because its `bash.exe` is an x64
-program run under emulation, while `MSYSTEM` was `CLANGARM64`. `install.sh` maps `x86_64` to the
-amd64 download (`plugin/hooks-handlers/install.sh`, read on 2026-10-28), so there it would fetch the
-x64 binary and run it under emulation, which works and is not native. Telling the machine's own
-architecture, for example from `PROCESSOR_ARCHITEW6432` or the system's own report, would fetch the
-ARM64 binary, at the cost of a second source of truth in the installer. Neither has been run.
+Claude Code issues #21878, #25832, #26389, #23295, #25399 and #68295 (June 2026, Claude Code 2.1.177) report `${CLAUDE_PLUGIN_ROOT}` expanding to a backslash path that Git Bash reads as escapes, and #70150, still open, reports the same for exec-form hook arguments. Their current status may differ. The plugin reference says substituted paths keep their native backslashes in exec form and in a hook that runs through PowerShell.
+
+A route with no `bash` at runtime has these parts, each unconfirmed. Claude Code hooks would use exec form, with `command` naming the `.exe` and `args` holding the rest, or `"shell": "powershell"`, and it is not confirmed that a plugin's `hooks/hooks.json` accepts either. Codex hooks would add `commandWindows` beside `command`, and it is not confirmed that 0.160.0 runs it. The Claude Code command files need a form that does not call `bash`, and no source read so far says which one. The daemon and the hook client are one native binary, so the wrapper scripts' work (starting the daemon, fetching the binary and checking its hash) would move into it, except the first fetch, which needs a script native to the platform, such as a PowerShell installer. One run on the test machine with Git removed from the PATH, and Claude Code and Codex installed there, shows which parts work.
+
+On a Windows 11 ARM64 machine on 2026-10-28, with PortableGit 2.56.0.4 for ARM64, Git Bash reported `uname -m` as `x86_64` and `PROCESSOR_ARCHITECTURE` as `AMD64`, because its `bash.exe` is an x64 program run under emulation, while `MSYSTEM` was `CLANGARM64`. `install.sh` maps `x86_64` to the amd64 download (`plugin/hooks-handlers/install.sh`, read on 2026-10-28), so under Git Bash it would fetch the x64 binary and run it under emulation, which works and is not native. An installer native to Windows reads the machine's own architecture, so this applies only while `install.sh` runs there. `install.sh` has not been run on that machine.
 
 **Nothing independent of the repository vouches for a release.** On 2026-10-27 the GitHub API
 showed `main` without branch protection and secret scanning and push protection disabled.
