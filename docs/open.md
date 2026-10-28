@@ -103,6 +103,14 @@ Windows and the README does not say so. One run on Windows 11 with Git Bash show
 fails. If it does, the choices are converting the path in a first command, which costs a `cygpath`
 dependency, or stating that Windows is unsupported.
 
+On a Windows 11 ARM64 machine on 2026-10-28, with PortableGit 2.56.0.4 for ARM64, Git Bash reported
+`uname -m` as `x86_64` and `PROCESSOR_ARCHITECTURE` as `AMD64`, because its `bash.exe` is an x64
+program run under emulation, while `MSYSTEM` was `CLANGARM64`. `install.sh` maps `x86_64` to the
+amd64 download (`plugin/hooks-handlers/install.sh`, read on 2026-10-28), so there it would fetch the
+x64 binary and run it under emulation, which works and is not native. Telling the machine's own
+architecture, for example from `PROCESSOR_ARCHITEW6432` or the system's own report, would fetch the
+ARM64 binary, at the cost of a second source of truth in the installer. Neither has been run.
+
 **Nothing independent of the repository vouches for a release.** On 2026-10-27 the GitHub API
 showed `main` without branch protection and secret scanning and push protection disabled.
 `plugin/checksums.txt`, which authorizes the downloaded binary, sits in the same repository as the
