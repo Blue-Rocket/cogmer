@@ -33,22 +33,17 @@ out.
 People the maintainer has never met install cogmer, on machines, networks and settings the
 maintainer has not seen, and none of them is worse off for it.
 
-**Nothing checks that a program accepts the hooks and commands of an older plugin on the
-same machine.** One program in `~/.cogmer/bin` serves every host, and the installer and the
-daemon replace it only with a newer one (D-215, the installer and the daemon replace a program
-only with a newer version), so a host whose plugin lags runs its older hook lines, handler
-scripts and command files against a newer program, read from `common.sh` and `install.sh` on
-2026-10-25. This happens whenever one host updates its plugin from a newer marketplace listing
-than another host holds. A release that renames a subcommand, or changes what a hook sends,
-makes the lagging host's hooks fail open: its sessions show no error and silently stop
-capturing and receiving turns until its plugin updates, and its command files lack any new
-command.
-
-A test that runs the current program through the previous release's `hooks.json`,
-`codex-hooks.json`, handler scripts and command files would catch it, with the previous
-release's plugin directory read from git by its tag. A release that has to break that
-interface would then say so in the plugin's version and in what a lagging host's session
-reports.
+**A release that has to break the interface an older plugin uses has no way to tell a lagging host's
+session.** One program in `~/.cogmer/bin` serves every host, so a host whose plugin has not updated
+runs its older hook lines, handler scripts and command files against a newer program (D-269, the
+program serves the plugin of each of the last three releases). A test now runs the program through
+each of the last three plugins and fails when a release renames a subcommand they call or changes
+something their scripts read, but a release that must break one has nowhere to say so. The lagging
+host's hooks then fail open, its sessions show no error, and they silently stop capturing and
+receiving turns until its plugin updates. Raising the plugin's version, which the host reads when it
+syncs, and a line in the session-start note that tells the model its plugin is older than the
+program's, would say it, at the cost of a check of the plugin's version against the program's in the
+hook that runs at every session start.
 
 **A Cowork user whose bridge is down may see an error on every prompt.** An interactive Claude Code session on 2026-10-14 showed "Stop hook error: MCP server
 'remote-devices' not connected" for a Stop hook that names a server that is absent. B31 (a hook of type
