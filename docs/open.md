@@ -126,11 +126,18 @@ The name after `#` can hold `;`, `$` and backticks, because `sanitizeName` strip
 and unprintable characters. A throwaway plugin of the same shape, run on Claude Code 2.1.312 in
 default permission mode on 2026-10-27, had both `x;touch <file>` and `x$(touch <file>)` refused by the
 permission check and no file created. Not tried: a user who has allowed other commands, a mode that
-skips the check, other Claude Code versions, and the Codex skill. Cogmer cannot check the string,
-since the substitution happens before `cli.sh` runs. What cogmer can do is limit the characters in the
-name its own pairing string carries, which costs names with other characters and stops no
-attacker. Running the same test with an allowed command, and with the Codex skill, would show how
-much the check covers.
+skips the check, other Claude Code versions, and the Codex skill. `cli.sh` cannot check the string,
+since the substitution happens before it runs. Two things can limit it. Cogmer can limit the characters
+in the name its own pairing string carries, which costs names with other characters and stops no
+attacker. The prompt hook the daemon already runs on every prompt sees a command as typed (B33, a
+project or plugin command reaches UserPromptSubmit with the text as typed) and could exit 2 for a
+`/cogmer:` command whose text holds a character outside an alphabet. On 2026-10-28 on a Mac, such a hook
+blocked `x;touch <file>` before the command file's shell line ran, showed its message as the result, and
+no file was created (`4b70323`). That check would also protect a user who has allowed other commands,
+while the hook runs. It costs an entry in `behaviors.go` with a negative test, a block the user sees,
+and no protection where the hook is disabled or fails open because the daemon is down. Not tried: an
+interactive session, Windows, Codex and Cowork. Running the same test with an allowed command, and
+with the Codex skill, would show how much the permission check covers.
 
 **The `user-identity` branch is 134 commits ahead of `main` and changes the wire and the data of
 every installed machine.** On 2026-10-27 it merges into `main` with no conflict (`git merge-tree`),
