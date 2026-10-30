@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-28 · **Status:** not built · **Areas:** release, daemon
 
-**Decision.** When no program is installed in `~/.cogmer/bin`, or the installed one is older than the plugin's version (D-215), the Windows dock (D-272, a dock in the plugin's bin folder passes calls to the installed program) fetches one as `install.sh` does. It takes the program from the address in `plugin/release-url.txt`, checks it against `plugin/checksums.txt` before anything runs it, and installs it detached from the hook, one installer at a time, with a wait of an hour after a failure and its progress in the install state file and `install.log` (D-172, D-075, D-084). While no program is installed, the dock answers a session-start or a command with the install state and any other hook with nothing. The dock is written in Go, since a hook line has no shell.
+**Decision.** When no program is installed in `~/.cogmer/bin`, or the installed one is older than the plugin's version (D-215), the Windows dock (D-272, a dock in the plugin's scripts folder passes hook calls to the installed program) fetches one as `install.sh` does. It takes the program from the address in `plugin/release-url.txt`, checks it against `plugin/checksums.txt` before anything runs it, and installs it detached from the hook, one installer at a time, with a wait of an hour after a failure and its progress in the install state file and `install.log` (D-172, D-075, D-084). While no program is installed, the dock answers a session-start with the install state and any other hook with nothing. The dock is written in Go, since a hook line has no shell.
 
 **Rejected.**
 - *A PowerShell script that the dock starts.* The machine's script policy can refuse it.
