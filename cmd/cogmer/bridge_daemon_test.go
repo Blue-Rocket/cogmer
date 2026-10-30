@@ -297,9 +297,7 @@ func TestTheBridgeKeepsARealDaemonForACoworkUser(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds the binary and starts daemons")
 	}
-	if _, err := exec.LookPath("lsof"); err != nil {
-		t.Skip("no lsof on this machine")
-	}
+	needsToFindADaemon(t)
 	// It starts daemons on ports and in a state directory of its own and gives each program its own
 	// environment, so it can run beside the others.
 	t.Parallel()
@@ -390,9 +388,7 @@ func TestStopLeavesTheMarkAndAStartingDaemonRemovesIt(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds the binary and starts a daemon")
 	}
-	if _, err := exec.LookPath("lsof"); err != nil {
-		t.Skip("no lsof on this machine")
-	}
+	needsToFindADaemon(t)
 	dir := t.TempDir()
 	bin := buildVersion(t, dir, "0.0.9")
 	hooks, peer := freeAddr(t), freeAddr(t)

@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 	"testing"
 )
@@ -86,23 +85,14 @@ func TestB20DetectsAMissingOrAlteredAttachment(t *testing.T) {
 // session is disturbed whenever the daemon is down. The stand-ins are scripts, since
 // running the test binary as the hook would run this suite again.
 func TestB11DetectsAHookThatDisturbsAPromptWithNoDaemon(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("the stand-ins are shell scripts")
-	}
-	stand := func(name, body string) string {
-		p := filepath.Join(t.TempDir(), name)
-		if err := os.WriteFile(p, []byte("#!/bin/sh\n"+body+"\n"), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		return p
-	}
-	if err := checkFailOpenWith(stand("quiet", "exit 0")); err != nil {
+	stand := func(name, sh, cmd string) string { return standInProgram(t, t.TempDir(), name, sh, cmd) }
+	if err := checkFailOpenWith(stand("quiet", "exit 0", "exit /b 0")); err != nil {
 		t.Errorf("a hook that exits 0 and says nothing was reported: %v", err)
 	}
-	if err := checkFailOpenWith(stand("fails", "exit 1")); err == nil {
+	if err := checkFailOpenWith(stand("fails", "exit 1", "exit /b 1")); err == nil {
 		t.Error("a hook that exits non-zero with no daemon was not detected")
 	}
-	if err := checkFailOpenWith(stand("noisy", "echo stray output; exit 0")); err == nil {
+	if err := checkFailOpenWith(stand("noisy", "echo stray output; exit 0", "echo stray output")); err == nil {
 		t.Error("a hook that writes to stdout with no daemon was not detected")
 	}
 	if err := checkFailOpenWith(filepath.Join(t.TempDir(), "absent")); err == nil {

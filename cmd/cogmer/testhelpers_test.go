@@ -185,3 +185,43 @@ func captureStdout(t *testing.T, fn func()) []byte {
 // enforces. On Windows they are not: a file reads as 0666 and a directory as 0777 whatever its
 // access list says, so a test of who may read a file cannot be made with them there.
 func modesMeanSomething() bool { return runtime.GOOS != "windows" }
+
+// needsToFindADaemon skips a test where the program cannot find the process that holds a port: it
+// uses lsof on Unix systems, and netstat and tasklist on Windows, which every Windows has.
+func needsToFindADaemon(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		if cannotNameProcesses() {
+			t.Skip("tasklist is refused in this session, as it is over ssh, so no process can be named")
+		}
+		return
+	}
+	if _, err := exec.LookPath("lsof"); err != nil {
+		t.Skip("no lsof on this machine")
+	}
+}
+
+// standInProgram writes a program that prints or exits as a test needs, and returns its path. A
+// shell script is not a program Windows runs, so there it is a batch file: sh is the body of the
+// script and cmd the body of the batch file.
+func standInProgram(t *testing.T, dir, name, sh, cmd string) string {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	body := "#!/bin/sh\n" + sh + "\n"
+	if runtime.GOOS == "windows" {
+		path += ".cmd"
+		body = "@echo off\r\n" + cmd + "\r\n"
+	}
+	if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// pathWith is a PATH that holds dir first and what a stand-in needs beyond it.
+func pathWith(dir string) string {
+	if runtime.GOOS == "windows" {
+		return dir + ";" + filepath.Join(os.Getenv("SystemRoot"), "System32")
+	}
+	return dir + ":/usr/bin:/bin"
+}

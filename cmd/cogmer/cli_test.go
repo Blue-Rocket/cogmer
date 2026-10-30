@@ -239,9 +239,7 @@ func TestARestartReplacesARunningDaemonWithOneThatAnswers(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds the binary")
 	}
-	if _, err := exec.LookPath("lsof"); err != nil {
-		t.Skip("no lsof on this machine")
-	}
+	needsToFindADaemon(t)
 	if _, err := exec.LookPath("curl"); err != nil {
 		t.Skip("no curl on this machine")
 	}
