@@ -9,6 +9,10 @@ Your session keeps working when your colleague's is offline. Their turns reach y
 session at your next prompt, never before it, so nothing they do makes your session
 take a turn.
 
+On Windows, Claude Code and Codex run cogmer's hooks and commands through `bash`, which Git for
+Windows provides, so install Git for Windows first. Without it the hooks do not run and cogmer
+does nothing. Claude Cowork does not use `bash`.
+
 ## Install in Claude Code
 
 Run these two commands inside a Claude Code session, one at a time. Pasted together,
