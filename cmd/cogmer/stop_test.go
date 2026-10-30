@@ -4,14 +4,12 @@ package main
 
 import (
 	"bufio"
-	"io"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 )
@@ -154,126 +152,6 @@ func TestADaemonOfAnotherVersionIsReplaced(t *testing.T) {
 	if _, ok := daemonVersionAt(hooks); ok {
 		t.Fatal("a daemon still answers after cogmer stop")
 	}
-}
-
-// realGoCaches names the module and build caches the way the test process was started. A test
-// that has pointed HOME at a temporary directory would otherwise make `go build` fill a new
-// module cache under it, which takes about a minute and cannot be deleted when the test
-// ends, since the module cache is read-only.
-var realGoCaches = func() []string {
-	out, err := exec.Command("go", "env", "GOMODCACHE", "GOCACHE").Output()
-	if err != nil {
-		return nil
-	}
-	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-	if len(lines) != 2 {
-		return nil
-	}
-	return []string{"GOMODCACHE=" + lines[0], "GOCACHE=" + lines[1]}
-}()
-
-// testBuildVersion is the version of a binary that a test builds without needing a particular one.
-// Tests that name a version of their own, because they compare versions, still get their own.
-const testBuildVersion = "test-build"
-
-// A build links the whole program and takes about 4.5s, and 17 tests wanted one, so the process
-// builds each version once, in a directory of its own, and hands every test a copy at the path it
-// asked for. A copy and not a link, since a test may write over its binary.
-var (
-	sharedBuildsMu  sync.Mutex
-	sharedBuildsDir string
-	sharedBuilds    = map[string]*sharedBuild{}
-)
-
-type sharedBuild struct {
-	once sync.Once
-	path string
-	err  string
-}
-
-func buildVersion(t *testing.T, dir, v string) string {
-	t.Helper()
-	sharedBuildsMu.Lock()
-	if sharedBuildsDir == "" {
-		d, err := os.MkdirTemp("", "cogmer-test-builds-")
-		if err != nil {
-			sharedBuildsMu.Unlock()
-			t.Fatal(err)
-		}
-		sharedBuildsDir = d
-	}
-	b := sharedBuilds[v]
-	if b == nil {
-		b = &sharedBuild{}
-		sharedBuilds[v] = b
-	}
-	root := sharedBuildsDir
-	sharedBuildsMu.Unlock()
-
-	b.once.Do(func() {
-		b.path = filepath.Join(root, v, "cogmer")
-		cmd := exec.Command("go", "build", "-ldflags", "-X main.version="+v+" -X main.noBrowser=1", "-o", b.path, ".")
-		cmd.Env = append(os.Environ(), realGoCaches...)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			b.err = err.Error() + "\n" + string(out)
-		}
-	})
-	if b.err != "" {
-		t.Fatalf("build %s: %s", v, b.err)
-	}
-	out := filepath.Join(dir, v, "cogmer")
-	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	src, err := os.Open(b.path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer src.Close()
-	dst, err := os.OpenFile(out, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := io.Copy(dst, src); err != nil {
-		dst.Close()
-		t.Fatal(err)
-	}
-	if err := dst.Close(); err != nil {
-		t.Fatal(err)
-	}
-	return out
-}
-
-// removeSharedBuilds deletes the binaries the process built, when the tests have finished.
-func removeSharedBuilds() {
-	sharedBuildsMu.Lock()
-	defer sharedBuildsMu.Unlock()
-	if sharedBuildsDir != "" {
-		_ = os.RemoveAll(sharedBuildsDir)
-	}
-}
-
-func waitForVersion(t *testing.T, addr, want string) {
-	t.Helper()
-	deadline := time.Now().Add(20 * time.Second)
-	for time.Now().Before(deadline) {
-		if v, ok := daemonVersionAt(addr); ok && v == want {
-			return
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	got, ok := daemonVersionAt(addr)
-	t.Fatalf("no daemon reporting %s on %s within 20s (got %q, answering %v)", want, addr, got, ok)
-}
-
-func freeAddr(t *testing.T) string {
-	t.Helper()
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer l.Close()
-	return l.Addr().String()
 }
 
 // The 09-22 case: a cogmer daemon left running from another state directory holds

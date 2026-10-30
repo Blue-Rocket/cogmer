@@ -98,7 +98,7 @@ func TestTheSettingCannotChangeForARoom(t *testing.T) {
 // the setting has rooms with no such column, and each must read back as injecting.
 func TestAMembershipDatabaseFromBeforeTheSettingKeepsInjecting(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setHome(t, home)
 	if err := os.MkdirAll(filepath.Join(home, ".cogmer"), 0o700); err != nil {
 		t.Fatal(err)
 	}

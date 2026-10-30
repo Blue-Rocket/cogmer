@@ -1,4 +1,4 @@
-//go:build !docker && !windows
+//go:build !docker
 
 package main
 

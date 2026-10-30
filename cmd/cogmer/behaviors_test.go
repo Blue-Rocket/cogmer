@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -251,13 +250,7 @@ func TestTheBlockBudgetIsBelowWhatTheHostInjectsWhole(t *testing.T) {
 }
 
 func TestTheProbeHookWritesAnOutputOfTheLengthItIsGiven(t *testing.T) {
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-	runProbeBigHook([]string{"9000"})
-	w.Close()
-	os.Stdout = old
-	b, _ := io.ReadAll(r)
+	b := captureStdout(t, func() { runProbeBigHook([]string{"9000"}) })
 	if len(b) != 9000 || !strings.HasPrefix(string(b), budgetProbeMark) {
 		t.Errorf("the hook wrote %d characters beginning %q", len(b), string(b)[:20])
 	}

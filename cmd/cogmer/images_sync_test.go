@@ -74,7 +74,7 @@ func TestAnImageReachesAColleagueAndIsKept(t *testing.T) {
 	if err != nil || !bytes.Equal(got, img) {
 		t.Fatalf("the colleague's file is not the image: %v", err)
 	}
-	if info, _ := os.Stat(path); info.Mode().Perm() != 0o600 {
+	if info, _ := os.Stat(path); modesMeanSomething() && info.Mode().Perm() != 0o600 {
 		t.Errorf("the file is readable by others: %v", info.Mode())
 	}
 	if row, _, _ := b.store.ImageRow(ref.SHA256); row.State != imageHave {

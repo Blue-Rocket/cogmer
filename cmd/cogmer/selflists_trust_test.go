@@ -11,7 +11,7 @@ import (
 // given machines of u.
 func listsMachine(t *testing.T, ids ...*Identity) *Membership {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	setHome(t, t.TempDir())
 	m, err := OpenMembership()
 	if err != nil {
 		t.Fatal(err)

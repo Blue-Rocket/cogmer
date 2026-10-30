@@ -30,7 +30,7 @@ func newOfflinePeer(t *testing.T, roomID, roomName string) *offlinePeer {
 	t.Helper()
 	// Everything below is opened while HOME points at this peer's directory.
 	// Nothing may re-resolve it afterwards, because the next peer moves it.
-	t.Setenv("HOME", t.TempDir())
+	setHome(t, t.TempDir())
 
 	m, err := OpenMembership()
 	if err != nil {
@@ -363,7 +363,9 @@ func TestLosingARoomDoesNotReissueSequences(t *testing.T) {
 	}
 
 	// The room is gone. Membership and sequence position are not: they live
-	// beside the identity, precisely so that this is survivable (D-029).
+	// beside the identity, precisely so that this is survivable (D-029). The lost
+	// room's file is closed first, since Windows cannot delete a file that is open.
+	_ = p.store.Close()
 	fresh, err := OpenStore(roomID + "-replacement")
 	if err != nil {
 		t.Fatal(err)

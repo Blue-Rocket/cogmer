@@ -83,7 +83,7 @@ func (u *testUser) rotate(t *testing.T) {
 // shared.key when the identity has a user, as on a machine the user added.
 func newUserPeer(t *testing.T, roomID, roomName string, id *Identity, shared *testUser) *offlinePeer {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	setHome(t, t.TempDir())
 	m, err := OpenMembership()
 	if err != nil {
 		t.Fatal(err)
@@ -861,7 +861,7 @@ func TestAMachinesAddressIsLearnedFromItsSignedRequestAndReplacesTheBootstrap(t 
 // events it held still verify (D-239, an event is identified by its signer, room and
 // sequence).
 func TestARoomFromBeforeV4HoldsTwoMachinesOfOneUserAtOneSequence(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setHome(t, t.TempDir())
 	t.Setenv("COGMER_HOME", "")
 	dir := filepath.Join(homeDir(), "rooms")
 	if err := os.MkdirAll(dir, 0o755); err != nil {

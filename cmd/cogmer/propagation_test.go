@@ -337,7 +337,7 @@ func TestAPendingPushSurvivesARestart(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Setenv("HOME", a.home)
+	setHome(t, a.home)
 	m, err := OpenMembership()
 	if err != nil {
 		t.Fatal(err)

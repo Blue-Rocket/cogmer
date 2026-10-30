@@ -34,7 +34,7 @@ type machine struct {
 func newMachine(t *testing.T) *machine {
 	t.Helper()
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setHome(t, home)
 	m, err := OpenMembership()
 	if err != nil {
 		t.Fatal(err)
@@ -52,7 +52,7 @@ func newMachine(t *testing.T) *machine {
 
 // use points the process's state directory at this machine, for the calls that read
 // it, such as opening a room's database.
-func (m *machine) use(t *testing.T) { t.Setenv("HOME", m.home) }
+func (m *machine) use(t *testing.T) { setHome(t, m.home) }
 
 // local sends a guarded request to the machine's local routes, as its page does.
 func (m *machine) local(t *testing.T, path string, body, out any) string {

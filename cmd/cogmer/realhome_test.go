@@ -32,6 +32,9 @@ func TestADevelopmentBuildRefusesTheAccountsStateDirectoryHoweverItIsReached(t *
 	}
 	link := filepath.Join(t.TempDir(), "looks-harmless")
 	if err := os.Symlink(real, link); err != nil {
+		if runtime.GOOS == "windows" {
+			t.Skipf("a link needs a privilege an ordinary Windows account does not hold: %v", err)
+		}
 		t.Fatal(err)
 	}
 	for name, dir := range map[string]string{
@@ -114,7 +117,7 @@ func TestHomeDirPanicsInsteadOfReturningTheAccountsStateDirectory(t *testing.T) 
 		return false
 	}
 	t.Setenv("COGMER_HOME", "")
-	t.Setenv("HOME", home)
+	setHome(t, home)
 	if !panics() {
 		t.Error("with no COGMER_HOME and the account's home as HOME, homeDir returned the real directory")
 	}
@@ -127,7 +130,7 @@ func TestHomeDirPanicsInsteadOfReturningTheAccountsStateDirectory(t *testing.T) 
 		t.Error("a directory made for the test was refused")
 	}
 	t.Setenv("COGMER_HOME", "")
-	t.Setenv("HOME", t.TempDir())
+	setHome(t, t.TempDir())
 	if panics() {
 		t.Error("a test that sets HOME to a directory of its own was refused")
 	}
@@ -135,7 +138,7 @@ func TestHomeDirPanicsInsteadOfReturningTheAccountsStateDirectory(t *testing.T) 
 
 func buildWithFlags(t *testing.T, ldflags string) string {
 	t.Helper()
-	out := filepath.Join(t.TempDir(), "cogmer")
+	out := filepath.Join(t.TempDir(), "cogmer"+exeSuffix)
 	cmd := exec.Command("go", "build", "-ldflags", ldflags, "-o", out, ".")
 	cmd.Env = append(os.Environ(), realGoCaches...)
 	if b, err := cmd.CombinedOutput(); err != nil {

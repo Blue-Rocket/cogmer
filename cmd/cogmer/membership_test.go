@@ -30,7 +30,7 @@ func testDaemon(t *testing.T) (*Daemon, Room) {
 
 func testMembership(t *testing.T) *Membership {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	setHome(t, t.TempDir())
 	m, err := OpenMembership()
 	if err != nil {
 		t.Fatal(err)
@@ -209,7 +209,7 @@ func TestAnAmbiguousNameIsReportedNotGuessed(t *testing.T) {
 // A membership.db written before the constraint was relaxed still enforces it:
 // CREATE TABLE IF NOT EXISTS leaves the old table exactly as it was.
 func TestMigrationDropsTheNameConstraint(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setHome(t, t.TempDir())
 	path := filepath.Join(homeDir(), "membership.db")
 	if err := os.MkdirAll(homeDir(), 0o700); err != nil {
 		t.Fatal(err)
@@ -383,7 +383,7 @@ func TestABoundSessionCannotBeMoved(t *testing.T) {
 
 // The column is removed from databases that predate the change, not merely ignored.
 func TestMigrationDropsTheInjectedColumn(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setHome(t, t.TempDir())
 	if err := os.MkdirAll(homeDir(), 0o700); err != nil {
 		t.Fatal(err)
 	}

@@ -20,7 +20,7 @@ import (
 // the HOME of the moment.
 func newFounder(t *testing.T, id *Identity, u *testUser, rooms int) (*offlinePeer, []Room) {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	setHome(t, t.TempDir())
 	m, err := OpenMembership()
 	if err != nil {
 		t.Fatal(err)

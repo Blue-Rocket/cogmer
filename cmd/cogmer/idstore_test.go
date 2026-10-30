@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -60,7 +59,7 @@ CREATE TABLE session_rooms (
 // move to machines with nowhere to dial (D-103, an address belongs to a machine and
 // is stored in one place).
 func TestAMembershipStoreFromBeforeTheUserIdentityMigrates(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setHome(t, t.TempDir())
 	t.Setenv("COGMER_HOME", "")
 	if err := os.MkdirAll(homeDir(), 0o700); err != nil {
 		t.Fatal(err)
@@ -458,7 +457,7 @@ CREATE INDEX idx_events_room ON events(room_id, rowid_alias);`
 // verifies under the scheme that signed it (D-058, signature schemes are kept,
 // never replaced).
 func TestARoomStoreFromBeforeTheSignerColumnMigrates(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setHome(t, t.TempDir())
 	t.Setenv("COGMER_HOME", "")
 	dir := filepath.Join(homeDir(), "rooms")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -555,7 +554,7 @@ func TestTheSharedKeyIsKeptInAFileOfItsOwn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if perm := info.Mode().Perm(); perm != 0o600 {
+	if perm := info.Mode().Perm(); modesMeanSomething() && perm != 0o600 {
 		t.Errorf("shared.key is %o, want 600", perm)
 	}
 	got, version, ok, err := loadSharedKey()
@@ -587,7 +586,7 @@ func keyEncodings(priv ed25519.PrivateKey) []string {
 func TestTheSharedKeyNeverAppearsInTheIdentity(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("COGMER_HOME", home)
-	t.Setenv("HOME", home)
+	setHome(t, home)
 	t.Setenv("COGMER_ADDR", "127.0.0.1:1")
 	t.Setenv("COGMER_PEER_ENDPOINT", "")
 	t.Setenv("CLAUDE_PLUGIN_ROOT", "")
@@ -626,13 +625,7 @@ func TestTheSharedKeyNeverAppearsInTheIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-	runWhoami()
-	w.Close()
-	os.Stdout = stdout
-	printed, _ := io.ReadAll(r)
+	printed := captureStdout(t, runWhoami)
 	if !strings.Contains(string(printed), f.user) {
 		t.Errorf("whoami does not print the user it holds:\n%s", printed)
 	}
