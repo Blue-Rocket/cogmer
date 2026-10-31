@@ -1,0 +1,82 @@
+Cowork sandbox probe, one cloud session started 2026-10-31T06:28:40Z, first report at 06:30:18Z, written at 2026-10-31T07:00:00Z
+(UTC; the probe's lines carry the sandbox's UTC clock)
+
+What was asked
+  What a Cowork cloud session's sandbox lets a cogmer daemon and its hooks do: whether a daemon
+  started there reaches the public relay and is reachable through it, which of two upgrade
+  requests the proxy passes, what the hooks receive, whether a hook's additionalContext reaches
+  the model, whether the transcript is readable there, and whether a detached process outlives
+  its hook.
+
+Machine and versions
+  Mac with Apple silicon, macOS 26.6.2, Claude desktop app 4.4212.0 (read at 05:28Z). The account
+  is on a Team plan. The session ran on host vm, Linux x86_64, as root, in /home/claude, with
+  CLAUDE_CODE_REMOTE true and curl 8.5.0. The released program was cogmer 0.10.5 for linux_amd64,
+  run only after its sha256 matched the pin in the plugin's checksums.txt, which equals the
+  checksum published with v0.10.5.
+
+The plugin
+  docs/work/cowork-sandbox-probe/ at this commit, named cogmer-sandbox-probe, version 0.1.0. On
+  Linux only, its hooks do the following. At SessionStart, probe.sh records the names of the
+  fields in the hook's JSON (never values), whether transcript_path is present and the file
+  readable, and which process ran the hook, starts a detached loop that appends the time to a
+  file every 30s for up to an hour, and returns a SessionStart marker as additionalContext;
+  net.sh makes nine HTTPS requests with curl, and relay.sh starts a throwaway cogmer daemon on a
+  state directory made for the run, records its log lines about the relay and the "Checked just
+  now" line of whoami, and stops it. At UserPromptSubmit, probe.sh records the same and returns a
+  UserPromptSubmit marker. At Stop, probe.sh records the same and returns nothing. The command,
+  report, prints the probe's files. Before the run the hooks were run in a Linux container
+  (Debian, x86_64) with simulated payloads, where the daemon connected as a WebSocket, the
+  heartbeat outlived its hook, and the Stop hook printed nothing.
+
+Clicks
+  Upload plugin with the zip, a new Cowork session, "hello", a question asking what the sandbox
+  probe markers were, and /cogmer-sandbox-probe:report at about 06:30Z. The state of "Only on
+  this computer" was not read, and the session ran on a Linux VM with CLAUDE_CODE_REMOTE true.
+
+Settings
+  The organization's network policy, set by the user in the run before this one to Additional
+  allowed domains tailcat.dev, tc301a.ipn.dev, tc302a.ipn.dev, tc303a.ipn.dev and
+  tc304a.ipn.dev, and left so for this run on the user's instruction. It was not read again.
+
+Seen (the pasted report at 06:30:18Z)
+  The daemon, from relay.sh: the program downloaded at 06:28:42Z and matched the pin. The daemon
+    answered on 127.0.0.1:4892 after 3s. Its log said the relay connection was carried as a
+    WebSocket (TS_DEBUG_DERP_WS_CLIENT=1), that it was reachable at an address of 186
+    characters, and that it connected as a WebSocket to https://tc301a.ipn.dev/derp, twice.
+    whoami said "Checked just now: a connection from outside reached this machine through the
+    relay at nyc, in 388ms." The daemon was then stopped at 06:28:53Z.
+  The requests, from net.sh: tailcat.dev/derpmap.json 200; the four relay servers 200, each a
+    DERP page; the WebSocket upgrade to tc302a.ipn.dev/derp, curl exit 28 after 8001 ms with 45
+    bytes received, status 101; the same request with Upgrade: DERP in place of websocket, the
+    same exit, byte count and status, and a reply that began with the characters (DERP; github.com/ 400
+    with the proxy's own message "Request path could not be canonicalized"; example.com 403,
+    "CONNECT tunnel failed". The bytes of the two upgrade replies were not compared.
+  The hooks, from probe.sh, with the transcript in /root/.claude/projects/-home-claude/ at every
+    event:
+    SessionStart (06:28:40Z), pid 212, parent 211. Fields: cwd, hook_event_name, scratchpad_dir,
+      session_id, source, transcript_path. The transcript was readable and 0 bytes.
+    UserPromptSubmit (06:28:40Z, 06:28:57Z, 06:30:14Z). Fields: cwd, hook_event_name,
+      permission_mode, prompt, prompt_id, scratchpad_dir, session_id, transcript_path. The
+      transcript was readable, 69599 bytes at the first, 648676 at the second, 693525 at the
+      third.
+    Stop (06:28:42Z, 06:29:00Z). Fields: background_tasks, cwd, effort, hook_event_name,
+      last_assistant_message, level, permission_mode, prompt_id, scratchpad_dir, session_crons,
+      session_id, stop_hook_active, transcript_path. The transcript was readable, 646771 bytes
+      at the first, 691855 at the second.
+  The markers the hooks wrote: SessionStart-1793428120-212 and UserPromptSubmit-1793428120-288.
+    The user's question about the markers got this answer from the session's model: it listed
+    both markers, said both showed up in hook context, and said the UserPromptSubmit marker was
+    the same for both messages.
+  The heartbeat: 4 lines, first 06:28:40Z, last 06:30:10Z, the report run at 06:30:18Z.
+
+Not shown
+  Whether a detached process survives while the session is idle for minutes or hours, or after
+  the session is resumed: the one report was taken 98s after the session began, and the user
+  planned the later reports for another time. A daemon that stays up and polls colleagues. A
+  daemon with an identity or in a room, so no turn was exchanged, and nothing about a cloud key
+  or an environment variable in a Cowork session. Whether the native relay protocol carried by
+  a daemon through the proxy works, since the daemon used the WebSocket (D-217 sets it when
+  CLAUDE_CODE_REMOTE is true). A wider list, a wildcard entry, a narrower list, an individual
+  plan, another account or another desktop app version. Which program started the session's
+  Claude Code in the VM.

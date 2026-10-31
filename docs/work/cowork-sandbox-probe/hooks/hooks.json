@@ -1,0 +1,28 @@
+{
+  "description": "Records, on Linux only, whether a daemon reaches the relay, which hosts the sandbox reaches, what the hooks receive and return, and whether a process outlives its hook.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {"type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/probe.sh\" SessionStart", "timeout": 15},
+          {"type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/net.sh\"", "timeout": 15},
+          {"type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/relay.sh\"", "timeout": 15}
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {"type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/probe.sh\" UserPromptSubmit", "timeout": 15}
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {"type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/probe.sh\" Stop", "timeout": 15}
+        ]
+      }
+    ]
+  }
+}
