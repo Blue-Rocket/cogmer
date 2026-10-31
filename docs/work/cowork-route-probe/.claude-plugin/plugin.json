@@ -1,0 +1,5 @@
+{
+  "name": "cogmer-route-probe",
+  "version": "0.1.0",
+  "description": "Throwaway probe: where a plugin's bundled MCP server and command hooks run in a local and a cloud Cowork session."
+}

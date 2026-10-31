@@ -1,0 +1,52 @@
+{
+  "description": "Records where a bundled server and the command hooks run, and whether the sandbox reaches the relay.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/where.sh\"",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/relay.sh\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "mcp_tool",
+            "server": "plugin:cogmer-route-probe:probe",
+            "tool": "ping",
+            "input": {
+              "via": "plugin:cogmer-route-probe:probe",
+              "session": "${session_id}"
+            },
+            "timeout": 15
+          },
+          {
+            "type": "mcp_tool",
+            "server": "remote-devices",
+            "tool": "plugin_cogmer-route-probe_probe__ping",
+            "input": {
+              "via": "remote-devices",
+              "session": "${session_id}"
+            },
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/where.sh\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

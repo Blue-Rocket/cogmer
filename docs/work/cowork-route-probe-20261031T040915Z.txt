@@ -1,0 +1,118 @@
+Cowork route probe, run 2026-10-31 from 03:58Z to 04:05Z, written at 2026-10-31T04:09:15Z
+(UTC; the Mac's clock reads GMT, so its logs and the probe's lines use the same time)
+
+What was asked
+  Where a server that a plugin bundles runs in a Cowork session, which of two hook
+  names reaches it, where a plugin's command hooks run, and whether a Cowork cloud
+  sandbox reaches the public relay.
+
+Machine and versions
+  Mac with Apple silicon, macOS 26.6.2 (25G83), Darwin arm64, host pushover.local.
+  Claude desktop app 4.4212.0 (CFBundleShortVersionString and CFBundleVersion).
+  The app's own Claude Code: 2.1.309, the directory name under
+  ~/Library/Application Support/Claude/claude-code/ and in the app's log.
+  The account is on a Team plan. Settings > Cowork shows "Only on this computer", off
+  when read, and the New session page still shows the Chat and Cowork options.
+
+The plugin
+  docs/work/cowork-route-probe/ at this commit, named cogmer-route-probe, version
+  0.1.0, zipped from its contents to ~/Desktop/cogmer-route-probe.zip. It declares one
+  local server, "probe" (python3 server.py), with one tool, ping. Its hooks are, on
+  UserPromptSubmit, an mcp_tool hook naming the server "plugin:cogmer-route-probe:probe"
+  and another naming "remote-devices" with the tool
+  "plugin_cogmer-route-probe_probe__ping", and a command hook running hooks/where.sh;
+  on SessionStart, hooks/where.sh and hooks/relay.sh. The server logs to
+  ~/cogmer-route-probe/server.log, writes ~/cogmer-route-probe/write-test and starts a
+  detached `sleep 900`. relay.sh runs only where uname -s is Linux.
+  `claude plugin validate` passed with one warning, a missing icon. Before the run,
+  where.sh and the server were run on the Mac, and relay.sh was run in a Linux
+  container with CLAUDE_CODE_REMOTE=true and reached the relay as a WebSocket.
+
+Clicks and commands
+  1. Customize > Plugins > Add > Upload plugin, ~/Desktop/cogmer-route-probe.zip. The
+     app showed "This plugin includes local MCP servers" and the plugin's tabs
+     Commands 1, Connectors 1, Hooks 2. The user chose Continue.
+  2. A new Cowork session with "Only on this computer" off: hello, then
+     /cogmer-route-probe:report once.
+  3. A new Cowork session, by the user's report with "Only on this computer" turned on,
+     with a folder connected: hello, /cogmer-route-probe:report, hello again,
+     /cogmer-route-probe:report. The first report in this session came before "hello
+     again", and only the second one's output was pasted.
+  The report command runs, in the session's shell, cat /tmp/cogmer-route-probe-relay.txt,
+  sh hooks/where.sh --plain, and tail -n 20 $HOME/cogmer-route-probe/server.log.
+
+Seen in the first session (the pasted report)
+  /tmp/cogmer-route-probe-relay.txt, written by relay.sh at SessionStart:
+    2026-10-31T04:00:38Z relay.sh ran on host vm, Linux x86_64, CLAUDE_CODE_REMOTE true
+    2026-10-31T04:00:41Z downloaded cogmer_0.10.5_linux_amd64 and its sha256 matches the pin
+    2026-10-31T04:00:42Z the daemon answered on 127.0.0.1:4892 after 1s
+    daemon log: tailcat unavailable (fetching DERPMap for region -1:
+      Get "https://tailcat.dev/derpmap.json": Forbidden) - reachable only at 127.0.0.1:4893
+    no line naming a WebSocket, and no "Checked just now" line
+    2026-10-31T04:00:44Z stopped the daemon
+  where.sh --plain, run by the session's shell:
+    host vm, Linux x86_64, CLAUDE_CODE_REMOTE set with value true, /sessions absent,
+    no mounts, HOME /root
+  tail of $HOME/cogmer-route-probe/server.log: no such file, at /root/cogmer-route-probe.
+  On the Mac, ~/cogmer-route-probe/server.log held, for this session:
+    03:58:40Z host=pushover.local Darwin arm64 pid=40211 ppid=40210 cwd=/ HOME=/Users/david
+      env=CLAUDE_PLUGIN_ROOT | server started | write-test: ok | detached sleep 900: pid 40212
+    04:00:39Z ... pid=40211 | ping | args={"session": "57cb5b9a-...", "via": "remote-devices"}
+      | write-test exists: True | detached sleep: pid 40212 alive
+    04:01:13Z ... pid=40211 | ping | args={"session": "57cb5b9a-...", "via": "remote-devices"}
+      | write-test exists: True | detached sleep: pid 40212 alive
+  No line has via "plugin:cogmer-route-probe:probe" for session 57cb5b9a. The server
+  started at 03:58:40Z, when the plugin was enabled, before the session, and one process
+  answered both pings. The Mac's cowork_vm_node.log shows the local VM booting at
+  04:00:37Z, one second before relay.sh's first line.
+
+Seen in the second session (the pasted report)
+  /tmp/cogmer-route-probe-relay.txt: no such file, in the VM.
+  where.sh --plain, run by the session's shell: host claude, Linux aarch64,
+    CLAUDE_CODE_REMOTE not set, /sessions exists, mounts
+    /Users/david/cogmer-route-probe, and the session's outputs and uploads folders under
+    ~/Library/Application Support/Claude/local-agent-mode-sessions/..., HOME
+    /sessions/eager-intelligent-pascal.
+  tail of $HOME/cogmer-route-probe/server.log: no such file, under that HOME.
+  The Mac's cowork_vm_node.log shows the report's shell commands run in the VM at
+  04:04:55Z to 04:04:57Z and 04:05:32Z to 04:05:34Z, as eager-intelligent-pascal.
+  The session's own transcript on the Mac,
+  local-agent-mode-sessions/.../1cfcae71/.claude/projects/session/a19ecb72-....jsonl,
+  recorded these hook events (hook content only; session a19ecb72-...):
+    04:04:37 hook_success SessionStart: sh "${CLAUDE_PLUGIN_ROOT}/hooks/where.sh"
+    04:04:37 hook_success SessionStart: bash "${CLAUDE_PLUGIN_ROOT}/hooks-handlers/session-start.sh"
+    04:04:37 hook_additional_context SessionStart: "where.sh ran on host: pushover.local;
+      system: Darwin arm64; CLAUDE_CODE_REMOTE: not set; /sessions: absent; mounts: none;
+      HOME: /Users/david", and the standing policy of the cogmer plugin
+    at 04:04:37, 04:04:52, 04:05:23 and 04:05:30, one each, for UserPromptSubmit:
+      hook_non_blocking_error (no text),
+      hook_additional_context "route-probe server reached: pushover.local",
+      hook_additional_context with the same where.sh line as above
+  The Mac's ~/cogmer-route-probe/server.log held, for this session:
+    04:04:37Z pid=42009 ppid=42001 cwd=/private/var/empty HOME=/Users/david
+      env=CLAUDECODE,CLAUDE_CODE_SESSION_ID,CLAUDE_PLUGIN_DATA,CLAUDE_PLUGIN_ROOT,CLAUDE_PROJECT_DIR
+      | server started | write-test: ok | detached sleep 900: pid 42055
+    04:04:37Z same pid | ping | args={"session": "a19ecb72-...", "via": "plugin:cogmer-route-probe:probe"}
+    then, at 04:04:52Z, 04:05:23Z and 04:05:30Z, each a server started with a new pid
+      (42191, 42447, 42584), a new detached sleep (42212, 42456, 42589) and one ping
+      with via "plugin:cogmer-route-probe:probe", and no "server stopped" line.
+  At 04:07Z all five detached sleep 900 processes (40212, 42055, 42212, 42456, 42589)
+  were still running. No line in the second session has via "remote-devices".
+
+Not shown
+  The model's answers: only the report's output was pasted, so what each session's model
+  said, and whether it showed any hook error to the user, is not known.
+  Whether the "plugin:cogmer-route-probe:probe" hook gave an error in the first session.
+  The state of "Only on this computer" during the second session, which is the user's
+  report and was not read from the setting. The first session's connected folder.
+  Where the command hooks ran in the first session, beyond relay.sh, which wrote its
+  file in a Linux x86_64 machine with CLAUDE_CODE_REMOTE true: where.sh's own hook
+  output in that session was not seen.
+  Why /tmp/cogmer-route-probe-relay.txt is absent in the second session's VM and on the
+  Mac. The hooks of that session ran on the Mac, where relay.sh exits at once because
+  uname -s is Darwin, which is the likely reason and was not otherwise checked.
+  Whether the cloud sandbox reaches the relay under another network policy, or as a
+  WebSocket: its map fetch was refused before a connection was tried.
+  Windows, another Mac, other plans, or another Claude desktop app version.
+  The account's marketplace plugin cogmer also ran in the second session (its
+  session-start.sh appears above), and what it did there was not examined.
