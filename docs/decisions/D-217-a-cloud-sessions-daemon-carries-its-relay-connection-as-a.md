@@ -7,7 +7,7 @@
 built with the `ts_debug_websockets` tag that compiles in the WebSocket relay client.
 A Claude Code cloud session's proxy breaks the relay's own protocol upgrade and passes
 the same connection carried as a WebSocket, which reached a daemon on another machine
-(e415f1d). A value the user set for the variable is left as it is.
+in an environment at the Full network level (e415f1d). A value the user set for the variable is left as it is.
 
 **Rejected.**
 - *WebSocket everywhere.* A daemon outside a cloud session works with the relay's own
@@ -18,7 +18,9 @@ the same connection carried as a WebSocket, which reached a daemon on another ma
 - *Trying the relay's own protocol first and falling back.* Each connection in a cloud
   session would wait out a timeout before it worked.
 
-**Limits.** `TS_DEBUG_DERP_WS_CLIENT` and the `ts_debug_websockets` tag are Tailscale
+**Limits.** When an environment's network level is below Full, its proxy can refuse the
+relay's map, and a daemon whose map fetch is refused opens no tunnel through the relay
+(0139779, one session, its level not named). `TS_DEBUG_DERP_WS_CLIENT` and the `ts_debug_websockets` tag are Tailscale
 debug settings with no stability promise, and an upgrade of the module can rename or
 remove them without failing the build. The WebSocket client compiles only for Linux and
 macOS, and a build without the tag, such as `go build` for development, ignores the
