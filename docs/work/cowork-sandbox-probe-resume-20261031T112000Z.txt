@@ -1,0 +1,59 @@
+Cowork sandbox probe, the same session resumed on 2026-10-31 at 11:09:00Z, reports at 11:09:07Z and 11:11:32Z, written at 2026-10-31T11:20:00Z
+(UTC; the probe's lines carry the sandbox's UTC clock)
+
+What was asked
+  Whether a Cowork cloud session's sandbox keeps its files and a detached process after hours
+  of idle time and a resume, and whether a daemon started by the resumed session's hook still
+  reaches the relay. This continues 7adc75c, which holds the first part of the run: its plugin,
+  its machine and versions, and the first report at 06:30:18Z.
+
+Machine and versions
+  The same as in 7adc75c: Mac with Apple silicon, macOS 26.6.2, Claude desktop app 4.4212.0,
+  a Team plan, host vm, Linux x86_64, root, in /home/claude, CLAUDE_CODE_REMOTE true. The
+  plugin was the one committed in 7adc75c, unchanged. The user shut the laptop down after the
+  first report and resumed the session on the same laptop at about 11:09Z, 4h40m after it began.
+  The organization's network policy was the five-host list of 7adc75c, which was not read again.
+
+Clicks
+  The user resumed the session and, within seconds, ran /cogmer-sandbox-probe:report, then ran
+  it again about two and a half minutes later after a second prompt. Nothing else was done.
+
+Seen
+  Files. The report's files from 06:28Z were all there: the payload lines of 06:28Z to 06:30Z,
+    both markers, and the heartbeat file. The two markers were unchanged, because probe.sh
+    writes a marker only if its file is absent.
+  Hooks. The resumed session ran SessionStart at 11:09:00Z as pid 135, parent 133, against pid
+    212 for the first SessionStart. Its payload fields were context_tokens, cwd,
+    estimated_cache_write_usd, hook_event_name, prompt_cache_likely_expired, scratchpad_dir,
+    seconds_since_last_response, session_id, source and transcript_path. The transcript was
+    readable, 728429 bytes. UserPromptSubmit ran at 11:09:01Z, Stop at 11:09:24Z and
+    UserPromptSubmit again at 11:11:29Z, each with the same fields as in 7adc75c and the
+    transcript readable, from 728748 to 755749 bytes.
+  Heartbeat. At the first report the file had 11 lines, the first at 06:28:40Z and the last at
+    11:09:00Z. At the second it had 16 lines, the last at 11:11:30Z. The report prints only the
+    first line, the last line and the count. The resumed SessionStart starts a new loop that
+    writes at once and every 30s, so by arithmetic its lines at 11:09:00Z to 11:11:30Z are six
+    of the 16, and the first loop wrote the other ten, which at 30s a line ended near
+    06:33:10Z. The first loop would have written 120 lines by 07:28Z had it run its hour. The
+    last response before it stopped was at 06:30:44Z. The second loop kept writing through the
+    gap between the Stop at 11:09:24Z and the prompt at 11:11:29Z, about two minutes.
+  The daemon, from relay.sh, started by the resumed SessionStart: downloaded at 11:09:02Z and
+    matched the pin, answered on 127.0.0.1:4892 at 11:09:07Z after 3s, logged that the relay
+    connection was carried as a WebSocket and that it connected as a WebSocket to
+    https://tc301a.ipn.dev/derp, twice, and whoami said "Checked just now: a connection from
+    outside reached this machine through the relay at nyc, in 462ms." It was stopped at
+    11:09:13Z. The reply of the first report, taken at 11:09:07Z, held only the first two lines
+    of this because the hooks had not finished.
+  The requests, from net.sh at 11:09:00Z: the same statuses as in 7adc75c. tailcat.dev 200, the
+    four relay servers 200, both upgrade requests 101 with exit 28 after 8000 ms and 45 bytes,
+    github.com/ 400, example.com 403.
+
+Not shown
+  The exact timestamps of the first loop's lines after 06:30:10Z, which the report does not
+  print, so its stopping time is derived from the line count and an assumed 30s spacing. Why
+  the first loop stopped: the report does not say whether the machine was suspended, stopped or
+  rebuilt, and pid 135 against pid 212 and the unchanged files are the only evidence of a new
+  process tree on the same disk. A detached process after an idle of between two and a half
+  minutes and 4h40m, or after an idle that Cowork does not end. A resume on another day, in
+  another session, or while the desktop app was closed. A daemon that stays up, polls
+  colleagues or holds a room, and the other items under "Not shown" in 7adc75c.
