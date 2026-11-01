@@ -1,6 +1,6 @@
 #!/bin/sh
 # Says whether the file cloud.value is in this plugin's folder, and its length, mode, owner and the
-# first eight hex digits of its sha256, never its content, plus the plugin folder, the user id the
+# first eight hex digits of its sha256, never its content, plus the plugin's version, the plugin folder, the user id the
 # hook runs as, whether CLAUDE_CODE_REMOTE is set and the host. It appends the line to
 # /tmp/cogmer-companion-probe.txt and returns it as additionalContext, so that a session can be asked
 # what the probe says without running a command. It runs only where uname -s is Linux, reads nothing
@@ -22,7 +22,8 @@ if [ -f "$F" ]; then
 else
   state="absent"
 fi
-line="$now $EVENT companion probe: cloud.value $state; plugin folder $ROOT; hook runs as uid $(id -u); CLAUDE_CODE_REMOTE ${CLAUDE_CODE_REMOTE-not set}; host $(hostname 2>/dev/null)"
+ver="$(sed -n 's/.*"version" *: *"\([^"]*\)".*/\1/p' "$ROOT/.claude-plugin/plugin.json" 2>/dev/null | head -1)"
+line="$now $EVENT companion probe: plugin version ${ver:-unknown}, cloud.value $state; plugin folder $ROOT; hook runs as uid $(id -u); CLAUDE_CODE_REMOTE ${CLAUDE_CODE_REMOTE-not set}; host $(hostname 2>/dev/null)"
 printf '%s\n' "$line" >> "$OUT" 2>/dev/null
 line="$(printf '%s' "$line" | tr -d '\\"' | tr '\r\n\t' '   ')"
 printf '{"hookSpecificOutput":{"hookEventName":"%s","additionalContext":"The companion probe says: %s. If the user asks what the companion probe says, repeat it exactly."}}\n' "$EVENT" "$line"

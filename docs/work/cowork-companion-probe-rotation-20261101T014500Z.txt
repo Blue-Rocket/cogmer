@@ -1,0 +1,49 @@
+Cowork companion probe, version 0.1.1 uploaded over 0.1.0, one cloud session on 2026-11-01 at 01:37:41Z, written at 2026-11-01T01:45:00Z
+(UTC; the probe's lines carry the sandbox's UTC clock)
+
+What was asked
+  Whether uploading a plugin of the same name with a new version and a new file replaces the
+  file that a later Cowork cloud session sees, which a rotation of a stored credential needs.
+  This continues 7a362f6, which holds the first upload (version 0.1.0, file digits 7b4fb771),
+  its plugin, its machine and versions, and the sessions that read it.
+
+Machine and versions
+  The same as in 7a362f6: Mac with Apple silicon, macOS 26.6.2, Claude desktop app 4.4212.0, a
+  Team plan, sessions on host vm as root with CLAUDE_CODE_REMOTE true.
+
+The plugin
+  docs/work/cowork-companion-probe/ at this commit, version 0.1.1, built by build.sh with the
+  version given as its second argument. Its manifest says 0.1.1, its cloud.value is a new file of
+  2400 random base64url characters with mode 600, which holds no secret and is not in the
+  repository, and its sha256 starts 475d99a3. hooks/check.sh now begins its line with the plugin's
+  version, read from the manifest in the plugin's folder. The first version's check.sh did not
+  print a version. `claude plugin validate` passed with warnings, and in a Linux container the
+  hook printed the new line with the new digits.
+
+Clicks
+  Customize > Plugins > Add > Upload plugin with the 0.1.1 zip, with 0.1.0 still installed. The
+  app showed a dialog "Replace existing plugin?" that read: a plugin named "Cogmer companion
+  probe" is already installed, this will overwrite the current version with your local copy, and
+  to keep both, rename your local plugin in its plugin.json before uploading. The buttons were
+  Cancel and Replace. The user chose Replace, then started a new Cowork session and asked what the
+  companion probe says. The client the session was started from was not stated. The report below
+  is the answer the session's model gave, which the user pasted.
+
+Seen
+  At 01:37:41Z the model gave two lines, one for SessionStart and one for UserPromptSubmit, the
+  same but for the hook's name:
+    plugin version 0.1.1, cloud.value present, 2400 bytes, mode 600, owner root:root uid 0,
+    sha256 starts 475d99a3;
+    plugin folder /root/.claude/plugins/synced/66bf4325-2c04-41c9-b5a7-5961be7defb3_2b8c305b-86ee-46d6-88cd-e46e64ac604d/cogmer-companion-probe;
+    hook runs as uid 0; CLAUDE_CODE_REMOTE true; host vm.
+  The folder is the same as for 0.1.0 in 7a362f6. The model gave one set of lines, with the new
+  digits and no line with the old ones.
+
+Not shown
+  Whether a session that was already running when the plugin was replaced keeps the old file or
+  sees the new one, and whether a session resumed afterwards re-syncs it. Whether the old file is
+  deleted from the account's storage or only hidden. What a plugin uploaded under a different
+  name does, other than what the dialog says: that it keeps the old one. Whether the replacement
+  reaches sessions started from the phone, since the one session was started from a client the
+  user did not name. The answer is the model's repetition of the hook's context, not the file the
+  probe wrote.
