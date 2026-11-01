@@ -23,7 +23,8 @@ else
   state="absent"
 fi
 ver="$(sed -n 's/.*"version" *: *"\([^"]*\)".*/\1/p' "$ROOT/.claude-plugin/plugin.json" 2>/dev/null | head -1)"
-line="$now $EVENT companion probe: plugin version ${ver:-unknown}, cloud.value $state; plugin folder $ROOT; hook runs as uid $(id -u); CLAUDE_CODE_REMOTE ${CLAUDE_CODE_REMOTE-not set}; host $(hostname 2>/dev/null)"
+de="$(sed -n 's/.*"defaultEnabled" *: *\([a-z]*\).*/\1/p' "$ROOT/.claude-plugin/plugin.json" 2>/dev/null | head -1)"
+line="$now $EVENT companion probe: plugin version ${ver:-unknown}, defaultEnabled ${de:-not set}, cloud.value $state; plugin folder $ROOT; hook runs as uid $(id -u); CLAUDE_CODE_REMOTE ${CLAUDE_CODE_REMOTE-not set}; host $(hostname 2>/dev/null)"
 printf '%s\n' "$line" >> "$OUT" 2>/dev/null
 line="$(printf '%s' "$line" | tr -d '\\"' | tr '\r\n\t' '   ')"
 printf '{"hookSpecificOutput":{"hookEventName":"%s","additionalContext":"The companion probe says: %s. If the user asks what the companion probe says, repeat it exactly."}}\n' "$EVENT" "$line"
