@@ -1,0 +1,11 @@
+{
+  "description": "On Linux only, reports whether the plugin's cloud.value file is there and its length, mode and owner, never its content.",
+  "hooks": {
+    "SessionStart": [
+      {"hooks": [{"type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/check.sh\" SessionStart", "timeout": 15}]}
+    ],
+    "UserPromptSubmit": [
+      {"hooks": [{"type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/check.sh\" UserPromptSubmit", "timeout": 15}]}
+    ]
+  }
+}
