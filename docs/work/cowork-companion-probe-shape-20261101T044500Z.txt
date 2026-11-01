@@ -1,0 +1,50 @@
+Cowork companion probe, a file in the form of a cloud value, one cloud session on 2026-11-01 at 04:39:09Z, written at 2026-11-01T04:45:00Z
+(UTC; the probe's lines carry the sandbox's UTC clock)
+
+What was asked
+  Whether an uploaded personal plugin holding a file in the form of a cogmer cloud value, with
+  that value's prefix and the base64url of a JSON object of its fields, reaches a Cowork cloud
+  session with the same length, mode and digest as a file of random characters did in 7a362f6,
+  which holds the plugin, its first upload and the machine and versions. The file holds random
+  bytes of the lengths that real keys, signatures and relay addresses have and no real key.
+
+Machine and versions
+  The same Mac, desktop app, Team plan and organization as in 7a362f6, with the earlier probe
+  plugin removed by the user before this upload, so that the upload was a first install and
+  showed no Replace dialog. The session ran on host vm as root with CLAUDE_CODE_REMOTE true. The
+  client the session was started from was not stated.
+
+The plugin
+  docs/work/cowork-companion-probe/ at this commit, version 0.1.3, built by
+  build.sh <folder> 0.1.3 x real-shape. cloud.value is the prefix cogmer-cloud-v1: and the
+  base64url, unpadded, of a JSON object with the fields of cloudValueWire: key, shared, cloud,
+  displayName and three machines, each with a key, a name and an endpoint of about 300
+  characters. Every key, signature and address is random bytes. The file is 2502 bytes with mode
+  600 and a sha256 starting 03623a1b, and it is not in the repository. A script decoded it and
+  found those five fields and three machines. hooks/check.sh now also says whether the file
+  starts with cogmer-cloud-v1:, from its first sixteen bytes, and prints nothing else of the
+  content. In a Linux container the hook printed the line for the staged plugin with the same
+  digits.
+
+Clicks
+  Customize > Plugins > Add > Upload plugin with the zip. The user did not report any message
+  about the file. A new Cowork session was started and the user asked what the companion probe
+  says. The report below is the answer the session's model gave, which the user pasted.
+
+Seen
+  Two lines, one for SessionStart and one for UserPromptSubmit, both at 04:39:09Z and the same
+  but for the hook's name:
+    plugin version 0.1.3, defaultEnabled not set, cloud.value present, 2502 bytes, starts with
+    the public prefix cogmer-cloud-v1:, mode 600, owner root:root uid 0, sha256 starts 03623a1b;
+    plugin folder
+    /root/.claude/plugins/synced/66bf4325-2c04-41c9-b5a7-5961be7defb3_2b8c305b-86ee-46d6-88cd-e46e64ac604d/cogmer-companion-probe;
+    hook runs as uid 0; CLAUDE_CODE_REMOTE true; host vm.
+  The length, mode, digits and folder are those of the built file and of the folder in 7a362f6.
+
+Not shown
+  That the daemon's parser accepts the file, which was not run on it, since its keys and
+  certificates are random and would fail verification. Whether a file with real certificates
+  differs from this one in how upload or sync treats it. Whether an organization with scanning on
+  scans it, since Blue Rocket's scanning is off. A Claude Code cloud session, a second
+  environment, or a session started from the phone, none of which this run used. The answer is
+  the model's repetition of the hook's context, not the file the probe wrote.

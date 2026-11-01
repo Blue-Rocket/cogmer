@@ -18,7 +18,11 @@ if [ -f "$F" ]; then
   mode="$(stat -c '%a' "$F" 2>/dev/null)"
   owner="$(stat -c '%U:%G uid %u' "$F" 2>/dev/null)"
   sum="$( (sha256sum "$F" 2>/dev/null || shasum -a 256 "$F" 2>/dev/null) | cut -c1-8)"
-  state="present, $len bytes, mode $mode, owner $owner, sha256 starts $sum"
+  case "$(head -c 16 "$F" 2>/dev/null)" in
+    cogmer-cloud-v1:) prefix="starts with the public prefix cogmer-cloud-v1:" ;;
+    *) prefix="does not start with cogmer-cloud-v1:" ;;
+  esac
+  state="present, $len bytes, $prefix, mode $mode, owner $owner, sha256 starts $sum"
 else
   state="absent"
 fi
