@@ -562,6 +562,10 @@ words, is read as the same phrase, so that copying it takes no editing.
 A session in a cloud environment speaks as its user as a machine does, and never asks
 for the recovery phrase, because its container is not a place the user controls.
 
+A session in a cloud environment that has no cloud value says that it shares nothing until the user
+has cogmer on one of their own computers, so that a user is never sent to make an identity in a place
+they cannot reach.
+
 A cloud environment is added from the daemon's page, which shows the value to paste into
 the environment, and that value is never shown to an assistant, because whoever holds it
 speaks as the user in every room the user is in.
