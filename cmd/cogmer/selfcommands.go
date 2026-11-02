@@ -35,24 +35,74 @@ func needsUserIdentity(id *Identity) bool {
 	if id.HasUser() || userIdentityGateOff() {
 		return false
 	}
-	if os.Getenv(cloudKeyVar) != "" {
-		writeCloudIdentityNeeded(os.Stdout)
+	if os.Getenv(cloudKeyVar) != "" || os.Getenv("CLAUDE_CODE_REMOTE") == "true" {
+		found, ok := cloudValueHere()
+		writeCloudIdentityNeeded(os.Stdout, found, ok)
 		return true
 	}
 	writeIdentityNeeded(os.Stdout)
 	return true
 }
 
-// writeCloudIdentityNeeded is the gate's word in a cloud session, which never takes the
-// recovery phrase (D-223) and takes its identity from the cloud value its daemon reads
-// (D-246). It never repeats any part of the value.
-func writeCloudIdentityNeeded(w io.Writer) {
-	fmt.Fprintln(w, "Nothing was done yet: this cloud session has no cogmer identity yet. Its daemon")
-	fmt.Fprintf(w, "takes one from the value in %s when it starts, and has not, either because it\n", cloudKeyVar)
-	fmt.Fprintln(w, "is still starting or because the value does not read. A cloud session never asks")
-	fmt.Fprintln(w, "for your recovery phrase. If this goes on, add the cloud environment again from")
-	fmt.Fprint(w, commandText("/cogmer:self-machines on one of your own machines, and paste the value its page shows\n"))
-	fmt.Fprintf(w, "into this environment's %s.\n", cloudKeyVar)
+// cloudValueFound is a cloud value a cloud session's command found: where, whether it
+// reads, and why not. It holds nothing of the value.
+type cloudValueFound struct {
+	where string
+	reads bool
+	why   string
+}
+
+// cloudValueHere looks where a cloud session's daemon looks for its value: the variable,
+// and where CLAUDE_CODE_REMOTE is true the plugin files (D-279, a cloud session's daemon
+// reads its cloud value from the plugin files it finds, as well as from the variable). It
+// reports nothing found when there is none.
+func cloudValueHere() (cloudValueFound, bool) {
+	if v := os.Getenv(cloudKeyVar); v != "" {
+		_, err := parseCloudValue(v)
+		f := cloudValueFound{where: cloudKeyVar, reads: err == nil}
+		if err != nil {
+			f.why = err.Error()
+		}
+		return f, true
+	}
+	if os.Getenv("CLAUDE_CODE_REMOTE") != "true" {
+		return cloudValueFound{}, false
+	}
+	best, discarded := newestPluginValue(syncedPluginsRoot())
+	switch {
+	case best != nil:
+		return cloudValueFound{where: "a plugin's " + pluginValueFile, reads: true}, true
+	case discarded > 0:
+		return cloudValueFound{where: "a plugin's " + pluginValueFile, why: "none of the files reads as a cloud value"}, true
+	}
+	return cloudValueFound{}, false
+}
+
+// writeCloudIdentityNeeded is the gate's word in a cloud session, which takes its identity
+// from a cloud value its daemon reads (D-246, D-279) and has no page to make one in. With no
+// value it says that the session shares nothing until the user has cogmer on one of their own
+// computers (D-281, a command in a cloud session with no value says the user must first set
+// cogmer up on one of their own computers). With one it says whether it reads. It never
+// repeats any part of the value.
+func writeCloudIdentityNeeded(w io.Writer, found cloudValueFound, ok bool) {
+	switch {
+	case !ok:
+		fmt.Fprintln(w, "Nothing was done yet: this is a cloud session, and it shares nothing, because no cloud")
+		fmt.Fprintf(w, "value was found, either in %s or in a %s file in a plugin you uploaded. A cloud\n", cloudKeyVar, pluginValueFile)
+		fmt.Fprintln(w, "session takes its identity from that value. You get one by having cogmer on one of your own")
+		fmt.Fprint(w, commandText("computers and running /cogmer:self-machines there, which adds a cloud environment and gives you the\n"))
+		fmt.Fprintln(w, "value to paste into this environment, or a plugin to upload. The install steps are in the")
+		fmt.Fprintln(w, "README under \"Install in Claude Code\".")
+	case found.reads:
+		fmt.Fprintf(w, "Nothing was done yet: this cloud session has no cogmer identity yet. A cloud value was found in %s\n", found.where)
+		fmt.Fprintln(w, "and it reads, so the session's daemon takes it when it starts or at the next prompt. Run this again")
+		fmt.Fprintln(w, "then.")
+	default:
+		fmt.Fprintf(w, "Nothing was done yet: this cloud session has no cogmer identity, because the value in %s does\n", found.where)
+		fmt.Fprintf(w, "not read (%s). Add the cloud environment again, from ", found.why)
+		fmt.Fprint(w, commandText("/cogmer:self-machines on one of your own computers,\n"))
+		fmt.Fprintln(w, "and use the new value.")
+	}
 }
 
 func writeIdentityNeeded(w io.Writer) {

@@ -468,6 +468,11 @@ func runDaemon() {
 	if v, ok := os.LookupEnv(cloudKeyVar); ok {
 		_ = os.Unsetenv(cloudKeyVar)
 		d.startCloud(v)
+	} else if os.Getenv("CLAUDE_CODE_REMOTE") == "true" {
+		// No variable, so the value may be in a plugin the user uploaded, and is looked for
+		// again at each prompt (D-279).
+		d.pluginRoot = syncedPluginsRoot()
+		d.startCloudFromPlugins()
 	}
 	// The machine's own chain is kept with the user's records, so that its own state
 	// and the removals its events name include its own certificates, whatever wrote
@@ -582,7 +587,7 @@ func runDaemon() {
 	go d.RunIdentity(5 * time.Second)
 	go d.RunSelfLists(10 * time.Second)
 	if d.cloud != nil {
-		go d.RunCloud(5 * time.Second)
+		d.ensureCloudLoop()
 	}
 	// One set of routes over both listeners. Every check a request passes is the
 	// same whichever carried it, which is the point of the listener interface

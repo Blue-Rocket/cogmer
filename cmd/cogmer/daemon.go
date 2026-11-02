@@ -148,6 +148,14 @@ type Daemon struct {
 	// whether or not it read, since a cloud session never takes the recovery phrase.
 	cloud    *cloudSession
 	cloudEnv bool
+	// pluginRoot is where a cloud session's daemon looks for cloud values in plugin files,
+	// empty where it does not (D-279, a cloud session's daemon reads its cloud value from the
+	// plugin files it finds, as well as from the variable). pluginMu serializes a look, and
+	// cloudLoop starts the cloud loop once. noCloudLoop stops a test starting it.
+	pluginRoot  string
+	pluginMu    sync.Mutex
+	cloudLoop   sync.Once
+	noCloudLoop bool
 
 	// selfCheck asks whether this daemon can be reached through its relay. Nil when
 	// the daemon runs no overlay. It lives in tailcat.go, which is the only place
@@ -383,6 +391,7 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	d.hostCalls.note(host.Name())
+	d.takeNewerPluginValue()
 	// A prompt that is a command is answered before anything else, with no lock held
 	// because a command talks to this daemon. It is not a turn of the room, it needs no
 	// room, and it offers nothing (D-209). A host that has no process to run a command in

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"crypto/ed25519"
 	"crypto/rand"
@@ -165,13 +166,20 @@ type cloudAddResponse struct {
 	Value   string `json:"value,omitempty"`
 	Name    string `json:"name,omitempty"`
 	Machine string `json:"machine,omitempty"`
-	Error   string `json:"error,omitempty"`
+	// Plugin is the zip of the plugin that holds Value as a file, in base64, and PluginFile
+	// is the name the page gives the download (D-278, the machines page offers the cloud value
+	// as a plugin for the user to upload once).
+	Plugin     string `json:"plugin,omitempty"`
+	PluginFile string `json:"pluginFile,omitempty"`
+	Error      string `json:"error,omitempty"`
 }
 
 // handleCloudAdd makes a cloud key, certifies it under this machine's shared key as a
 // machine of kind cloud with the name the user gave, keeps the certificate with the
 // user's records, so that it is listed, copied and removed like any machine's, and
-// answers with the value (D-246). The key is in this response and nowhere else.
+// answers with the value and the plugin that holds it (D-246). The key is in this
+// response and nowhere else. A user has one cloud key at a time, so a user who has a
+// current one is told to remove it first (D-280, a user has one cloud key at a time).
 func (d *Daemon) handleCloudAdd(w http.ResponseWriter, r *http.Request) {
 	var req cloudAddRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -183,12 +191,83 @@ func (d *Daemon) handleCloudAdd(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, cloudAddResponse{Error: "Give the cloud environment a name."})
 		return
 	}
+	if have, ok := d.currentCloudKey(); ok {
+		writeJSON(w, cloudAddResponse{Error: fmt.Sprintf("You already have a cloud environment, %s. Remove it first, then add another: "+
+			"a value left in any plugin is used until its cloud key is removed.", have)})
+		return
+	}
 	value, machine, err := d.addCloud(name)
 	if err != nil {
 		writeJSON(w, cloudAddResponse{Error: err.Error()})
 		return
 	}
-	writeJSON(w, cloudAddResponse{Value: value, Name: name, Machine: machine})
+	res := cloudAddResponse{Value: value, Name: name, Machine: machine}
+	if zipped, file, err := cloudPluginZip(d.id.User, d.id.UserDisplayName, machine, value); err == nil {
+		res.Plugin, res.PluginFile = base64.StdEncoding.EncodeToString(zipped), file
+	}
+	writeJSON(w, res)
+}
+
+// currentCloudKey is the name of a cloud key of this user's that is certified under the
+// current shared key and not removed, if there is one.
+func (d *Daemon) currentCloudKey() (string, bool) {
+	certs, current := d.members.displayCerts(d.id.User)
+	for key, c := range certs {
+		if c.Kind == KindCloud && current[key] {
+			return c.Name, true
+		}
+	}
+	return "", false
+}
+
+// cloudPluginName is the name of the plugin that holds a user's cloud value: cogmer-cloud
+// and eight hex digits of the hash of the user's identifier, so that it does not collide
+// with another plugin's name (D-278).
+func cloudPluginName(user string) string {
+	sum := sha256.Sum256([]byte(user))
+	return "cogmer-cloud-" + hex.EncodeToString(sum[:4])
+}
+
+// cloudPluginZip is the zip of a plugin that holds value as the file cloud.value with mode
+// 600, and nothing else but its manifest: no hook, no command and no skill (D-278). Its
+// version is the cloud certificate's serial, which rises with each cloud key, so that an
+// upload over the same name is a newer version. It returns the zip and a file name for it.
+func cloudPluginZip(user, display, cloudKey, value string) ([]byte, string, error) {
+	name := cloudPluginName(user)
+	version := "1.0.0"
+	if c, err := parseCloudValue(value); err == nil {
+		version = fmt.Sprintf("1.0.%d", c.cloud.Serial)
+	}
+	manifest, err := json.MarshalIndent(map[string]string{
+		"name":    name,
+		"version": version,
+		"description": "The cogmer cloud value of " + firstNonEmpty(display, PeerName(user)) +
+			" for cloud sessions. Upload it once as a personal plugin, and share and publish it nowhere.",
+	}, "", "  ")
+	if err != nil {
+		return nil, "", err
+	}
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	for _, f := range []struct {
+		name string
+		body []byte
+		mode os.FileMode
+	}{{".claude-plugin/plugin.json", manifest, 0o644}, {pluginValueFile, []byte(value), 0o600}} {
+		h := &zip.FileHeader{Name: f.name, Method: zip.Deflate}
+		h.SetMode(f.mode)
+		w, err := zw.CreateHeader(h)
+		if err != nil {
+			return nil, "", err
+		}
+		if _, err := w.Write(f.body); err != nil {
+			return nil, "", err
+		}
+	}
+	if err := zw.Close(); err != nil {
+		return nil, "", err
+	}
+	return buf.Bytes(), name + ".zip", nil
 }
 
 // addCloud certifies a new cloud key named name and returns the value that holds it.
@@ -360,18 +439,23 @@ type cloudSession struct {
 // the recovery phrase (D-223, a cloud session never asks for the phrase).
 func (d *Daemon) isCloudSession() bool { return d.cloud != nil || d.cloudEnv }
 
-// startCloud makes this daemon a cloud session's from the value raw. A value that
-// does not read leaves the daemon with no identity, sharing nothing, and says why in
-// the log without quoting the value.
-func (d *Daemon) startCloud(raw string) {
+// startCloud makes this daemon a cloud session's from the value raw, which the variable
+// held.
+func (d *Daemon) startCloud(raw string) { d.startCloudFrom(raw, cloudKeyVar) }
+
+// startCloudFrom makes this daemon a cloud session's from the value raw, which source
+// names. A value that does not read leaves the daemon with no identity, sharing nothing,
+// and says why in the log without quoting the value. A daemon that already holds a
+// session takes the new value's, certifying a session key under the new cloud key.
+func (d *Daemon) startCloudFrom(raw, source string) {
 	d.cloudEnv = true
 	setup, err := parseCloudValue(raw)
 	if err != nil {
-		log.Printf("cloud: %s does not read as a cloud value (%v), so this session shares nothing. Add a cloud environment again from /cogmer:self-machines on one of your machines.", cloudKeyVar, err)
+		log.Printf("cloud: %s does not read as a cloud value (%v), so this session shares nothing. Add a cloud environment again from /cogmer:self-machines on one of your machines.", source, err)
 		return
 	}
 	if d.id.HasUser() && d.id.Chain.Session == nil {
-		log.Printf("cloud: this machine already speaks for %s as a machine of its own, so %s is ignored", PeerName(d.id.User), cloudKeyVar)
+		log.Printf("cloud: this machine already speaks for %s as a machine of its own, so %s is ignored", PeerName(d.id.User), source)
 		return
 	}
 	d.cloud = &cloudSession{setup: setup, ttl: sessionCertTTL, renewBefore: sessionRenewBefore,
@@ -394,6 +478,17 @@ func (d *Daemon) startCloud(raw string) {
 		log.Printf("cloud: no session key could be certified, so this session shares nothing: %v", err)
 		d.cloud = nil
 	}
+}
+
+// ensureCloudLoop starts the loop that renews the session key and asks for the user's
+// lists, once. The daemon's start calls it for a session that began there, and a prompt
+// that takes a plugin's value calls it for one that began later (D-279).
+func (d *Daemon) ensureCloudLoop() {
+	d.cloudLoop.Do(func() {
+		if !d.noCloudLoop {
+			go d.RunCloud(5 * time.Second)
+		}
+	})
 }
 
 // ensureSessionKey keeps the session key while its certificate has more than

@@ -1,6 +1,6 @@
 # D-280 — A user has one cloud key at a time
 
-**Date:** 2026-11-02 · **Status:** not built · **Areas:** identity, view
+**Date:** 2026-11-02 · **Status:** active · **Areas:** identity, view
 
 **Decision.** The machines page adds a cloud key only when the user's records name none that is current, and a user who wants another removes the current one first (D-250, a removal of a cloud key names a cutoff for each of its session keys in each room). A plugin reaches every cloud session of the account that syncs the account's plugins (D-278, the machines page offers the cloud value as a plugin for the user to upload once), so a second key would sit beside the first with the same authority and no use, and a refusal makes the order of a rotation the only way to add one.
 
