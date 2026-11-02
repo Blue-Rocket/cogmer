@@ -77,8 +77,10 @@ no collaboration and never a broken session.
 Starting the daemon never delays the first prompt. It is the session-start hook's
 job, and waiting on a daemon the user did not ask for is worse than not having one.
 
-Failure is silent to the user. The daemon records its own troubles in its own log,
-where anybody who looks will find them, and says nothing to a user who did not ask.
+A failure that stops collaboration and that the user can repair is shown to the user in one
+line at the start of a session, so that a user whose collaboration has stopped is not left
+without knowing why. The daemon records every other trouble in its own log, where anybody
+who looks will find it, and says nothing else to a user who did not ask.
 
 Injected context is bounded (section 21), because it spends the context window the
 user relies on for their own work.
@@ -2663,8 +2665,11 @@ plugin a user has installed, and an unprefixed `create` or `status` would collid
 
 A user never has to start the daemon, notice that it has stopped, or know that it
 exists. The session-start hook starts it when it is not already running, so installing
-is the whole of setup, and the first session after installing is like every session
-after it.
+is the whole of setup.
+
+When the install has finished, the user is told once, in one line, that cogmer is installed
+and what to run next, so that a user knows the install worked. After that line, a session
+shows nothing of cogmer unless something needs repair.
 
 Starting the daemon never delays the session. The hook returns at once, and the daemon
 becomes useful when it is ready, so a session that begins before the daemon is
@@ -2674,8 +2679,9 @@ A daemon already running is the ordinary case, not an error. Several sessions of
 begin at once on one machine, each tries to start the daemon, at most one succeeds, and
 none reports a problem.
 
-A daemon that fails to start is silent to the user, and recorded by the daemon. It means
-no collaboration, and the session continues as it would have without cogmer.
+A daemon that fails to start is recorded by the daemon and shown to the user in one line at
+the start of the session. It means no collaboration, and the session continues as it would
+have without cogmer.
 
 The daemon outlives the session that started it, because a room may have members in
 several sessions, and starting it repeatedly is worse than leaving it running. So the
