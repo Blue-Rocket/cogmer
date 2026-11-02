@@ -38,6 +38,11 @@ measured on 2026-09-22.
 Installing changes nothing about how Claude Code starts, edits no shell profile, and
 registers no service with the operating system.
 
+Run `/cogmer:self-status` as that first command. Once the download has finished it prints
+the string to send a colleague and, when your machine can be reached, a line saying that a
+connection from outside reached your machine through the relay, which is how you know the install
+works. If it prints a reason instead, the reason says what is wrong.
+
 Each binary is authorized by a SHA-256 hash pinned in the plugin. A download whose
 hash does not match is deleted without being run. If there is no verified download
 and the machine has Go installed, the binary is built from source instead.
