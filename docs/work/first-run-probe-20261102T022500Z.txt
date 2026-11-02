@@ -1,0 +1,50 @@
+First-run probe, print mode on macOS and on Windows with and without Git, written at 2026-11-02T02:25:00Z
+(UTC; the runs were between about 02:00Z and 02:23Z on 2026-11-02)
+
+What was asked
+  Which of three hook forms run in Claude Code, how the harness reports a hook that fails, and
+  whether a hook's systemMessage reaches the model. The three forms are a shell-form command that
+  runs bash, a shell-form command with "shell": "powershell", and an exec-form hook whose command is
+  powershell with args. This continues f62a961, which ran the same three forms on Windows without
+  Git in 2026-10 and recorded that the shell form failed and the other two ran.
+
+Machines and versions
+  macOS 26.6.2 on Apple silicon, Claude Code 2.1.316, no PowerShell installed (neither pwsh nor
+  powershell on PATH). Windows 11 ARM64 (10.0.26200) in Parallels, account cogmer-test, not an
+  administrator, Claude Code 2.1.312, logged in. The Parallels VM had been paused and was resumed
+  before the Windows runs. On Windows the second run removed from PATH every folder that holds a
+  bash.exe or a git.exe, and the script reported bash.exe was not on PATH.
+
+The plugin
+  docs/work/first-run-probe/ at this commit, version 0.1.0. For SessionStart and UserPromptSubmit
+  it holds three hooks, each appending a line to cogmer-first-run-probe.log in the working directory
+  and answering with a systemMessage and an additionalContext that carry the markers
+  SYS-FRP-<form>-<event> and CTX-FRP-<form>-<event>. It holds no secret, reads nothing and sends
+  nothing. `claude plugin validate` passed with warnings.
+
+What was done
+  run.sh on macOS and run.ps1 on Windows each ran one `claude -p` turn with the plugin loaded by
+  --plugin-dir, in an empty folder, with --setting-sources project and --output-format stream-json
+  --include-hook-events, asking the model to list every line of its context that contains FRP-.
+  run.ps1's first version failed to parse on PowerShell 5.1 (`< NUL`) and was fixed before any run
+  that is reported here.
+
+Seen
+  macOS: the bash hook ran. The PowerShell-form hook and the exec-form hook did not, and the
+    harness reported each with outcome error and exit code 1 and stderr "Failed to run: Hook ..." for
+    the first and "Error occurred while executing hook command: Executable not found in $PATH:
+    "powershell"" for the second. `claude -p` printed nothing of them outside the stream of events.
+  Windows with Git on PATH: all six hooks ran, each with outcome success and exit 0.
+  Windows without bash on PATH: the PowerShell-form and exec-form hooks ran with outcome success,
+    and the bash-form hook ended with outcome error, exit 1 and stderr beginning "bash : The term
+    'bash' is not recognized as the name of a cmdlet, function, script file, or operable program",
+    which is PowerShell's wording, so the shell-form command had been run by PowerShell.
+  In all three runs the model quoted only the CTX markers of the hooks that ran, and no SYS marker.
+    The stream of hook events carried each hook's whole output, systemMessage included.
+
+Not shown
+  What a person sees in an interactive session of any of these: whether a systemMessage appears on
+  the screen, and whether a failed hook puts a message there. Codex, Cowork, the VS Code extension
+  and a plugin installed from a marketplace. Whether the shell-form hook runs under PowerShell on a
+  Windows machine that has Git installed but that Claude Code does not find. The model's answers
+  are its own repetition of its context, with the stream of events as the record of the hooks.

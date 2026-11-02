@@ -1,0 +1,5 @@
+{
+  "name": "cogmer-first-run-probe",
+  "version": "0.1.0",
+  "description": "Throwaway probe: whether a hook's systemMessage reaches a person, and which hook forms run without Git for Windows."
+}
