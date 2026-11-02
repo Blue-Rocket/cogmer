@@ -11,7 +11,8 @@ take a turn.
 
 On Windows, Claude Code and Codex run cogmer's hooks and commands through `bash`, which Git for
 Windows provides, so install Git for Windows first. Without it the hooks do not run and cogmer
-does nothing. Codex runs hooks through the Windows command prompt, so for Codex the `bin` folder
+does nothing, and Claude Code shows, at the start of each session and at each prompt, a hook error
+that says `bash` is not recognized (seen in Claude Code 2.1.312). Codex runs hooks through the Windows command prompt, so for Codex the `bin` folder
 of Git for Windows, which holds `bash.exe`, has to be on your PATH, and Git's installer puts only
 its `cmd` folder there in the choice it recommends. Recent versions of Claude Code find Git Bash
 themselves. Claude Cowork does not use `bash`.
