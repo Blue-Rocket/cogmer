@@ -1,0 +1,50 @@
+First-run probe, interactive screens on macOS and on Windows with and without Git, written at 2026-11-02T02:42:00Z
+(UTC; the sessions ran between about 02:32Z and 02:40Z on 2026-11-02, the screens' own clocks reading 4:32 to 4:40 AM in the maintainer's time zone)
+
+What was asked
+  What a person sees in an interactive Claude Code session of a hook's systemMessage and of a hook
+  that fails to run. This continues 7922dca, which holds the plugin (docs/work/first-run-probe/),
+  its three hook forms and the print-mode runs, and f62a961.
+
+Machines and versions
+  Run A: macOS 26.6.2, Claude Code 2.1.316 in a Terminal window, Opus 5.5, Claude Team plan, no
+  PowerShell installed. Runs B and C: Claude Code 2.1.312 on Windows 11 ARM64 (Parallels), account
+  cogmer-test, run from the Mac's terminal by `ssh -t cogmer-windows` with interactive.ps1, which
+  loads the plugin with --plugin-dir and --setting-sources project in a folder of its own. For run C
+  the launcher removed from PATH every folder holding a bash.exe or a git.exe for that session and
+  printed "bash.exe on PATH: False". Each session was started from the plugin folder by --plugin-dir,
+  not installed from a marketplace.
+
+What was done
+  Each run started a session, the person looked at the screen, typed "What lines in your context
+  contain FRP-?", looked again, and left. Run A was reported as two screenshots, which are not
+  kept in the repository. Runs B and C were reported as pasted text of the screen.
+
+Seen
+  Run A (macOS), before the prompt: two blocks each headed "SessionStart:startup hook error", the
+    first reading "Failed to run: Hook "Add-Content -Path cogmer-first-run-probe.log -Value
+    'powershell SessionStart ran'; Write-Output '{"systemMessage":"SYS-FRP-powershell-SessionStart",
+    ...", the second "Failed with non-blocking status code: Error occurred while executing hook
+    command: Executable not found in $PATH: "powershell"", and the line "SessionStart:startup says:
+    SYS-FRP-bash-SessionStart". After the prompt the same two error blocks headed "UserPromptSubmit
+    hook error" and the line "UserPromptSubmit says: SYS-FRP-bash-UserPromptSubmit" appeared. The
+    model's answer quoted only CTX-FRP-bash-SessionStart and CTX-FRP-bash-UserPromptSubmit.
+  Run B (Windows, bash.exe on PATH): before the prompt, three lines "SessionStart:startup says:
+    SYS-FRP-exec-SessionStart", "...powershell-...", "...bash-...", in that order, and no error.
+    After the prompt, "UserPromptSubmit says: SYS-FRP-bash-...", "...powershell-...", "...exec-...".
+    The model quoted the six CTX-FRP lines and no SYS line. The probe's log held the six hooks'
+    lines.
+  Run C (Windows, no bash.exe on PATH): before the prompt, "SessionStart:startup says:
+    SYS-FRP-exec-SessionStart", "SessionStart:startup says: SYS-FRP-powershell-SessionStart", and
+    "SessionStart:startup hook error" followed by "Failed with non-blocking status code: bash : The
+    term 'bash' is not recognized as the name of a cmdlet, function, script file, or operable
+    program. Check", the text cut off there. After the prompt the same error block headed
+    "UserPromptSubmit hook error" appeared between the two "says:" lines. The model quoted four CTX
+    lines, those of the PowerShell and exec hooks, and none of the bash hook.
+
+Not shown
+  Run C's log, which was not pasted, so that the hooks that ran there is read from the screen and
+  from 7922dca's print-mode run. How a systemMessage and a hook error look in the VS Code extension,
+  in Codex, in Cowork, and for a plugin installed from a marketplace, or in a session with remote
+  control enabled, for which community reports say the message is not shown. Whether the error
+  block stays on screen after later prompts, and whether the text after "Check" is ever shown.
