@@ -6,7 +6,7 @@
 
 **Rejected.**
 - *Reading one plugin by its name.* The user can copy a plugin, rename it and alter it, so a name identifies nothing about its contents.
-- *A hook in the plugin that hands the daemon the file's path.* A folder's name changes between hooks, with a suffix such as `~g2` after an upload (`419a2d6`), and a daemon that searches for the files needs no hook.
+- *A hook in the plugin that hands the daemon the file's path.* A folder's name changes between hooks, with a suffix such as `~g2` after an upload (`419a2d6`), and a daemon that searches for the files needs no hook, since a plugin of a manifest and the file alone, with no hook and no command, was synced into a session (`f6d721a`).
 
 **Limits.** A daemon that has read a value holds it in memory, so removing the plugin does not end that daemon's authority and removing its cloud key does (D-250, a removal of a cloud key names a cutoff for each of its session keys in each room).
 
