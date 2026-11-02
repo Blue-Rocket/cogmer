@@ -170,10 +170,15 @@ index holds. Hooks keep it fresh, but only for edits the current session made.
 - **Claude Code prefixes every plugin command with the plugin manifest's `name`, and
   offers no unprefixed form.** A user types `/cogmer:room-create`, so changing
   the manifest name renames every command at once.
-- **Every Claude Code extension point delivers to the model, and nothing displays to a
-  person.** A person sees only what the model then says. MCP as a
-  display channel was tested exhaustively and surfaces nowhere anybody looks, so do
-  not try it again. Nothing checks this, which is why it is written here.
+- **A hook can show a person a line through its `systemMessage` or by failing.**
+  Interactive Claude Code printed a `systemMessage` as "<hook> says: ..." and never gave
+  it to the model, and printed a "hook error" block with the error text for a hook that
+  failed to run, at session start and at every prompt (`11b1294`, Claude Code 2.1.312 and
+  2.1.316). A hook form that fails on some machines is therefore loud on them. A hook's
+  standard output and MCP reach only the model, and MCP as a display channel was tested
+  exhaustively and surfaces nowhere anybody looks, so do not try it again. Nothing checks
+  that a `systemMessage` keeps showing, and another host may not show it, which is why
+  this is written here.
 - **Whether injected context survives a compaction is the summarizer's judgment**,
   not a format guarantee, so no assertion can cover it. Re-run Test B from
   `84a0751:docs/phase0a-findings.md` when the model or the Claude Code version
