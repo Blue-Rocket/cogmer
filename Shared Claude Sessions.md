@@ -566,6 +566,16 @@ A cloud environment is added from the daemon's page, which shows the value to pa
 the environment, and that value is never shown to an assistant, because whoever holds it
 speaks as the user in every room the user is in.
 
+A cloud environment can take its value from a plugin the user uploads once, so that a session
+started in a browser or on a phone joins a room as its user while none of the user's machines
+is awake.
+
+The page says what keeping the value in a plugin reveals before it offers the plugin, so that the
+user chooses knowing that a service the user does not run holds the credential.
+
+A user has one cloud value at a time, and adding another begins by removing the current one, so
+that the value in a plugin is the value every cloud session of the user speaks with.
+
 The machine that adds a cloud environment keeps the certificate that names it and not the
 key the value holds, so that the value the user pastes is the only copy, and a machine
 taken later gives a thief no cloud environment of the user's.
