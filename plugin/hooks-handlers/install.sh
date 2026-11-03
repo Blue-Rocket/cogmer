@@ -134,6 +134,7 @@ if [ -n "$expected" ] && command -v curl > /dev/null 2>&1; then
       if chmod +x "$tmp/bin" && mv -f "$tmp/bin" "$target"; then
         say "installed $want from release"
         clear_install_state
+        [ -z "$installed" ] && write_install_notice "$want"
         # The session that triggered this looked for a binary that was still
         # downloading and found none, so nothing is running yet. Start it here
         # rather than leaving the first session inert and the second one useful.
@@ -159,6 +160,7 @@ if command -v go > /dev/null 2>&1; then
     if [ -x "$tmp/cogmer" ] && mv -f "$tmp/cogmer" "$target"; then
       say "installed $want from source"
       clear_install_state
+      [ -z "$installed" ] && write_install_notice "$want"
       start_daemon_if_needed
       exit 0
     fi

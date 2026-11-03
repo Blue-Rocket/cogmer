@@ -13,6 +13,14 @@
 #   log; the session says nothing about any of it.
 . "$(dirname "$0")/common.sh"
 
+# The host this hook is for: Claude Code's hook line passes none, and Codex's passes codex.
+host="${1:-claude}"
+
+# The one line the person sees, in the hook's systemMessage, when an install has finished or
+# cogmer cannot work and the person can act (D-282). Claude Code shows it on the screen. A host
+# that is not shown to show it gets the note for the model alone.
+ct_notice=""
+
 # Obtain or update the binary, detached, so nothing here waits on a download.
 # It decides for itself whether there is anything to do, and does nothing in the
 # overwhelmingly common case where the right version is already installed.
@@ -61,8 +69,10 @@ if ! cogmer_binary > /dev/null 2>&1; then
   read -r state age detail <<< "$(install_state)"
   case "$state" in
     installing) note="cogmer is downloading in the background (started ${age}s ago). Room commands will not work until it finishes, which is usually seconds." ;;
-    failed)     note="cogmer failed to install: ${detail}. It retries about an hour after a failure. Room commands will not work until it succeeds." ;;
-    stalled)    note="A cogmer install started ${age}s ago and did not finish. Starting a new session will try again." ;;
+    failed)     note="cogmer failed to install: ${detail}. It retries about an hour after a failure. Room commands will not work until it succeeds."
+                ct_notice="cogmer failed to install: ${detail}. It tries again in about an hour, and nothing is shared until it installs." ;;
+    stalled)    note="A cogmer install started ${age}s ago and did not finish. Starting a new session will try again."
+                ct_notice="cogmer's install started ${age}s ago and did not finish. A new session tries again, and nothing is shared until it installs." ;;
     *)          note="cogmer is installed as a plugin but its binary has not been fetched yet. It is fetched in the background when a session starts." ;;
   esac
   ct_context="$ct_context $note Do not speculate about other causes; this is the reason."
@@ -81,8 +91,23 @@ if [ "$dstate" = blocked ] || [ "$dstate" = upgrade-failed ]; then
       upgrade-failed) dwhy="Nothing is being captured or shared in any room until that is fixed." ;;
     esac
     ct_context="$ct_context cogmer is installed but its daemon could not start ${dage}s ago: $(json_safe "$ddetail"). ${dwhy}"
+    case "$dstate" in
+      blocked)        ct_notice="cogmer's daemon could not start: ${ddetail}. Nothing is captured or shared until that is fixed." ;;
+      upgrade-failed) ct_notice="cogmer could not upgrade its data: ${ddetail}. Nothing is captured or shared until that is fixed." ;;
+    esac
   fi
 fi
 
-printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$(json_safe "$ct_context")"
+# With nothing wrong, a first install that has finished and has not been announced is announced
+# once, by the program that holds the mark (D-282).
+if [ -z "$ct_notice" ] && [ "$host" = claude ] && [ -f "$(install_notice_file)" ] && notice_bin="$(cogmer_binary)"; then
+  ct_notice="$("$notice_bin" notice 2>/dev/null | head -1)"
+fi
+
+if [ -n "$ct_notice" ] && [ "$host" = claude ]; then
+  printf '{"systemMessage":"%s","hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' \
+    "$(json_safe "$ct_notice")" "$(json_safe "$ct_context")"
+else
+  printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$(json_safe "$ct_context")"
+fi
 exit 0

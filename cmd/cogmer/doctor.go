@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -50,6 +51,54 @@ func saveVerification(v verification) {
 	}
 	b, _ := json.MarshalIndent(m, "", "  ")
 	_ = os.WriteFile(verifyPath(), b, 0o600)
+	logVerificationFailures(v)
+}
+
+// logVerificationFailures appends one line to daemon.log for each failure a recorded result
+// holds, and for a probe that could not run, written by the process that ran the check and
+// not through the daemon, which may not be running (D-283, a recorded behavior-check failure
+// is also written to daemon.log by the process that ran the check). It is called when a
+// result is recorded, so a later reminder that the version had failed writes none.
+func logVerificationFailures(v verification) {
+	host, version := "claude", v.Version
+	if h, rest, ok := strings.Cut(v.Version, ":"); ok {
+		host, version = h, rest
+	}
+	ids := make([]string, 0, len(v.Failures))
+	for id := range v.Failures {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		why := v.Failures[id]
+		if id == probeCouldNotRun {
+			appendDaemonLogLine("check: %s %s could not run its probe: %s", host, version, failureLine(why))
+			continue
+		}
+		appendDaemonLogLine("check: %s %s failed %s (%s): %s", host, version, id, registeredBehaviorTitle(id), failureLine(why))
+	}
+}
+
+// registeredBehaviorTitle is the title of the behavior with this identifier in any host's registry,
+// or "" for one that is in none.
+func registeredBehaviorTitle(id string) string {
+	for _, list := range [][]Behavior{Behaviors, CodexBehaviors, CoworkBehaviors} {
+		for _, b := range list {
+			if b.ID == id {
+				return b.Title
+			}
+		}
+	}
+	return ""
+}
+
+// failureLine makes s a single line of at most 400 characters, so a log line holds one fact.
+func failureLine(s string) string {
+	s = strings.Join(strings.Fields(s), " ")
+	if len(s) > 400 {
+		s = s[:400] + "…"
+	}
+	return s
 }
 
 // BehaviorKnownBroken reports whether a behavior is recorded as FAILING for this

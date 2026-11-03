@@ -159,6 +159,16 @@ set_install_state() {
 
 clear_install_state() { rm -f "$(install_state_file)" 2>/dev/null; }
 
+# The mark that says a first install has finished and the person has not been told. The
+# installer writes the version into it, and the first hook that runs afterwards shows the person
+# one line and removes it (D-282).
+install_notice_file() { printf '%s' "${COGMER_HOME:-$HOME/.cogmer}/install-notice"; }
+
+write_install_notice() {
+  ct_state_dir
+  (umask 077; printf '%s\n' "$1" > "$(install_notice_file)") 2>/dev/null
+}
+
 # install_state prints "<state> <age-seconds> <detail>".
 #
 # An `installing` mark older than staleAfter is reported as `stalled`: a crash

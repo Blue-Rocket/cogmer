@@ -62,6 +62,8 @@ func main() {
 		runLog()
 	case "version":
 		fmt.Println(version)
+	case "notice":
+		runNotice()
 	case "stop":
 		runStop(os.Args[2:])
 	case "where":
@@ -695,11 +697,18 @@ func runHook(kind string, host Host) {
 	payload["host"] = host.Name()
 	addEntrypoint(payload, os.Getenv)
 
+	// The first install that has finished is announced by the first hook that runs after it,
+	// whether or not the daemon answers (D-282).
+	notice := ""
+	if kind == "prompt" {
+		notice = noticeFor(host)
+	}
 	body, _ := json.Marshal(payload)
 	client := &http.Client{Timeout: 3 * time.Second}
 	resp, err := localPost(client, "http://"+addr()+endpoint, body)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "cogmer: daemon unreachable (%v); continuing without collaboration\n", err)
+		_, _ = os.Stdout.Write(promptHookOutput(host, notice, ""))
 		os.Exit(0)
 	}
 	defer resp.Body.Close()
@@ -708,14 +717,13 @@ func runHook(kind string, host Host) {
 		Context string `json:"context"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		_, _ = os.Stdout.Write(promptHookOutput(host, notice, ""))
 		os.Exit(0)
 	}
 	// What a prompt hook writes to stdout is appended to the pending turn's
 	// context, in the form the host reads (verified against Claude Code 2.1.273 and
 	// Codex 0.159.3).
-	if out.Context != "" {
-		_, _ = os.Stdout.Write(host.PromptHookOutput(out.Context))
-	}
+	_, _ = os.Stdout.Write(promptHookOutput(host, notice, out.Context))
 	os.Exit(0)
 }
 

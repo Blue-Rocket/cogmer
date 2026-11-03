@@ -11,8 +11,8 @@ Claude Code or Codex starts, and it replaces or wraps nothing.
 
 | hook | what it does |
 |---|---|
-| `SessionStart` | starts the daemon if it is not running, replaces a running daemon of another version, and fetches the binary in the background if it has not been fetched |
-| `UserPromptSubmit` | captures your prompt, and injects the colleagues' turns this session has not seen |
+| `SessionStart` | starts the daemon if it is not running, replaces a running daemon of another version, and fetches the binary in the background if it has not been fetched; in Claude Code it also shows one line when the install, the daemon or an upgrade needs repair |
+| `UserPromptSubmit` | captures your prompt, and injects the colleagues' turns this session has not seen; in Claude Code, when a first install has just finished, it also shows one line that says so |
 | `Stop` | captures the completed response |
 
 ## The first room under a new version

@@ -103,3 +103,21 @@ func relayLibraryLogf(out func(string, ...any)) func(string, ...any) {
 		out("%s", line)
 	}
 }
+
+// appendDaemonLogLine appends one timestamped line to daemon.log with a single write, for a
+// process other than the daemon (D-283). The file is opened for appending with mode 0600,
+// since the log names peers and addresses, and a daemon that bounds the log by copying it
+// aside and emptying it in place does not lose the line, bar the few it already accepts to
+// lose (D-261). A line that cannot be written is dropped, since recording a failure must
+// not become another.
+func appendDaemonLogLine(format string, args ...any) {
+	if err := ensureStateDir(); err != nil {
+		return
+	}
+	f, err := os.OpenFile(daemonLogPath(), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	_, _ = f.WriteString(time.Now().UTC().Format(time.RFC3339) + " " + fmt.Sprintf(format, args...) + "\n")
+}

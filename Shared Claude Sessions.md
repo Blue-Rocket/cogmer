@@ -2667,7 +2667,7 @@ A user never has to start the daemon, notice that it has stopped, or know that i
 exists. The session-start hook starts it when it is not already running, so installing
 is the whole of setup.
 
-When the install has finished, the user is told once, in one line, that cogmer is installed
+When cogmer's first install has finished, the user is told once, in one line, that cogmer is installed
 and what to run next, so that a user knows the install worked. After that line, a session
 shows nothing of cogmer unless something needs repair.
 
