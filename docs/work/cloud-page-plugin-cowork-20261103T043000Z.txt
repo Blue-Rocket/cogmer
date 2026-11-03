@@ -1,0 +1,55 @@
+The machines page's plugin in a Cowork cloud session, on 2026-11-03 between about 03:30Z and 04:29Z, written at 2026-11-03T04:30:00Z
+(UTC; the session's own time was not recorded)
+
+What was asked
+  Whether the plugin that the machines page made for a cloud value, uploaded as a personal plugin,
+  reaches a Cowork cloud session with its file intact. This continues e180ea5, which holds the page's
+  zip read by a daemon on a droplet, and f6d721a, which holds a plugin of a manifest and a file of
+  random bytes reaching a session.
+
+Machines and versions
+  The page's zip was made by a daemon built from 63d0b04 on a droplet (Ubuntu 24.04 x86_64), as in
+  e180ea5, and downloaded to a Mac with Apple silicon, macOS 26.6.2, then uploaded from the Mac to a
+  Team plan's organization Blue Rocket, the same account as in 7a362f6. The sessions were new Cowork
+  cloud sessions, whose client the user did not name, on host vm as root with CLAUDE_CODE_REMOTE true.
+  The connection from the Mac was slow and unreliable.
+
+What was done
+  1. The user uploaded cogmer-cloud-dd98401b.zip, the page's plugin of e180ea5 (version 1.0.2, a
+     manifest and cloud.value of 1292 bytes with mode 600, whose sha256 begins dbf43a4e on the
+     droplet's copy), under Customize > Plugins > Add > Upload plugin. The user said it was uploaded
+     and reported no message, and did not describe the plugin's page.
+  2. A new Cowork session was given a prompt
+     that asked the model to run one find command, which lists every file named cloud.value with its
+     length, mode, owner, the first eight hex digits of its sha256 and its first sixteen characters,
+     and to reply with only the output.
+  3. The user then uploaded docs/work/synced-reporter-probe/, a plugin of two hook scripts and a
+     manifest, 2078 bytes, that returns the same fields for each cloud.value one folder below an
+     account folder under $HOME/.claude/plugins/synced as additionalContext at SessionStart and
+     UserPromptSubmit, where CLAUDE_CODE_REMOTE is true. In a Linux container against a file of the
+     same shape it reported the right length, mode, owner and digest, and it printed nothing with
+     CLAUDE_CODE_REMOTE unset. A new session was asked what the synced reporter says.
+
+Seen
+  The model declined the prompt of step 2. It said it would not run it, that the command sweeps the
+  whole filesystem for files named cloud.value and reports their size, permissions, a hash
+  fingerprint and the first bytes of each, that such files tend to hold credential or configuration
+  material, and that the instructions to reply with only the raw output and run nothing else were
+  shaped to extract that material. It offered to inspect a file or directory the user named.
+  The reporter's line, which the user pasted, read: "The synced reporter says (UserPromptSubmit):
+  [folder cogmer-cloud-dd98401b: 1292 bytes, mode 600, owner root, sha256 starts dbf43a4e, begins
+  cogmer-cloud-v1:]; plugin folders: cogmer cogmer-cloud-dd98401b cogmer-cloud-dd98401b.meta.json
+  cogmer-synced-reporter cogmer-synced-reporter.meta.json cogmer.meta.json manifest.json". The
+  length, mode, digest prefix and public prefix are those of the droplet's copy.
+  The reporter found the file at $HOME/.claude/plugins/synced, with the account folder between that
+  and the plugin's folder.
+
+Not shown
+  A daemon in a session reading the file. The cogmer plugin on the account is the released one, whose
+  daemon has no reader, and the starter plugin of docs/work/cloud-e2e-probe/ was not uploaded. Whether
+  the daemon's default folder, which comes from the home directory it runs in, is the one the hook
+  used. How the plugin's page looked, whether the upload gave a message, and the client the session
+  was started from. Whether the file is there at the SessionStart of a first session after the upload,
+  since the line reported was the UserPromptSubmit one. What the .meta.json files and manifest.json
+  hold. Whether the model would have declined a prompt that said what it was for. The answer is the
+  model's repetition of the hook's context, not a record the plugin wrote.

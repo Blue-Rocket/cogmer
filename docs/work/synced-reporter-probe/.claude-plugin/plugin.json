@@ -1,0 +1,5 @@
+{
+  "name": "cogmer-synced-reporter",
+  "version": "0.1.0",
+  "description": "Throwaway probe: reports the length, mode, owner and digest prefix of every cloud.value file under the account's synced plugins, so that a session can say what it holds without anyone reading the files."
+}
