@@ -295,6 +295,9 @@ func TestTheCloudAddResponseOffersAPluginThatHoldsOnlyItsManifestAndTheValue(t *
 		_, _ = b.ReadFrom(rc)
 		rc.Close()
 		files[f.Name] = b.Bytes()
+		if f.Modified.Year() < 2026 {
+			t.Errorf("%s is dated %v, not when the plugin was made", f.Name, f.Modified)
+		}
 		if f.Name == pluginValueFile && f.Mode().Perm() != 0o600 {
 			t.Errorf("%s has mode %o, want 600", f.Name, f.Mode().Perm())
 		}

@@ -254,7 +254,7 @@ func cloudPluginZip(user, display, cloudKey, value string) ([]byte, string, erro
 		body []byte
 		mode os.FileMode
 	}{{".claude-plugin/plugin.json", manifest, 0o644}, {pluginValueFile, []byte(value), 0o600}} {
-		h := &zip.FileHeader{Name: f.name, Method: zip.Deflate}
+		h := &zip.FileHeader{Name: f.name, Method: zip.Deflate, Modified: time.Now().UTC()}
 		h.SetMode(f.mode)
 		w, err := zw.CreateHeader(h)
 		if err != nil {
