@@ -154,6 +154,7 @@ type Daemon struct {
 	// cloudLoop starts the cloud loop once. noCloudLoop stops a test starting it.
 	pluginRoot  string
 	pluginMu    sync.Mutex
+	pluginNoted string
 	cloudLoop   sync.Once
 	noCloudLoop bool
 

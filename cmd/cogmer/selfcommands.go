@@ -68,8 +68,10 @@ func cloudValueHere() (cloudValueFound, bool) {
 	if os.Getenv("CLAUDE_CODE_REMOTE") != "true" {
 		return cloudValueFound{}, false
 	}
-	best, discarded := newestPluginValue(syncedPluginsRoot())
+	best, discarded, mixed := newestPluginValue(syncedPluginsRoot())
 	switch {
+	case mixed:
+		return cloudValueFound{where: "a plugin's " + pluginValueFile, why: "the files name more than one user"}, true
 	case best != nil:
 		return cloudValueFound{where: "a plugin's " + pluginValueFile, reads: true}, true
 	case discarded > 0:

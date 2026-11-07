@@ -220,13 +220,18 @@ func (d *Daemon) currentCloudKey() (string, bool) {
 	return "", false
 }
 
-// cloudPluginName is the name of the plugin that holds a user's cloud value: cogmer-cloud
-// and eight hex digits of the hash of the user's identifier, so that it does not collide
-// with another plugin's name (D-278).
-func cloudPluginName(user string) string {
+// cloudPluginPrefix starts the name of the plugin that holds a user's cloud value (D-278).
+const cloudPluginPrefix = "cogmer-cloud-"
+
+// cloudPluginDigits is eight hex digits of the hash of the user's identifier, which the
+// plugin's name ends in so that it does not collide with another plugin's name (D-278).
+func cloudPluginDigits(user string) string {
 	sum := sha256.Sum256([]byte(user))
-	return "cogmer-cloud-" + hex.EncodeToString(sum[:4])
+	return hex.EncodeToString(sum[:4])
 }
+
+// cloudPluginName is the name of the plugin that holds a user's cloud value.
+func cloudPluginName(user string) string { return cloudPluginPrefix + cloudPluginDigits(user) }
 
 // cloudPluginZip is the zip of a plugin that holds value as the file cloud.value with mode
 // 600, and nothing else but its manifest: no hook, no command and no skill (D-278). Its

@@ -46,36 +46,44 @@ func TestTheNewestPluginValueThatVerifiesIsTheOneTakenAndTheRestAreDiscarded(t *
 	a, _ := twoMachines(t)
 	older, _ := cloudValueFor(t, a, "older")
 	newer, newerKey := cloudValueFor(t, a, "newer")
+	newest, _ := cloudValueFor(t, a, "newest")
+	name := cloudPluginName(a.d.id.User)
 	root := t.TempDir()
-	writePluginValue(t, root, "cogmer-user", older)
-	writePluginValue(t, root, "cogmer-user~g2", newer)
-	writePluginValue(t, root, "copy-of-the-older", older)
-	writePluginValue(t, root, "garbage", "not a cloud value")
-	big := filepath.Join(root, "acct_1", "big")
+	writePluginValue(t, root, name, older)
+	writePluginValue(t, root, name+"~g2", newer)
+	// A plugin that is not named as the page names its plugin is never opened, even when it
+	// holds the newest value, and neither is a file deeper than a plugin's folder.
+	writePluginValue(t, root, "copy-of-the-newest", newest)
+	writePluginValue(t, root, name+"-copy", newest)
+	if err := os.MkdirAll(filepath.Join(root, "acct_1", name+"~g9", "deeper"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "acct_1", name+"~g9", "deeper", pluginValueFile), []byte(newest), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// A plugin that is named right and holds no value that reads is discarded, as is a
+	// file too large to be one, and a value in a plugin named for another user's digits.
+	writePluginValue(t, root, name+"~g3", "not a cloud value")
+	big := filepath.Join(root, "acct_1", name+"~g4")
 	if err := os.MkdirAll(big, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(big, pluginValueFile), bytes.Repeat([]byte("x"), pluginValueMax+1), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(filepath.Join(root, "acct_1", "deep", "deeper"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(root, "acct_1", "deep", "deeper", pluginValueFile), []byte(newer), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	writePluginValue(t, root, cloudPluginPrefix+"00000000", newest)
 
-	best, discarded := newestPluginValue(root)
-	if best == nil || best.setup.cloud.Machine != newerKey {
-		t.Fatalf("the value taken is %v, want the one with the higher serial", best)
+	best, discarded, mixed := newestPluginValue(root)
+	if best == nil || best.setup.cloud.Machine != newerKey || mixed {
+		t.Fatalf("the value taken is %v, want the newest of the plugins named as the page names them", best)
 	}
-	if discarded != 2 {
-		t.Errorf("%d files were discarded, want the garbage and the oversized one", discarded)
+	if discarded != 3 {
+		t.Errorf("%d files were discarded, want the garbage, the oversized one and the one for other digits", discarded)
 	}
-	if got, _ := newestPluginValue(t.TempDir()); got != nil {
+	if got, _, _ := newestPluginValue(t.TempDir()); got != nil {
 		t.Error("a folder with no plugin holds a value")
 	}
-	if got, _ := newestPluginValue(""); got != nil {
+	if got, _, _ := newestPluginValue(""); got != nil {
 		t.Error("no folder holds a value")
 	}
 }
@@ -93,13 +101,73 @@ func TestTwoPluginValuesOfOneSerialAreToldApartByTheirKeysIdentifiers(t *testing
 	if kb < ka {
 		want = kb
 	}
+	name := cloudPluginName(a.d.id.User)
 	for _, order := range [][2]string{{va, vb}, {vb, va}} {
 		root := t.TempDir()
-		writePluginValue(t, root, "first", order[0])
-		writePluginValue(t, root, "second", order[1])
-		if best, _ := newestPluginValue(root); best == nil || best.setup.cloud.Machine != want {
+		writePluginValue(t, root, name, order[0])
+		writePluginValue(t, root, name+"~g2", order[1])
+		if best, _, _ := newestPluginValue(root); best == nil || best.setup.cloud.Machine != want {
 			t.Fatalf("with values of one serial the daemon took %v, want the key that sorts first", best)
 		}
+	}
+}
+
+func TestValuesOfTwoUsersAreNeverChosenBetweenAndSaidOnceInTheLog(t *testing.T) {
+	var logs bytes.Buffer
+	log.SetOutput(&logs)
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
+
+	a, _ := twoMachines(t)
+	b := newMachine(t)
+	phrase, err := NewPhrase()
+	if err != nil {
+		t.Fatal(err)
+	}
+	createUser(t, b, phrase, "Eli", "tablet")
+	// The other user's value has the higher serial, which says nothing across users.
+	va, _ := cloudValueFor(t, a, "mine")
+	vb, _ := cloudValueFor(t, b, "theirs")
+	if a.d.id.User == b.d.id.User {
+		t.Fatal("the two machines are one user")
+	}
+	root := t.TempDir()
+	writePluginValue(t, root, cloudPluginName(a.d.id.User), va)
+	writePluginValue(t, root, cloudPluginName(b.d.id.User), vb)
+
+	if best, _, mixed := newestPluginValue(root); best != nil || !mixed {
+		t.Fatalf("values of two users gave %v, mixed %v", best, mixed)
+	}
+	c := newMachine(t)
+	c.d.noCloudLoop = true
+	c.d.pluginRoot = root
+	c.d.startCloudFromPlugins()
+	c.d.takeNewerPluginValue()
+	c.d.takeNewerPluginValue()
+	if c.d.cloud != nil || c.d.isCloudSession() {
+		t.Error("a daemon given the values of two users took one")
+	}
+	if n := strings.Count(logs.String(), "name more than one user"); n != 1 {
+		t.Errorf("the log says it %d times, want once", n)
+	}
+	words, _ := cloudValueSaid(t, root)
+	if !strings.Contains(words, "name more than one user") && !strings.Contains(words, "more than one user") {
+		t.Errorf("a command says %q", words)
+	}
+}
+
+func TestAPluginNamedForAnotherUsersDigitsIsDiscarded(t *testing.T) {
+	a, _ := twoMachines(t)
+	b := newMachine(t)
+	phrase, err := NewPhrase()
+	if err != nil {
+		t.Fatal(err)
+	}
+	createUser(t, b, phrase, "Eli", "tablet")
+	value, _ := cloudValueFor(t, a, "mine")
+	root := t.TempDir()
+	writePluginValue(t, root, cloudPluginName(b.d.id.User), value)
+	if best, discarded, _ := newestPluginValue(root); best != nil || discarded != 1 {
+		t.Errorf("a value in a plugin named for another user gave %v, discarding %d", best, discarded)
 	}
 }
 
@@ -111,6 +179,7 @@ func TestADaemonTakesAPluginValueWhenItAppearsAndANewerOneWhenThatAppears(t *tes
 	a, _ := twoMachines(t)
 	older, olderKey := cloudValueFor(t, a, "older")
 	newer, newerKey := cloudValueFor(t, a, "newer")
+	name := cloudPluginName(a.d.id.User)
 	root := t.TempDir()
 
 	c := newMachine(t)
@@ -123,7 +192,7 @@ func TestADaemonTakesAPluginValueWhenItAppearsAndANewerOneWhenThatAppears(t *tes
 	}
 
 	// The plugin syncs after the session began, and the next prompt takes its value.
-	writePluginValue(t, root, "cogmer-user", older)
+	writePluginValue(t, root, name, older)
 	c.d.takeNewerPluginValue()
 	if c.d.cloud == nil || c.d.cloud.setup.cloud.Machine != olderKey || c.d.id.Chain.Session == nil {
 		t.Fatalf("the daemon did not take the value that appeared: %+v", c.d.cloud)
@@ -133,7 +202,7 @@ func TestADaemonTakesAPluginValueWhenItAppearsAndANewerOneWhenThatAppears(t *tes
 	}
 
 	// An upload replaces it with a newer one, which the next prompt takes.
-	writePluginValue(t, root, "cogmer-user~g2", newer)
+	writePluginValue(t, root, name+"~g2", newer)
 	c.d.takeNewerPluginValue()
 	if c.d.cloud.setup.cloud.Machine != newerKey || c.d.id.Chain.Session.CloudKey != newerKey {
 		t.Fatalf("the daemon kept the older value after a newer one appeared")
@@ -145,7 +214,7 @@ func TestADaemonTakesAPluginValueWhenItAppearsAndANewerOneWhenThatAppears(t *tes
 		t.Fatal(err)
 	}
 	c.d.takeNewerPluginValue()
-	writePluginValue(t, root, "an-older-copy", older)
+	writePluginValue(t, root, name+"~g3", older)
 	c.d.takeNewerPluginValue()
 	if c.d.cloud == nil || c.d.cloud.setup.cloud.Machine != newerKey {
 		t.Error("the daemon dropped or lowered the value it held")
@@ -157,13 +226,55 @@ func TestADaemonTakesAPluginValueWhenItAppearsAndANewerOneWhenThatAppears(t *tes
 	}
 }
 
+func TestADaemonHoldsItsUsersValueAndIgnoresAnotherUsersWhateverItsSerial(t *testing.T) {
+	var logs bytes.Buffer
+	log.SetOutput(&logs)
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
+
+	a, _ := twoMachines(t)
+	b := newMachine(t)
+	phrase, err := NewPhrase()
+	if err != nil {
+		t.Fatal(err)
+	}
+	createUser(t, b, phrase, "Eli", "tablet")
+	mine, mineKey := cloudValueFor(t, a, "mine")
+	theirs, _ := cloudValueFor(t, b, "theirs")
+	for i := 0; i < 3; i++ { // so that their serial is the higher
+		cloudValueFor(t, b, "more")
+	}
+	theirs, _ = cloudValueFor(t, b, "latest")
+
+	root := t.TempDir()
+	c := newMachine(t)
+	c.d.noCloudLoop = true
+	c.d.pluginRoot = root
+	writePluginValue(t, root, cloudPluginName(a.d.id.User), mine)
+	c.d.takeNewerPluginValue()
+	if c.d.cloud == nil || c.d.cloud.setup.cloud.Machine != mineKey {
+		t.Fatal("the daemon did not take its user's value")
+	}
+	if err := os.RemoveAll(filepath.Join(root, "acct_1")); err != nil {
+		t.Fatal(err)
+	}
+	writePluginValue(t, root, cloudPluginName(b.d.id.User), theirs)
+	c.d.takeNewerPluginValue()
+	c.d.takeNewerPluginValue()
+	if c.d.cloud.setup.cloud.Machine != mineKey || c.d.cloud.setup.user != a.d.id.User {
+		t.Error("another user's value replaced the one the daemon held")
+	}
+	if n := strings.Count(logs.String(), "for another user, which is ignored"); n != 1 {
+		t.Errorf("the log says it %d times, want once", n)
+	}
+}
+
 func TestADaemonWithNoPluginRootLooksNowhere(t *testing.T) {
 	a, _ := twoMachines(t)
 	value, _ := cloudValueFor(t, a, "web")
 	c := newMachine(t)
 	c.d.noCloudLoop = true
 	root := t.TempDir()
-	writePluginValue(t, root, "p", value)
+	writePluginValue(t, root, cloudPluginName(a.d.id.User), value)
 	c.d.takeNewerPluginValue()
 	if c.d.cloud != nil {
 		t.Error("a daemon that was given no folder to look in took a value")
@@ -172,6 +283,16 @@ func TestADaemonWithNoPluginRootLooksNowhere(t *testing.T) {
 	if got := syncedPluginsRoot(); got != root {
 		t.Errorf("the folder is %q, want the one the environment names", got)
 	}
+}
+
+// cloudValueSaid is what a command says in a cloud session whose plugin files are under root.
+func cloudValueSaid(t *testing.T, root string) (string, bool) {
+	t.Helper()
+	t.Setenv("CLAUDE_CODE_REMOTE", "true")
+	t.Setenv(cloudKeyVar, "")
+	t.Setenv("COGMER_SYNCED_PLUGINS", root)
+	words, stopped := gateWords(t, &Identity{})
+	return strings.Join(strings.Fields(words), " "), stopped
 }
 
 // The words a command gives in a cloud session that has no identity (D-281, a command in a
@@ -227,7 +348,7 @@ func TestACloudSessionSaysWhetherAValueItFoundReadsAndNeverQuotesIt(t *testing.T
 
 	root := t.TempDir()
 	t.Setenv("COGMER_SYNCED_PLUGINS", root)
-	writePluginValue(t, root, "cogmer-user", value)
+	writePluginValue(t, root, cloudPluginName(a.d.id.User), value)
 	words, stopped := gateWords(t, &Identity{})
 	if flat := strings.Join(strings.Fields(words), " "); !stopped || !strings.Contains(flat, "it reads") || !strings.Contains(flat, pluginValueFile) || !strings.Contains(flat, "next prompt") {
 		t.Errorf("a value in a plugin file that reads was said as: %s", words)
@@ -236,7 +357,7 @@ func TestACloudSessionSaysWhetherAValueItFoundReadsAndNeverQuotesIt(t *testing.T
 	if err := os.RemoveAll(filepath.Join(root, "acct_1")); err != nil {
 		t.Fatal(err)
 	}
-	writePluginValue(t, root, "bad", "garbage that is no cloud value")
+	writePluginValue(t, root, cloudPluginName(a.d.id.User), "garbage that is no cloud value")
 	words, _ = gateWords(t, &Identity{})
 	if flat := strings.Join(strings.Fields(words), " "); !strings.Contains(flat, "does not read") || !strings.Contains(flat, "self-machines") {
 		t.Errorf("a plugin file that does not read was said as: %s", words)
@@ -376,6 +497,7 @@ func TestThePageTellsTheUserWhatKeepingTheValueInAPluginRevealsBeforeOfferingIt(
 		"Every cloud session of your account that syncs your plugins receives the value",
 		"a value left in any copy of the plugin is used until its cloud key is removed",
 		"remove the plugin in your plugin settings, then upload the new one",
+		"Keep the plugin's name as it is: a session reads only a plugin with that name, and a renamed one may not be read",
 		"Share it and publish it nowhere",
 	} {
 		if !strings.Contains(page, said) {

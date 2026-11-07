@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 )
 
@@ -41,9 +42,16 @@ type pluginValue struct {
 	setup *cloudSetup
 }
 
-// newerValue reports whether a is the value to take over b: the one whose cloud
-// certificate has the higher serial, and for equal serials the one whose cloud key's
-// identifier sorts first, so that every session of the user takes the same one (D-279).
+// pluginFolderName is the name of a plugin folder that may hold a cloud value: the name the
+// machines page gives its plugin, with the suffix that a later upload over the same name
+// adds (D-279). A plugin of any other name is not opened, so that a plugin of another kind
+// cannot supply a value.
+var pluginFolderName = regexp.MustCompile(`^` + regexp.QuoteMeta(cloudPluginPrefix) + `([0-9a-f]{8})(~g[0-9]+)?$`)
+
+// newerValue reports whether a is the value to take over b, for two values of one user: the
+// one whose cloud certificate has the higher serial, and for equal serials the one whose
+// cloud key's identifier sorts first, so that every session of the user takes the same one
+// (D-279). A serial counts the certificates of one user, so it says nothing of values of two.
 func newerValue(a, b *cloudSetup) bool {
 	if a.cloud.Serial != b.cloud.Serial {
 		return a.cloud.Serial > b.cloud.Serial
@@ -51,16 +59,24 @@ func newerValue(a, b *cloudSetup) bool {
 	return a.cloud.Machine < b.cloud.Machine
 }
 
-// newestPluginValue reads every cloud.value one folder below an account folder under
-// root, discards each that is not a cloud value whose certificates verify, and returns the
-// one to act on. It reports how many files it discarded, and never quotes a file.
-func newestPluginValue(root string) (best *pluginValue, discarded int) {
+// newestPluginValue reads the cloud.value of each folder one below an account folder under
+// root that is named as the page names its plugin, discards each that is not a cloud value
+// whose certificates verify or whose name does not end in the digits of the user it names, and
+// returns the newest. When the values that remain name more than one user it returns none and
+// says so, since which user the session should speak as is not decided by any value. It
+// reports how many files it discarded, and never quotes a file.
+func newestPluginValue(root string) (best *pluginValue, discarded int, mixed bool) {
 	if root == "" {
-		return nil, 0
+		return nil, 0, false
 	}
-	paths, _ := filepath.Glob(filepath.Join(root, "*", "*", pluginValueFile))
+	paths, _ := filepath.Glob(filepath.Join(root, "*", cloudPluginPrefix+"*", pluginValueFile))
 	sort.Strings(paths)
+	var values []*pluginValue
 	for _, p := range paths {
+		m := pluginFolderName.FindStringSubmatch(filepath.Base(filepath.Dir(p)))
+		if m == nil {
+			continue
+		}
 		info, err := os.Lstat(p)
 		if err != nil || !info.Mode().IsRegular() || info.Size() > pluginValueMax {
 			discarded++
@@ -72,46 +88,79 @@ func newestPluginValue(root string) (best *pluginValue, discarded int) {
 			continue
 		}
 		setup, err := parseCloudValue(string(raw))
-		if err != nil {
+		if err != nil || m[1] != cloudPluginDigits(setup.user) {
 			discarded++
 			continue
 		}
-		if v := (&pluginValue{raw: string(raw), setup: setup}); best == nil || newerValue(v.setup, best.setup) {
+		values = append(values, &pluginValue{raw: string(raw), setup: setup})
+	}
+	for _, v := range values {
+		if v.setup.user != values[0].setup.user {
+			return nil, discarded, true
+		}
+	}
+	for _, v := range values {
+		if best == nil || newerValue(v.setup, best.setup) {
 			best = v
 		}
 	}
-	return best, discarded
+	return best, discarded, false
 }
 
 // startCloudFromPlugins makes this daemon a cloud session's from the newest value in
 // the plugin files, when there is one, and says in the log how many files it ignored.
 func (d *Daemon) startCloudFromPlugins() {
-	best, discarded := newestPluginValue(d.pluginRoot)
+	best, discarded, mixed := newestPluginValue(d.pluginRoot)
 	if discarded > 0 {
-		log.Printf("cloud: %d file(s) named %s under %s do not read as a cloud value and are ignored", discarded, pluginValueFile, d.pluginRoot)
+		log.Printf("cloud: %d file(s) named %s under %s do not read as a cloud value for the user their plugin is named for and are ignored", discarded, pluginValueFile, d.pluginRoot)
+	}
+	if mixed {
+		d.notePlugins("mixed", "cloud: the plugin files name more than one user, so none is taken")
+		return
 	}
 	if best != nil {
 		d.startCloudFrom(best.raw, "a plugin's "+pluginValueFile)
 	}
 }
 
+// notePlugins writes a line to the log when its kind differs from the last one written,
+// so that a prompt that looks again does not repeat it.
+func (d *Daemon) notePlugins(kind, line string) {
+	if d.pluginNoted == kind {
+		return
+	}
+	d.pluginNoted = kind
+	log.Print(line)
+}
+
 // takeNewerPluginValue looks at the plugin files again and starts a cloud session from
-// the newest value when this daemon has none or a value older than it. It is called at
-// each prompt, because a session that began before an upload runs its first hook on the
-// files from before it (D-279). A value no longer in the files ends nothing: a daemon
-// that has read one holds it, and removing the cloud key is what ends its authority.
+// the newest value when this daemon has none or a value of its own user older than it. It
+// is called at each prompt, because a session that began before an upload runs its first
+// hook on the files from before it (D-279). A value no longer in the files ends nothing: a
+// daemon that has read one holds it, and removing the cloud key is what ends its authority.
+// A value of another user never replaces the one it holds.
 func (d *Daemon) takeNewerPluginValue() {
 	if d.pluginRoot == "" {
 		return
 	}
 	d.pluginMu.Lock()
 	defer d.pluginMu.Unlock()
-	best, _ := newestPluginValue(d.pluginRoot)
+	best, _, mixed := newestPluginValue(d.pluginRoot)
+	if mixed {
+		d.notePlugins("mixed", "cloud: the plugin files name more than one user, so none is taken")
+		return
+	}
 	if best == nil {
 		return
 	}
-	if c := d.cloud; c != nil && !newerValue(best.setup, c.setup) {
-		return
+	if c := d.cloud; c != nil {
+		if best.setup.user != c.setup.user {
+			d.notePlugins("other:"+best.setup.user, "cloud: a plugin holds a cloud value for another user, which is ignored")
+			return
+		}
+		if !newerValue(best.setup, c.setup) {
+			return
+		}
 	}
 	d.startCloudFrom(best.raw, "a plugin's "+pluginValueFile)
 	if d.cloud != nil {

@@ -325,7 +325,8 @@ async function addCloud(){
       the relay addresses of your machines, and they hold no secret. Your organization's administrators can see that the
       plugin exists. You can open the plugin's files in your browser, <code>cloud.value</code> among them, in every version an
       upload over the same name keeps. Every cloud session of your account that syncs your plugins receives the value, and a
-      value left in any copy of the plugin is used until its cloud key is removed. To rotate it, remove ${esc(res.name)} here,
+      value left in any copy of the plugin is used until its cloud key is removed. Keep the plugin's name as it is: a session reads
+      only a plugin with that name, and a renamed one may not be read. To rotate it, remove ${esc(res.name)} here,
       remove the plugin in your plugin settings, then upload the new one.</p></div>` : ''}
     <div class="row"><button id="doneCloud">Done</button></div>`);
   el('cloudValue').value = res.value;
