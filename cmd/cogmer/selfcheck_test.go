@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -214,6 +215,13 @@ func TestOnlyAnAuthenticatedRequestCountsAsHearingFromAColleague(t *testing.T) {
 func TestTheRealOverlayCheckPassesForALiveServerAndFailsForADeadOne(t *testing.T) {
 	if testing.Short() {
 		t.Skip("uses the relay")
+	}
+	// A cloud session's proxy breaks the relay's own protocol, and only a binary with the
+	// release's tag can carry the connection as a WebSocket (D-217, a cloud session's daemon
+	// carries its relay connection as a WebSocket), so without the tag this would fail with
+	// nothing wrong in cogmer.
+	if os.Getenv("CLAUDE_CODE_REMOTE") == "true" && !builtWithWebSocketRelay {
+		t.Skip("in a cloud session the relay is reached only as a WebSocket, which this test binary cannot do; run it with -tags ts_debug_websockets, as scripts/release.sh builds")
 	}
 	if c, err := net.DialTimeout("tcp", "tailcat.dev:443", 3*time.Second); err != nil {
 		t.Skipf("cannot reach tailcat.dev, so the relay is out of reach: %v", err)

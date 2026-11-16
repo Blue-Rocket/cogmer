@@ -104,13 +104,16 @@ every target cross-compiles with `CGO_ENABLED=0`.
 - **Test with `go test ./...`.** To drive a real session, run `claude -p …
   --settings <file>` with a throwaway `COGMER_HOME` per run, and `< /dev/null`, or it
   waits on stdin.
-- **In a Claude Code cloud session, where `CLAUDE_CODE_REMOTE` is `true`, test with
-  `go test -tags ts_debug_websockets ./...`.** There cogmer carries its relay connection
-  as a WebSocket (D-217, a cloud session's daemon carries its relay connection as a
-  WebSocket), which only a build with that tag can do, and `scripts/release.sh` sets it.
-  Without the tag, `TestTheRealOverlayCheckPassesForALiveServerAndFailsForADeadOne` speaks
-  the relay's own protocol, which the session's proxy breaks, and fails after 10s with
-  nothing wrong in cogmer. On a user's own machine, plain `go test ./...` is right.
+- **A local `go test ./...` covers what a release can break in a cloud session.** There
+  cogmer carries its relay connection as a WebSocket (D-217, a cloud session's daemon
+  carries its relay connection as a WebSocket), which only a build with the
+  `ts_debug_websockets` tag can do. `scripts/release.sh` sets the tag, and
+  `TestTheTailscaleVersionInUseStillSwitchesTheRelayToAWebSocket` checks on any machine
+  that the Tailscale version in `go.mod` still has the tag and reads the variable cogmer
+  sets. What no test here can check is the cloud session's proxy itself. In a cloud
+  session, `go test -tags ts_debug_websockets ./...` also runs
+  `TestTheRealOverlayCheckPassesForALiveServerAndFailsForADeadOne` through that proxy,
+  and without the tag that test skips.
 - **Test several machines in containers with `go test -tags 'docker
   ts_debug_websockets' -run Container ./cmd/cogmer`.** Each machine is a container
   with its own state, driven through the commands, the hooks and the requests the
