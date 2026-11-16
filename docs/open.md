@@ -325,6 +325,27 @@ that exist. Whether a room shows a colleague's session joining, leaving or worki
 is undecided, and "Whether arrival wants announcing" under "Somebody else uses it"
 is part of the same question.
 
+**The session start hook adds cogmer's text to the context of every session, in a room
+or not.** It starts the daemon, starts the binary fetch, and injects the standing policy
+for room content into every session on the machine (read from
+`plugin/hooks-handlers/session-start.sh` on 2026-11-16). D-284 (a session in no room
+reaches cogmer only through the commands its user types) governs the prompt and stop
+hooks and leaves this hook out. D-176 (the standing policy is also stated once at session
+start) places the policy there so it reaches the model where room content cannot, and a
+session not yet in a room may join one later in the same session.
+
+The options, each with its cost:
+- Leave it. Every session carries the policy, 106 words, whether or not it ever joins a
+  room.
+- State the policy when a session joins, in the command's output. It then arrives in a
+  tool result, beside text the command printed, rather than in a position of its own,
+  which reverses D-176.
+- Drop the policy and rely on the framing inside each block. D-176's Limits record that
+  the same hostile turn was refused with and without the policy.
+- Stop starting the daemon at session start and start it from the commands. Every command
+  that needs the daemon would have to start it and wait for it to answer, and colleagues
+  could not fetch this machine's events while no session on it had started one.
+
 **A room never closes, so nothing is archived.** D-132 (a closed room's log is archived)
 has a closed room kept as an archive that can be read but never rejoined, and the
 specification freezes a room's sequences at that point. Membership ends per person
@@ -449,6 +470,14 @@ There are four ways to reach such a person, each with a cost. Requiring Claude C
 **A user in Chat mode captures and shares nothing, and the README does not say so.** The README's Cowork section describes Cowork alone. Anthropic's plugins article says hooks are grayed out in Chat, and one message in Chat mode reached no program on a Mac (`d306243`). A README sentence would name Chat mode and say nothing yet about a merged conversation, which the item above leaves unknown.
 
 **No behavior check records that a `Stop` hook with an empty reply ends the turn, and a stop reply that carried context restarted a turn eight times.** In a Cowork-mode conversation on a Mac, a probe's `Stop` hook returned the JSON form of `additionalContext`, and nine `Stop` calls followed in 25 seconds (`d306243`). The hooks reference caps consecutive continuations by stop hooks at eight and does not say that a reply's `additionalContext` continues a turn. A behavior check for an empty reply would need a probe turn, and no check should call `Stop` with context.
+
+**A Cowork session in no room sends every prompt and response to the daemon.** Its hooks
+are calls through the bridge (D-205, Cowork through a bridge on the user's machine), not
+`plugin/hooks-handlers/run.sh`, so the check that ends the hooks of a Claude Code or Codex
+session in no room never runs for it (read from `cmd/cogmer/cowork_setup.go`,
+`coworkHookFile`, on 2026-11-16). The fix would be the same check in the bridge, before it
+relays a call, which needs the bridge to read `bound-sessions/` under the state directory
+of the daemon it relays to.
 
 ## Cloud sessions in a room
 

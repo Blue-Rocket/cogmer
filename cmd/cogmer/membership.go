@@ -250,7 +250,9 @@ func OpenMembership() (*Membership, error) {
 	if _, err := db.Exec(cloudSchema); err != nil {
 		return nil, fmt.Errorf("init lists versions: %w", err)
 	}
-	return &Membership{db: db}, nil
+	m := &Membership{db: db}
+	m.ensureMarkers()
+	return m, nil
 }
 
 // migrateMembership brings an existing membership.db up to date. CREATE TABLE IF
@@ -1155,6 +1157,9 @@ func (m *Membership) LeaveSession(sessionID string) (Room, error) {
 	}
 	_, err := m.db.Exec(`UPDATE session_rooms SET left_at = ? WHERE session_id = ?`,
 		time.Now().UTC().Format(time.RFC3339), sessionID)
+	if err == nil {
+		m.markLeft(sessionID)
+	}
 	return room, err
 }
 
@@ -1192,9 +1197,12 @@ func (m *Membership) BindSession(sessionID, roomID string) error {
 			return &BoundElsewhereError{Was: prior, Wanted: wanted}
 		}
 		// Returning to the room it was in. Not a move, so permitted.
+		m.markBound(sessionID)
 		_, err := m.db.Exec(`UPDATE session_rooms SET left_at = NULL WHERE session_id = ?`, sessionID)
 		return err
 	}
+	// The file comes first, so that no moment has the session bound without it (D-284).
+	m.markBound(sessionID)
 	_, err = m.db.Exec(`INSERT INTO session_rooms (session_id, room_id, joined_at) VALUES (?,?,?)`,
 		sessionID, roomID, time.Now().UTC().Format(time.RFC3339))
 	return err

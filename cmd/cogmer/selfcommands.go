@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
+	"time"
 )
 
 // --- the commands' side of the user identity ---
@@ -42,6 +44,23 @@ func needsUserIdentity(id *Identity) bool {
 	}
 	writeIdentityNeeded(os.Stdout)
 	return true
+}
+
+// askDaemonToTakeCloudValue asks a cloud session's daemon to look at the plugin files
+// again before a command reads the identity, which the daemon writes when it takes a
+// value. A cloud session in no room reaches its daemon about its value only this way,
+// since its hooks end before they call (D-284, a session in no room reaches cogmer only
+// through the commands its user types), and it also takes a newer value a rotation left
+// (D-279). A daemon that does not answer within 3s leaves the identity as it was.
+func askDaemonToTakeCloudValue() {
+	if os.Getenv("CLAUDE_CODE_REMOTE") != "true" || os.Getenv(cloudKeyVar) != "" {
+		return
+	}
+	resp, err := localPost(&http.Client{Timeout: 3 * time.Second}, "http://"+addr()+"/cloud/take", []byte("{}"))
+	if err != nil {
+		return
+	}
+	_ = resp.Body.Close()
 }
 
 // cloudValueFound is a cloud value a cloud session's command found: where, whether it
@@ -97,8 +116,8 @@ func writeCloudIdentityNeeded(w io.Writer, found cloudValueFound, ok bool) {
 		fmt.Fprintln(w, "README under \"Install in Claude Code\".")
 	case found.reads:
 		fmt.Fprintf(w, "Nothing was done yet: this cloud session has no cogmer identity yet. A cloud value was found in %s\n", found.where)
-		fmt.Fprintln(w, "and it reads, so the session's daemon takes it when it starts or at the next prompt. Run this again")
-		fmt.Fprintln(w, "then.")
+		fmt.Fprintln(w, "and it reads, but the session's daemon has not taken it. The daemon takes it when it starts and")
+		fmt.Fprintln(w, "when a command like this one asks, so run this again in a moment.")
 	default:
 		fmt.Fprintf(w, "Nothing was done yet: this cloud session has no cogmer identity, because the value in %s does\n", found.where)
 		fmt.Fprintf(w, "not read (%s). Add the cloud environment again, from ", found.why)

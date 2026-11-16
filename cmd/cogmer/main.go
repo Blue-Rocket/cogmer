@@ -472,7 +472,7 @@ func runDaemon() {
 		d.startCloud(v)
 	} else if os.Getenv("CLAUDE_CODE_REMOTE") == "true" {
 		// No variable, so the value may be in a plugin the user uploaded, and is looked for
-		// again at each prompt (D-279).
+		// again at each prompt of a session in a room and when a command asks (D-279).
 		d.pluginRoot = syncedPluginsRoot()
 		d.startCloudFromPlugins()
 	}
@@ -910,6 +910,7 @@ func resolvePeer(m *Membership, arg string) (string, error) {
 }
 
 func withMembership(fn func(*Membership, *Identity)) {
+	askDaemonToTakeCloudValue()
 	id, err := LoadIdentity()
 	if err != nil {
 		log.Fatalf("identity: %v", err)
@@ -1816,6 +1817,7 @@ func runConflicts(args []string) {
 func runWhoami() {
 	// Deliberately not openLocal: who you are is answerable in no room at all,
 	// and a command that reports your identity must not fail for want of one.
+	askDaemonToTakeCloudValue()
 	id, err := LoadIdentity()
 	if err != nil {
 		log.Fatalf("identity: %v", err)

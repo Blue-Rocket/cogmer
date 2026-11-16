@@ -89,8 +89,9 @@ cmd/cogmer/
   identity.go    §6 peer identity
 ```
 
-State is in `~/.cogmer/`: `identity.json`, `identity.key`, `membership.db` and
-`rooms/*.db`. The code is pure Go throughout, with `modernc.org/sqlite` and no cgo, so
+State is in `~/.cogmer/`: `identity.json`, `identity.key`, `membership.db`,
+`rooms/*.db`, and `bound-sessions/`, a file for each session in a room, which the hook
+script checks before it calls anything. The code is pure Go throughout, with `modernc.org/sqlite` and no cgo, so
 every target cross-compiles with `CGO_ENABLED=0`.
 
 - **Build with `go build -o bin/cogmer ./cmd/cogmer`.** `bin/` is untracked, because

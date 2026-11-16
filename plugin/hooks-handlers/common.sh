@@ -36,6 +36,39 @@ ct_state_dir() {
   chmod 700 "$d" 2>/dev/null
 }
 
+# hook_for_session_in_no_room succeeds when a hook's payload comes from a session in
+# no room and holds no cogmer command, so the hook can end without calling anything
+# (D-284). Its arguments are the payload and then the hook's own arguments, such as
+# `hook --host codex prompt`.
+#
+# Every doubt fails it, and failing it calls the daemon, which answers for a session
+# in no room exactly as it did before this check: no directory of bound sessions yet,
+# an argument list that is not a hook's, a host it does not know, no session
+# identifier, an identifier holding anything but letters, digits, `-` and `_`, and any
+# mention of a command. A command has to reach the daemon even from a session in no
+# room, because the daemon records it so that the reply to it is never captured once
+# the command has put the session in a room (D-209). The reverse error, answering "no
+# room" for a session that is in one, would stop capture with nothing saying so.
+hook_for_session_in_no_room() {
+  local payload="$1" host=claude dir id
+  shift
+  [ "${1:-}" = hook ] || return 1
+  shift
+  if [ "${1:-}" = --host ]; then host="${2:-}"; fi
+  dir="${COGMER_HOME:-$HOME/.cogmer}/bound-sessions"
+  [ -d "$dir" ] || return 1
+  case "$payload" in *'/cogmer:'*|*'$cogmer'*) return 1 ;; esac
+  local re='"session_id"[[:space:]]*:[[:space:]]*"([A-Za-z0-9_-]+)"'
+  [[ $payload =~ $re ]] || return 1
+  id="${BASH_REMATCH[1]}"
+  case "$host" in
+    claude) ;;
+    codex) id="codex_$id" ;;
+    *) return 1 ;;
+  esac
+  [ ! -e "$dir/$id" ]
+}
+
 # ct_say appends one timestamped line to a log under the state directory.
 #
 # §3.1 requires failure to be silent TO THE PERSON AT THE KEYBOARD. It does not require silence

@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -123,6 +124,16 @@ func (d *Daemon) startCloudFromPlugins() {
 	}
 }
 
+// handleCloudTake looks at the plugin files again for a command that reads the user
+// identity. The hooks of a cloud session in no room never reach this daemon (D-284, a
+// session in no room reaches cogmer only through the commands its user types), so the
+// command asks, and a value uploaded after the session began is taken when the session
+// first needs it (D-279).
+func (d *Daemon) handleCloudTake(w http.ResponseWriter, r *http.Request) {
+	d.takeNewerPluginValue()
+	writeJSON(w, map[string]any{"cloud": d.isCloudSession()})
+}
+
 // notePlugins writes a line to the log when its kind differs from the last one written,
 // so that a prompt that looks again does not repeat it.
 func (d *Daemon) notePlugins(kind, line string) {
@@ -135,8 +146,9 @@ func (d *Daemon) notePlugins(kind, line string) {
 
 // takeNewerPluginValue looks at the plugin files again and starts a cloud session from
 // the newest value when this daemon has none or a value of its own user older than it. It
-// is called at each prompt, because a session that began before an upload runs its first
-// hook on the files from before it (D-279). A value no longer in the files ends nothing: a
+// is called at each prompt of a session in a room and when a command that reads the user
+// identity asks, because a session that began before an upload runs its first hook on the
+// files from before it (D-279). A value no longer in the files ends nothing: a
 // daemon that has read one holds it, and removing the cloud key is what ends its authority.
 // A value of another user never replaces the one it holds.
 func (d *Daemon) takeNewerPluginValue() {

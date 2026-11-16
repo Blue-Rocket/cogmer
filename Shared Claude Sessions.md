@@ -1494,6 +1494,10 @@ Before a room exists, a session is an ordinary agent session: nothing is
 captured, injected or shared. Collaboration is something a user starts, not a state
 they are in.
 
+A session in no room hands cogmer nothing but the commands its user types in it.
+Installing cogmer then exposes none of a user's other work to it, since that work stays
+with the host until the user starts collaborating.
+
 A new room does not contain the conversation that led a user to invite someone. Earlier
 turns are never contributed to a room by default.
 

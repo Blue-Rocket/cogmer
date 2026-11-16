@@ -232,6 +232,7 @@ func (d *Daemon) LocalRoutes() *http.ServeMux {
 	// all (D-087).
 	mux.HandleFunc("/hook/prompt", guardLocal(d.handlePrompt))
 	mux.HandleFunc("/hook/stop", guardLocal(d.handleStop))
+	mux.HandleFunc("/cloud/take", guardLocal(d.handleCloudTake))
 	mux.HandleFunc("/events", d.handleEvents)
 	mux.HandleFunc("/peers", d.handlePeers)
 	mux.HandleFunc("/self", d.handleSelf)

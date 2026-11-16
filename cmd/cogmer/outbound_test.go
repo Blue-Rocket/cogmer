@@ -53,6 +53,7 @@ var outboundCalls = map[site]struct {
 	{"verify.go", "http.Client"}:                   {1, "the peer client it is handed, which is the one above"},
 	{"machineadd.go", "http.Client"}:               {3, "the peer client it is handed, to a machine being added, pinned to the key in the string the user entered"},
 	{"localguard.go", "http.Client"}:               {1, "the daemon on loopback, with the guard header attached in one place"},
+	{"selfcommands.go", "http.Client"}:             {1, "the daemon on loopback, asking a cloud session's daemon to read the plugin files before a command reads the identity"},
 	{"localguard.go", "http.NewRequest"}:           {1, "the same request"},
 	{"transport.go", "http.Transport"}:             {1, "the same client"},
 	{"transport.go", "net.Dialer"}:                 {1, "a peer's TCP address"},

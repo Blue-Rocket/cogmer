@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"log"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -307,6 +308,9 @@ func gateWords(t *testing.T, id *Identity) (string, bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// No daemon answers here, so a command's request to take a cloud value fails as it
+	// does in a session whose daemon is down.
+	t.Setenv("COGMER_ADDR", "127.0.0.1:1")
 	real := os.Stdout
 	os.Stdout = w
 	stopped := needsUserIdentity(id)
@@ -350,7 +354,7 @@ func TestACloudSessionSaysWhetherAValueItFoundReadsAndNeverQuotesIt(t *testing.T
 	t.Setenv("COGMER_SYNCED_PLUGINS", root)
 	writePluginValue(t, root, cloudPluginName(a.d.id.User), value)
 	words, stopped := gateWords(t, &Identity{})
-	if flat := strings.Join(strings.Fields(words), " "); !stopped || !strings.Contains(flat, "it reads") || !strings.Contains(flat, pluginValueFile) || !strings.Contains(flat, "next prompt") {
+	if flat := strings.Join(strings.Fields(words), " "); !stopped || !strings.Contains(flat, "it reads") || !strings.Contains(flat, pluginValueFile) || !strings.Contains(flat, "run this again") {
 		t.Errorf("a value in a plugin file that reads was said as: %s", words)
 	}
 
@@ -506,5 +510,41 @@ func TestThePageTellsTheUserWhatKeepingTheValueInAPluginRevealsBeforeOfferingIt(
 	}
 	if strings.Index(page, "Anthropic stores the file") > strings.Index(page, "Download ${esc(res.pluginFile)}")+400 {
 		t.Error("the page's disclosure comes long after its download button")
+	}
+}
+
+// A cloud session in no room never reaches its daemon from a hook (D-284, a session in no
+// room reaches cogmer only through the commands its user types), so a command that needs
+// the user identity asks the daemon to look at the plugin files, and goes on with the
+// identity the daemon then writes. The value is uploaded after the daemon started, which
+// is the case the look at each prompt served (D-279).
+func TestACommandInACloudSessionTakesAValueUploadedAfterTheDaemonStarted(t *testing.T) {
+	a, _ := twoMachines(t)
+	value, key := cloudValueFor(t, a, "web")
+	root := t.TempDir()
+
+	c := newMachine(t)
+	c.d.noCloudLoop = true
+	c.d.pluginRoot = root
+	c.d.startCloudFromPlugins()
+	writePluginValue(t, root, cloudPluginName(a.d.id.User), value)
+
+	srv := httptest.NewServer(c.d.LocalRoutes())
+	defer srv.Close()
+	t.Setenv("COGMER_ADDR", strings.TrimPrefix(srv.URL, "http://"))
+	t.Setenv("CLAUDE_CODE_REMOTE", "true")
+	t.Setenv(cloudKeyVar, "")
+
+	var id *Identity
+	gated := true
+	withMembership(func(_ *Membership, got *Identity) { id, gated = got, needsUserIdentity(got) })
+	if gated {
+		t.Fatal("a command stopped for want of an identity that a value in the plugin files gives")
+	}
+	if c.d.cloud == nil || c.d.cloud.setup.cloud.Machine != key {
+		t.Fatalf("the daemon did not take the value the command asked it to look for: %+v", c.d.cloud)
+	}
+	if !id.HasUser() || id.User != a.d.id.User {
+		t.Errorf("the command went on with an identity for %q, not the value's user", id.User)
 	}
 }

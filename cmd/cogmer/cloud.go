@@ -487,7 +487,7 @@ func (d *Daemon) startCloudFrom(raw, source string) {
 
 // ensureCloudLoop starts the loop that renews the session key and asks for the user's
 // lists, once. The daemon's start calls it for a session that began there, and a prompt
-// that takes a plugin's value calls it for one that began later (D-279).
+// or a command that takes a plugin's value calls it for one that began later (D-279).
 func (d *Daemon) ensureCloudLoop() {
 	d.cloudLoop.Do(func() {
 		if !d.noCloudLoop {
