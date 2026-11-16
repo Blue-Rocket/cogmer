@@ -479,6 +479,52 @@ session in no room never runs for it (read from `cmd/cogmer/cowork_setup.go`,
 relays a call, which needs the bridge to read `bound-sessions/` under the state directory
 of the daemon it relays to.
 
+**Whether the ordinary cogmer plugin captures and injects in a Cowork session that runs on
+the user's computer, with no bridge, is not known.** Anthropic's page on plugin support lists
+hooks as loading in Cowork, and a local MCP server as loading "when the Cowork session runs on
+your computer" (https://claude.com/docs/plugins/platform-support.md, read on 2026-11-16). On
+2026-10-31 a local Cowork session on a Mac ran the cogmer plugin's `session-start.sh`
+(`78477ee`), and no turn has been run through `plugin/hooks-handlers/run.sh` there. If capture,
+injection and the room commands work, a Cowork user on their own computer needs no bridge, no
+Desktop configuration and no second plugin, which would replace D-205 (Claude Cowork is a
+supported host through a bridge on the user's machine) for that case.
+
+A run would install the marketplace plugin on a Mac whose Desktop configuration has no
+`cogmer` entry, create a room in a local Cowork session, and check that a colleague receives
+its turns and that the session receives the colleague's. It would also show which host the
+binary resolves there (D-203, a host is declared by its entry point and resolved per request).
+
+**Whether a merged Chat and Cowork conversation runs the plugin's hooks is not known.** Since
+Chat and Cowork merged, Cowork is available from any conversation and Claude decides what a
+task needs, and the merge became generally available for Team plans on 2026-11-12
+(https://claude.com/blog/cowork-is-now-claude, read on 2026-11-16). Anthropic's page on plugin
+support lists hooks as ignored in Chat and loaded in Cowork (read on 2026-11-16). A Cowork
+cloud session ran the command hooks on 2026-10-31 (`7adc75c`), before the merge reached this
+Team plan, whose "Chat and Cowork unified" setting was off. Capture has to be automatic for a
+host to be in reach, so a conversation whose turns before Cowork joins it are not captured is
+only partly shared. A run would turn the setting on, start a conversation with the cogmer
+plugin installed, and record which hooks fire before and after Claude first uses Cowork in it.
+
+## ChatGPT Work as a host
+
+A user of ChatGPT Work on their own computer shares a conversation with colleagues through the
+Codex plugin cogmer already has.
+
+**Whether cogmer's Codex plugin captures and injects in a ChatGPT Work thread is not known.**
+OpenAI's page on hooks says that "Local-only Work and Codex threads continue to support their
+existing hooks", that plain text a UserPromptSubmit hook writes "is added as extra developer
+context", that Stop carries `last_assistant_message`, and that a plugin's hooks are reviewed and
+trusted before they run. It also says that Work Cloud without local computer access does not
+run them (https://learn.chatgpt.com/docs/hooks, read on 2026-11-16). Those are the events
+cogmer's Codex hooks use (D-201, Claude Code and Codex are supported hosts).
+
+A run would install the plugin, trust its hooks in a local Work thread, and check the room
+commands, capture and injection with a colleague. It would also show whether a Work thread
+carries `CODEX_THREAD_ID` (B28, `CODEX_THREAD_ID` in a shell tool equals the hook session
+identifier) and whether a typed `$cogmer` command reaches the hook as Codex's does. If they
+work, a ChatGPT Work user is reached with no new design, and the README and §29 (the
+experience we want) would name ChatGPT Work as a way in.
+
 ## Cloud sessions in a room
 
 A user in a Claude Code cloud session, such as one started from the iPhone app, shares a
