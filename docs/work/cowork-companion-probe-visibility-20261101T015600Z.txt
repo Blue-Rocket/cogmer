@@ -1,0 +1,41 @@
+Cowork companion probe, the organization's plugin inventory read on 2026-11-01 at about 01:50Z, written at 2026-11-01T01:56:00Z
+
+What was asked
+  Who in the organization can see a personal plugin that holds a file standing in for a
+  credential, and what the organization keeps of it. This continues 7a362f6, which holds the
+  plugin (cogmer-companion-probe, a file of 2400 random characters, no secret), its first upload
+  and the machine and versions, and dab6794, which holds the replacement by version 0.1.1.
+
+Machine and versions
+  The same as in 7a362f6: a Mac with Apple silicon, macOS 26.6.2, a browser signed in to the
+  organization Blue Rocket on a Team plan, as a member who can open the organization's admin
+  settings. The browser's version was not read.
+
+Clicks
+  Organization settings > Plugins & skills > Inventory, then the entry for the plugin. The user
+  sent two screenshots, which are not kept in the repository.
+
+Seen
+  The inventory's heading says "Every skill and plugin your organization governs, including the
+  ones members created for themselves". Its columns are Name, Source, Version, Capabilities,
+  Audience and Users (30d). The probe's row read: name cogmer-companion-probe, creator David Foote
+  (you), the description of the plugin, source Member, version 0.1.1, one capability icon, audience
+  "Only creator", users and activity "-". The other rows were plugins from Anthropic's directory
+  with the audience "Everyone, can install", and a plugin named cogmer created by the same member.
+  The plugin's own page read: Member, 0.1.1, updated Nov 1; creator David Foote with the email
+  address and "Created Nov 1, 2026"; Source Member; Audience Only creator; Users (30d) and
+  Activity (30d) "-". Under Distribution it read Sharing "Only creator" ("Who the owner has shared
+  it with") and Publish request "None" ("The owner's latest request to publish it to the
+  organization"). Under "Connectors & tools", described as what this version can reach when it
+  runs, it listed "Can run code without asking" and "Hooks, runs on SessionStart,
+  UserPromptSubmit". Under Version history it listed 0.1.1 as Current, uploaded Nov 1, and 0.1.0,
+  uploaded Nov 1. The page showed, in the part that was in view, no control to read or download a
+  version's files.
+
+Not shown
+  Whether an administrator can open or download a version's files, which the part of the page in
+  view did not show, and the menu at the end of the row was not opened. Whether version 0.1.0's
+  file, with its old content, is still stored and can be read by anyone. What another member sees
+  in their own inventory or in a search of the organization. Whether the inventory is the same for
+  an organization where the member is no owner. How long a version stays in the history, and
+  whether a version can be deleted.

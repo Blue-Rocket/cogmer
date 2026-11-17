@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -123,7 +124,7 @@ func (d *tailcatDialer) clientFor(addr string) *tailcat.Client {
 	if c, ok := d.clients[addr]; ok {
 		return c
 	}
-	c := tailcat.NewClient(tailcat.Addr(addr))
+	c := newRelayClient(addr)
 	d.clients[addr] = c
 	return c
 }
@@ -205,7 +206,7 @@ func (d *tailcatDialer) Diagnose(ctx context.Context, e Endpoint) string {
 		diag.Region = fmt.Sprintf("relay region %d", info.RegionID)
 	}
 	held := d.clientFor(e.Value)
-	fresh := tailcat.NewClient(tailcat.Addr(e.Value))
+	fresh := newRelayClient(e.Value)
 	defer func() { go func() { _ = fresh.Close() }() }()
 
 	ping := func(c *tailcat.Client) pingOutcome {
@@ -261,7 +262,7 @@ func loadTailcatKey() (key.NodePrivate, error) {
 	if err != nil {
 		return k, err
 	}
-	if err := os.MkdirAll(homeDir(), 0o700); err != nil {
+	if err := ensureStateDir(); err != nil {
 		return k, err
 	}
 	// 0600, like identity.key: holding it is holding the tunnel.
@@ -392,7 +393,7 @@ func loadTailcatRegion() (*tailcfg.DERPRegion, error) {
 	}
 	r := ci.Region[0]
 	if buf, err := json.MarshalIndent(r, "", "  "); err == nil {
-		_ = os.MkdirAll(homeDir(), 0o700)
+		_ = ensureStateDir()
 		_ = os.WriteFile(path, buf, 0o600)
 	}
 	return r, nil
@@ -451,7 +452,7 @@ func newSelfCheck(srv *tailcat.Server, endpoint string) func(context.Context) Se
 			return sc
 		}
 		start := time.Now()
-		c := tailcat.NewClient(tailcat.Addr(e.Value))
+		c := newRelayClient(e.Value)
 		defer c.Close()
 		conn, err := c.DialTCPPort(ctx, tailcatPort)
 		sc.TookMs = time.Since(start).Milliseconds()
@@ -463,4 +464,12 @@ func newSelfCheck(srv *tailcat.Server, endpoint string) func(context.Context) Se
 		sc.Reached = true
 		return sc
 	}
+}
+
+// newRelayClient is a client of the relay library with its output filtered (the overlay is
+// confined to this file, D-068).
+func newRelayClient(addr string) *tailcat.Client {
+	c := tailcat.NewClient(tailcat.Addr(addr))
+	c.Logf = relayLibraryLogf(log.Printf)
+	return c
 }

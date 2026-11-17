@@ -178,10 +178,10 @@ func TestAHookForAnUnsupportedHostFailsOpen(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds the binary")
 	}
-	bin := buildVersion(t, t.TempDir(), "host-flag-test")
+	bin := buildVersion(t, t.TempDir(), testBuildVersion)
 	cmd := exec.Command(bin, "hook", "--host", "emacs", "prompt")
 	cmd.Stdin = strings.NewReader(`{"session_id":"s","prompt":"x"}`)
-	cmd.Env = append(os.Environ(), "COGMER_ADDR=127.0.0.1:1")
+	cmd.Env = append(os.Environ(), "COGMER_ADDR=127.0.0.1:1", "COGMER_HOME="+filepath.Join(t.TempDir(), stateDirName))
 	out, err := cmd.Output()
 	if err != nil || len(out) != 0 {
 		t.Errorf("a hook for an unsupported host disturbed the session: %v %q", err, out)
@@ -307,7 +307,7 @@ func TestDeliveryWithoutEvidenceIsTrustedOnlyWhereThatHostsCheckFailed(t *testin
 	})
 }
 
-// The commands of the Claude plugin call cli.sh directly and Codex's go through
+// The commands of the Claude plugin call cli.sh and Codex's go through
 // codex-cli.sh, so cli.sh declares the host unless a wrapper already did.
 func TestCliDeclaresTheHostUnlessAWrapperAlreadyDid(t *testing.T) {
 	root, home := cliHarness(t)
@@ -343,12 +343,12 @@ func TestCreateAndJoinRefuseBeforeWritingWhenTheHostCannotBeTold(t *testing.T) {
 		t.Skip("builds the binary")
 	}
 	dir := t.TempDir()
-	bin := buildVersion(t, dir, "host-unclear-test")
+	bin := buildVersion(t, dir, testBuildVersion)
 	home := filepath.Join(dir, "home")
 	run := func(extra []string, args ...string) (string, int) {
 		cmd := exec.Command(bin, args...)
 		cmd.Env = append([]string{"PATH=/usr/bin:/bin", "HOME=" + dir, "COGMER_HOME=" + home,
-			"COGMER_TAILCAT=off", "COGMER_PREFLIGHT=off", "COGMER_ADDR=127.0.0.1:1"}, extra...)
+			"COGMER_TAILCAT=off", "COGMER_PREFLIGHT=off", "COGMER_IDENTITY_PAGE=off", "COGMER_ADDR=127.0.0.1:1"}, extra...)
 		out, err := cmd.CombinedOutput()
 		code := 0
 		if ee, ok := err.(*exec.ExitError); ok {
@@ -396,11 +396,11 @@ func TestCommandsNameTheNextCommandTheWayTheHostInvokesIt(t *testing.T) {
 		t.Skip("builds the binary")
 	}
 	dir := t.TempDir()
-	bin := buildVersion(t, dir, "command-text-test")
+	bin := buildVersion(t, dir, testBuildVersion)
 	run := func(home string, extra []string, args ...string) string {
 		cmd := exec.Command(bin, args...)
 		cmd.Env = append([]string{"PATH=/usr/bin:/bin", "HOME=" + dir, "COGMER_HOME=" + home,
-			"COGMER_TAILCAT=off", "COGMER_PREFLIGHT=off", "COGMER_ADDR=127.0.0.1:1"}, extra...)
+			"COGMER_TAILCAT=off", "COGMER_PREFLIGHT=off", "COGMER_IDENTITY_PAGE=off", "COGMER_ADDR=127.0.0.1:1"}, extra...)
 		out, _ := cmd.CombinedOutput()
 		return string(out)
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
@@ -8,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -42,6 +44,25 @@ type Event struct {
 	// causes verification to fail, and every scheme is Ed25519 over length-prefixed
 	// fields, so there is no weaker one to be downgraded to.
 	SigVersion int `json:"sigVersion,omitempty"`
+	// Signer is the key that signed the event. Under v3 it is always the peer's own
+	// key, PeerID, and it is not among v3's signed fields, which never change (D-058,
+	// signature schemes are kept, never replaced). It is stored so that a machine
+	// signing for its user, whose events name the user as their peer, can be told
+	// apart from the user's other machines (D-239, an event a machine signs for its
+	// user names the user and the signing key as signed fields).
+	Signer string `json:"signer,omitempty"`
+	// IdentityVersion and RemovalsSeen are the shared-key version the signing
+	// machine holds and the hashes, in hex and sorted, of the removals it has seen
+	// for its user. Both are signed fields under v4 and absent under v3 (D-239, an
+	// event a machine signs for its user names the shared-key version and the
+	// removals seen), and a receiver that lacks them withholds the event from the
+	// assistant until it has fetched them (D-221, an event whose identity version the receiver lacks is withheld until fetched).
+	IdentityVersion uint64   `json:"identityVersion,omitempty"`
+	RemovalsSeen    []string `json:"removalsSeen,omitempty"`
+	// Chain ties Signer to the user PeerID names, and is not signed: it is the
+	// certificates' own signatures that make it true, so an event can be checked
+	// wherever it arrives, relayed or fetched again after a lost database (D-239, an event a machine signs for its user names the signing key).
+	Chain *Chain `json:"chain,omitempty"`
 }
 
 const (
@@ -78,9 +99,25 @@ CREATE TABLE IF NOT EXISTS events (
   -- Which signing scheme the signature column was made under. NULL or 0 means v2,
   -- the only scheme that existed before this column. An event is immutable and can
   -- never be re-signed, so this is what lets a field be added later without
-  -- invalidating every event already written (D-058).
+  -- invalidating every event already written (D-058, signature schemes are kept, never replaced).
   sig_version       INTEGER,
-  UNIQUE(peer_id, peer_sequence)
+  -- The key that signed the event. For a v3 event it is peer_id, and an event a
+  -- machine signs for its user names the user as peer_id and the machine here
+  -- (D-239, an event a machine signs for its user names the signing key). Its index
+  -- is made in migrate, since a table made before the column cannot be indexed on
+  -- it until the column is added.
+  signer            TEXT,
+  -- What a v4 event carries beyond v3's fields: the chain that ties its signer to
+  -- its user, as JSON, the shared-key version its signer holds and the hex hashes of
+  -- the removals it has seen, as a JSON array (D-239, an event a machine signs for its user names the signing key). NULL for a v3 event.
+  chain             TEXT,
+  identity_version  INTEGER,
+  removals_seen     TEXT,
+  -- An event is identified by its signer, room and sequence, since each machine of a
+  -- user numbers its own events (D-239, an event a machine signs for its user names the signing key; D-027, a sequence conflict is quarantined).
+  -- For a v3 event the signer is the peer, so this is the old (peer_id,
+  -- peer_sequence) rule.
+  UNIQUE(signer, peer_sequence)
 );
 CREATE INDEX IF NOT EXISTS idx_events_room ON events(room_id, rowid_alias);
 
@@ -95,7 +132,9 @@ CREATE TABLE IF NOT EXISTS event_conflicts (
   peer_sequence     INTEGER NOT NULL,
   held_event_id     TEXT NOT NULL,
   incoming_event_id TEXT NOT NULL,
-  incoming          TEXT NOT NULL
+  incoming          TEXT NOT NULL,
+  -- The key whose sequence collided, which for a v3 event is peer_id (D-239, an event a machine signs for its user names the signing key).
+  signer            TEXT
 );
 
 -- §19 delivery state, derived from evidence rather than recorded as intent.
@@ -144,7 +183,7 @@ func roomExists(room string) bool {
 
 func OpenStore(room string) (*Store, error) {
 	dir := filepath.Join(homeDir(), "rooms")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := ensureRoomsDir(); err != nil {
 		return nil, err
 	}
 	path := filepath.Join(dir, room+".db")
@@ -158,6 +197,9 @@ func OpenStore(room string) (*Store, error) {
 	}
 	if err := migrate(db); err != nil {
 		return nil, err
+	}
+	if _, err := db.Exec(refusalSchema); err != nil {
+		return nil, fmt.Errorf("init refusals: %w", err)
 	}
 	return &Store{db: db, imageDir: filepath.Join(dir, room+".images")}, nil
 }
@@ -213,7 +255,68 @@ func migrate(db *sql.DB) error {
 			}
 		}
 	}
-	return nil
+	for _, c := range []string{"signer TEXT", "chain TEXT", "identity_version INTEGER", "removals_seen TEXT"} {
+		name, typ, _ := strings.Cut(c, " ")
+		if err := addColumnIfMissing(db, "events", name, typ); err != nil {
+			return fmt.Errorf("migrate %s: %w", name, err)
+		}
+	}
+	if err := addColumnIfMissing(db, "event_conflicts", "signer", "TEXT"); err != nil {
+		return fmt.Errorf("migrate event_conflicts signer: %w", err)
+	}
+	// Every event stored before the column was signed under v3 or earlier, by its
+	// peer's own key, so its signer is its peer. Run on every open, and cheap once
+	// done since the index finds the rows with no signer, so an event an older build
+	// wrote after a downgrade gains its signer too.
+	for _, stmt := range []string{
+		`CREATE INDEX IF NOT EXISTS idx_events_signer ON events(signer, peer_sequence)`,
+		`UPDATE events SET signer = peer_id WHERE signer IS NULL`,
+	} {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("migrate signer: %w", err)
+		}
+	}
+	return rekeyEventsOnSigner(db)
+}
+
+// rekeyEventsOnSigner rebuilds an events table whose uniqueness is on (peer_id,
+// peer_sequence) so that it is on (signer, peer_sequence). Two machines of one user
+// name the same peer and number their events from 1 each (D-239, an event a machine signs for its user names the signing key), so under the old
+// rule the second machine's events would all be set aside as conflicts. SQLite
+// cannot drop a constraint in place, so the table is copied. Every row already has a
+// signer, filled above, and for those rows signer is peer_id, so nothing that was
+// unique stops being so.
+func rekeyEventsOnSigner(db *sql.DB) error {
+	var ddl string
+	if err := db.QueryRow(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'events'`).Scan(&ddl); err != nil {
+		return fmt.Errorf("read events schema: %w", err)
+	}
+	if !strings.Contains(strings.ReplaceAll(ddl, " ", ""), "UNIQUE(peer_id,peer_sequence)") {
+		return nil
+	}
+	cols := `rowid_alias, event_id, peer_id, peer_sequence, room_id, timestamp, user_id,
+		user_display_name, machine_id, origin_session_id, event_type, content, metadata,
+		signature, sig_version, signer, chain, identity_version, removals_seen`
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	newTable := strings.Replace(schema[strings.Index(schema, "CREATE TABLE IF NOT EXISTS events ("):strings.Index(schema, "CREATE INDEX IF NOT EXISTS idx_events_room")],
+		"CREATE TABLE IF NOT EXISTS events (", "CREATE TABLE events_rekeyed (", 1)
+	for _, stmt := range []string{
+		newTable,
+		`INSERT INTO events_rekeyed (` + cols + `) SELECT ` + cols + ` FROM events`,
+		`DROP TABLE events`,
+		`ALTER TABLE events_rekeyed RENAME TO events`,
+		`CREATE INDEX IF NOT EXISTS idx_events_room ON events(room_id, rowid_alias)`,
+		`CREATE INDEX IF NOT EXISTS idx_events_signer ON events(signer, peer_sequence)`,
+	} {
+		if _, err := tx.Exec(stmt); err != nil {
+			return fmt.Errorf("rekey events on signer: %w", err)
+		}
+	}
+	return tx.Commit()
 }
 
 // nextSequence returns this peer's next monotonic sequence number (§8).
@@ -221,13 +324,71 @@ func migrate(db *sql.DB) error {
 // where the next one comes from: a room that has lost its database reports 0 while
 // the peer has issued hundreds, which is precisely the condition worth detecting
 // rather than papering over (D-029).
-func (s *Store) HighestSequence(peerID string) (int64, error) {
+//
+// It is asked by signer, since a sequence is the signing machine's own (D-239, an event a machine signs for its user names the signing key); for
+// a v3 event the signer is the peer.
+func (s *Store) HighestSequence(signer string) (int64, error) {
 	var seq sql.NullInt64
-	err := s.db.QueryRow(`SELECT MAX(peer_sequence) FROM events WHERE peer_id = ?`, peerID).Scan(&seq)
+	err := s.db.QueryRow(`SELECT MAX(peer_sequence) FROM events WHERE signer = ?`, signer).Scan(&seq)
 	if err != nil {
 		return 0, err
 	}
 	return seq.Int64, nil
+}
+
+// heldTurn is one turn of a signer as this store holds it, shown to a person who
+// is choosing the last of the signer's turns that counts: its sequence, which is
+// the number a cutoff names, when its author stated it was written, and the start
+// of its text.
+type heldTurn struct {
+	Sequence int64  `json:"sequence"`
+	At       string `json:"at"`
+	Kind     string `json:"kind"`
+	Text     string `json:"text"`
+}
+
+// recentTurnsBy is the newest n turns of signer this store holds, a prompt or an
+// answer, newest first, each with the first 100 characters of its text on one line.
+func (s *Store) recentTurnsBy(signer string, n int) []heldTurn {
+	rows, err := s.db.Query(`SELECT peer_sequence, timestamp, event_type, COALESCE(content, '') FROM events
+		WHERE signer = ? AND event_type IN (?, ?) ORDER BY peer_sequence DESC LIMIT ?`,
+		signer, EventUserPrompt, EventAssistantMessage, n)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var out []heldTurn
+	for rows.Next() {
+		var t heldTurn
+		if err := rows.Scan(&t.Sequence, &t.At, &t.Kind, &t.Text); err != nil {
+			return out
+		}
+		t.Text = oneLine(t.Text, 100)
+		out = append(out, t)
+	}
+	return out
+}
+
+// oneLine is the start of text on one line: whitespace runs become single spaces
+// and the result is at most limit characters, ending in an ellipsis when it was cut.
+func oneLine(text string, limit int) string {
+	text = strings.Join(strings.Fields(text), " ")
+	if r := []rune(text); len(r) > limit {
+		return string(r[:limit]) + "…"
+	}
+	return text
+}
+
+// sessionStarted is the earliest timestamp this store holds of any event of the
+// agent sessions signer wrote turns for, under the same peer, as their author stated
+// it, or "" when it holds none. It is for a person telling sessions apart, never for
+// deciding what counts, since an author states its own times.
+func (s *Store) sessionStarted(signer string) string {
+	var at sql.NullString
+	_ = s.db.QueryRow(`SELECT MIN(e.timestamp) FROM events e
+		JOIN (SELECT DISTINCT peer_id, origin_session_id FROM events WHERE signer = ?) o
+		ON e.peer_id = o.peer_id AND e.origin_session_id = o.origin_session_id`, signer).Scan(&at)
+	return at.String
 }
 
 // Append durably commits a locally generated event before it is considered
@@ -236,6 +397,14 @@ func (s *Store) HighestSequence(peerID string) (int64, error) {
 // this database is exactly what breaks when this database is lost. It is reserved
 // outside the room first -- see Membership.ReserveSequence and D-029.
 func (s *Store) Append(seq int64, id *Identity, room, sessionID, eventType, content string, meta map[string]any) (*Event, error) {
+	return s.AppendAs(seq, id, nil, room, sessionID, eventType, content, meta)
+}
+
+// AppendAs is Append for a machine that may speak for a user: the event names the
+// user as its peer and is signed under v4 with the removals this machine has seen
+// (D-239, an event a machine signs for its user names the signing key), and a machine with no user identity writes the v3 event Append always
+// wrote.
+func (s *Store) AppendAs(seq int64, id *Identity, removalsSeen []string, room, sessionID, eventType, content string, meta map[string]any) (*Event, error) {
 	var rawMeta json.RawMessage
 	if meta != nil {
 		if b, err := json.Marshal(meta); err == nil {
@@ -244,7 +413,7 @@ func (s *Store) Append(seq int64, id *Identity, room, sessionID, eventType, cont
 	}
 	ev := &Event{
 		EventID:         fmt.Sprintf("%013d-%s", time.Now().UTC().UnixMilli(), randomID()),
-		PeerID:          id.PeerID,
+		PeerID:          id.Peer(),
 		PeerSequence:    seq,
 		RoomID:          room,
 		Timestamp:       time.Now().UTC().Format(time.RFC3339Nano),
@@ -257,7 +426,7 @@ func (s *Store) Append(seq int64, id *Identity, room, sessionID, eventType, cont
 		Metadata:        rawMeta,
 	}
 	if id.private != nil {
-		ev.Sign(id.private)
+		ev.SignAs(id, removalsSeen)
 	}
 	res, err := s.Insert(ev)
 	if err != nil {
@@ -266,7 +435,7 @@ func (s *Store) Append(seq int64, id *Identity, room, sessionID, eventType, cont
 	if res == InsertConflict {
 		// Locally generated sequences come from MAX()+1, so this means the local
 		// store is inconsistent rather than that a peer misbehaved.
-		return nil, fmt.Errorf("local sequence %d for peer %s is already held by another event", ev.PeerSequence, ev.PeerID)
+		return nil, fmt.Errorf("local sequence %d for signer %s is already held by another event", ev.PeerSequence, ev.signerKey())
 	}
 	return ev, nil
 }
@@ -320,52 +489,122 @@ func (s *Store) Insert(ev *Event) (InsertResult, error) {
 	}
 	defer tx.Rollback()
 
-	var heldID string
-	err = tx.QueryRow(`SELECT event_id FROM events WHERE peer_id = ? AND peer_sequence = ?`,
-		ev.PeerID, ev.PeerSequence).Scan(&heldID)
-	switch {
-	case err == sql.ErrNoRows:
-		// nothing holds this slot; fall through to insert
-	case err != nil:
+	signer := ev.signerKey()
+	// An event is a redelivery only when the event held under its slot, or under its
+	// identifier, is the same in every signed field. One that differs is a conflict,
+	// whichever of the two it shares: an identifier is chosen by its signer, so a
+	// signed event can carry another's, and treating it as a redelivery would drop
+	// whichever arrived second (D-027, a sequence conflict is quarantined).
+	held, err := heldEvent(tx, `signer = ? AND peer_sequence = ?`, signer, ev.PeerSequence)
+	if err != nil {
 		return InsertStored, err
-	case heldID == ev.EventID:
-		return InsertDuplicate, nil
-	default:
+	}
+	if held == nil {
+		if held, err = heldEvent(tx, `event_id = ?`, ev.EventID); err != nil {
+			return InsertStored, err
+		}
+	}
+	if held != nil {
+		if sameSignedEvent(held, ev) {
+			return InsertDuplicate, nil
+		}
 		raw, _ := json.Marshal(ev)
 		if _, err := tx.Exec(`
 			INSERT INTO event_conflicts
-			  (detected_at, room_id, peer_id, peer_sequence, held_event_id, incoming_event_id, incoming)
-			VALUES (?,?,?,?,?,?,?)`,
+			  (detected_at, room_id, peer_id, peer_sequence, held_event_id, incoming_event_id, incoming, signer)
+			SELECT ?,?,?,?,?,?,?,?
+			WHERE NOT EXISTS (SELECT 1 FROM event_conflicts
+			  WHERE signer = ? AND peer_sequence = ? AND held_event_id = ? AND incoming = ?)`,
 			time.Now().UTC().Format(time.RFC3339Nano), ev.RoomID, ev.PeerID, ev.PeerSequence,
-			heldID, ev.EventID, string(raw)); err != nil {
+			held.EventID, ev.EventID, string(raw), signer,
+			signer, ev.PeerSequence, held.EventID, string(raw)); err != nil {
 			return InsertConflict, err
 		}
 		return InsertConflict, tx.Commit()
 	}
 
-	// A different event id may still collide on event_id alone if the same event
-	// arrives having been assigned a different sequence somewhere. Treat that as
-	// redelivery too rather than writing it twice.
-	var exists int
-	if err := tx.QueryRow(`SELECT COUNT(*) FROM events WHERE event_id = ?`, ev.EventID).Scan(&exists); err != nil {
-		return InsertStored, err
+	// The v4 fields are stored only for a v4 event, where they are signed or, for
+	// the chain, checked against signatures of their own. A v3 event's claims in
+	// them are not stored, since nothing checked them.
+	var chain, removals sql.NullString
+	var version sql.NullInt64
+	if ev.SigVersion == 4 {
+		if ev.Chain != nil {
+			if b, err := json.Marshal(ev.Chain); err == nil {
+				chain = sql.NullString{String: string(b), Valid: true}
+			}
+		}
+		if b, err := json.Marshal(ev.RemovalsSeen); err == nil && len(ev.RemovalsSeen) > 0 {
+			removals = sql.NullString{String: string(b), Valid: true}
+		}
+		version = sql.NullInt64{Int64: int64(ev.IdentityVersion), Valid: true}
 	}
-	if exists > 0 {
-		return InsertDuplicate, nil
-	}
-
 	if _, err := tx.Exec(`
 		INSERT INTO events
 		  (event_id, peer_id, peer_sequence, room_id, timestamp, user_id,
 		   user_display_name, machine_id, origin_session_id, event_type, content, metadata,
-		   signature, sig_version)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		   signature, sig_version, signer, chain, identity_version, removals_seen)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		ev.EventID, ev.PeerID, ev.PeerSequence, ev.RoomID, ev.Timestamp, ev.UserID,
 		ev.UserDisplayName, ev.MachineID, ev.OriginSessionID, ev.EventType, ev.Content,
-		string(ev.Metadata), ev.Signature, ev.SigVersion); err != nil {
+		string(ev.Metadata), ev.Signature, ev.SigVersion, signer, chain, version, removals); err != nil {
 		return InsertStored, err
 	}
 	return InsertStored, tx.Commit()
+}
+
+// heldEvent is the event the condition finds, or nil when none does.
+func heldEvent(tx *sql.Tx, where string, args ...any) (*Event, error) {
+	rows, err := tx.Query(`SELECT `+selectCols+` FROM events WHERE `+where+` LIMIT 1`, args...)
+	if err != nil {
+		return nil, err
+	}
+	evs, err := scanEvents(rows)
+	if err != nil || len(evs) == 0 {
+		return nil, err
+	}
+	return &evs[0], nil
+}
+
+// sameSignedEvent reports whether two events agree in their scheme and in every
+// field a scheme signs. The signature itself is not compared, since two encodings of
+// one signature are the same event.
+func sameSignedEvent(a, b *Event) bool {
+	if a.SigVersion != b.SigVersion || a.signerKey() != b.signerKey() {
+		return false
+	}
+	if !bytes.Equal(a.eventBytes(""), b.eventBytes("")) {
+		return false
+	}
+	if a.SigVersion != 4 {
+		return true
+	}
+	return a.IdentityVersion == b.IdentityVersion && slices.Equal(a.RemovalsSeen, b.RemovalsSeen)
+}
+
+// signerKey is the key that signed an event, which is what its sequence numbers
+// (D-239, an event a machine signs for its user names the signing key). Under v4 it is the signed Signer field. Under v3 and earlier it is the
+// peer, whatever the unsigned Signer field claims, since only the peer's own key
+// signs those schemes.
+func (e *Event) signerKey() string {
+	if e.SigVersion == 4 && e.Signer != "" {
+		return e.Signer
+	}
+	return e.PeerID
+}
+
+// machineKey is the key the user's records certify for the event's signer: the cloud
+// key a session's certificate names for a cloud session's event, and the signer itself
+// otherwise. A session key has no machine certificate of its own, so its events stand
+// or fall with its cloud key, removed or suspended (D-216, a cloud session signs with a
+// key of its own that the user's shared key vouches for). The chain was verified when
+// the event was taken, so its session certificate names the signer's cloud key.
+func (e *Event) machineKey() string {
+	s := e.signerKey()
+	if e.SigVersion == 4 && e.Chain != nil && e.Chain.Session != nil && e.Chain.Session.Session == s {
+		return e.Chain.Machine.Machine
+	}
+	return s
 }
 
 // Conflict is a quarantined event, kept for diagnosis.
@@ -402,14 +641,25 @@ func scanEvents(rows *sql.Rows) ([]Event, error) {
 	var out []Event
 	for rows.Next() {
 		var e Event
-		var meta, sig sql.NullString
+		var meta, sig, chain, removals sql.NullString
+		var version sql.NullInt64
 		var rowid int64
 		if err := rows.Scan(&rowid, &e.EventID, &e.PeerID, &e.PeerSequence, &e.RoomID, &e.Timestamp,
 			&e.UserID, &e.UserDisplayName, &e.MachineID, &e.OriginSessionID, &e.EventType, &e.Content,
-			&meta, &sig, &e.SigVersion); err != nil {
+			&meta, &sig, &e.SigVersion, &e.Signer, &chain, &version, &removals); err != nil {
 			return nil, err
 		}
 		e.Signature = sig.String
+		e.IdentityVersion = uint64(version.Int64)
+		if chain.Valid && chain.String != "" {
+			var c Chain
+			if json.Unmarshal([]byte(chain.String), &c) == nil {
+				e.Chain = &c
+			}
+		}
+		if removals.Valid && removals.String != "" {
+			_ = json.Unmarshal([]byte(removals.String), &e.RemovalsSeen)
+		}
 		if meta.Valid && meta.String != "" {
 			e.Metadata = json.RawMessage(meta.String)
 		}
@@ -420,7 +670,7 @@ func scanEvents(rows *sql.Rows) ([]Event, error) {
 
 const selectCols = `rowid_alias, event_id, peer_id, peer_sequence, room_id, timestamp,
 	user_id, user_display_name, machine_id, origin_session_id, event_type, content, metadata,
-	signature, COALESCE(sig_version, 0)`
+	signature, COALESCE(sig_version, 0), COALESCE(signer, peer_id), chain, identity_version, removals_seen`
 
 // orderBy is the deterministic total order every peer must agree on (review B1).
 //
@@ -433,7 +683,11 @@ const selectCols = `rowid_alias, event_id, peer_id, peer_sequence, room_id, time
 // Injection uses the same order (review B2): anti-entropy delivers old events
 // late, so arrival order is not chronological, and injecting out of sequence is
 // how a referent resolves to the wrong turn.
-const orderBy = `ORDER BY timestamp, peer_id, peer_sequence`
+//
+// The signer sits between the peer and the sequence because two machines of one
+// user name one peer and number their events each from 1 (D-239, an event a machine signs for its user names the signing key). For a v3 event it
+// is the peer, so the order of every room written before is unchanged.
+const orderBy = `ORDER BY timestamp, peer_id, signer, peer_sequence`
 
 func (s *Store) ListRoom(room string) ([]Event, error) {
 	rows, err := s.db.Query(`SELECT `+selectCols+` FROM events WHERE room_id = ? `+orderBy, room)
@@ -445,12 +699,14 @@ func (s *Store) ListRoom(room string) ([]Event, error) {
 
 // UndeliveredFor returns room events this agent session has not been confirmed
 // to have received, excluding events the session itself produced -- those are
-// already in its own context window (§19).
+// already in its own context window (§19). Changes to the room's guest list are
+// never given to an assistant, since they are no turn of the room (D-235, a room's
+// one guest list, changed by any guest through events in the room).
 func (s *Store) UndeliveredFor(room, sessionID string) ([]Event, error) {
 	rows, err := s.db.Query(`SELECT `+selectCols+` FROM events
-		WHERE room_id = ? AND origin_session_id != ? AND event_type != ?
+		WHERE room_id = ? AND origin_session_id != ? AND event_type NOT IN (?, ?, ?)
 		  AND event_id NOT IN (SELECT event_id FROM session_delivered WHERE origin_session_id = ?)
-		`+orderBy, room, sessionID, EventUserImage, sessionID)
+		`+orderBy, room, sessionID, EventUserImage, GuestInvite, GuestRevoke, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -591,9 +847,24 @@ func (s *Store) commitPendingRow(sessionID, promptID, idsJSON string) (int, erro
 // Contiguous, not maximum: a gap means the events after it have not truly been
 // received, and reporting the maximum would tell a peer we hold events we lack,
 // which it would then never send.
+//
+// It is keyed by signer, the key whose sequence it is (D-239, an event a machine signs for its user names the signing key). For a v3 event the
+// signer is the peer, so a peer on an older build reads the same map it always did.
+//
+// A sequence this machine refused because its machine was past a cutoff or suspended
+// counts as held, so that it is not asked for again on every poll and a cut-off
+// machine's later events do not leave a gap that keeps everything after it on offer
+// (D-236, a revocation names the last turn that counts). A refusal is cleared when the
+// event would count, and the sequence is then asked for again. A quarantined
+// conflict counts as held too, so that an event whose identifier another event holds
+// is quarantined once rather than asked for on every poll (D-027, a sequence
+// conflict is quarantined).
 func (s *Store) SyncState(room string) (map[string]int64, error) {
-	rows, err := s.db.Query(`SELECT peer_id, peer_sequence FROM events
-		WHERE room_id = ? ORDER BY peer_id, peer_sequence`, room)
+	rows, err := s.db.Query(`SELECT k, seq FROM (
+		  SELECT COALESCE(signer, peer_id) AS k, peer_sequence AS seq FROM events WHERE room_id = ?
+		  UNION SELECT signer, peer_sequence FROM refused_events
+		  UNION SELECT COALESCE(signer, peer_id), peer_sequence FROM event_conflicts WHERE room_id = ?)
+		ORDER BY k, seq`, room, room)
 	if err != nil {
 		return nil, err
 	}
@@ -625,7 +896,7 @@ func (s *Store) EventsSince(room string, have map[string]int64) ([]Event, error)
 	}
 	var out []Event
 	for _, e := range all {
-		if e.PeerSequence > have[e.PeerID] {
+		if e.PeerSequence > have[e.signerKey()] {
 			out = append(out, e)
 		}
 	}

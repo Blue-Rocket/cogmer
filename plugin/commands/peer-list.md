@@ -1,12 +1,12 @@
 ---
 description: List the peers this machine knows, and whether each is verified
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" peers:*)
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" peers:*)
 disable-model-invocation: true
 ---
 
 ## Known peers
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" peers`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" peers`
 
 ## Your task
 

@@ -4,7 +4,7 @@
 
 **Decision.** No network provider is part of a room's identity, its membership or
 replication, and none is a prerequisite: cogmer works with no virtual private network
-when peers can reach each other. A connection tries the same network, then a private
+when machines can reach each other. A connection tries the same network, then a private
 network provider, then internet peer-to-peer, then a relay, and which one connected
 appears in no room's identity and no event.
 
@@ -18,4 +18,4 @@ appears in no room's identity and no event.
 - *Tailscale as the foundation.* It ties adoption to an account and a second daemon for
   the simplest case.
 
-**Revisit when** a transport is added whose peers cannot be found as candidates.
+**Revisit when** a transport is added whose machines cannot be found as candidates.

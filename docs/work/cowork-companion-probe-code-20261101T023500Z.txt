@@ -1,0 +1,39 @@
+Cowork companion probe, one Claude Code cloud session on 2026-11-01 at 02:24:02Z, written at 2026-11-01T02:35:00Z
+(UTC; the probe's lines carry the sandbox's UTC clock)
+
+What was asked
+  Whether a Claude Code cloud session loads the personal plugin that Cowork cloud sessions
+  loaded in 7a362f6, and sees its file. This continues 7a362f6, which holds the plugin
+  (cogmer-companion-probe, a file of 2400 random characters, no secret), its first upload and the
+  machine and versions, and dab6794, which holds the replacement by version 0.1.1 (file digits
+  475d99a3).
+
+Machine and versions
+  The same Mac, desktop app and Team plan as in 7a362f6, with the session started in a browser at
+  claude.ai/code. The session's page showed the environment "cogmer", the repository
+  Blue-Rocket/cogmer and a branch named claude/elegant-gates-7ho00g. The environment's edit
+  dialog, opened by the user in that session after the report and shown in a screenshot, read:
+  Who can use it "Personal"; Network access "Full"; Network secrets "None"; Setup script "Not
+  set"; Environment variables "1 variable". What the variable holds was not read. The browser's
+  version was not read.
+
+Clicks
+  The user started a new session in that environment and asked what the companion probe says. The
+  report below is the answer the session's model gave, which the user pasted.
+
+Seen
+  Two lines, the same but for the hook's name, both at 02:24:02Z:
+    plugin version 0.1.1, cloud.value present, 2400 bytes, mode 600, owner root:root uid 0,
+    sha256 starts 475d99a3; plugin folder
+    /root/.claude/plugins/synced/66bf4325-2c04-41c9-b5a7-5961be7defb3_2b8c305b-86ee-46d6-88cd-e46e64ac604d/cogmer-companion-probe;
+    hook runs as uid 0; CLAUDE_CODE_REMOTE true; host vm.
+  The folder is the same path as the Cowork sessions reported in 7a362f6 and dab6794, with no
+  suffix, and the files are those of version 0.1.1.
+
+Not shown
+  A second Claude Code environment, whether the plugin loads in one set to a network level
+  other than Full, and whether it loads in a session of a repository outside the organization.
+  Whether the organization's network setting for Cowork, which the user may have changed since,
+  has any part in this: the environment has a setting of its own. A session started before a
+  replacement of the plugin, or a resumed one, in Claude Code. The answer is the model's
+  repetition of the hook's context, not the file the probe wrote.

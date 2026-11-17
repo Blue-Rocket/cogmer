@@ -9,6 +9,14 @@ Your session keeps working when your colleague's is offline. Their turns reach y
 session at your next prompt, never before it, so nothing they do makes your session
 take a turn.
 
+On Windows, Claude Code and Codex run cogmer's hooks and commands through `bash`, which Git for
+Windows provides, so install Git for Windows first. Without it the hooks do not run and cogmer
+does nothing, and Claude Code shows, at the start of each session and at each prompt, a hook error
+that says `bash` is not recognized (seen in Claude Code 2.1.312). Codex runs hooks through the Windows command prompt, so for Codex the `bin` folder
+of Git for Windows, which holds `bash.exe`, has to be on your PATH, and Git's installer puts only
+its `cmd` folder there in the choice it recommends. Recent versions of Claude Code find Git Bash
+themselves. Claude Cowork does not use `bash`.
+
 ## Install in Claude Code
 
 Run these two commands inside a Claude Code session, one at a time. Pasted together,
@@ -29,6 +37,11 @@ your machine. The binary is about 30MB, and the download took 13 to 16 seconds w
 measured on 2026-09-22.
 Installing changes nothing about how Claude Code starts, edits no shell profile, and
 registers no service with the operating system.
+
+Run `/cogmer:self-status` as that first command. Once the download has finished it prints
+the string to send a colleague and, when your machine can be reached, a line saying that a
+connection from outside reached your machine through the relay, which is how you know the install
+works. If it prints a reason instead, the reason says what is wrong.
 
 Each binary is authorized by a SHA-256 hash pinned in the plugin. A download whose
 hash does not match is deleted without being run. If there is no verified download
@@ -181,7 +194,7 @@ Host behavior can change, and several failures are silent: the room keeps accept
 records the wrong thing.
 
 ```sh
-bin/cogmer doctor          # each installed host: two Claude turns (about 13s), one Codex turn
+bin/cogmer doctor          # each installed host: two Claude turns (about 18s), one Codex turn
 bin/cogmer doctor --host claude   # one host only; --host codex likewise
 bin/cogmer doctor --deep   # also drives a real Claude compaction, about 40s
 ```

@@ -46,6 +46,8 @@ type blobRequest struct {
 	Nonce     string `json:"nonce"`
 	Signature string `json:"signature"`
 	Endpoint  string `json:"endpoint,omitempty"`
+	Signer    string `json:"signer,omitempty"`
+	Chain     *Chain `json:"chain,omitempty"`
 }
 
 // handleBlob serves the bytes of an image to a peer that is a verified guest of the room, and
@@ -61,12 +63,17 @@ func (d *Daemon) handleBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	room, ok := d.members.RoomByID(req.RoomID)
-	if !ok {
+	// An expelled user's machine serves the room to nobody (D-241).
+	if !ok || d.expelledFrom(room.RoomID) {
 		http.Error(w, "unauthenticated", http.StatusUnauthorized)
 		return
 	}
 	cred := syncRequest{PeerID: req.PeerID, RoomID: req.RoomID, Timestamp: req.Timestamp,
-		Nonce: req.Nonce, Signature: req.Signature, Endpoint: req.Endpoint}
+		Nonce: req.Nonce, Signature: req.Signature, Endpoint: req.Endpoint, Signer: req.Signer, Chain: req.Chain}
+	if err := connectedAs(r, cred.requestMachine()); err != nil {
+		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		return
+	}
 	if err := d.verifyRequest(cred, room.RoomID); err != nil {
 		log.Printf("image: refused a request for %s: %v", room.RoomName, err)
 		http.Error(w, "unauthenticated", http.StatusUnauthorized)
@@ -87,7 +94,9 @@ func (d *Daemon) handleBlob(w http.ResponseWriter, r *http.Request) {
 	if _, found, err := store.ImageRow(req.SHA256); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	} else if !found {
+	} else if !found || d.imageOnlyHidden(store, room.RoomID, req.SHA256) {
+		// An image only a suspended machine's turns name is served no more than they are
+		// (D-234).
 		http.NotFound(w, r)
 		return
 	}
@@ -247,12 +256,13 @@ func (d *Daemon) requestBlob(addr string, room Room, row imageRow, part string, 
 	if err != nil {
 		return err
 	}
-	ts, nonce, sig, err := signRequest(d.id, room.RoomID, AdvertisedEndpoint())
+	cred, err := signRequestAs(d.id, room.RoomID, AdvertisedEndpoint())
 	if err != nil {
 		return err
 	}
 	body, _ := json.Marshal(blobRequest{Protocol: wireVersion, RoomID: room.RoomID, SHA256: row.SHA256, Offset: offset,
-		PeerID: d.id.PeerID, Timestamp: ts, Nonce: nonce, Signature: sig, Endpoint: AdvertisedEndpoint()})
+		PeerID: cred.PeerID, Timestamp: cred.Timestamp, Nonce: cred.Nonce, Signature: cred.Signature,
+		Endpoint: cred.Endpoint, Signer: cred.Signer, Chain: cred.Chain})
 	resp, err := client.Post(peerURL("/blob"), "application/json", bytes.NewReader(body))
 	if err != nil {
 		return err
@@ -301,6 +311,10 @@ func finishImage(row imageRow, part, final string) error {
 	if typ, ok := sniffImageType(data); !ok || typ != row.Type {
 		_ = os.Remove(part)
 		return fmt.Errorf("the bytes are %q, not the %s the event names", typ, row.Type)
+	}
+	if !imageWithinLimits(row.Type, data) {
+		_ = os.Remove(part)
+		return errors.New("the image has more pixels than cogmer stores")
 	}
 	if err := os.Chmod(part, 0o600); err != nil {
 		return err

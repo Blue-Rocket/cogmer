@@ -13,7 +13,14 @@ import "encoding/json"
 // Nothing here mentions the agent that produced an event. A session identifier is
 // an opaque string naming where a turn came from; its host-specific format is a
 // fact about the adapter, not about the protocol.
-const wireVersion = 2
+//
+// Version 3 carries events signed for a user (D-239, an event a machine signs for
+// its user names the signing key) and sync requests signed under v5 with a chain,
+// which a version 2 reader cannot judge, so a machine on version 2 is told to upgrade
+// rather than handed events it would refuse one by one. A version 2 request is
+// still read, so a machine not yet upgraded is answered and reads that it is the
+// older side.
+const wireVersion = 3
 
 // minWireVersion is the oldest a peer may speak and still be read.
 //
@@ -53,6 +60,12 @@ type wireEvent struct {
 	// scheme to verify under. Omitted means v2 -- the scheme in use before this
 	// field existed, which is what a peer on an older build still sends.
 	SigVersion int `json:"sigVersion,omitempty"`
+	// The fields a v4 event adds, which a build that does not know v4 ignores and
+	// then refuses the event as a version problem (D-058, signature schemes are kept, never replaced; D-239, an event a machine signs for its user names the signing key).
+	Signer          string   `json:"signer,omitempty"`
+	IdentityVersion uint64   `json:"identityVersion,omitempty"`
+	RemovalsSeen    []string `json:"removalsSeen,omitempty"`
+	Chain           *Chain   `json:"chain,omitempty"`
 }
 
 func toWire(e Event) wireEvent {
@@ -62,8 +75,19 @@ func toWire(e Event) wireEvent {
 		UserDisplayName: e.UserDisplayName, MachineID: e.MachineID,
 		OriginSessionID: e.OriginSessionID, EventType: e.EventType,
 		Content: e.Content, Metadata: e.Metadata, Signature: e.Signature,
-		SigVersion: e.SigVersion,
+		SigVersion: e.SigVersion, Signer: v4Field(e, e.Signer), IdentityVersion: e.IdentityVersion,
+		RemovalsSeen: e.RemovalsSeen, Chain: e.Chain,
 	}
+}
+
+// v4Field sends a signer only for a v4 event, where it is signed. A v3 event read
+// from the store has its peer as signer, and sending it would add a field that
+// says nothing to an event an older build reads.
+func v4Field(e Event, s string) string {
+	if e.SigVersion == 4 {
+		return s
+	}
+	return ""
 }
 
 func fromWire(w wireEvent) Event {
@@ -73,6 +97,7 @@ func fromWire(w wireEvent) Event {
 		UserDisplayName: w.UserDisplayName, MachineID: w.MachineID,
 		OriginSessionID: w.OriginSessionID, EventType: w.EventType,
 		Content: w.Content, Metadata: w.Metadata, Signature: w.Signature,
-		SigVersion: w.SigVersion,
+		SigVersion: w.SigVersion, Signer: w.Signer, IdentityVersion: w.IdentityVersion,
+		RemovalsSeen: w.RemovalsSeen, Chain: w.Chain,
 	}
 }

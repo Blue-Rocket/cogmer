@@ -1,0 +1,21 @@
+00:11:28 users
+00:11:28 mac user: already made (this machine already speaks for a user)
+00:11:29 win user: already made (this machine already speaks for a user)
+00:11:29 mac self-status says: ['Checked just now: a connection from outside reached this machine through the relay at fra, in 135ms.']
+00:11:29 win self-status says: ['Checked just now: a connection from outside reached this machine through the relay at fra, in 234ms.']
+00:11:29 mac string length 250 win string length 250
+00:11:29 pairing (real `pair --terminal` on both machines)
+00:11:31 words shown: mac='aardvark enterprise' win='aardvark enterprise'
+00:11:31 mac pair output ends: rather than a new first meeting.
+00:11:31 win pair output ends: rather than a new first meeting.
+00:11:31 room
+00:11:31 created golden-badlands
+00:11:31 invite: Told them. They accept with:  /cogmer:room-join golden-badlands
+00:11:32 join: it there, and cannot be moved once it has been told something.
+00:11:32 turn mac -> win
+00:11:34 mac turn in win's view after 2.3s
+00:11:36 win's next prompt was given the mac turn: True
+00:11:36 turn win -> mac
+00:11:38 win turn in mac's view after 1.8s
+00:11:38 mac's next prompt was given the win turn: True
+00:11:38 done

@@ -1,5 +1,6 @@
 {
   "name": "blue-rocket",
+  "description": "Share a conversation between Claude Code and Codex sessions, peer to peer, with no server holding the conversation.",
   "owner": {
     "name": "Blue Rocket"
   },

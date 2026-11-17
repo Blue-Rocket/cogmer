@@ -12,8 +12,10 @@ injected, and a view of the room is a separate program outside the session.
   `84a0751:docs/decisions.md`.
 - Asked what the team was discussing, a session answered who said what, and that they
   were unverified, from injected context alone. `84a0751:docs/decisions.md`.
-- Every Claude Code extension point delivers to the model, and nothing displays to a
-  person. D-036 (MCP logging notifications are not a display channel).
+- No extension point that carries the room's turns shows them to a person. A hook's
+  `systemMessage` shows a line, as "<hook> says: ...", and is never given to the model, and a
+  hook that fails to run prints a "hook error" block with its error text (`11b1294`). D-036
+  (MCP logging notifications are not a display channel).
 
 **Rejected.**
 - *Making the injected block readable, so that it doubles as the display.* The block is
@@ -21,5 +23,6 @@ injected, and a view of the room is a separate program outside the session.
 - *Writing to the terminal from a hook.* Nothing written there is shown, and it would
   contend with Claude Code's own rendering if it were.
 
-**Revisit when** Claude Code shows hook output to the user. Nothing checks that
-automatically, since it needs a terminal and somebody watching.
+**Revisit when** Claude Code shows a hook's injected context to the user, as it shows a
+hook's `systemMessage`. Nothing checks that automatically, since it needs a terminal and
+somebody watching.

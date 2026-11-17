@@ -2,9 +2,6 @@ package main
 
 import (
 	"errors"
-	"os"
-	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -32,14 +29,9 @@ func TestB32DetectsAHookOnSessionStartThatNowReachesItsServer(t *testing.T) {
 
 func coworkHome(t *testing.T) {
 	t.Helper()
-	if runtime.GOOS == "windows" {
-		t.Skip("the stand-in for Claude Code is a shell script")
-	}
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "claude"), []byte("#!/bin/sh\necho '9.9.9 (Claude Code)'\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("PATH", dir+":/usr/bin:/bin")
+	standInProgram(t, dir, "claude", "echo '9.9.9 (Claude Code)'", "echo 9.9.9 (Claude Code)")
+	t.Setenv("PATH", pathWith(dir))
 	t.Setenv("COGMER_HOME", t.TempDir())
 	t.Setenv("COGMER_PREFLIGHT", "")
 }

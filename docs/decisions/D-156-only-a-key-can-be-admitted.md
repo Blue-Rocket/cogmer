@@ -9,7 +9,7 @@ names no key.
 - `Allow` and `Invite` each refuse an identifier from which no public key can be read.
   `cmd/cogmer/membership.go`, `Allow` and `Invite`.
 - Admission is proved by possession of the key the identifier names. D-143 (admission is
-  proved by signing a fresh challenge).
+  proved by a signed request bound to the connection).
 
 **Rejected.**
 - *Recording a name or an identifier from before keys, such as `alice` or `peer-8f3a…`.*

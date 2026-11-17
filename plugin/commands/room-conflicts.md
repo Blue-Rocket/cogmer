@@ -1,12 +1,12 @@
 ---
 description: Show quarantined events for this room
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" conflicts:*)
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" conflicts:*)
 disable-model-invocation: true
 ---
 
 ## What happened
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" conflicts`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" conflicts`
 
 ## Your task
 

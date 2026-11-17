@@ -1,0 +1,48 @@
+Cowork file-only probe, one cloud session reported on 2026-11-02, written at 2026-11-02T10:46:00Z
+(UTC; the session's own time was not recorded)
+
+What was asked
+  Whether a personal plugin that holds only a manifest and a data file, with no hook and no
+  command, is accepted by the upload and synced into a cloud session with its file. This continues
+  7a362f6, which holds the first companion probe, its upload and the machine and versions, and
+  4bd9f95, which holds a file in the form of a cloud value reaching a session.
+
+Machine and versions
+  The same Mac, desktop app, Team plan and organization as in 7a362f6. The session was a new cloud
+  session, whose client the user did not name. Its host and the plugin folder layout were read from
+  its own report below.
+
+The plugin
+  docs/work/cowork-file-only-probe/ at this commit, version 0.2.0, name cogmer-file-probe, built by
+  build.sh. The zip holds .claude-plugin/plugin.json and cloud.value, which is in the form of a
+  cloud value, 2502 bytes of random bytes with mode 600 and no real key, with a sha256 starting
+  117866ed. It holds no hook, no command and no skill. `claude plugin validate` passed with
+  warnings. A second zip with one added command file was built for the case that the upload refused
+  the first, and was not used.
+
+Clicks
+  Customize > Plugins > Add > Upload plugin with cogmer-file-probe.zip. The user said it was
+  uploaded and reported no message and no refusal, and did not describe the plugin's page. A new
+  session was then asked to run one shell command, given in the prompt, that finds every file named
+  cloud.value and prints its path, length, mode, owner, the first eight hex digits of its sha256 and
+  its first sixteen characters, without opening the file otherwise, and lists the plugin folder.
+
+Seen
+  The report, which the user pasted, held two files:
+    .../synced/66bf4325-2c04-41c9-b5a7-5961be7defb3_2b8c305b-86ee-46d6-88cd-e46e64ac604d/
+      cogmer-file-probe/cloud.value: 2502 bytes, mode 600, root:root, sha256 starts 117866ed,
+      prefix cogmer-cloud-v1:
+    the same account folder, cogmer-companion-probe/cloud.value: 2502 bytes, mode 600, root:root,
+      sha256 starts 03623a1b, prefix cogmer-cloud-v1:
+  The second is the file of the companion probe 0.1.3 of 4bd9f95, which was still installed on the
+  account. The listing of the account folder read: cogmer, cogmer-companion-probe,
+  cogmer-companion-probe.meta.json, cogmer-file-probe, cogmer-file-probe.meta.json,
+  cogmer.meta.json, manifest.json. The file-only plugin's folder had no suffix.
+
+Not shown
+  Whether the plugin's page in settings listed cloud.value, and what the Contents tab and buttons
+  showed. What the meta.json files and manifest.json hold, which were not read. Which client the
+  session was started from, and whether a Claude Code cloud session also syncs a plugin of only a
+  file. Whether the file arrives in a session that began before the upload. How many plugins can
+  hold a cloud.value before a session fails to start. The answer is the model's report of its own
+  command's output, not a record the plugin wrote.

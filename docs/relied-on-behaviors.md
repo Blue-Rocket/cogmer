@@ -83,6 +83,10 @@ If this changes to something other than the text typed, such as the command file
 
 If this changes so that the host's limit falls below the budget, every block over it reaches the model as a preview of its first two thousand characters and a pointer to a file, so the newest turns, which are at the end of the block, are missing, and the recorded block is not the one offered, so it is never confirmed delivered and is offered again at every prompt and grows. It fails silently. This is what happened when the limit was 10,000 characters and the budget 60,000, and a room's offered turns grew from 21 to more than 180.
 
+### B35: Claude Code offers the skills in a plugin's skills/ folder and in no other folder of the plugin
+
+If this changes so that a skill in another folder of the plugin is offered, the Codex skill in plugin/codex-skills reaches a Claude Code session's model as a route to every command, which D-119 keeps closed, and the model can run a command nobody asked for, including one that binds a session to a room or admits a colleague. It fails silently, since nothing in a session says a skill was offered. If skills/ stops being loaded, nothing breaks.
+
 ### B24: A slash command whose ! line exits non-zero produces no model turn
 
 If this changes, nothing breaks: cli.sh exits 0 on every path, which is correct either way. The check fails so that the reason for that rule can be revisited, since a failing line that still ran a turn would let a command report failure by its exit status. Where it holds, a command that exits non-zero leaves the model unable to explain or act on what happened, and the person sees only a failed shell line, so a path that exited 1 again would fail silently.
@@ -113,7 +117,7 @@ If this changes, a session counts a colleague's turns as delivered after a compa
 
 `cogmer doctor --host codex` checks these against the installed Codex runtime.
 Set `COGMER_CODEX_BIN` to check another executable, such as a desktop runtime.
-These checks use an isolated turn, with real hook output and a shell tool.
+These checks use an isolated turn, with real hook output and a shell tool, and one loads a probe plugin into a Codex home of its own and asks the app server for its skills, with no turn.
 Codex compaction behavior is not checked.
 
 ### B25: Codex prompt and Stop hooks carry matching session and turn identifiers
@@ -127,6 +131,10 @@ If this changes, the room records an incomplete response or counts no tools. Rea
 ### B27: Codex records injected context as a hook-marked message and the model receives it
 
 If this changes, a colleague's turns are never confirmed as delivered and are offered again. An altered or truncated block cannot confirm delivery of the complete block.
+
+### B36: Codex offers the skills in the folder a plugin's manifest names
+
+If this changes so that Codex offers only a fixed folder of the plugin, or none, the cogmer skill that gives a Codex user every command is not offered, `$cogmer` finds nothing, and a Codex user has no way to run a room command. The skill sits in plugin/codex-skills so that Claude Code does not offer it (D-119), which depends on the manifest's skills path being honored. It fails visibly, since the commands do not exist, but nothing says why.
 
 ### B28: CODEX_THREAD_ID in a shell tool equals the hook session identifier
 

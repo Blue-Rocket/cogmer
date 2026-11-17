@@ -3,7 +3,7 @@
 **Date:** 2026-09-16 · **Status:** active · **Areas:** daemon, transport, trust
 
 **Decision.** Hooks and the local view are served on one listener, `COGMER_ADDR`, which
-refuses to bind anything but loopback. Synchronization with peers is served on a separate
+refuses to bind anything but loopback. Synchronization with other machines is served on a separate
 listener, `COGMER_PEER_ADDR`.
 
 **Support.**

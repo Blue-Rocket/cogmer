@@ -158,3 +158,24 @@ func TestAProgramWithNoOrderToGoByIsReplacedWithoutAShellError(t *testing.T) {
 		}
 	}
 }
+
+// A first install leaves the mark that makes the first hook after it tell the person (D-282, the
+// person is shown one line when the install finishes and when cogmer needs repair), and an
+// upgrade leaves none.
+func TestAFirstInstallLeavesTheMarkThatAnnouncesItAndAnUpgradeDoesNot(t *testing.T) {
+	first := runInstaller(t, "", "0.10.6")
+	if first.version != "0.10.6" {
+		t.Fatalf("the first install left %q", first.version)
+	}
+	raw, err := os.ReadFile(filepath.Join(first.home, "install-notice"))
+	if err != nil || strings.TrimSpace(string(raw)) != "0.10.6" {
+		t.Errorf("a first install left the mark %q, %v", raw, err)
+	}
+	upgrade := runInstaller(t, "0.10.5", "0.10.6")
+	if upgrade.version != "0.10.6" {
+		t.Fatalf("the upgrade left %q", upgrade.version)
+	}
+	if _, err := os.Stat(filepath.Join(upgrade.home, "install-notice")); err == nil {
+		t.Error("an upgrade left a mark")
+	}
+}

@@ -7,13 +7,13 @@ can reach it, and the daemon then notes at start that it is reachable.
 
 **Support.**
 - Exposing the peer listener is how a second machine reaches this one. §4 (networking).
-- Every peer connection is TLS pinned to a key this machine knows, so a stranger
+- Every connection between machines is TLS pinned to a key this machine knows, so a stranger
   completes no handshake. D-101 (peer connections are TLS pinned to a key this machine has recorded).
 
 **Rejected.**
 - *Exposing the peer listener by default.* Nothing is reachable until someone decides it
   should be.
-- *Refusing to expose it until peers were authenticated.* It would have meant building
+- *Refusing to expose it until callers were authenticated.* It would have meant building
   identity before ever running across a network, which is what identity is for.
 
 **Revisit when** exposing the peer listener is found to reveal something a pinned

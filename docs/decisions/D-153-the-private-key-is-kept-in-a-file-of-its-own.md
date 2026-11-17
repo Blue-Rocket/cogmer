@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-17 · **Status:** active · **Areas:** identity, trust
 
-**Decision.** A peer's private key is in `~/.cogmer/identity.key`, never in `identity.json`,
+**Decision.** A machine's private key is in `~/.cogmer/identity.key`, never in `identity.json`,
 which `whoami` prints and a user may hand to a colleague.
 
 **Support.**

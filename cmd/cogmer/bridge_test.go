@@ -169,6 +169,24 @@ func TestACommandNamedAsAToolIsRefusedAndRunsNothing(t *testing.T) {
 	}
 }
 
+// A Stop hook that returns context starts the turn again, and the hooks reference caps
+// such continuations at eight, so the bridge answers a stop call with nothing whatever
+// the daemon says. A probe plugin whose Stop hook returned context made nine calls in
+// 25 seconds (d306243).
+func TestTheBridgeAnswersAStopCallWithNothingWhateverTheDaemonSays(t *testing.T) {
+	d := &fakeDaemon{answer: func(string, []byte, time.Duration) ([]byte, error) {
+		return []byte(`{"context":"a colleague's turn"}`), nil
+	}}
+	s := startBridge(t, d, time.Second, time.Second)
+	s.callTool(1, "stop", map[string]any{"session_id": "s", "prompt_id": "p", "last_assistant_message": "done"})
+	if text := toolText(t, s.next(2*time.Second)); text != "" {
+		t.Errorf("a stop call was answered with %q; a Stop hook that returns context starts the turn again", text)
+	}
+	if calls := d.recorded(); len(calls) != 1 || calls[0].path != "/hook/stop" {
+		t.Errorf("the stop call reached the daemon as %v, want one call to /hook/stop", calls)
+	}
+}
+
 // D-147: a server that cogmer ships asks the client for no inference. The bridge answers
 // requests and never makes one, and declares only the tools capability.
 func TestTheBridgeDeclaresOnlyToolsAndNeverMakesARequest(t *testing.T) {

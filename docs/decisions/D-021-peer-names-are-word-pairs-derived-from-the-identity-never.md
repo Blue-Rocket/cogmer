@@ -27,7 +27,8 @@ name a peer asserts.
 
 **Limits.** A derived name can be ground: an identity can be generated again and again
 until its name matches a target, so a name is a mnemonic for a verified identity,
-never an introduction to a stranger (D-139).
+never an introduction to a stranger (D-139, a name is shown as itself only for a verified
+peer).
 
 **Revisit when** peer names are needed at a scale where collisions become common, since
-the lists hold 8,280 combinations (D-140).
+the lists hold 8,280 combinations (D-140, peer names come from 8,280 combinations).

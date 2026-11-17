@@ -1,0 +1,11 @@
+{
+  "description": "Throwaway probe: reports, as context, the cloud.value files a cloud session holds.",
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/report.sh\" SessionStart" } ] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [ { "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/report.sh\" UserPromptSubmit" } ] }
+    ]
+  }
+}

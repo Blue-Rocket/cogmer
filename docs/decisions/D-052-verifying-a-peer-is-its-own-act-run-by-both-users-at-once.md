@@ -2,19 +2,21 @@
 
 **Date:** 2026-09-17 · **Status:** active · **Areas:** pairing
 
-**Decision.** Verification is separate from joining a room and from host approval. Both
-users run it at the same time on a call. Each daemon runs the exchange with the other,
-both show the same two words, and each user says whether the other read out the same
-ones.
+**Decision.** Verification is separate from joining a room and from host approval, and a
+user verifies a colleague once, whichever machines the two of them use. Both users
+run it at the same time on a call. Each user's daemon runs the exchange with one of the
+colleague's machines, both show the same two words, and each user says whether the other
+read out the same ones.
 
 **Support.**
 - Verification confirms a key that is on file, whichever way the key arrived, so it
   needs nothing from the path by which a key is approved. `cmd/cogmer/verify.go`,
   `handleVerify`, and `cmd/cogmer/sas_test.go`, `TestAnUnknownPeerCannotVerify`.
 - It is interactive and blocks on another person. `cmd/cogmer/main.go`, `runPair`.
-- Each daemon tries every address this machine knows for the peer and keeps the one that
-  answers signed by the identity asked for, and a reply from a different peer is a wrong
-  peer and not a wrong address. `cmd/cogmer/verify.go`, `RunVerification`, and
+- Each daemon dials every address it knows for the colleague's machines and keeps one
+  whose key is certified to the user asked for (D-219, a user is a master key that
+  certifies machines through a shared key), and a reply from a machine of a different user
+  is a wrong peer and not a wrong address. `cmd/cogmer/verify.go`, `RunVerification`, and
   `cmd/cogmer/verify_test.go`, `TestVerifyDialsOnlyTheNamedPeer`.
 
 **Rejected.**

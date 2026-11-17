@@ -1,0 +1,11 @@
+cloud-network-probe, TLS through the relay, 20261024T215028Z
+machine: a Claude Code cloud session (CLAUDE_CODE_REMOTE=true), Full network level
+build: user-identity branch at 49fd866, go test -tags ts_debug_websockets, so the relay connection is a WebSocket (D-217)
+target: the maintainer's machine named wonka, peer quiet-pintail, its daemon at the released version the maintainer runs, reached at the tc:// endpoint in its pairing string
+method: a test in package main, not committed: dialers[tailcat].Diagnose, then dialers[tailcat].Dial to the endpoint, then a TLS 1.3 client handshake with a fresh self-signed client certificate made by peerCert, checking the server certificate's key against the pairing string, then one HTTP request
+seen:
+  relay ping, held connection: answered in 646ms; new connection: answered in 793ms; path through relay region 1 in 118ms
+  TCP connection through the tunnel: opened in 113ms
+  TLS handshake: completed in 132ms; server key quiet-pintail, the key in the pairing string
+  first read after the request: remote error: tls: bad certificate, the daemon refusing a client certificate whose key it has not recorded
+not shown: a sync between the two once paired, a connection from the user's machine to a cloud session, and a run below the Full network level

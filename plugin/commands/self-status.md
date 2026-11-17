@@ -1,12 +1,12 @@
 ---
 description: Show who you are, what you send colleagues, whether they can reach you, and which versions are running
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" whoami:*)
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" whoami:*)
 disable-model-invocation: true
 ---
 
 ## What happened
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" whoami`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" whoami`
 
 ## Your task
 

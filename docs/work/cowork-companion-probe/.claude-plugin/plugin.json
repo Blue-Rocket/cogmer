@@ -1,0 +1,5 @@
+{
+  "name": "cogmer-companion-probe",
+  "version": "0.1.0",
+  "description": "Throwaway probe: whether an uploaded plugin's file reaches a Cowork cloud session started from any client."
+}

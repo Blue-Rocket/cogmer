@@ -1,12 +1,12 @@
 ---
 description: Stop the cogmer daemon on this machine
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" stop:*)
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" stop:*)
 disable-model-invocation: true
 ---
 
 ## What happened
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" stop`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" stop`
 
 ## Your task
 

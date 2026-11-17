@@ -1,0 +1,30 @@
+cloud-run, wonka's half: a cloud session's turn reaching wonka's test daemon, read at 20261026T0008Z
+date: 2026-10-25 from about 09:55 PDT, and the daemon read at 17:08 PDT, 2026-10-26T00:08Z
+machine: wonka, a MacBook Pro on macOS (Darwin 25.6.0), with the real cogmer 0.10.5 daemon on 127.0.0.1:4782 untouched throughout
+build: the user-identity branch at bab2408, go build -o /tmp/cogmer-test ./cmd/cogmer, version "dev", without the ts_debug_websockets tag, so the relay connection is the relay's own protocol
+state: COGMER_HOME=$HOME/.cogmer-test, COGMER_ADDR=127.0.0.1:4792, COGMER_PEER_ADDR=127.0.0.1:4793, COGMER_HOST=claude, COGMER_PREFLIGHT=off
+other side: a Claude Code cloud session, recorded in docs/work/cloud-run-20261025T171545Z.txt
+what was done:
+  env ... /tmp/cogmer-test daemon > /tmp/cogmer-test.log 2>&1 &
+  the person opened http://127.0.0.1:4792/identity, made the test user wonka111, named the machine wonka-test, and kept the recovery phrase; the page then said the identity was made
+  the person added the cloud environment cloud-test on the identity page's machines section and copied its value; the value was never read, printed or logged by an assistant
+  env ... CLAUDE_CODE_SESSION_ID=wonka-test-1 /tmp/cogmer-test create    -> the room balmy-shoal
+  after the cloud session reported:
+    curl http://127.0.0.1:4792/events?room=balmy-shoal
+    curl http://127.0.0.1:4792/export?room=balmy-shoal
+    grep of /tmp/cogmer-test.log for sync, pull, cloud, refusals
+seen:
+  the real daemon on 4782 answered as 0.10.5 with three rooms before and after each step, and ~/.cogmer held no data-version file
+  the test daemon's log, at startup: "relay connection carried as the relay's own protocol", and "reachable at tc://tco2FwWCC0Lh... (189 chars)"
+  the room's events, three:
+    2026-10-25T17:03:29 GUEST_INVITE, machine wonka-test, sequence 1
+    2026-10-25T17:16:48 USER_PROMPT, machine cloud-test, sequence 1, "cloud-test says hello from the cloud session"
+    2026-10-25T17:16:48 ASSISTANT_MESSAGE, machine cloud-test, sequence 2, "noted, from the cloud"
+  the log line at 10:16:49 PDT, one second after the cloud session's turn: "sync: received 2 event(s) from tc://tco2FwWCBvXb... (186 chars)", an address of 186 characters beginning as the cloud daemon's own "reachable at" line does
+  the export: the three turns under the user wonka111, each with "machine, as its user named it:" followed by wonka-test or cloud-test
+not shown:
+  how the room page marks the cloud turns, since only the export was read
+  a turn from wonka-test reaching the cloud session's prompt hook
+  the removal of cloud-test on the page, the cutoff it proposes, and the cloud session's next turn being refused (D-250)
+  that the address in the "received" line belongs to the cloud daemon, beyond its length and its first characters matching the cloud daemon's own log line
+  a run of the build with the ts_debug_websockets tag on wonka, or a run after da03f5a, which came later

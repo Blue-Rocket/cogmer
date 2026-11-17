@@ -4,11 +4,16 @@
 
 **Decision.** The host's daemon delivers an invitation to a paired guest as an offer, a message
 telling the guest that they have been admitted to a room, over the connection pairing set up.
-The host is given a string to send by hand only when the daemon cannot reach the guest.
+The offer is addressed to the guest, a user, and is sent to every machine of the guest that the
+host's daemon knows. A machine that receives it enters the room in the list of rooms the user's
+machines share, marked as offered (D-228, a user's colleagues, verifications, labels and rooms
+belong to the user and are copied between the user's machines), so a session on any of the
+guest's machines joins the room by name, including a machine the host never heard of. The host is
+given a string to send by hand only when the daemon reaches none of the guest's machines.
 
 **Support.**
-- Delivering an offer is not pushing an admission. The row on the host's guest list is the
-  admission, and whom to admit is the host's judgment, so an offer tells the guest that the row
+- Delivering an offer is not pushing an admission. The invitation on the room's guest list
+  is the admission, and whom to admit is the inviting guest's judgment, so an offer tells the guest that the row
   exists, joining remains the guest's own act and reading anything still requires
   verification. D-024 (admission is a guest list), D-054 (verification gates synchronization
   and injection).
@@ -23,7 +28,7 @@ The host is given a string to send by hand only when the daemon cannot reach the
   start).
 
 **Rejected.**
-- *The guest polling for offers.* It requires every pair of paired peers to keep contact
+- *The guest polling for offers.* It requires every pair of paired users to keep contact
   indefinitely, whether or not they share a room, which is standing traffic and standing
   metadata for something that happens rarely, where a push fails at once and visibly and costs
   nothing between invitations.
@@ -31,5 +36,5 @@ The host is given a string to send by hand only when the daemon cannot reach the
 **Limits.** The only remaining manual exchange is between people who have never paired. D-051
 (stranger pairing is not a supported case).
 
-**Revisit when** paired peers acquire a standing reason to poll each other, since pull then
+**Revisit when** paired users acquire a standing reason to poll each other, since pull then
 costs nothing extra and is the better shape.

@@ -400,6 +400,26 @@ var Behaviors = []Behavior{
 		},
 	},
 	{
+		ID:       "B35",
+		Title:    "Claude Code offers the skills in a plugin's skills/ folder and in no other folder of the plugin",
+		Reliance: "If this changes so that a skill in another folder of the plugin is offered, the Codex skill in plugin/codex-skills reaches a Claude Code session's model as a route to every command, which D-119 keeps closed, and the model can run a command nobody asked for, including one that binds a session to a room or admits a colleague. It fails silently, since nothing in a session says a skill was offered. If skills/ stops being loaded, nothing breaks.",
+		Tier:     TierSession,
+		Check: func(p *Probe) error {
+			var seen, hidden bool
+			for _, s := range p.PluginSkills {
+				seen = seen || strings.HasSuffix(s, ":seen")
+				hidden = hidden || strings.HasSuffix(s, ":hidden")
+			}
+			if hidden {
+				return fmt.Errorf("Claude Code offered a skill from a folder of a plugin other than skills/ (%v), so the Codex skill in plugin/codex-skills would be a route to the commands for its model; move it somewhere Claude Code does not read (D-119)", p.PluginSkills)
+			}
+			if !seen {
+				return fmt.Errorf("Claude Code offered no skill from a plugin's skills/ folder either (%v), so this check saw nothing", p.PluginSkills)
+			}
+			return nil
+		},
+	},
+	{
 		ID:       "B24",
 		Title:    "A slash command whose ! line exits non-zero produces no model turn",
 		Reliance: "If this changes, nothing breaks: cli.sh exits 0 on every path, which is correct either way. The check fails so that the reason for that rule can be revisited, since a failing line that still ran a turn would let a command report failure by its exit status. Where it holds, a command that exits non-zero leaves the model unable to explain or act on what happened, and the person sees only a failed shell line, so a path that exited 1 again would fail silently.",
@@ -465,7 +485,7 @@ func MarkdownReport() string {
 	b.WriteString("## Codex session checks\n\n")
 	b.WriteString("`cogmer doctor --host codex` checks these against the installed Codex runtime.\n")
 	b.WriteString("Set `COGMER_CODEX_BIN` to check another executable, such as a desktop runtime.\n")
-	b.WriteString("These checks use an isolated turn, with real hook output and a shell tool.\n")
+	b.WriteString("These checks use an isolated turn, with real hook output and a shell tool, and one loads a probe plugin into a Codex home of its own and asks the app server for its skills, with no turn.\n")
 	b.WriteString("Codex compaction behavior is not checked.\n\n")
 	for _, bh := range CodexBehaviors {
 		fmt.Fprintf(&b, "### %s: %s\n\n%s\n\n", bh.ID, bh.Title, bh.Reliance)

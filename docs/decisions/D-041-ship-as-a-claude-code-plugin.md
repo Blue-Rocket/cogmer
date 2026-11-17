@@ -13,7 +13,7 @@ loads its own hooks and commands from the same package, installed through its ma
   marketplace).
 
 - Codex loads the command skill and its hook configuration from its manifest.
-  `plugin/.codex-plugin/plugin.json`, `plugin/skills/cogmer/SKILL.md`.
+  `plugin/.codex-plugin/plugin.json`, `plugin/codex-skills/cogmer/SKILL.md`.
 
 **Rejected.**
 - *A list of the surfaces cogmer reaches, such as the terminal, the desktop application

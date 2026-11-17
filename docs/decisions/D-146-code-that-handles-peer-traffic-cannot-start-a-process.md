@@ -22,4 +22,5 @@ session take a turn), since it forbids starting any process from those files.
 - *Checking the call graph.* It is more precise, and harder to keep correct than a list
   of imports.
 
-**Revisit when** a peer event needs to start a process, which D-035 leaves undecided.
+**Revisit when** a remote event needs to start a process, which D-035 (a remote event never makes an
+interactive session take a turn) leaves undecided.

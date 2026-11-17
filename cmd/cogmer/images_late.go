@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"io"
 	"log"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -51,7 +50,7 @@ var codexImageOpen = regexp.MustCompile(`^<image name=\[Image #(\d+)\](?: path="
 // are complete are read, so an offset that stops in the middle of a line that Codex is still
 // writing is not passed.
 func codexTurnImages(path, turnID, prompt string, offset int64) (imgs []lateImage, found bool, at, next int64) {
-	f, err := os.Open(path)
+	f, err := openTranscript(path)
 	if err != nil {
 		return nil, false, 0, offset
 	}
@@ -146,6 +145,10 @@ func prepareData(n int, data []byte) preparedImage {
 	case len(data) > maxImageBytes:
 		ref.Type = typ
 		ref.Note = imageTooLarge
+		return preparedImage{ref: ref}
+	case !imageWithinLimits(typ, data):
+		ref.Type = typ
+		ref.Note = imageTooManyPixels
 		return preparedImage{ref: ref}
 	}
 	sum := sha256.Sum256(data)

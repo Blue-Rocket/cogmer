@@ -28,6 +28,207 @@ downloaded. Shipping binaries inside the plugin removes the download entirely bu
 commits about 150MB per release into the history everybody clones, and is ruled
 out.
 
+**A command names a next step only for its own case, and none walks a user from a fresh install to a room.** Several commands name what comes next in their case: the output of `/cogmer:self-status` ends with the command to pair, `/cogmer:peer-list` points to `/cogmer:peer-pair`, and `/cogmer:room-create` says that a second session joins with `/cogmer:room-join` (read from `plugin/commands` and the output of 0.10.2 on 2026-11-02). Which next step a user is told therefore depends on which command they ran, and a user who has run only `/cogmer:self-status` is told how to pair and not that a room comes after. Each command's output could end with the next step chosen from the user's state: make the identity, send the string, pair, create a room. That costs a decision, code and a test for each state, and a line that the model has to relay, since a command's output reaches a person only through the model.
+
+## Before a wider audience
+
+People the maintainer has never met install cogmer, on machines, networks and settings the
+maintainer has not seen, and none of them is worse off for it.
+
+**Another account on the same machine can read and drive a user's daemon, because the daemon's local
+address is open to every account.** On 2026-10-28, on a droplet (Ubuntu 24.04) with two accounts,
+the `codex` account fetched the transcript of a room belonging to the `claude` account, with no
+credential, from `/export?room=<name>` and `/events?room=<name>` on the daemon's loopback address,
+and `/healthz` and the identity page answered 200 as well. The room held fabricated turns in a
+throwaway home. The daemon leaves those reads unguarded because only a web page was considered, and
+a cross-origin page cannot read their answers (the comment before `LocalRoutes` returns,
+`cmd/cogmer/daemon.go`, read on 2026-10-28). The routes that change something check a method, an
+Origin and a header whose value is a constant, so any account that sends it passes (D-087, the local
+API requires a header that a web page cannot send, read from `cmd/cogmer/localguard.go`; not tried
+across accounts). A second account's cogmer also treats the first's daemon as its own: with the
+default addresses, its daemon logged "a cogmer daemon is already serving 127.0.0.1:4782; leaving it
+to it" and exited 0, its commands then reached the other account's daemon, and `cogmer stop` as the
+second account said nothing was listening, since it cannot see another account's process. This
+affects any machine with more than one account, such as a shared workstation or a build server. A
+secret in a file of mode 0600 in the state directory, which hooks and commands send and which the
+page receives in the address `cogmer machines` opens, as Jupyter does, closes the reading and the
+driving, at the cost of a token in an address and a read of the file by each caller. A Unix socket
+for commands and hooks, with the TCP listener serving only the page, costs a second listener and
+does not exist on Windows. A port chosen from the account stops the sharing and not the reading.
+Which to choose is a decision, and D-087 does not cover it.
+
+**A release that has to break the interface an older plugin uses has no way to tell a lagging host's
+session.** One program in `~/.cogmer/bin` serves every host, so a host whose plugin has not updated
+runs its older hook lines, handler scripts and command files against a newer program (D-269, the
+program serves the plugin of each of the last three releases). A test now runs the program through
+each of the last three plugins and fails when a release renames a subcommand they call or changes
+something their scripts read, but a release that must break one has nowhere to say so. The lagging
+host's hooks then fail open, its sessions show no error, and they silently stop capturing and
+receiving turns until its plugin updates. Raising the plugin's version, which the host reads when it
+syncs, and a line in the session-start note that tells the model its plugin is older than the
+program's, would say it, at the cost of a check of the plugin's version against the program's in the
+hook that runs at every session start.
+
+**A Cowork user whose bridge is down may see an error on every prompt.** An interactive Claude Code session on 2026-10-14 showed "Stop hook error: MCP server
+'remote-devices' not connected" for a Stop hook that names a server that is absent. B31 (a hook of type
+mcp_tool that names a server that is not there shows nothing) says nothing shows, and its check runs
+with `claude -p`. Find out whether an interactive session differs, and if it does, whether the Cowork
+plugin's hooks show the error when the bridge has not started. A user whose bridge is down would then
+see an error on every prompt. A `claude -p --include-hook-events` run on Windows on 2026-10-28 reported two such errors from hooks the test did not define, probably the account's Cowork plugin, which was not identified (`5baeaea`).
+Either the check is made and the Cowork plugin's hooks are shown to be silent without the bridge, or Cowork is labeled experimental until it is.
+
+**Whether a cloud environment shows the cloud key to the people who can edit it is not known.** D-246 (a cloud environment is added from the machines page)
+keeps the cloud key in an environment variable of the cloud environment. Whether a cloud
+environment hides a variable's value from other people who can edit the environment is not
+known, and matters only for an environment shared with others, since the maintainer creates
+theirs at a personal level, said on 2026-10-24.
+For an environment shared with a team, whoever can read the value speaks as the user. A check from a second account that can edit the environment would answer it, and until then the documentation can say that a cloud environment holding the key is not shared.
+
+**NAT to NAT, with a real colleague on a real home router.** The last unknown in the
+transport, and not testable alone.
+
+**Re-pick the overlay relay when it cannot be reached.** D-187 pins it so the
+address is stable. Nothing re-picks, so a machine that relocates past its pinned
+relay is unreachable and nothing says so. Change driven by failure, never by
+preference.
+
+**Say when your own address changes.** Every pairing string and invitation already
+handed out is then stale, and only the daemon can know.
+
+**Nothing independent of the repository vouches for a release.** On 2026-10-27 the GitHub API
+showed `main` without branch protection and secret scanning and push protection disabled.
+`plugin/checksums.txt`, which authorizes the downloaded binary, sits in the same repository as the
+hook scripts, so whoever can push can change both, and a plugin runs with the user's privileges
+and updates without a review of what changed (Anthropic's plugin security page, and the
+cc-plugin-audit project that hashes plugin directories for that reason). Protecting `main` against
+force pushes and requiring status checks, two-factor on every account that can push, and
+secret scanning with push protection cost nothing on a public repository. Signing
+`checksums.txt` with a key kept off the repository and checked by `install.sh` costs a key to
+keep, a verifier to ship and a signing step in `release.sh`.
+
+**There is no way to report a vulnerability privately.** The repository has no `SECURITY.md` and no
+`.github` directory, checked on 2026-10-27, and whether GitHub's private vulnerability reporting is on
+was not checked. Somebody who finds a fault would open a public issue. A `SECURITY.md` naming a
+channel, with private reporting enabled, fixes it at the cost of a channel the maintainer reads.
+
+**A colleague's pairing string reaches a shell command line, and Claude Code's permission check is
+the only thing in the way.** `/cogmer:peer-pair` takes a string a colleague sent, and Claude Code
+substitutes it into the line `"${CLAUDE_PLUGIN_ROOT}/cli.sh" pair $ARGUMENTS` before bash runs it.
+The name after `#` can hold `;`, `$` and backticks, because `sanitizeName` strips only `#`, `@`, control
+and unprintable characters. A throwaway plugin of the same shape, run on Claude Code 2.1.312 in
+default permission mode on 2026-10-27, had both `x;touch <file>` and `x$(touch <file>)` refused by the
+permission check and no file created. Not tried: a user who has allowed other commands, a mode that
+skips the check, other Claude Code versions, and the Codex skill. `cli.sh` cannot check the string,
+since the substitution happens before it runs. Two things can limit it. Cogmer can limit the characters
+in the name its own pairing string carries, which costs names with other characters and stops no
+attacker. The prompt hook the daemon already runs on every prompt sees a command as typed (B33, a
+project or plugin command reaches UserPromptSubmit with the text as typed) and could exit 2 for a
+`/cogmer:` command whose text holds a character outside an alphabet. On 2026-10-28 on a Mac, such a hook
+blocked `x;touch <file>` before the command file's shell line ran, showed its message as the result, and
+no file was created (`4b70323`). That check would also protect a user who has allowed other commands,
+while the hook runs. It costs an entry in `behaviors.go` with a negative test, a block the user sees,
+and no protection where the hook is disabled or fails open because the daemon is down. Not tried: an
+interactive session, Windows, Codex and Cowork. Running the same test with an allowed command, and
+with the Codex skill, would show how much the permission check covers.
+
+**The `user-identity` branch is 134 commits ahead of `main` and changes the wire and the data of
+every installed machine.** On 2026-10-27 it merges into `main` with no conflict (`git merge-tree`),
+`main` and the branch both carry plugin version 0.10.5, the wire version on the branch is 3, and the
+state directory carries data version 1 where `main` reads none. A program that finds newer data
+touches nothing (D-244, the data in the state directory carries one version, and a program that
+finds a newer one touches nothing), so a plugin that lags on a user's other host stops working
+against the migrated data, and the first start of the new program migrates the databases after
+copying them (D-256, the databases are copied before the state directory is migrated, and a program
+that cannot migrate it stops). The two beta users, the maintainer's own `~/.cogmer`, and each host's
+plugin all move together, and nothing yet says in what order. A release with its own version number,
+such as 0.11.0, a plan for each of the three machines, and the lagging-plugin test above, would
+cover it.
+
+**Codex's shell tool cannot start on Ubuntu 24.04 with its default kernel settings, so `doctor`
+reports B28 failed and a Codex user's commands fail there.** On 2026-10-28, on a droplet with Ubuntu
+24.04 and codex-cli 0.160.0, `kernel.apparmor_restrict_unprivileged_userns` is 1, and a shell tool
+run with `-s workspace-write` answered `bwrap: loopback: Failed RTM_NEWADDR: Operation not
+permitted` and did not run. `cogmer doctor --host codex` there passed B25, B26, B27 and B36 and
+failed B28 with `CODEX_THREAD_ID ""`, because the probe's tool wrote no file. Run with the sandbox
+off, the same Codex exported `CODEX_THREAD_ID` to the tool, equal to the thread it reported at the
+start of the turn, and the shipped `codex-cli.sh` accepted the session and ran `whoami` and `rooms`
+with the Linux binary, so the failure is the sandbox and no change in what Codex exports. A Codex
+user on such a machine gets capture and delivery from the hooks, which run outside the tool (B25 and
+B27 passed), and no `$cogmer` command until the tool can run, which Codex's own shell use needs as
+well. Not tried: a command in a session of the installed plugin, and the probe with network allowed
+(`-c sandbox_workspace_write.network_access=true`), whose one attempt ran no tool. The message for
+B28 could name this cause when the tool wrote nothing, at the cost of a sentence and a test, and the
+README could tell a Codex user on such a machine that the sandbox needs that setting changed or
+turned off, which is their own decision.
+
+**No Codex or Cowork session has run on the `user-identity` branch.** The container tests and the
+cloud run drive Claude Code, and the Codex and Cowork hooks, commands and bridge are covered by
+tests that call the daemon directly. A Codex session and a Cowork session each making an identity,
+pairing with a colleague, joining a room, renaming the colleague and removing a machine would show
+what the tests do not. The removal of a machine is the least likely to have been seen, since it ends
+the daemon that a host's hook starts again.
+
+**A machine with no browser cannot make a user identity, and whether a Codex command can open the
+page is not known.** The identity page is the only place the recovery phrase is shown or typed
+(D-223, the recovery phrase is typed only into the daemon's browser page), and every pairing and
+room command stops at it until an identity exists (D-230, a user identity is made in the daemon's
+page the first time the user needs one). `openInBrowser` runs in the command's own process
+(`cmd/cogmer/selfcommands.go:77` and `main.go:2144`, read on 2026-10-27), which for Codex is a `bash
+codex-cli.sh` run in its shell tool, where a sandbox may refuse a window, and a Codex user on a
+machine with no browser has no other route, since pairing's terminal fallback sits behind the same
+gate. A Cowork command runs in the daemon on the user's own machine, so it is not affected. Printing
+the page's address for the user to open themselves, which holds no secret, costs the user opening
+it, and having the daemon open it costs a route on the daemon and the window of a daemon with a
+display (B23, a detached daemon can open a window). The item on details left undecided under "Cloud
+sessions in a room" already names a machine with no browser for adding a machine.
+
+On the droplet on 2026-10-28, `cogmer machines` on a machine with no screen printed "could not open
+a browser (exit status 3). Open this address in a browser on this machine", though `xdg-open` is
+installed, and the address is of no use from another computer. An SSH tunnel from the user's
+computer reached the page only when its local port was the daemon's own: a tunnel on the same port
+answered 200 to the page and to a guarded POST, and a tunnel on another local port answered 403,
+"this address is not served here", to both, because the Host check names the daemon's own port
+(`isOwnHost`, `cmd/cogmer/localguard.go`). A user whose own computer already runs a daemon on that
+port cannot use the same one. Telling the user to forward the daemon's own port, in the message,
+costs a sentence. Accepting any loopback port in the Host check and the Origin check would make a
+page of any local web server acceptable to the daemon, so it is not offered here; an explicit
+setting that names the one port a tunnel uses, read at the daemon's start, would not.
+
+**The Cowork bridge says nothing when an upgrade failed.** A failed upgrade or a failed copy now
+writes a `daemon-state` mark, and the session-start hook of Claude Code and of Codex tells the model
+that the daemon could not start (D-256, the databases are copied before the state directory is
+migrated, and a program that cannot migrate it stops). The Cowork bridge has no session-start call
+(D-205, Claude Cowork is a supported host through a bridge on the user's machine), so a Cowork user
+who runs no command sees nothing capture or arrive and no reason, while the bridge goes on trying to
+start a daemon that stops at once (D-208, the bridge keeps a daemon running for a Cowork user, and
+runs a restart and a stop itself). A note of its own, read from the same mark and given to Cowork's
+model with the bridge's reply to a prompt, would cover it, at the cost of a line in every prompt's
+reply while the fault lasts.
+
+**A machine that was removed and erased starts again as a new unconnected machine when any host next
+starts a daemon.** D-252 (a reachable machine is asked to erase its keys before it is removed)
+erases the keys and ends the daemon, and the next Claude Code session, Codex hook or Cowork call
+starts one that makes a fresh machine key and no user (read from `retire.go` and the start code, not
+run). The user then meets the identity page again on that machine, which suits a machine given away
+and may surprise a user who only removed it from their list. D-208's mark that a user stopped the
+daemon does not apply, since nobody ran `stop`. Whether the machine should keep a mark that it was
+retired is not decided.
+
+**One colleague's machine goes unreachable about 45 times a day, and the cause is probably that
+their computer sleeps and wakes.** The maintainer's `~/.cogmer/daemon.log` on 2026-10-28 holds 216
+outages of the peer `drizzle-ravine` between 2026-10-22 and 2026-10-27, a median of 17.6 minutes
+between the starts of two (10th percentile 9.7, 90th 52.1), each lasting a median of 10 minutes and
+at most 150 (D-210, the daemon says where a connection to a peer fails, and discards a connection
+that is stuck, logs the outage). Fifty-five requests from the same peer were refused for a timestamp
+20 to 48 minutes from now, against a tolerance of two minutes, which is what a request signed before
+a computer slept and sent after it woke would carry. That fits a laptop that wakes for a few minutes
+at a time, and does not fit a fault in the relay or in the address, which would not delay a signed
+request by half an hour. Nothing from the colleague's side has been read. Asking the colleague
+whether the machine sleeps, and reading their power log for wake times, would settle it. If it does,
+no change is needed in the code, and a user who sees the status change on that rhythm is told by the
+room status how long the colleague has been out of reach (D-194, a colleague this machine cannot
+reach is named, with how long, in the room status and the view).
+
 ## Somebody else uses it
 
 A colleague who did not write cogmer installs it, pairs, joins a room and works in it.
@@ -43,9 +244,6 @@ somebody quietly not using it again.
 Two things to watch for, because both have been argued about without evidence:
 whether the two-word comparison is performed or skipped, and whether the browser view
 is consulted or forgotten.
-
-**NAT to NAT, with a real colleague on a real home router.** The last unknown in the
-transport, and not testable alone.
 
 **What a person actually notices in the view.** D-090 left this open: the display
 name and the derived name are separate elements but carry similar weight, and
@@ -72,16 +270,8 @@ has an address used as one of several candidates tried together, demoted by
 silence, invalidated by a wrong key, aged at a rate set by what it names, and
 restored by evidence. `known_peers` holds one endpoint per peer with the time it was
 recorded, replaced when the peer advertises another (read on 2026-09-28). D-103 (an
-address belongs to a peer, and is stored in one place) gave each address the owner
+address belongs to a machine, and is stored in one place) gave each address the owner
 the lifecycle needs, and nothing past that is built.
-
-**Re-pick the overlay relay when it cannot be reached.** D-187 pins it so the
-address is stable. Nothing re-picks, so a machine that relocates past its pinned
-relay is unreachable and nothing says so. Change driven by failure, never by
-preference.
-
-**Say when your own address changes.** Every pairing string and invitation already
-handed out is then stale, and only the daemon can know.
 
 **Whether to rebuild the post-quantum hedge.** D-104 removed the pre-shared key,
 which was the only quantum-resistant element in the stack. It could be rebuilt at
@@ -123,24 +313,6 @@ two of three peers, and checking that each one's events arrive attributed to the
 origin, would answer it. Pairs are the case that exists, so this waits until somebody
 wants a third member.
 
-**One peer that is offline delays sync with every other, and rooms are asked of peers who
-are not in them.** `RunSync` in `cmd/cogmer/sync.go` asks each address one after another,
-and `syncTargets` returns every address this machine has recorded, so a peer paired once
-and never finished costs a dial that times out in about ten seconds on every round. In
-`~/.cogmer/daemon.log` on 2026-10-12 the first failure for such a peer and the first for
-the colleague a room was shared with are ten seconds apart. Each request to a peer also
-names a room it is not a guest of, in a signed request, so that peer learns the room's
-identifier. With one colleague the cost is about ten seconds in the view, and it grows
-with the number of peers ever paired who are offline: six pairings with four offline
-would lag the view by about forty seconds a round and could leave a colleague's last turn
-out of what a prompt injects.
-
-The fix has two parts. For each room, ask only that room's guests, which `RoomPeers`
-already maps to addresses, and ask the addresses in parallel so an unreachable one waits
-alone. Before changing which peers are asked, read whether relaying a third member's
-events (§13) relies on asking a peer that is not a guest of the room, since nothing has
-run that path.
-
 ## Rooms and sessions
 
 What a room, and the sessions in it, do as people create, leave, return and join from more than one session.
@@ -153,29 +325,31 @@ that exist. Whether a room shows a colleague's session joining, leaving or worki
 is undecided, and "Whether arrival wants announcing" under "Somebody else uses it"
 is part of the same question.
 
+**The session start hook adds cogmer's text to the context of every session, in a room
+or not.** It starts the daemon, starts the binary fetch, and injects the standing policy
+for room content into every session on the machine (read from
+`plugin/hooks-handlers/session-start.sh` on 2026-11-16). D-284 (a session in no room
+reaches cogmer only through the commands its user types) governs the prompt and stop
+hooks and leaves this hook out. D-176 (the standing policy is also stated once at session
+start) places the policy there so it reaches the model where room content cannot, and a
+session not yet in a room may join one later in the same session.
+
+The options, each with its cost:
+- Leave it. Every session carries the policy, 106 words, whether or not it ever joins a
+  room.
+- State the policy when a session joins, in the command's output. It then arrives in a
+  tool result, beside text the command printed, rather than in a position of its own,
+  which reverses D-176.
+- Drop the policy and rely on the framing inside each block. D-176's Limits record that
+  the same hostile turn was refused with and without the policy.
+- Stop starting the daemon at session start and start it from the commands. Every command
+  that needs the daemon would have to start it and wait for it to answer, and colleagues
+  could not fetch this machine's events while no session on it had started one.
+
 **A room never closes, so nothing is archived.** D-132 (a closed room's log is archived)
 has a closed room kept as an archive that can be read but never rejoined, and the
 specification freezes a room's sequences at that point. Membership ends per person
 through `leave` and `revoke`; the room itself has no closed state.
-
-**`leave`, run twice, says "this session is not in a room."** True, and unhelpful
-to somebody who left it a moment ago: it reads as a failure and sends them looking
-for a problem. It should say it has already left. `LeaveSession` returns that error
-from `RoomForSession` finding nothing, so the distinction to draw is between never
-having been in one and having left it — the row is still there with `left_at` set,
-so both are answerable.
-
-**`create`, run twice, silently makes a second room.** Inherent — a room is a new
-thing each time — but it is the command where a mistaken repeat costs most, because
-the second room is indistinguishable from the first to everybody except its
-creator, who now has two and is talking in one of them.
-
-Nothing currently helps. The session invoking it is already bound to a room when
-this happens, and binding is what `BindSession` already knows about, so a second
-`create` from a session already in a room could say which room that is and ask.
-That is the one place a non-idempotent command could cheaply refuse a mistake it
-now makes in silence. The command's documentation warns against retrying, which is
-the weakest possible form of the check.
 
 **A notice when a second session from this machine joins a room — not thought
 through.** `SessionsInRoom` already counts this machine's live sessions in a room
@@ -235,16 +409,15 @@ output reaches the model, that the empty text block the bridge returns for a cal
 raises nothing, that the plugin's name does not collide with another of the same name, and that a
 computer's rename needs only the command again.
 
-An interactive Claude Code session on 2026-10-14 showed "Stop hook error: MCP server
-'remote-devices' not connected" for a Stop hook that names a server that is absent. B31 (a hook of type
-mcp_tool that names a server that is not there shows nothing) says nothing shows, and its check runs
-with `claude -p`. Find out whether an interactive session differs, and if it does, whether the Cowork
-plugin's hooks show the error when the bridge has not started. A user whose bridge is down would then
-see an error on every prompt.
-
 When a Cowork session has been seen to work with them, D-205 and D-207 become active. The probe left an
 entry named `cogmer-host-probe` in the user's Claude Desktop configuration, the probe plugin installed in
 Cowork, and the files `~/.cogmer-host-probe.*`, to be removed by the user.
+
+**`cowork-setup` writes Claude Desktop's configuration to a file that Desktop on Windows did not read, and reports success.** On 2026-10-28 on Windows 11 ARM64, the setup wrote `%APPDATA%\Claude\claude_desktop_config.json`, and Desktop's Developer settings listed no servers. Desktop on one account read `AppData\Local\Claude-Data\claude_<id>\claude_desktop_config.json`. On the other, a fresh Microsoft Store (MSIX) install, Desktop's log said at its first launch to create the file under `AppData\Local\Packages\Claude_<id>\LocalCache\Roaming\Claude\`, and from a later launch Desktop used the `Claude-Data` folder, carrying the `cogmer` entry across and rewriting the file. The setup has no way to find the file Desktop reads, so a user who runs it sees success and then no `cogmer` server. With the right file named in `COGMER_DESKTOP_CONFIG`, Desktop started the bridge, the bridge started the daemon, and Desktop's device-bridge line changed from `+0 local-mcp` to `+2 local-mcp`, whose entries the log does not name. The setup could look for each of these locations and use the one that exists, which fails again on a layout nobody has seen. It could also say which file it wrote and how to check that Desktop lists `cogmer`, which costs the user a step but is true on every layout.
+
+**Cowork has not been shown to run on Windows: Claude Desktop reported the workspace VM unsupported in the Parallels guest, and no hook reached the bridge.** On 2026-10-28 Desktop's `cowork_vm_node.log` said `workspace VM not supported (status=unsupported)` and listed the VM's disk, kernel and initrd files as missing. A Cowork session there answered `/cogmer:self-status` with "cogmer did not answer", and the bridge's log shows no call after `tools/list`, so the session's hook never reached the bridge. The cause was not established. Claude Code issue #49997 reports Cowork working on Windows 11 ARM64 in Parallels until a Desktop update, and issue #51598 reports that Windows Server 2022 needed the full Hyper-V role, both read only as search-result summaries on 2026-10-28. Cowork on a machine whose virtualization works, such as a Mac, would show whether the hook reaches the bridge. A Windows machine that supports nested or hardware virtualization would show the same on Windows. Three `cogmer` processes ran after Desktop started the bridge, and one held the daemon's ports. The other two were not identified, so whether Desktop starts the bridge twice is not known. Anthropic's support articles say new Cowork sessions on Pro, Max and Ultra plans run in the cloud, and a setting on a Team plan chooses where they run (read on 2026-10-31), so the unsupported workspace VM may not have decided that run, and which kind it was is not known.
+
+**Three tests of stopping a daemon skip on Windows over ssh, one of them the Cowork bridge's, and no test there checks that a file holding a key is private.** On 2026-10-30 `go test ./...` on Windows 11 ARM64 over ssh passed 716 tests, skipped 21 and failed none (`3a340e1`). Three skip on every system unless asked, such as the one that needs the public relay. Fifteen skip because Windows has no group or other mode bits or lets an ordinary account make no link: eleven read mode bits, three make a migration fail with a read-only file, and one makes a symbolic link. Three skip because `tasklist` answers "Access denied" for every process in an ssh session, so `stop` cannot name the process that holds a port: `TestTheBridgeKeepsARealDaemonForACoworkUser`, `TestARestartReplacesARunningDaemonWithOneThatAnswers` and `TestStopLeavesTheMarkAndAStartingDaemonRemovesIt`. They failed there before the skip, and nobody has run them in an interactive session. What keeps `shared.key` and the databases private on Windows is the access list the account's profile folder passes down, which no test reads. Running the suite as a scheduled task in the account's interactive session would show whether the three pass, and costs a task on the test machine. Naming the process with the Windows API instead of `tasklist` would make `stop` work where `tasklist` is refused, and costs code that calls the API and a change to D-123 (stop finds a daemon by the addresses it holds, and signals only cogmer), which names `tasklist`, and to the accounting of outbound code. A check of the access list could call `icacls`, and what it should require is not decided.
 
 **The cogmer plugin starts a daemon in every Cowork sandbox, where it has nothing to do.** The second image
 probe on 2026-10-15 found `/root/.cogmer` in the sandbox, with a membership database, a tailcat key and a
@@ -252,54 +425,146 @@ daemon log written two seconds after the session started. The sandbox is remote 
 all failed, so that daemon has an identity, no room and no route to a colleague, and a user gets nothing
 from it. Which version ran there was not read. The organization's inventory on the same day listed two
 member-created copies, David's at 0.10.3 and Arielle's at 0.7.4. The sandbox's environment holds
-`CLAUDE_CODE_REMOTE`, whose value was not read. If it marks a remote sandbox, the plugin's session-start hook
-could start nothing there, since the Cowork route is the bridge on the user's machine (D-205).
+`CLAUDE_CODE_REMOTE`, which is `true` there (`78477ee`). The plugin's session-start hook could start nothing there,
+since the Cowork route is the bridge on the user's machine (D-205).
+
+D-205's reason for rejecting a daemon in the sandbox, that it "cannot reach a relay or another
+machine" (`06749a0`, dated 2026-10-13), predates D-217 (a cloud session's daemon carries its relay
+connection as a WebSocket), which showed a Claude Code cloud container at the Full network level reaching the relay on
+2026-10-18. A 0.10.5 daemon run in a Cowork cloud session's sandbox on 2026-10-31, with `CLAUDE_CODE_REMOTE`
+set to `true`, could not fetch the relay's map: tailcat.dev answered Forbidden, so the daemon was reachable only at 127.0.0.1 and logged no WebSocket (`78477ee`). The organization's network policy decided that refusal. Three runs of a probe in cloud sessions on 2026-10-31 show the proxy refusing the relay's map, its four servers and a WebSocket upgrade under the policy as it stood, which was package managers only plus the organization's own extra domains, and show the proxy passing all of them, with the upgrade accepted, once all domains were allowed or only those five hosts were added (`ce962eb`). Under the policy as it stood the daemon there has no route to a colleague, and stopping the hook from starting it would cost nothing a user has. Where an owner has allowed the five hosts, a daemon there has a route. A 0.10.5 daemon that a session-start hook started connected to the relay as a WebSocket, and its `whoami` reported a connection from outside through the relay, in a first session and again after a resume (`7adc75c`, `c72ef75`). In that case the hook would either be stopped from starting the daemon, or the sandbox would be made a cloud session, which D-278 (the machines page offers the cloud value as a plugin for the user to upload once) gives a way to receive its value.
+
+A cloud session could be made without giving it any secret, by having one of the user's machines approve it. The daemon in the sandbox would make its own key pair, as a cloud session does under D-216 (a cloud session signs with a key of its own that the user's shared key vouches for), and show a string holding its public key and relay address. The string holds no secret, and could reach the user through the model like a pairing string. The user would approve the string on the machines page of one of their machines. That machine would certify the sandbox's key and send it the chain, as D-229 (a machine is added from another of the user's machines) does when it certifies a new machine, and the sandbox would fetch the user's lists from that machine over the relay, as D-245 (a cloud session takes its user's lists only from one of the user's machines) has a session do. The design would need no `COGMER_CLOUD_KEY` and no file, and it would change how a cloud session gets its chain under D-246 (a cloud environment is added from the machines page) and D-216. The design costs an approval for each new session, since a new sandbox makes a new key, and a machine awake to approve. Two things stop it today. A sandbox reaches the relay only where an organization owner has allowed it (`ce962eb`), although a daemon there connects once it is allowed (`7adc75c`). And the string would pass through the model, so room content could manipulate the model into showing an attacker's string, where pairing guards against a swapped string with two words read aloud (D-054, verification gates synchronization and injection). What the machines page could show for the user to check against the sandbox, without trusting the model, is not known.
+
+Both cloud routes have reached the relay only at a wide enough network level. A Claude Code cloud environment failed every check below the Full level on 2026-10-18 (`0139779`) and reached a daemon on another machine at the Full level (`e415f1d`), which D-217 (a cloud session's daemon carries its relay connection as a WebSocket) records. The Cowork sandbox follows the organization's setting under Organization settings > Capabilities, which the screen tags Chat and Cowork and says does not apply to web search, web fetch or MCP connectors (`ce962eb`). Only an owner of a Team or Enterprise organization can change it, and for individual plans Anthropic's article on creating and editing files describes only an on or off toggle (read on 2026-10-31). Because the setting is the organization's, allowing the relay for a Cowork sandbox allows those hosts for every member and for the other uses the setting covers, which an owner has to accept. A Claude Code environment has a network access setting of its own, which read Full for the maintainer's personal environment on 2026-10-31, and whether the organization's setting also governs Claude Code cloud sessions was not seen. Not known: whether a Pro or Max user can choose any level for either route, and whether a wildcard such as `*.ipn.dev` works.
+
+The session's hooks give a daemon in a Cowork cloud sandbox what capture and delivery need, but not a long life. On 2026-10-31 the command hooks ran in the sandbox as root. The transcript path was readable at every event, the Stop payload carried the last assistant message, and the model repeated the `additionalContext` that SessionStart and UserPromptSubmit returned (`7adc75c`). A detached process outlived its hook and ran between prompts. A loop started in the first session wrote about ten of the hundred and twenty lines an hour would have given, which ends it near two and a half minutes after the last response, while a loop started on the resume ran through a gap of about two minutes. Files in `/tmp` survived 4h40m with the laptop off, and the resume's hook had a fresh process id (`c72ef75`). So a daemon there has to be started by the session-start hook for each session and each resume, and has to ask its colleagues for what it missed, as D-031 (peer synchronization polls) already supports for a machine that was absent. No sandbox has had an identity, so none can yet be a member of a room. Not known: how long Cowork keeps a sandbox's processes, whether a resume on another day or with the desktop app closed behaves the same, and which program starts the session's Claude Code in the sandbox.
+
+Other ways a value could reach the sandbox without passing through the model are also not shown to work. A `SessionStart` command hook could read a file from a folder the user attaches, which in a cloud session needs the desktop app open, leaves a permanent file the model's shell can read, and would need D-246 to accept a file as an equivalent of the variable. The cloud session in the probe showed no mounts, and which folder it had connected was not recorded (`78477ee`). A command hook could fetch the value over the network, which needs a credential for the store it fetches from and so moves the secret problem. An `mcp_tool` hook's plain-text reply would put the key in a transcript, and D-246 never shows the value to a log, and the server answering would have to hold the key.
+
+**No daemon in a Cowork cloud session has been shown to read a cloud value that the machines page made.** D-278 (the machines page offers the cloud value as a plugin for the user to upload once), D-279 (a cloud session's daemon reads its cloud value from the plugin files it finds, as well as from the variable), D-280 (a user has one cloud key at a time) and D-281 (a command in a cloud session with no value says the user must first set cogmer up on one of their own computers) are built and tested. A daemon built from `63d0b04` with `CLAUDE_CODE_REMOTE` true read the zip the page made, unpacked into a folder laid out as a synced plugin, spoke for the user and took the user's lists from the user's machine (`e180ea5`). The same zip, uploaded as a personal plugin, reached a Cowork cloud session with the length, mode, owner and digest prefix of the page's file, as a hook of another plugin reported (`5fd9fa4`). The cogmer plugin on the account is the released one, whose daemon has no reader, so no daemon in a session has read the file. None has looked in its default folder in a session either, though the hook found the file under the home directory's `.claude/plugins/synced` (`5fd9fa4`). The daemon looks for `cloud.value` in plugin folders named as the page names its plugin, one folder below an account folder under the home directory's `.claude/plugins/synced`, the layout that the Cowork sessions of `7a362f6`, `f6d721a` and `5fd9fa4` showed, and no behavior check covers it, since the folder is in the sandbox and `cogmer doctor` runs on the user's machine. A Cowork session declined to run a prompt that asked it to list the files named `cloud.value` and reply with only the output, and said that the instructions looked shaped to extract credential material (`5fd9fa4`), so a check that asks a session to inspect the file can fail on the model's refusal, and the hook that reported the file in that run did not.
+
+The runs behind the decisions showed some facts that none of them holds. Uploading a plugin of the same name asked "Replace existing plugin?", and a new session then saw only the new file (`dab6794`). A session that was running did not run the plugin's hook at its next prompt after the plugin was removed, and its synced folder no longer held the plugin's folder or its file (`d65dd22`, `2f35641`). Remove cleared every visible trace of the plugin from the member's settings and the organization's inventory (`0f35f77`). The desktop app kept listing a removed plugin until it was restarted (`d65dd22`), but a later one was gone from it 5 minutes after its removal with no restart, and the app may never have listed that one (`8897336`). The organization's inventory listed a personal plugin as a member's, with audience and sharing both "Only creator" and no publish request, and kept the replaced version in a version history with no control there to download, view or delete a version (`e282ceb`, `8808f16`, `ece3d10`). An owner can turn off plugins for everyone with the Skills switch, or stop Claude Code syncing account plugins with `syncClaudeAiPlugins` in its managed settings (Anthropic's page on managing plugins for an organization, read on 2026-11-01). A model that looked through a plugin printed its file (`cac2d7c`, `9477067`), and the same holds for the variable, which a routine `env` shows, since no model has been asked to print it. Anthropic's plugins article says a plugin added in Desktop reaches the user's other Claude Code installs (read on 2026-10-28), so a daemon on the user's own machine could find the file, and D-279 has the daemon read the files only where `CLAUDE_CODE_REMOTE` is `true`. A credential limited to the rooms the user chooses for cloud sessions would limit what a leak gives, and would need a new version of the value.
+
+Not known: whether a value with real certificates is treated differently by the upload and the sync from the file of random bytes in the form of a value (`4bd9f95`); whether a Claude Code cloud session syncs a plugin of only a manifest and a file, since `f6d721a` records one session, whose client was not stated; what the plugin's page lists for such a plugin; what the `.meta.json` files and `manifest.json` beside the synced plugins hold; whether the plugin loads in a second Claude Code environment, or in one below the Full network level; whether a plugin switched off with `"<name>@synced": false` is still synced with its file; whether an administrator can read a member's plugin files by any route, since Anthropic's articles on the compliance API and on managing plugins do not say (read on 2026-11-01), and the latter says a member-created item's page shows no version history, which the screens contradict; whether an organization with security scanning on, which Blue Rocket has off, scans a personal upload and how it treats a key-shaped file; what another member sees; how long a session waits for a replacement, with one observation of 8s; whether a daemon running between prompts ever sees the new file; and how many plugins can hold a `cloud.value` before a session fails to start.
+
+**A Cowork turn shows the user's computer as its machine, and Desktop's name for the computer and
+cogmer's name for the machine are two names.** Every turn carries the name of the machine that
+signed it (D-233, every turn carries the name of the machine it came from, as a field the user
+asserts), and a Cowork turn is signed by the machine that runs the bridge, so a colleague reads the
+laptop's name for a turn whose model ran in a remote sandbox. D-205 says a renamed computer needs
+the setup run again, and a machine's name is now a label the user chose and renames from the
+machines page (D-231, a user's machines are managed from one command that opens the daemon's page).
+Whether the two names can differ, and what a colleague sees when they do, has not been looked at.
+
+**The Cowork plugin and the marketplace plugin share the name `cogmer`, and the bridge a Cowork plugin needs exists only on a machine whose Desktop was set up.** On 2026-10-28 Claude Desktop on a Mac listed both plugins and offered `self-status` and `self-stop` twice each, and `/self-status` in a Cowork-mode conversation answered that cogmer did not answer (`56aa259`). That Mac's Desktop configuration had no `cogmer` entry (`d306243`). Anthropic's plugins article says a plugin added in Desktop is saved to the account and reaches Claude Code from v2.1.273 (read on 2026-10-28), so the zip's hooks run on every machine of the account and give a non-blocking error where no bridge runs, as the item about a bridge that is down describes. Naming the zip's plugin differently, such as `cogmer-cowork`, ends the duplicate commands and adds a second command prefix (D-118, the plugin manifest name is the command namespace). One plugin for every surface, which the next item asks about, would end both problems.
+
+**A plugin's bundled MCP server runs on the user's computer in a local Cowork session and in a cloud one, and the hook that reaches it is named differently in each.** The line in D-205 (Claude Cowork is a supported host through a bridge on the user's machine) that "a server that a plugin bundles would start in the sandbox" is contradicted by a probe on 2026-10-31 on a Mac (`78477ee`). In the cloud session the app started the server at about the time the plugin was enabled, before the session, and the hook that names `remote-devices`, the server through which a cloud session reaches the computer's servers (a name seen, not documented), with the tool `plugin_<plugin>_<server>__<tool>` reached it, while the hook that names `plugin:<plugin>:<server>` did not. In the local session a Claude Code process started it anew for each prompt, the plugin-named hook reached it, and the session recorded a non-blocking error on every prompt, which fits the `remote-devices` hook. Whether the other name errors in a cloud session was not seen. Anthropic's support articles say the same (read on 2026-10-31): a cloud session reaches "Local MCP servers, including plugins that bundle them" through the desktop app, which has to be open, and on Pro, Max and Ultra plans every new Cowork session runs in the cloud, where on this Team plan a setting chooses, which the article calls "Run new tasks in the cloud" and this Mac's Settings > Cowork shows as "Only on this computer".
+
+A plugin that carried both hooks would leave an error on every prompt in at least the local session, and a plugin with one would serve one kind of session. If one plugin carried both, it could start the daemon with the server and need no Desktop configuration, and typed commands could use the path Cowork uses (B33, a project or plugin command reaches UserPromptSubmit with the text as typed). Whether a hook can be limited to one kind of session is not known. Not known either: whether Cowork asks for a plugin's `userConfig`, and what a merged conversation does, which this Team plan cannot show while its "Chat and Cowork unified" setting is off. The probe also showed where command hooks run: in the local session on the Mac, where a cogmer plugin's `session-start.sh` ran too, and in the cloud session on Linux x86_64 with `CLAUDE_CODE_REMOTE` true, shown by the file that `relay.sh` wrote there (`78477ee`).
+
+**A person with Claude Desktop and neither Claude Code nor Codex cannot install cogmer for Cowork.** The README says cogmer "has to be installed on that computer first, through Claude Code or Codex", since that fetches and verifies the program, and that setup is a command in one of them (read on 2026-10-29). `cogmer cowork-setup` writes the Desktop entry and a zip whose files depend only on the entry name, the constant `cogmer`, and the version, so by `coworkPluginFiles` and `writeZip` in `cmd/cogmer/cowork_setup.go` it is the same bytes on every machine for a release (read on 2026-10-29). Why D-205 (Claude Cowork is a supported host through a bridge on the user's machine) says a renamed computer needs the setup again is not clear from that code. Cowork on Windows has not been shown to run (`4dfaa00`), and the item above says why Cowork testing waits.
+
+There are four ways to reach such a person, each with a cost. Requiring Claude Code or Codex costs no work and serves no Cowork-only user. A Cowork plugin built by `release.sh`, attached to the release and pinned in `checksums.txt` beside the binaries, could be named differently, such as `cogmer-cowork`, which ends the duplicate commands. It costs a command prefix that differs from Claude Code's (D-118, the plugin manifest name is the command namespace), a compatibility rule between the zip and the program, since one command no longer writes both, and a second route beside `self-cowork`. An MCP Bundle, a zip that Claude for macOS and Windows installs with one click and whose manifest takes a platform-specific binary (the `anthropics/mcpb` manifest and README, read on 2026-10-29), could carry the bridge with no Git, Claude Code or Codex. It costs a program that lives in the bundle's folder, not `~/.cogmer/bin`, which D-066 (the binary is fetched and verified, never shipped in the plugin) and D-215 (the installer and the daemon replace a program only with a newer version) do not cover, and nobody has shown that Cowork reaches a server installed that way. A setup program the user downloads would be a new Windows installer written in Go, and costs an unsigned executable that Windows warns about, since signing is deferred. A throwaway bundle with a stand-in server, installed on a Mac and called from a Cowork conversation, would answer the bundle question, and running `cowork-setup` on two machines with different names and comparing the zips would answer the one about the name.
+
+**A user in Chat mode captures and shares nothing, and the README does not say so.** The README's Cowork section describes Cowork alone. Anthropic's plugins article says hooks are grayed out in Chat, and one message in Chat mode reached no program on a Mac (`d306243`). A README sentence would name Chat mode and say nothing yet about a merged conversation, which the item above leaves unknown.
+
+**No behavior check records that a `Stop` hook with an empty reply ends the turn, and a stop reply that carried context restarted a turn eight times.** In a Cowork-mode conversation on a Mac, a probe's `Stop` hook returned the JSON form of `additionalContext`, and nine `Stop` calls followed in 25 seconds (`d306243`). The hooks reference caps consecutive continuations by stop hooks at eight and does not say that a reply's `additionalContext` continues a turn. A behavior check for an empty reply would need a probe turn, and no check should call `Stop` with context.
+
+**A Cowork session in no room sends every prompt and response to the daemon.** Its hooks
+are calls through the bridge (D-205, Cowork through a bridge on the user's machine), not
+`plugin/hooks-handlers/run.sh`, so the check that ends the hooks of a Claude Code or Codex
+session in no room never runs for it (read from `cmd/cogmer/cowork_setup.go`,
+`coworkHookFile`, on 2026-11-16). The fix would be the same check in the bridge, before it
+relays a call, which needs the bridge to read `bound-sessions/` under the state directory
+of the daemon it relays to.
+
+**Whether the ordinary cogmer plugin captures and injects in a Cowork session that runs on
+the user's computer, with no bridge, is not known.** Anthropic's page on plugin support lists
+hooks as loading in Cowork, and a local MCP server as loading "when the Cowork session runs on
+your computer" (https://claude.com/docs/plugins/platform-support.md, read on 2026-11-16). On
+2026-10-31 a local Cowork session on a Mac ran the cogmer plugin's `session-start.sh`
+(`78477ee`), and no turn has been run through `plugin/hooks-handlers/run.sh` there. If capture,
+injection and the room commands work, a Cowork user on their own computer needs no bridge, no
+Desktop configuration and no second plugin, which would replace D-205 (Claude Cowork is a
+supported host through a bridge on the user's machine) for that case.
+
+A run would install the marketplace plugin on a Mac whose Desktop configuration has no
+`cogmer` entry, create a room in a local Cowork session, and check that a colleague receives
+its turns and that the session receives the colleague's. It would also show which host the
+binary resolves there (D-203, a host is declared by its entry point and resolved per request).
+
+**Whether a merged Chat and Cowork conversation runs the plugin's hooks is not known.** Since
+Chat and Cowork merged, Cowork is available from any conversation and Claude decides what a
+task needs, and the merge became generally available for Team plans on 2026-11-12
+(https://claude.com/blog/cowork-is-now-claude, read on 2026-11-16). Anthropic's page on plugin
+support lists hooks as ignored in Chat and loaded in Cowork (read on 2026-11-16). A Cowork
+cloud session ran the command hooks on 2026-10-31 (`7adc75c`), before the merge reached this
+Team plan, whose "Chat and Cowork unified" setting was off. Capture has to be automatic for a
+host to be in reach, so a conversation whose turns before Cowork joins it are not captured is
+only partly shared. A run would turn the setting on, start a conversation with the cogmer
+plugin installed, and record which hooks fire before and after Claude first uses Cowork in it.
+
+## ChatGPT Work as a host
+
+A user of ChatGPT Work on their own computer shares a conversation with colleagues through the
+Codex plugin cogmer already has.
+
+**Whether cogmer's Codex plugin captures and injects in a ChatGPT Work thread is not known.**
+OpenAI's page on hooks says that "Local-only Work and Codex threads continue to support their
+existing hooks", that plain text a UserPromptSubmit hook writes "is added as extra developer
+context", that Stop carries `last_assistant_message`, and that a plugin's hooks are reviewed and
+trusted before they run. It also says that Work Cloud without local computer access does not
+run them (https://learn.chatgpt.com/docs/hooks, read on 2026-11-16). Those are the events
+cogmer's Codex hooks use (D-201, Claude Code and Codex are supported hosts).
+
+A run would install the plugin, trust its hooks in a local Work thread, and check the room
+commands, capture and injection with a colleague. It would also show whether a Work thread
+carries `CODEX_THREAD_ID` (B28, `CODEX_THREAD_ID` in a shell tool equals the hook session
+identifier) and whether a typed `$cogmer` command reaches the hook as Codex's does. If they
+work, a ChatGPT Work user is reached with no new design, and the README and §29 (the
+experience we want) would name ChatGPT Work as a way in.
 
 ## Cloud sessions in a room
 
 A user in a Claude Code cloud session, such as one started from the iPhone app, shares a
 conversation with colleagues without a daemon on their own computer being reachable.
 
-**A user's machines are separate identities to colleagues, and a cloud session has no identity of
-its own to sign with.** D-219 (a user is a master key that certifies machines through a shared
-key) decides the identity that fixes both, with D-220 (a removal names the last event of a machine
-that counts), D-221 (an event whose identity version the receiver lacks is withheld from the
-assistant until fetched), D-222 (a machine tells every machine it knows of each machine it adds),
-D-223 (the recovery phrase is typed only into the daemon's browser page), D-224 (a conflict
-between identity records goes to the higher level, then to a removal, then to the lowest hash),
-D-225 (a machine sends each removal and new shared key to every colleague it knows until each
-acknowledges), D-226 (a cloud session takes the highest valid snapshot of its user's colleagues
-and rooms from any source), D-227 (the daemon pushes a new snapshot to the user's repo when the
-user's list changes, once the user has opted in) and D-216 (a cloud session signs with a key of
-its own that the user's shared key vouches for). Nothing of it is built. D-044 (sync requests are
-signed), D-101 (peer connections are TLS pinned to a key this machine has recorded), D-141 (a
-machine's key is created once and never leaves the machine), D-143 (admission is proved by
-signing a fresh challenge) and D-152 (events are signed at origin) state the design, and the code
-still gives each machine an identity that colleagues verify, so they differ from the code until
-the build. Two changes wait for it:
+**The decisions that make the user the peer leave details undecided.** Each is needed by a
+slice of the second run, and none has a choice taken yet:
 
-- §6 gains the requirement that a user is a master key that certifies machines, with its
-  benefit to the user, in the same commit as the code (W-85).
-- D-216 and D-219 to D-227 become active.
+- Adding a machine or pairing on a machine with no browser, which the second run leaves out,
+  since every machine a user adds has had a browser and a cloud session needs no phrase
+  (D-223, the recovery phrase is typed only into the daemon's browser page).
+- How a user who has lost every machine reaches colleagues, since the user could reach each
+  colleague only by sending a new pairing string.
+- How a cloud session's hooks load.
+- Whether a colleague holding shares of the recovery phrase could recover a user who has lost
+  it, which no decision has examined.
 
-Not decided: what the room view shows for a user to choose a cutoff across rooms, how a user who
-has lost every machine reaches colleagues, since the user could reach each colleague only by
-sending a new pairing string, how a cloud session's hooks load, and whether a colleague holding
-shares of the recovery phrase could recover a user who has lost it, which no decision has
-examined.
+**Whether a Codex cloud task can be a cloud session is not known.** The cloud key, its session
+certificates and the fetch of the user's lists depend only on `COGMER_CLOUD_KEY` being set
+(`cmd/cogmer/cloud.go`, read on 2026-10-27), and so need nothing of a host. The WebSocket relay
+switch tests `CLAUDE_CODE_REMOTE`, the plugin reaches the cloud through claude.ai's marketplace
+sync, and the environment's variable is set in a Claude Code environment's settings, and each of
+those is a Claude Code fact. D-201 (Claude Code and Codex are supported hosts) covers Codex CLI and
+desktop sessions and not a cloud task, and nothing has shown whether a Codex cloud task loads the
+plugin's hooks, accepts an environment variable and reaches the relay. A run in one, as
+`docs/work/cloud-run.md` was run in a Claude Code environment, would answer it.
 
-**A user has no way to set up a cloud session's key, snapshot and repo, and three facts the setup
-depends on are unknown.** D-226 and D-227 need a cloud key, a first snapshot and a private repo
-added to the cloud environment. The setup would be one command that creates the repo with the
-`gh` command when it is installed and signed in, makes and certifies the cloud key, writes and
-pushes the first snapshot, and prints the value to paste into the environment. The unknown facts
-are where a cloud session places a repo added to it and whether the repo is on disk when the
-session-start hook runs, whether a cloud environment hides the value of an environment variable
-from other people who can edit the environment, and whether a cloud session can open a connection
-through the relay to a peer port of a user's machine and finish a TLS handshake there, which the
-live source in D-226 needs and no run has shown. A cloud session's clone of this repo was shallow,
-with 50 commits, on 2026-10-19, which limits the history check in D-226 to the commits a clone
-holds.
+**A daemon switches its relay connection to a WebSocket only when `CLAUDE_CODE_REMOTE` is `true`, so no network evidence moves it.** The relay's own protocol starts as an HTTPS request that is switched into a stream, and a proxy that passes ordinary requests but not that switch stops it. `relayAsWebSocketInCloud` in `cmd/cogmer/tailcat.go` sets Tailscale's `TS_DEBUG_DERP_WS_CLIENT` before any relay connection in that case only (D-217, a cloud session's daemon carries its relay connection as a WebSocket), and a cloud session was observed to need it on 2026-10-18 (`e415f1d`). A host that renames the variable, or a Mac or Linux daemon behind a proxy of the same kind, would not switch and would not reach the relay. A Windows daemon cannot switch at all, since Tailscale compiles the WebSocket client only for Linux and macOS (`derp/derphttp/websocket.go` in the Tailscale module that `go.mod` names, read on 2026-10-28), and a Windows daemon reached the relay with the relay's own protocol on 2026-10-29 (`0e0c629`).
+
+Tailscale built its WebSocket relay client for browsers, presumably because a browser cannot open the relay's switched connection: the commit "cmd/derper, derp/derphttp: add websocket support" of 2021-10-22 cites its issue "Run Tailscale in the browser", and the commit "derp/derphttp: don't link websockets other than on GOOS=js" of 2024-11-08 links the client only for browsers or the `ts_debug_websockets` tag, citing its issue about binary size (both in `tailscale/tailscale`, read on 2026-10-28). So the switch is an upstream debug setting made for another purpose. HTTP marks a protocol switch hop-by-hop, so an intermediary does not forward it unless built to (RFC 9110 section 7.8, read on 2026-10-28). Other networks that inspect TLS have been reported to break such connections: Tailscale's firewall page says FortiGate application control rules with certain configurations intercept a client's HTTPS connection to the control plane, so the client cannot connect and shows a certificate verification error, and a Fly.io user behind a TLS-inspecting network got "expected handshake response status code 101 but got 200" from a WebSocket dial on 2026-08-31, with the cause left open (read on 2026-10-28). Anthropic's cloud environments page says a session's outbound traffic passes through an HTTP/HTTPS proxy "for security and abuse prevention purposes", which blocks malicious requests and limits rates, and that an agent proxy adds a network secret to a request after it leaves the session's VM (read on 2026-10-28). That suggests the proxy reads each request, which would explain why it does not carry a protocol switch it has no rule for, and the page does not say so or mention switches.
+
+Five ways a proxy can break the switch are plausible, from general knowledge and not checked: it recognizes only some upgrade protocols and rejects `DERP`; it parses every message as HTTP and closes the connection on bytes that are not; it strips the hop-by-hop `Connection` and `Upgrade` headers; it accepts HTTP/2 from the client and speaks HTTP/1.1 upstream, where the HTTP/1.1 switch has no counterpart; or it buffers, or closes a connection that stays open. The cloud session's proxy is a forward proxy at a local address (`e415f1d:docs/work/cloud-network-probe-20261018T163431Z.txt`) and passed a WebSocket. That fits the first way best, rules out stripping the headers from every request, and fits the second only if the proxy handles WebSocket on purpose. Whether the HTTP/2 way applies is not known. The last would stop a WebSocket as well, so a fallback would then need keepalives. A probe from a cloud session that sends the relay host `Upgrade: websocket`, `Upgrade: DERP` and a made-up protocol name, logs each status line or timeout, and then holds an idle WebSocket open for several minutes would say which, and would extend `docs/work/cloud-network-probe.sh`.
+
+A fallback that is sticky and revisited would close the first two of those cases, and not the Windows one. After the relay's own protocol fails to connect within a timeout, the daemon sets the variable for the process and resets its cached relay clients (`tailcatDialer.Reset`), and it tries the relay's own protocol again after a while, so a switch made on false evidence ends. The variable stays the fast path for a cloud session. It costs one timeout in a restricted network, 10s being what the pings in `e415f1d` waited. It also costs a switch whenever a relay or a peer is down, which puts that daemon on a Tailscale setting with no stability promise until the retry, and a test needs a proxy that refuses the switch, which nobody has built. D-217 rejected a fallback that waited on every connection, and this one waits once. Nothing is planned until a network other than a cloud session is seen to break the switch, or the variable changes.
+
+**Two checks of a cloud session in a room with a paired machine are not shown.**
+
+`docs/work/cloud-run.md` is the run that shows a cloud session in a room with a paired machine,
+on the maintainer's machine and in a cloud session. The end of the next paragraph cites its results
+and names the two checks it has not shown.
 
 `docs/work/cloud-network-probe.sh` tests, from a cloud session, whether cogmer's transport
 opens a tunnel through the public relay and whether SSH over port 443 reaches GitHub. It writes
@@ -313,9 +578,13 @@ later run at the Full level reached a daemon on another machine through the rela
 WebSocket: both relay pings answered, in 817ms and 774ms, and path discovery found the route
 through relay region 1 in 132ms, with no change to that daemon (`e415f1d`). Without WebSocket
 mode the same pings got no answer in 10s, so the failure there is at the relay. The tunnel
-opened and dialed inside the session as a WebSocket, and timed out without it. No run has
-opened a TCP connection through the tunnel to another machine's peer port, or a TLS handshake
-on it.
+opened and dialed inside the session as a WebSocket, and timed out without it. A later run, on
+2026-10-24, opened a TCP connection through the tunnel to the maintainer's daemon in 113ms and
+completed a TLS handshake with it in 132ms, with the key its pairing string names, and the
+daemon refused the run's unrecorded client certificate (`1d2b505`). Part 2 of
+`docs/work/cloud-run.md` ran on 2026-10-25 and 2026-10-26 (`243df61`, `e85170d`), and the maintainer's
+test machine recorded its half (`634abd7`). How that machine's room page marks the cloud session's
+turns, and which of them it counts after the cloud key's removal, are not shown.
 
 A cloud session with 0.10.4 reached the relay, observed on 2026-10-18. The user's claude.ai copy of
 the plugin stayed at 0.10.3 after 0.10.4 reached `main`, until the user forced a sync in Manage
@@ -333,16 +602,6 @@ colleague, which no run has tried.
 ## Tidying the commands
 
 The plugin's commands sit in the layout Claude Code prefers, and each has a reason to exist.
-
-**cogmer's Codex skill is loaded into Claude Code sessions, and gives the model a route to the
-commands.** `plugin/skills/cogmer/SKILL.md` is written for Codex and only
-`.codex-plugin/plugin.json` declares it, but Claude Code loads a plugin's `skills/` directory by
-itself. On 2026-10-18 the model in a Claude Code cloud session followed it to `codex-cli.sh`,
-which refused for want of a Codex session, then ran `cli.sh` through its shell. D-119 (no slash
-command is reachable by the model) keeps the command files from the model, and the skill
-reaches the same commands. Moving the skill to a directory only the Codex manifest names would
-keep it out of Claude Code; whether Claude Code reads a skills field in its own manifest that
-could exclude it is unchecked.
 
 **Move `plugin/commands/*.md` to the `skills/<name>/SKILL.md` layout.** The
 documentation calls `commands/` legacy and says the two are loaded identically. D-119
@@ -397,11 +656,10 @@ read as the terminal.
 
 D-213 becomes active when a colleague on another machine sees a picture sent from each host that sends one.
 
-Three questions are left. The relay speed for large transfers has not been measured, and a fetch may take
+Two questions are left. The relay speed for large transfers has not been measured, and a fetch may take
 20 seconds plus one second for each 50 KB. Image files stay with a room's database, and nothing removes
 either today, so D-132 (a closed room's log is archived, which is not built) has to say what becomes of a
-closed room's images. And a 5 MB image can hold a very large picture, and no limit on its pixel size is
-checked before the browser decodes it.
+closed room's images.
 
 **A colleague's pasted image never reaches the model.** Context is injected as text in a hook's output,
 under a budget of 9,000 characters (D-170, injected context has a character budget for the whole block),
@@ -415,6 +673,10 @@ Two ways remain:
   file with its own tool. That puts a colleague's bytes where the model reads them, so this option needs a
   place the model is allowed to read, cleanup, and a decision on whether the model's permission prompt for
   a file outside the project is acceptable.
+
+**`TestTheViewShowsAHeldImageAndSaysWhenOneIsComing` failed once in a full run of the suite and passes when run alone.** On 2026-11-03 `go test ./...` failed in it for turns 3 and 4, which showed only `<p>x</p>` where they should have said that an image could not be read and that it is not a kind cogmer sends, while a second run of the suite passed and the test alone passed 30 runs in a row (`b6466a3`). The cause is not known. One lead is in the code: `orderBy` in `cmd/cogmer/store.go` sorts events by their timestamp as text, and its comment says the format is fixed, while the timestamps are written with `time.RFC3339Nano`, which drops trailing zeros, so an event whose fraction ends in zeros can sort after a later event that shares its leading digits. Whether that explains this failure has not been tried, and the failure showed missing notes, not turns in another order.
+
+**`TestADaemonBlockedByAnotherCogmerSaysSoAndNamesStop` failed once in a full run of the suite and passes when run alone.** On 2026-11-16 in a Claude Code cloud session, `go test ./...` on the tree committed as `584326b` failed in it after 0.02s, the next full run passed, and the test alone passed three runs in a row at about 7s each. The failure's message was not kept, since the run's output was filtered to the lines that name a test. One lead is in the code, and has not been tried: the test runs in parallel with others, and `freeAddr` in `cmd/cogmer/testhelpers_test.go` closes the listener it opened before returning the port, so another test can take that port before this test's daemon binds it. Running the suite several times with its full output kept would show where it fails, and a helper that hands a daemon a port it still holds, or a retry when the bind fails, would end the race if that is the cause.
 
 ## Exporting the shared transcript
 

@@ -46,9 +46,11 @@ var typedCommands = map[string][]commandStep{
 	"room-conflicts": {{"", "conflicts"}},
 	"peer-list":      {{"", "peers"}},
 	"peer-forget":    {{"", "forget"}},
+	"peer-rename":    {{"", "rename"}},
 	"peer-pair":      {{"", "pair"}},
 	"self-name":      {{"", "name"}},
 	"self-status":    {{"", "whoami"}},
+	"self-machines":  {{"", "machines"}},
 }
 
 // typedCommandsUnavailable are the commands that cannot run from the daemon, with what a

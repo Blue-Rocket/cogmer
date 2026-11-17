@@ -9,7 +9,7 @@ the nonce the finished side has revealed.
 **Support.**
 - Nothing is not ready between one call and the next, but something can stop being ready: the
   other side can complete between our commit and our reveal, and its cleanup discards its
-  session, so one side finished with two words while the other reported that its peer was not
+  session, so one side finished with two words while the other reported that the other side was not
   expecting a verification. `cmd/cogmer/verify.go`, `RunVerification`.
 - By the time the other side has finished it has sent its own reveal, so its nonce is in this
   session and the inbound check finds it. D-059 (either side completes a verification from

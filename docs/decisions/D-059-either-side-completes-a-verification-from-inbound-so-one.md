@@ -2,13 +2,13 @@
 
 **Date:** 2026-09-18 · **Status:** active · **Areas:** pairing
 
-**Decision.** A peer whose own session holds the other's revealed nonce has what
+**Decision.** A daemon whose own verification session holds the other's revealed nonce has what
 the two words need and stops driving. Only one side has to run the exchange, and both
 learn the words. The loop checks for an inbound completion first and then attempts a
 round outbound.
 
 **Support.**
-- A side that completes ends its session, so a peer that began a moment later finds
+- A side that completes ends its session, so a daemon that began a moment later finds
   nothing to answer and waits out the timeout, which happens whenever two people type a
   few seconds apart. `cmd/cogmer/verify.go`, `RunVerification`.
 - The inbound path reads only a nonce that arrived through `handleVerify`, which refuses

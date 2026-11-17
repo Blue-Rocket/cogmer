@@ -6,8 +6,8 @@
 conversion to and from the stored row.
 
 **Support.**
-- A column can be added to the store for local bookkeeping without telling any peer, and
-  a wire field cannot change without every peer agreeing, so one struct for both would
+- A column can be added to the store for local bookkeeping without telling any other machine,
+  and a wire field cannot change without every machine agreeing, so one struct for both would
   let a convenient column become protocol without anyone deciding it. `cmd/cogmer/protocol.go`.
 - A test checks that converting an event to the wire format and back drops nothing.
   `cmd/cogmer/protocol_test.go`, `TestWireRoundTripPreservesEverything`.

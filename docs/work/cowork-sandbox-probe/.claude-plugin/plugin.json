@@ -1,0 +1,5 @@
+{
+  "name": "cogmer-sandbox-probe",
+  "version": "0.1.0",
+  "description": "Throwaway probe: what a Cowork cloud sandbox lets a cogmer daemon and its hooks do."
+}

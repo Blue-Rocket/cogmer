@@ -98,7 +98,7 @@ func TestTheSettingCannotChangeForARoom(t *testing.T) {
 // the setting has rooms with no such column, and each must read back as injecting.
 func TestAMembershipDatabaseFromBeforeTheSettingKeepsInjecting(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setHome(t, home)
 	if err := os.MkdirAll(filepath.Join(home, ".cogmer"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +212,7 @@ func TestTheCommandsCreateAndJoinShowOnlyAndRefuseToChangeIt(t *testing.T) {
 	home := filepath.Join(dir, "home")
 	run := func(session string, args ...string) (string, int) {
 		cmd := exec.Command(bin, args...)
-		cmd.Env = append(os.Environ(), "COGMER_HOME="+home, "COGMER_TAILCAT=off", "COGMER_PREFLIGHT=off",
+		cmd.Env = append(os.Environ(), "COGMER_HOME="+home, "COGMER_TAILCAT=off", "COGMER_PREFLIGHT=off", "COGMER_IDENTITY_PAGE=off",
 			"COGMER_ADDR=127.0.0.1:1", "CLAUDE_CODE_SESSION_ID="+session)
 		out, err := cmd.CombinedOutput()
 		code := 0

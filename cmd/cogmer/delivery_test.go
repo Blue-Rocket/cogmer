@@ -15,7 +15,7 @@ import (
 
 func testStore(t *testing.T) *Store {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	setHome(t, t.TempDir())
 	s, err := OpenStore("test")
 	if err != nil {
 		t.Fatal(err)

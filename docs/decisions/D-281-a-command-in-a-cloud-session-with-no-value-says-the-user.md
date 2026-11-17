@@ -1,0 +1,13 @@
+# D-281 — A command in a cloud session with no value says the user must first set cogmer up on one of their own computers
+
+**Date:** 2026-11-02 · **Status:** active · **Areas:** commands, identity
+
+**Decision.** A command that needs the user identity, run where `CLAUDE_CODE_REMOTE` is `true` and the session has no identity and no cloud value in the variable or in a plugin file (D-279, a cloud session's daemon reads its cloud value from the plugin files it finds, as well as from the variable), does nothing and says that this session shares nothing until the user has cogmer on one of their own computers and adds a cloud environment from its machines page (D-246, a cloud environment is added from the machines page, which shows the one value to paste into it), and it points to the install section of `README.md`. It never opens the identity page and never mentions the recovery phrase, because a cloud session never takes it (D-223, the recovery phrase is typed only into the daemon's browser page). Where the command finds a value that reads, the command first asks the daemon to take the value and goes on with the identity the daemon writes. When the daemon has not taken the value, the command says that a daemon takes a value when the daemon starts and when such a command asks, and that the user should run the command again. Where it finds a value that does not read, it says so and says where it found the value.
+
+**Rejected.**
+- *The words for a machine with no identity, which send the user to the identity page.* The page is on the sandbox, which the user cannot reach, and it asks for a phrase that a cloud session never takes.
+- *Starting no daemon in a cloud session until a value exists, so that no command has anything to say.* The user then sees nothing, and cannot tell a session that shares nothing from one that works.
+
+**Limits.** The words cannot tell a session whose plugin has not synced yet from one with no plugin, since a plugin's files can arrive after a session's first command (D-279).
+
+**Revisit when** a user is found to run a command in a cloud session with no value and still not know what to do.

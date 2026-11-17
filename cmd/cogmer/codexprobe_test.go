@@ -2,9 +2,6 @@ package main
 
 import (
 	"errors"
-	"os"
-	"path/filepath"
-	"runtime"
 	"slices"
 	"testing"
 	"time"
@@ -17,16 +14,9 @@ import (
 
 func codexProbeHome(t *testing.T) {
 	t.Helper()
-	if runtime.GOOS == "windows" {
-		t.Skip("the stand-in for Codex is a shell script")
-	}
 	t.Setenv("COGMER_HOME", t.TempDir())
 	t.Setenv("COGMER_PREFLIGHT", "")
-	stand := filepath.Join(t.TempDir(), "codex")
-	if err := os.WriteFile(stand, []byte("#!/bin/sh\necho codex-cli 9.9.9\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("COGMER_CODEX_BIN", stand)
+	t.Setenv("COGMER_CODEX_BIN", standInProgram(t, t.TempDir(), "codex", "echo codex-cli 9.9.9", "echo codex-cli 9.9.9"))
 }
 
 func standInForTheProbe(t *testing.T, results []Result, err error) *int {

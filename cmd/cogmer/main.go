@@ -11,15 +11,18 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
+	"unicode"
 )
 
 // version is stamped at build time with -ldflags "-X main.version=...". It is how
@@ -40,6 +43,8 @@ func main() {
 		usage()
 		os.Exit(2)
 	}
+	guardRealHome(os.Args[1])
+	guardStateDirectory(os.Args[1])
 	switch os.Args[1] {
 	case "daemon":
 		runDaemon()
@@ -57,12 +62,16 @@ func main() {
 		runLog()
 	case "version":
 		fmt.Println(version)
+	case "notice":
+		runNotice()
 	case "stop":
 		runStop(os.Args[2:])
 	case "where":
 		runWhere()
 	case "whoami":
 		runWhoami()
+	case "machines":
+		runMachines()
 	case "name":
 		runName(os.Args[2:])
 	case "conflicts":
@@ -75,6 +84,8 @@ func main() {
 		runAllow(os.Args[2:])
 	case "forget":
 		runForget(os.Args[2:])
+	case "rename":
+		runRename(os.Args[2:])
 	case "verify":
 		runVerify(os.Args[2:])
 	case "rooms":
@@ -140,6 +151,7 @@ func usage() {
   cogmer version         Print the build version
   cogmer where           Print the address to watch the room at
   cogmer whoami          Show this peer's identity and room
+  cogmer machines        Open the page where your machines are added, renamed and recovered
   cogmer name [text]     Show or set the name other people see for you
   cogmer conflicts [room] Show quarantined events (sequence conflicts)
 
@@ -148,6 +160,7 @@ Peers — durable, above any room. Done once with each colleague:
   cogmer peers           List peers this machine knows
   cogmer verify <peer>   Re-run just the two-word check
   cogmer allow <id> [nm] Record a peer WITHOUT verifying (scripts, tests)
+  cogmer rename <peer> <name> Change what you call a peer
   cogmer forget <id>     Discard a peer entirely
 
 Rooms — per room, repeated as often as you like:
@@ -169,6 +182,7 @@ Environment:
   COGMER_ADDR        hooks and UI address (loopback only, default 127.0.0.1:4782)
   COGMER_PEER_ADDR   peer sync address (default 127.0.0.1:4783)
   COGMER_PREFLIGHT   set to "off" to skip behavior checks on new rooms
+  COGMER_IDENTITY_PAGE  set to "off" to run a command on a machine with no user identity (tests)
   COGMER_PEERS       comma-separated peer addresses to synchronize with
   COGMER_SYNC_MS     poll interval in milliseconds (default 1000)
   COGMER_MAX_EVENTS       turns per injected block (default 40)
@@ -438,6 +452,7 @@ func runDaemon() {
 	// A daemon that is running ends the user's stop, so the marker that says one stands
 	// is removed here, whoever started this daemon (D-208).
 	_ = os.Remove(stoppedMarker())
+	keepDaemonLogBounded(daemonLogPath(), daemonLogMax, daemonLogCheckEvery)
 	id, err := LoadIdentity()
 	if err != nil {
 		log.Fatalf("identity: %v", err)
@@ -449,6 +464,28 @@ func runDaemon() {
 
 	d := &Daemon{id: id, members: members}
 	defer d.closeStores()
+	// A cloud session's daemon speaks for its user with a session key the cloud key in
+	// its environment certifies (D-216, D-247). The variable is dropped from this
+	// process's environment once read, so that nothing the daemon starts inherits it.
+	if v, ok := os.LookupEnv(cloudKeyVar); ok {
+		_ = os.Unsetenv(cloudKeyVar)
+		d.startCloud(v)
+	} else if os.Getenv("CLAUDE_CODE_REMOTE") == "true" {
+		// No variable, so the value may be in a plugin the user uploaded, and is looked for
+		// again at each prompt of a session in a room and when a command asks (D-279).
+		d.pluginRoot = syncedPluginsRoot()
+		d.startCloudFromPlugins()
+	}
+	// The machine's own chain is kept with the user's records, so that its own state
+	// and the removals its events name include its own certificates, whatever wrote
+	// identity.json (D-219, a user is a master key that certifies machines through a
+	// shared key).
+	d.storeOwnChain()
+	// A room left uncarried by a machine that stopped while becoming its user's is
+	// carried now (D-243, a room from before user identities takes one guest list).
+	d.mu.Lock()
+	d.carryRooms()
+	d.mu.Unlock()
 
 	if !isLoopback(addr()) {
 		log.Fatalf("refusing to serve hooks on %s: the hook API publishes into the room "+
@@ -525,7 +562,7 @@ func runDaemon() {
 
 	rooms, _ := members.Rooms()
 	log.Printf("cogmer daemon  peer=%s (%s)  serving %d room(s)",
-		id.UserDisplayName, id.PeerName, len(rooms))
+		d.id.UserDisplayName, d.id.PeerName, len(rooms))
 	if len(rooms) > 0 {
 		for _, r := range rooms {
 			g, _ := members.Guests(r.RoomID)
@@ -549,13 +586,18 @@ func runDaemon() {
 
 	go d.RunSync(peerList(), syncInterval())
 	go d.RunImages(2 * time.Second)
+	go d.RunIdentity(5 * time.Second)
+	go d.RunSelfLists(10 * time.Second)
+	if d.cloud != nil {
+		d.ensureCloudLoop()
+	}
 	// One set of routes over both listeners. Every check a request passes is the
 	// same whichever carried it, which is the point of the listener interface
 	// rather than a happy accident.
 	routes := d.PeerRoutes()
 	if tcListener != nil {
 		go func() {
-			if err := http.Serve(tcListener, routes); err != nil && !errors.Is(err, net.ErrClosed) {
+			if err := peerServer(routes).Serve(tcListener); err != nil && !errors.Is(err, net.ErrClosed) {
 				log.Printf("tailcat server stopped: %v", err)
 			}
 		}()
@@ -580,7 +622,7 @@ func runDaemon() {
 		}
 	}()
 	go func() {
-		if err := http.Serve(peer, routes); err != nil && !stopping.Load() {
+		if err := peerServer(routes).Serve(peer); err != nil && !stopping.Load() {
 			log.Fatalf("peer server: %v", err)
 		}
 	}()
@@ -655,11 +697,18 @@ func runHook(kind string, host Host) {
 	payload["host"] = host.Name()
 	addEntrypoint(payload, os.Getenv)
 
+	// The first install that has finished is announced by the first hook that runs after it,
+	// whether or not the daemon answers (D-282).
+	notice := ""
+	if kind == "prompt" {
+		notice = noticeFor(host)
+	}
 	body, _ := json.Marshal(payload)
 	client := &http.Client{Timeout: 3 * time.Second}
 	resp, err := localPost(client, "http://"+addr()+endpoint, body)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "cogmer: daemon unreachable (%v); continuing without collaboration\n", err)
+		_, _ = os.Stdout.Write(promptHookOutput(host, notice, ""))
 		os.Exit(0)
 	}
 	defer resp.Body.Close()
@@ -668,14 +717,13 @@ func runHook(kind string, host Host) {
 		Context string `json:"context"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		_, _ = os.Stdout.Write(promptHookOutput(host, notice, ""))
 		os.Exit(0)
 	}
 	// What a prompt hook writes to stdout is appended to the pending turn's
 	// context, in the form the host reads (verified against Claude Code 2.1.273 and
 	// Codex 0.159.3).
-	if out.Context != "" {
-		_, _ = os.Stdout.Write(host.PromptHookOutput(out.Context))
-	}
+	_, _ = os.Stdout.Write(promptHookOutput(host, notice, out.Context))
 	os.Exit(0)
 }
 
@@ -781,27 +829,21 @@ func runSeed() {
 func runLog() {
 	store, _, room := openLocal()
 	defer store.Close()
+	m, err := OpenMembership()
+	if err != nil {
+		log.Fatalf("membership: %v", err)
+	}
+	defer m.Close()
 
 	evs, err := store.ListRoom(room.RoomID)
 	if err != nil {
 		log.Fatalf("log: %v", err)
 	}
-	fmt.Printf("ROOM %s -- %d events\n\n", strings.ToUpper(room.RoomName), len(evs))
-	for _, e := range evs {
-		speaker := e.UserDisplayName
-		if e.EventType == EventAssistantMessage {
-			speaker = "Assistant — " + e.UserDisplayName
-		}
-		ts := e.Timestamp
-		if t, err := time.Parse(time.RFC3339Nano, e.Timestamp); err == nil {
-			ts = t.Local().Format("15:04:05")
-		}
-		content := e.Content
-		if len(content) > 400 {
-			content = content[:400] + " …"
-		}
-		fmt.Printf("%-22s %s  [%s/%d]\n%s\n\n", speaker, ts, PeerName(e.PeerID), e.PeerSequence, content)
-	}
+	// Judged as the view judges them, from this machine's records (D-234, a machine not
+	// certified under the current shared key is suspended).
+	list, _ := m.CachedGuestList(room.RoomID)
+	judge := &standings{members: m, room: room.RoomID, list: list, states: map[string]*UserState{}}
+	fmt.Print(formatRoomLog(room, evs, judge.of, randomID()))
 }
 
 // runConflicts surfaces quarantined events. A conflict means a peer's sequence
@@ -829,7 +871,11 @@ func explainNameTaken(err error) {
 	fmt.Println("That is what an interception looks like after the fact, so check with them on")
 	fmt.Println("a call before recording it.")
 	fmt.Print(commandText("\nIf they really do have a new key, /cogmer:peer-forget the old one first.\n"))
-	fmt.Printf("That discards its admissions too, so you will invite them again deliberately.\n\n")
+	fmt.Println("Forgetting leaves every room's guest list as it is, so invite the new key to")
+	fmt.Println("their rooms on purpose; the old key stays on the lists it was on.")
+	fmt.Println("A colleague who made a user identity in cogmer does not come here: their machine")
+	fmt.Println("proves the new identity with the key you verified, and keeps the name you gave them.")
+	fmt.Println()
 }
 
 func resolvePeer(m *Membership, arg string) (string, error) {
@@ -864,6 +910,7 @@ func resolvePeer(m *Membership, arg string) (string, error) {
 }
 
 func withMembership(fn func(*Membership, *Identity)) {
+	askDaemonToTakeCloudValue()
 	id, err := LoadIdentity()
 	if err != nil {
 		log.Fatalf("identity: %v", err)
@@ -911,6 +958,11 @@ func runPeers() {
 			}
 			fmt.Print(formatPeer(p, reported[p.PeerID]))
 		}
+		// A key that proved it belongs to a second user carried nothing to them, and
+		// only a pairing says who that user is (D-242).
+		for _, c := range m.LinkConflicts() {
+			fmt.Printf("\n%s\n", c.Error())
+		}
 		// Named, not counted. The usual room has two people in it, so a tally is
 		// always one and says nothing; what a person can act on is which
 		// colleague it is and what to type (D-188).
@@ -930,10 +982,13 @@ func runAllow(args []string) {
 	if len(args) > 1 {
 		name = args[1]
 	}
-	withMembership(func(m *Membership, _ *Identity) {
+	withMembership(func(m *Membership, id *Identity) {
 		if err := m.Allow(args[0], name); err != nil {
 			explainNameTaken(err)
 			log.Fatalf("allow: %v", err)
+		}
+		if err := m.RecordColleague(id, args[0]); err != nil {
+			fmt.Printf("recorded here, but your other machines were not told: %v\n", err)
 		}
 		fmt.Printf("recorded %s as %s — UNVERIFIED.\n", PeerName(args[0]), firstNonEmpty(name, PeerName(args[0])))
 		fmt.Println("nothing yet says this key is theirs rather than someone who intercepted it.")
@@ -942,11 +997,64 @@ func runAllow(args []string) {
 	})
 }
 
+func runRename(args []string) {
+	if len(args) < 2 {
+		log.Fatal(commandText("usage: /cogmer:peer-rename <peer> <new name>"))
+	}
+	withMembership(func(m *Membership, id *Identity) {
+		text, err := renamePeer(m, id, args[0], strings.Join(args[1:], " "))
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(text)
+	})
+}
+
+// renamePeer changes the name this user gives a colleague and nothing else: whether
+// they are verified, and every room, stay as they were (D-257, a user renames a
+// colleague with a command that changes the label and nothing else). The change goes
+// to the user's other machines as a label does (D-228). It returns what to tell the
+// user.
+func renamePeer(m *Membership, id *Identity, who, name string) (string, error) {
+	pid, err := resolvePeer(m, who)
+	if err != nil {
+		return "", err
+	}
+	pid = m.colleagueOf(pid)
+	if !m.Knows(pid) {
+		return "", fmt.Errorf(commandText("no peer known as %q; run /cogmer:peer-list"), who)
+	}
+	newName := sanitizeName(name)
+	if newName == "" {
+		return "", errors.New(commandText("usage: /cogmer:peer-rename <peer> <new name>"))
+	}
+	old := firstNonEmpty(m.Label(pid), PeerName(pid))
+	if newName == old {
+		return fmt.Sprintf("%s is already called %s.", PeerName(pid), newName), nil
+	}
+	if err := m.Allow(pid, newName); err != nil {
+		var taken *NameTakenError
+		if errors.As(err, &taken) {
+			return "", fmt.Errorf(commandText("you already call a different peer %q (%s), so %s is unchanged. Pick another name, or /cogmer:peer-forget the other one first."),
+				taken.Name, PeerName(taken.Existing), old)
+		}
+		return "", fmt.Errorf("rename: %w", err)
+	}
+	out := fmt.Sprintf("renamed %s to %s.", old, newName)
+	if newName != strings.TrimSpace(name) {
+		out += fmt.Sprintf(" (The name was shortened to what a label can hold: %q.)", newName)
+	}
+	if err := m.RecordColleague(id, pid); err != nil {
+		out += fmt.Sprintf("\nRenamed here, but your other machines were not told: %v", err)
+	}
+	return out, nil
+}
+
 func runForget(args []string) {
 	if len(args) == 0 {
 		log.Fatal(commandText("usage: /cogmer:peer-forget <peer>"))
 	}
-	withMembership(func(m *Membership, _ *Identity) {
+	withMembership(func(m *Membership, id *Identity) {
 		pid, err := resolvePeer(m, args[0])
 		if err != nil {
 			log.Fatal(err)
@@ -958,18 +1066,27 @@ func runForget(args []string) {
 		if err := m.Forget(pid); err != nil {
 			log.Fatalf("forget: %v", err)
 		}
+		// Forgetting on one machine forgets on every machine of the user (D-228;
+		// D-073, forgetting a peer changes no room's guest list).
+		if err := m.RecordColleague(id, pid); err != nil {
+			fmt.Printf("forgot here, but your other machines were not told: %v\n", err)
+		}
 		fmt.Printf("forgot %s. A later meeting will be a first meeting.\n", who)
 	})
 }
 
 func runRooms() {
-	withMembership(func(m *Membership, _ *Identity) {
+	withMembership(func(m *Membership, id *Identity) {
 		cur, hasCur := m.RoomForSession(sessionID())
 		rooms, err := m.Rooms()
 		if err != nil {
 			log.Fatalf("rooms: %v", err)
 		}
-		if len(rooms) == 0 {
+		var toJoin []listedRoom
+		if id.HasUser() {
+			toJoin = m.RoomsToJoin(id.User)
+		}
+		if len(rooms) == 0 && len(toJoin) == 0 {
 			if len(m.Offers()) == 0 {
 				fmt.Println(commandText("no rooms. /cogmer:room-create in an agent session makes one."))
 				return
@@ -999,17 +1116,35 @@ func runRooms() {
 					o.RoomName, firstNonEmpty(m.Label(o.Host), PeerName(o.Host)), o.RoomName)
 			}
 		}
+		// Rooms of yours that a session on another of your machines joined, which a
+		// session here joins by name.
+		if len(toJoin) > 0 {
+			fmt.Println("\non your room list, not joined on this machine:")
+			for _, r := range toJoin {
+				fmt.Printf(commandText("  %-24s /cogmer:room-join %s\n"), r.Name, r.Name)
+			}
+		}
 	})
 }
 
 func runCreateRoom(args []string) {
 	rest, showOnly := takeFlag(args, "--show-only")
+	rest, another := takeFlag(rest, "--another")
 	if len(rest) > 0 {
-		log.Fatalf("create takes no argument but --show-only, and was given %q", strings.Join(rest, " "))
+		log.Fatalf("create takes no argument but --show-only and --another, and was given %q", strings.Join(rest, " "))
 	}
 	refuseWhenTheHostIsUnclear()
 	withMembership(func(m *Membership, id *Identity) {
-		r, err := m.CreateRoom(id.PeerID, showOnly)
+		if needsUserIdentity(id) {
+			return
+		}
+		if !another {
+			if note := createRefusal(m, sessionID()); note != "" {
+				fmt.Print(note)
+				os.Exit(1)
+			}
+		}
+		r, err := createRoom(m, id, showOnly)
 		if err != nil {
 			log.Fatalf("create: %v", err)
 		}
@@ -1022,6 +1157,63 @@ func runCreateRoom(args []string) {
 		fmt.Println("\ninvite someone you have paired with:")
 		fmt.Println(commandText("  /cogmer:room-invite <name>"))
 	})
+}
+
+// createRefusal says why a session that already has a room should not make another, and
+// is empty for a session with none. A second room is a new room each time, and the
+// session cannot be put in it, so a repeated command is refused unless the user asks for
+// another with --another.
+func createRefusal(m *Membership, sid string) string {
+	if sid == "" {
+		return ""
+	}
+	room, left, bound := m.SessionBinding(sid)
+	if !bound {
+		return ""
+	}
+	if left {
+		return fmt.Sprintf("This session left %s and cannot be put in a different room, so a room made now would have no one of yours in it.\n"+
+			"Nothing was created. To make another room from here anyway, run the command again with --another.\n", room.RoomName)
+	}
+	return fmt.Sprintf("This session is already in %s. Nothing was created.\n"+
+		"A session cannot be moved to a second room, so a room made now could be entered only from another session. To make another room anyway, run the command again with --another.\n", room.RoomName)
+}
+
+// createRoom makes a room here. A machine that speaks for a user has the daemon found
+// it, since its first event is the user's invitation of themselves and every write to
+// a room's database is the daemon's (D-240, a room's identifier is the hash of its
+// creator and a random value). A machine with no user identity records the room and
+// its creator in room_guests, as it always has.
+func createRoom(m *Membership, id *Identity, showOnly bool) (Room, error) {
+	if !id.HasUser() {
+		r, err := m.CreateRoom(id.Peer(), showOnly)
+		if err != nil {
+			return Room{}, err
+		}
+		return r, m.RecordRoomMachine(r.RoomID, id.PeerID, id.Peer())
+	}
+	var res guestChangeResponse
+	if err := postLocal("/room/guests", guestChangeRequest{Op: "found", ShowOnly: showOnly}, &res); err != nil {
+		return Room{}, fmt.Errorf("the daemon did not answer, so no room was created: %w", err)
+	}
+	if res.Error != "" || res.Room == nil {
+		return Room{}, errors.New(firstNonEmpty(res.Error, "the daemon created no room"))
+	}
+	return *res.Room, nil
+}
+
+// changeGuestList asks the daemon to write an invitation or a revocation into a room
+// whose guest list is kept as events (D-235, a room's one guest list, changed by any
+// guest through events in the room).
+func changeGuestList(op, roomID, user string) error {
+	var res guestChangeResponse
+	if err := postLocal("/room/guests", guestChangeRequest{Op: op, RoomID: roomID, User: user}, &res); err != nil {
+		return fmt.Errorf("the daemon did not answer, so nothing was changed: %w", err)
+	}
+	if res.Error != "" {
+		return errors.New(res.Error)
+	}
+	return nil
 }
 
 // refuseWhenTheHostIsUnclear stops a command that is about to write a room, a peer
@@ -1073,6 +1265,9 @@ func runJoin(args []string) {
 	}
 	refuseWhenTheHostIsUnclear()
 	withMembership(func(m *Membership, id *Identity) {
+		if needsUserIdentity(id) {
+			return
+		}
 		name, roomID, endpoint, host, full := parseInvitation(args[0])
 		// A name on its own may be an offer already delivered over the channel
 		// (D-105), in which case the four facts an invitation line carries are
@@ -1121,6 +1316,21 @@ func runJoin(args []string) {
 				if err := m.Invite(roomID, host); err != nil {
 					log.Fatalf("join: %v", err)
 				}
+				// The inviting machine has joined the room, and is where this machine
+				// first asks for it. Its key is not in the invitation, so it is recorded
+				// under the identifier its address was recorded under, until its own
+				// sync request names the machine (D-103, a room's sync targets are the
+				// machines from which a session has joined it).
+				if err := m.RecordRoomMachine(roomID, host, host); err != nil {
+					log.Fatalf("join: %v", err)
+				}
+			}
+		}
+		// A room on the user's room list, created or joined from another of the user's
+		// machines or offered to the user there, is joined here by its name (D-228).
+		if !full {
+			if _, err := joinFromList(m, id, name, showOnlyFlag); err != nil {
+				log.Fatalf("join: %v", err)
 			}
 		}
 		r, err := m.FindRoom(name)
@@ -1134,7 +1344,7 @@ func runJoin(args []string) {
 				return
 			}
 			log.Fatalf("no room named %q. Ask its host for an invitation; yours to give them is:\n  %s",
-				name, id.PeerID)
+				name, id.Peer())
 		}
 		if err != nil {
 			log.Fatal(err)
@@ -1151,6 +1361,15 @@ func runJoin(args []string) {
 		// in another room cannot be moved (§12a), and printing "joined" and then
 		// refusing reads as a half-completed join rather than a refused one.
 		bindInvokingSession(m, r)
+		// A session here has joined the room, so this machine is one of its machines.
+		if err := m.RecordRoomMachine(r.RoomID, id.PeerID, id.Peer()); err != nil {
+			log.Fatalf("join: %v", err)
+		}
+		// The room and this machine's joining it go on the user's room list, so the
+		// user's other machines can join it by name and sync it with this one (D-228).
+		if err := m.RecordRoomOnList(id, r.RoomID, r.RoomName, withMachine(id.PeerID)); err != nil {
+			fmt.Printf("joined here, but your other machines were not told: %v\n", err)
+		}
 		fmt.Printf("joined %s. %s\n", r.RoomName, watchLine(r.RoomName))
 		if r.ShowOnly {
 			fmt.Print(showOnlyNote(r))
@@ -1187,11 +1406,18 @@ func runLeave() {
 		fmt.Println("there is nothing at a terminal to leave.")
 		return
 	}
-	withMembership(func(m *Membership, _ *Identity) {
+	withMembership(func(m *Membership, id *Identity) {
 		room, err := m.LeaveSession(sid)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			return
+		}
+		// With no session of this machine left in the room, the user's room list no
+		// longer names this machine as one that joined it (D-228).
+		if m.SessionsInRoom(room.RoomID) == 0 {
+			if err := m.RecordRoomOnList(id, room.RoomID, room.RoomName, withoutMachine(id.PeerID)); err != nil {
+				fmt.Printf("left here, but your other machines were not told: %v\n", err)
+			}
 		}
 		fmt.Printf("this session has left %s. It stops capturing and stops receiving.\n", room.RoomName)
 		fmt.Println("Nothing is hidden or undone: the room's history is unchanged, still readable")
@@ -1209,12 +1435,20 @@ func runGuests() {
 		if err != nil {
 			log.Fatalf("guests: %v", err)
 		}
-		reach, self, up := fetchPeers()
+		reach, self, up, refusing, fromBefore := fetchPeers(r.RoomID)
 		var rows []guestRow
 		for _, p := range g {
-			rows = append(rows, guestRow{Name: firstNonEmpty(m.Label(p), PeerName(p)), ID: p, Self: p == id.PeerID})
+			rows = append(rows, guestRow{Name: firstNonEmpty(m.Label(p), PeerName(p)), ID: p, Self: p == id.Peer()})
+		}
+		// A user removed from the room is no longer on its list, and is told so here,
+		// by whom and from which turns on (D-241).
+		removal, removed := localRemoval(m, id, r)
+		if removed && !slices.Contains(g, id.Peer()) {
+			rows = append([]guestRow{{Name: "you", ID: id.Peer(), Self: true}}, rows...)
 		}
 		renderGuests(os.Stdout, r.RoomName, rows, reach, self, up)
+		removal.FromBeforeUsers = fromBefore
+		renderRemoval(os.Stdout, removal, removed, refusing)
 		if line := coworkLine(m.SessionIDsInRoom(r.RoomID), fetchHostCalls(), up); line != "" {
 			fmt.Println()
 			fmt.Println(line)
@@ -1263,27 +1497,68 @@ func fetchHostCalls() map[string]string {
 	return body.HostCalls
 }
 
-// fetchPeers asks the running daemon whom it can reach. The answer lives in the
-// daemon, which is the process that tries, so a command that is a separate process
-// has to ask it. The second result is false when no daemon answered.
-func fetchPeers() ([]uiPeer, *uiSelf, bool) {
+// localRemoval reads this machine's record of its user's removal from a room, which is
+// in the room's own events, so the room status says it whether or not a daemon runs.
+func localRemoval(m *Membership, id *Identity, r Room) (removalSummary, bool) {
+	d := &Daemon{id: id, members: m}
+	defer d.closeStores()
+	return d.removalFrom(r.RoomID)
+}
+
+// renderRemoval says that the user was removed from the room, by whom and from which
+// of their turns on, and that their sessions keep their turns; or, when this machine
+// holds no revocation and the room's guests refuse it, that they are refusing it and
+// what that usually means, and no more (D-241).
+func renderRemoval(w io.Writer, s removalSummary, removed, refusing bool) {
+	switch {
+	case removed:
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "YOU WERE REMOVED FROM THIS ROOM. "+s.sentence())
+		fmt.Fprintln(w, "The room up to then stays readable here. Your sessions in it keep recording your turns on this")
+		fmt.Fprintln(w, "machine, and they reach the room if a guest invites you back.")
+		if s.Resuming {
+			fmt.Fprintln(w, "A guest has offered the room to you again, so it is coming back once their invitation arrives.")
+		}
+	case refusing && s.FromBeforeUsers:
+		// A room made before user identities is refused by a guest's machine that does
+		// not count this user yet, which is the ordinary state while its guests upgrade,
+		// and not a removal (D-242; D-243).
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "The room's guests are refusing this machine. The room was made before user identities, and a")
+		fmt.Fprintln(w, "guest's machine refuses yours until it counts you as a guest: once it has heard from this machine")
+		fmt.Fprintln(w, "since you made your identity, and a guest whose earlier list admitted you has upgraded and made theirs.")
+	case refusing:
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "The room's guests are refusing this machine, which usually means you were removed from the room.")
+	}
+}
+
+// fetchPeers asks the running daemon whom it can reach for one room: its colleagues,
+// one line each, the user's own machines that joined it, one line each, and whether
+// its guests are refusing this machine (D-194; D-241), and whether the room was made
+// before user identities, which such a refusal usually means (D-243). The answer lives in the daemon,
+// which is the process that tries, so a command that is a separate process has to ask
+// it. The third result is false when no daemon answered.
+func fetchPeers(roomID string) (peers []uiPeer, self *uiSelf, up, refusing, fromBeforeUsers bool) {
 	c := &http.Client{Timeout: 2 * time.Second}
-	resp, err := c.Get("http://" + addr() + "/peers")
+	resp, err := c.Get("http://" + addr() + "/peers?room=" + url.QueryEscape(roomID))
 	if err != nil {
-		return nil, nil, false
+		return nil, nil, false, false, false
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, nil, false
+		return nil, nil, false, false, false
 	}
 	var body struct {
-		Peers []uiPeer `json:"peers"`
-		Self  *uiSelf  `json:"self"`
+		Peers      []uiPeer `json:"peers"`
+		Self       *uiSelf  `json:"self"`
+		Refusing   bool     `json:"refusing"`
+		FromBefore bool     `json:"fromBeforeUsers"`
 	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&body); err != nil {
-		return nil, nil, false
+		return nil, nil, false, false, false
 	}
-	return body.Peers, body.Self, true
+	return body.Peers, body.Self, true, body.Refusing, body.FromBefore
 }
 
 type guestRow struct {
@@ -1317,6 +1592,13 @@ func renderGuests(w io.Writer, room string, rows []guestRow, reach []uiPeer, sel
 		}
 		fmt.Fprintf(w, "  %-22s %s%s\n", g.Name, g.ID[:32]+"…", mine)
 		if g.Self {
+			// The user's own machines that joined the room, one by one, since the user
+			// acts on each (D-194).
+			for _, p := range reach {
+				if p.Own {
+					fmt.Fprintf(w, "    your machine %s: %s\n", p.Name, ownReachLine(p, daemonUp))
+				}
+			}
 			continue
 		}
 		line := reachLine(byID[g.ID], daemonUp)
@@ -1331,6 +1613,14 @@ func renderGuests(w io.Writer, room string, rows []guestRow, reach []uiPeer, sel
 		fmt.Fprintln(w, commandText("do not arrive here, and the room looks quiet. They can run /cogmer:self-status to see"))
 		fmt.Fprintln(w, "whether this machine can be reached from theirs, and whether their daemon is running.")
 	}
+}
+
+// ownReachLine says whether this machine can reach one of the user's own machines.
+func ownReachLine(p uiPeer, daemonUp bool) string {
+	if daemonUp && p.NoAddress {
+		return "no address is recorded for it here, so nothing here tries to reach it"
+	}
+	return reachLine(&p, daemonUp)
 }
 
 // selfFailingFor says for how long this daemon has been unreachable, in a few words.
@@ -1401,7 +1691,11 @@ func runInvite(args []string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := m.Invite(r.RoomID, pid); err != nil {
+		if m.EventListed(r.RoomID) {
+			if err := changeGuestList("invite", r.RoomID, pid); err != nil {
+				log.Fatalf("invite: %v", err)
+			}
+		} else if err := m.Invite(r.RoomID, pid); err != nil {
 			log.Fatalf("invite: %v", err)
 		}
 		// The label, not the derived name. Switching between the two inside one
@@ -1432,7 +1726,7 @@ func runInvite(args []string) {
 		}
 		// The fallback carries the same four facts by hand. The address in it is
 		// the HOST's, so it is unaffected by whatever made the guest unreachable.
-		fmt.Printf(commandText("  /cogmer:room-join %s\n"), invitation(r, AdvertisedEndpoint(), self.PeerID))
+		fmt.Printf(commandText("  /cogmer:room-join %s\n"), invitation(r, AdvertisedEndpoint(), self.Peer()))
 	})
 }
 
@@ -1446,7 +1740,11 @@ func runRevoke(args []string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := m.Revoke(r.RoomID, pid); err != nil {
+		if m.EventListed(r.RoomID) {
+			if err := changeGuestList("revoke", r.RoomID, pid); err != nil {
+				log.Fatalf("revoke: %v", err)
+			}
+		} else if err := m.Revoke(r.RoomID, pid); err != nil {
 			log.Fatalf("revoke: %v", err)
 		}
 		fmt.Printf("%s may no longer enter %s. What they already hold remains theirs.\n",
@@ -1519,6 +1817,7 @@ func runConflicts(args []string) {
 func runWhoami() {
 	// Deliberately not openLocal: who you are is answerable in no room at all,
 	// and a command that reports your identity must not fail for want of one.
+	askDaemonToTakeCloudValue()
 	id, err := LoadIdentity()
 	if err != nil {
 		log.Fatalf("identity: %v", err)
@@ -1542,7 +1841,16 @@ func runWhoami() {
 		// said twice.
 		fmt.Printf("\n%s\n", nameLine(id))
 	}
-	printPairingInvitation(id)
+	// A first pairing string needs the user identity, since the string names the
+	// user (D-230, a user identity is made in the daemon's page the first time the
+	// user needs one).
+	if id.HasUser() || userIdentityGateOff() {
+		printPairingInvitation(id)
+	} else {
+		fmt.Println()
+		writeIdentityNeeded(os.Stdout)
+	}
+	writeOwnMachines(os.Stdout, m, id)
 
 	running, answering := daemonVersionAt(addr())
 	fmt.Printf("\n%s", versionReport(pluginVersion(), version, running, answering))
@@ -1685,6 +1993,8 @@ func sanitizeName(s string) string {
 			continue // would break the format, or is not printable
 		case r == ' ' || r == '\t':
 			space = true
+		case !unicode.IsPrint(r):
+			continue // a line or paragraph separator, a direction override, or invisible
 		default:
 			if space && b.Len() > 0 {
 				b.WriteRune(' ')
@@ -1742,6 +2052,13 @@ func runPair(args []string) {
 		return
 	}
 	peerID, endpoint, theirName := parsePairing(args[0])
+
+	// Pairing is between users, so it needs this user's identity first (D-230).
+	var gated bool
+	withMembership(func(_ *Membership, id *Identity) { gated = needsUserIdentity(id) })
+	if gated {
+		return
+	}
 
 	// A name rather than a pairing string: somebody finishing what they started.
 	// Pairing is the act people recognize, and verifying is our word for a step
@@ -2179,7 +2496,7 @@ func reportDaemonBlocked(what, address string, cause error) {
 // recordDaemonState mirrors the install-state format -- state, when, detail -- so
 // the shell side has one shape to read rather than two.
 func recordDaemonState(state, detail string) {
-	_ = os.MkdirAll(homeDir(), 0o700)
+	_ = ensureStateDir()
 	line := fmt.Sprintf("%s\t%d\t%s\n", state, time.Now().Unix(), strings.ReplaceAll(detail, "\t", " "))
 	_ = os.WriteFile(daemonStateFile(), []byte(line), 0o600)
 }
@@ -2249,7 +2566,7 @@ func writePairingInvitation(w io.Writer, id *Identity, endpoint string) {
 		return
 	}
 	fmt.Fprintf(w, "\nSend your colleague this — any channel will do, it is not a secret:\n\n  %s\n",
-		pairingString(id.PeerID, endpoint, chosenName(id)))
+		pairingString(id.Peer(), endpoint, chosenName(id)))
 	if note != "" {
 		fmt.Fprintf(w, "\n%s\n", note)
 	}
@@ -2360,15 +2677,15 @@ func checkReachable(endpoint string) (ok bool, why, note string) {
 	return true, "", ""
 }
 
-// daemonBlockedReason is what the daemon wrote when it could not bind its address,
-// if it did (D-177).
+// daemonBlockedReason is what the daemon wrote when it could not start, whether it
+// could not bind its address (D-177) or could not bring the data to its version.
 func daemonBlockedReason() (string, bool) {
 	raw, err := os.ReadFile(daemonStateFile())
 	if err != nil {
 		return "", false
 	}
 	f := strings.SplitN(strings.TrimSpace(string(raw)), "\t", 3)
-	if len(f) == 3 && f[0] == "blocked" {
+	if len(f) == 3 && (f[0] == "blocked" || f[0] == upgradeFailedState) {
 		return f[2], true
 	}
 	return "", false

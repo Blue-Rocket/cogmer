@@ -3,8 +3,8 @@
 **Date:** 2026-09-18 · **Status:** active · **Areas:** sync
 
 **Decision.** A build declares the newest wire version it speaks, `wireVersion`, and the
-oldest it reads, `minWireVersion`, and accepts any version between. A peer outside the
-range is reported with which side is older and what to do about it, and a peer that sends
+oldest it reads, `minWireVersion`, and accepts any version between. A machine outside the
+range is reported with which side is older and what to do about it, and a machine that sends
 no version is read as speaking version 1.
 
 **Support.**
@@ -12,8 +12,8 @@ no version is read as speaking version 1.
   whoever upgrades last, and the failure names a version and not what to do.
   `cmd/cogmer/protocol.go`, `minWireVersion`.
 - Accepting events of an unknown shape silently is how a field comes to mean two things,
-  so a peer outside the range is reported and its events are not read. `cmd/cogmer/sync.go`.
-- A peer that predates the field spoke version 1. `cmd/cogmer/protocol.go`, `speaks`.
+  so a machine outside the range is reported and its events are not read. `cmd/cogmer/sync.go`.
+- A machine whose build predates the field spoke version 1. `cmd/cogmer/protocol.go`, `speaks`.
 - A version on the wire is what lets the far end refuse a field it does not understand,
   and the wire format is separate from the stored row so that a column added for local
   bookkeeping cannot become protocol. D-155 (the wire format is defined separately from

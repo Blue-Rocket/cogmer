@@ -1,0 +1,53 @@
+{
+  "description": "Throwaway probe: what a person sees of a hook's systemMessage, and which hook forms run.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/probe.sh\" bash SessionStart"
+          },
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "Add-Content -Path cogmer-first-run-probe.log -Value 'powershell SessionStart ran'; Write-Output '{\"systemMessage\":\"SYS-FRP-powershell-SessionStart\",\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"CTX-FRP-powershell-SessionStart\"}}'"
+          },
+          {
+            "type": "command",
+            "command": "powershell",
+            "args": [
+              "-NoProfile",
+              "-Command",
+              "Add-Content -Path cogmer-first-run-probe.log -Value 'exec SessionStart ran'; Write-Output '{\"systemMessage\":\"SYS-FRP-exec-SessionStart\",\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"CTX-FRP-exec-SessionStart\"}}'"
+            ]
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/probe.sh\" bash UserPromptSubmit"
+          },
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "Add-Content -Path cogmer-first-run-probe.log -Value 'powershell UserPromptSubmit ran'; Write-Output '{\"systemMessage\":\"SYS-FRP-powershell-UserPromptSubmit\",\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"CTX-FRP-powershell-UserPromptSubmit\"}}'"
+          },
+          {
+            "type": "command",
+            "command": "powershell",
+            "args": [
+              "-NoProfile",
+              "-Command",
+              "Add-Content -Path cogmer-first-run-probe.log -Value 'exec UserPromptSubmit ran'; Write-Output '{\"systemMessage\":\"SYS-FRP-exec-UserPromptSubmit\",\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"CTX-FRP-exec-UserPromptSubmit\"}}'"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

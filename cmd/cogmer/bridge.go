@@ -122,6 +122,10 @@ type bridge struct {
 	handled   map[string]bool
 
 	mu sync.Mutex // serializes writes to out
+
+	// refusal, when set, is the bridge's answer to a command the user typed, and every
+	// other call is answered with nothing and relayed nowhere.
+	refusal string
 }
 
 func runBridge() {
@@ -135,6 +139,32 @@ func runBridge() {
 	}
 	go b.startAtLaunch()
 	b.serve()
+}
+
+// runRefusingBridge is the bridge on data newer than this program (D-244, a program
+// that finds a newer data version touches nothing). It starts no daemon, relays
+// nothing, and answers a command the user typed with refusal, so the host is answered
+// as it would be without cogmer.
+func runRefusingBridge(refusal string) {
+	b := &bridge{
+		in: os.Stdin, out: os.Stdout,
+		post:     postToDaemon,
+		deadline: bridgeDeadline, grace: bridgeGrace,
+		exit:    os.Exit,
+		refusal: refusal,
+	}
+	b.serve()
+}
+
+// refuse is the reply of a bridge that relays nothing: the refusal for a command the
+// user typed, which the model relays, and nothing for any other call.
+func (b *bridge) refuse(tool string, args map[string]any) string {
+	cmd, typed := isTypedCommand(args)
+	host, ok := hostByName(bridgeHost)
+	if tool != "prompt" || !typed || !ok {
+		return ""
+	}
+	return string(host.PromptHookOutput("## Output of " + typedCommandName(host, cmd.name) + "\n\n" + b.refusal))
 }
 
 // restartWait is how long a restart waits for the daemon to answer. COGMER_RESTART_WAIT
@@ -291,7 +321,9 @@ func (b *bridge) call(m bridgeMessage) {
 	}
 	deadline := b.deadlineFor(p.Name, p.Arguments)
 	work := func() string { return b.relay(p.Name, endpoint.path, endpoint.fields, p.Arguments, deadline) }
-	if local, ok := b.localCommand(p.Name, p.Arguments); ok {
+	if b.refusal != "" {
+		work = func() string { return b.refuse(p.Name, p.Arguments) }
+	} else if local, ok := b.localCommand(p.Name, p.Arguments); ok {
 		work = func() string { return b.runLocal(local, p.Arguments) }
 	} else if p.Name == "stop" && b.wasHandled(p.Arguments) {
 		work = func() string { return "" }

@@ -1,0 +1,16 @@
+{
+  "description": "Records which hosts the sandbox can reach, once at session start.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/net.sh\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

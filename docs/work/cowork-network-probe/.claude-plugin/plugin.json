@@ -1,0 +1,5 @@
+{
+  "name": "cogmer-network-probe",
+  "version": "0.1.0",
+  "description": "Throwaway probe: which hosts a Cowork cloud sandbox can reach, for the relay and its server list."
+}

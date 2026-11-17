@@ -40,7 +40,8 @@ say() { ct_say install.log "$*"; }
 # Defined BEFORE this, so that failing to create the install directory is not the
 # one step that exits without saying anything. It is load-bearing -- nothing is
 # installed without it -- and it used to be the quietest line in the file (D-084).
-if ! mkdir -p "$bin_dir" 2>/dev/null; then
+ct_state_dir
+if ! (umask 077; mkdir -p "$bin_dir") 2>/dev/null; then
   say "cannot create $bin_dir; nothing can be installed"
   exit 0
 fi
@@ -133,6 +134,7 @@ if [ -n "$expected" ] && command -v curl > /dev/null 2>&1; then
       if chmod +x "$tmp/bin" && mv -f "$tmp/bin" "$target"; then
         say "installed $want from release"
         clear_install_state
+        [ -z "$installed" ] && write_install_notice "$want"
         # The session that triggered this looked for a binary that was still
         # downloading and found none, so nothing is running yet. Start it here
         # rather than leaving the first session inert and the second one useful.
@@ -158,6 +160,7 @@ if command -v go > /dev/null 2>&1; then
     if [ -x "$tmp/cogmer" ] && mv -f "$tmp/cogmer" "$target"; then
       say "installed $want from source"
       clear_install_state
+      [ -z "$installed" ] && write_install_notice "$want"
       start_daemon_if_needed
       exit 0
     fi

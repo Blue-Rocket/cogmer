@@ -58,6 +58,16 @@ var CodexBehaviors = []Behavior{
 			}
 			return fmt.Errorf("Codex transcript contains no matching hook-context evidence")
 		}},
+	{ID: "B36", Title: "Codex offers the skills in the folder a plugin's manifest names",
+		Reliance: "If this changes so that Codex offers only a fixed folder of the plugin, or none, the cogmer skill that gives a Codex user every command is not offered, `$cogmer` finds nothing, and a Codex user has no way to run a room command. The skill sits in plugin/codex-skills so that Claude Code does not offer it (D-119), which depends on the manifest's skills path being honored. It fails visibly, since the commands do not exist, but nothing says why.", Tier: TierSession,
+		Check: func(p *Probe) error {
+			for _, name := range p.CodexPluginSkills {
+				if strings.HasSuffix(name, ":seen") {
+					return nil
+				}
+			}
+			return fmt.Errorf("Codex did not offer the skill in the folder a plugin's manifest names (it offered %v), so the cogmer skill in plugin/codex-skills would not reach a Codex user", p.CodexPluginSkills)
+		}},
 	{ID: "B28", Title: "CODEX_THREAD_ID in a shell tool equals the hook session identifier",
 		Reliance: "If this changes, a room command cannot identify the session that invoked it. The command refuses rather than choosing another session's room.", Tier: TierSession,
 		Check: func(p *Probe) error {
@@ -180,6 +190,7 @@ func RunCodexChecks() ([]Result, error) {
 	if b, err := os.ReadFile(filepath.Join(dir, "tool-session.txt")); err == nil {
 		p.ToolEnvSessionID = strings.TrimSpace(string(b))
 	}
+	p.CodexPluginSkills = runCodexSkillProbe(dir)
 	var results []Result
 	for _, b := range CodexBehaviors {
 		results = append(results, Result{B: b, Err: b.Check(p)})

@@ -226,10 +226,10 @@ func TestAPastedImageIsStoredAndNamedInTheEventsSignedMetadata(t *testing.T) {
 	if err != nil || !bytes.Equal(got, img) {
 		t.Fatalf("the stored file is not the image: %v", err)
 	}
-	if info, _ := os.Stat(path); info.Mode().Perm() != 0o600 {
+	if info, _ := os.Stat(path); modesMeanSomething() && info.Mode().Perm() != 0o600 {
 		t.Errorf("the file is readable by others: %v", info.Mode())
 	}
-	if info, _ := os.Stat(store.imageDir); info.Mode().Perm() != 0o700 {
+	if info, _ := os.Stat(store.imageDir); modesMeanSomething() && info.Mode().Perm() != 0o700 {
 		t.Errorf("the directory is open to others: %v", info.Mode())
 	}
 	if row, ok, _ := store.ImageRow(refs[0].SHA256); !ok || row.State != imageHave {
@@ -309,7 +309,7 @@ func TestAShowOnlyRoomSharesAPastedImageToo(t *testing.T) {
 }
 
 func TestTheImageTableIsAddedToARoomThatPredatesIt(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setHome(t, t.TempDir())
 	dir := filepath.Join(homeDir(), "rooms")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)

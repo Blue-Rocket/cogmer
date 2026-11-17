@@ -1,0 +1,90 @@
+Cowork network probe, three runs on 2026-10-31 from 04:44Z to 05:25Z, written at 2026-10-31T05:30:00Z
+(UTC; the probe's lines carry the sandbox's UTC clock)
+
+What was asked
+  Which hosts a Cowork cloud session's sandbox can reach over HTTPS, under three settings of
+  the organization's network policy: the relay's server list (tailcat.dev/derpmap.json), the
+  four relay servers (tc301a to tc304a.ipn.dev), a WebSocket upgrade to one of them, and two
+  controls (github.com and example.com).
+
+Machine and versions
+  Mac with Apple silicon, macOS 26.6.2, Claude desktop app 4.4212.0 (CFBundleShortVersionString,
+  read at 05:28Z). The account is on a Team plan, organization Blue Rocket. Every report below
+  says the probe ran on host vm, Linux x86_64, with CLAUDE_CODE_REMOTE true, curl 8.5.0, and
+  the same proxy variables set (names only, never values): CCR_AGENT_PROXY_ENABLED,
+  CCR_UPSTREAM_PROXY_ENABLED, HTTPS_PROXY, https_proxy, NO_PROXY and fifteen more, listed in
+  each report as the probe printed them.
+
+The plugin
+  docs/work/cowork-network-probe/ at this commit, named cogmer-network-probe, version 0.1.0,
+  zipped from its contents. Its one SessionStart command hook runs hooks/net.sh, which returns at
+  once and, where uname -s is Linux, starts a detached copy that makes the eight requests in
+  parallel with an 8s limit each and writes /tmp/cogmer-network-probe.txt. For each request the
+  file holds curl's exit code, the HTTP status, curl's error and the first 120 bytes of the
+  reply. The WebSocket upgrade is sent with --http1.1 and the headers Connection: Upgrade,
+  Upgrade: websocket, a fixed Sec-WebSocket-Key and Sec-WebSocket-Version: 13. The plugin's one
+  command, report, prints the file. `claude plugin validate` passed with warnings. Before the
+  runs, net.sh was run on the Mac, where all eight requests answered and the upgrade got 101,
+  and in a Linux container (Debian, aarch64) with a fake proxy variable holding the word
+  SECRET, where the file named the variable and not its value.
+
+Clicks
+  Customize > Plugins > Add > Upload plugin with the zip. For each run the user changed the
+  organization's setting under Organization settings > Capabilities and started a new Cowork
+  session. Each ran on a Linux VM with CLAUDE_CODE_REMOTE true, so each was a cloud session, and
+  the state of "Only on this computer" was not read. The user was asked to say hello, wait about
+  ten seconds and run /cogmer-network-probe:report, and pasted its output. Anthropic's article
+  says a setting applies when a session is created (read on 2026-10-31).
+
+Settings at each run
+  Run 1, 04:44:33Z. The setting the account had before the other runs, shown in a screenshot
+    the user sent afterwards. Allow network egress on, tagged Default, labelled Chat and Cowork.
+    Domain allowlist "Package managers only". Additional allowed domains: api.roboflow.com,
+    app.roboflow.com, source.roboflow.com and storage.googleapis.com, and the list continued
+    below the part of the screen that was shown.
+  Run 2, 04:52:49Z. The user's words: "I set it to all domains".
+  Run 3, 05:24:15Z. The user's words: "I set it to that list", which was exactly tailcat.dev,
+    tc301a.ipn.dev, tc302a.ipn.dev, tc303a.ipn.dev and tc304a.ipn.dev as additional allowed
+    domains. The dropdown's value and the other entries in the list were not read.
+
+Seen
+  Run 1 (04:44:33Z to 04:44:34Z)
+    1-derpmap https://tailcat.dev/derpmap.json: curl exit 56, status 000,
+      "CONNECT tunnel failed, response 403"
+    2 to 5, the four relay servers: the same, exit 56, status 000, 403
+    6-relay-sfo-websocket-upgrade: the same
+    7-control-github https://github.com/: exit 0, status 400, reply
+      {"message":"Request path could not be canonicalized.","documentation_url":"https://docs.anthropic.com/en/docs/claude-cod
+    8-control-example https://example.com/: exit 56, status 000, 403
+  Run 2 (04:52:49Z to 04:52:57Z)
+    1-derpmap: exit 0, status 200, reply starts with {"Regions": {"301": {"RegionID": 301,
+      "RegionCode": "nyc"
+    2 to 5, the four relay servers: exit 0, status 200, a page headed DERP that says it is a
+      Tailscale DERP server
+    6-relay-sfo-websocket-upgrade: exit 28 after 8000 ms with 45 bytes received, status 101.
+      The reply began with the characters (DERP followed by binary bytes, which the paste did
+      not keep exactly.
+    7-control-github: exit 0, status 400, the same reply as run 1
+    8-control-example: exit 0, status 200, an HTML page
+  Run 3 (05:24:15Z to 05:24:23Z)
+    1 to 6: the same as run 2, including the 101 and exit 28 on the upgrade
+    7-control-github: exit 0, status 400, the same reply as run 1
+    8-control-example: exit 56, status 000, "CONNECT tunnel failed, response 403"
+
+Also seen on the settings screen, in the screenshot of the setting from run 1
+  The Allow network egress setting carries the tags Chat and Cowork. A line under it says
+  "Network egress controls do not apply to web search, web fetch, or MCP connectors." The
+  sentence above the Code execution heading, "Applies to Cowork, Cowork in the cloud, Claude
+  Code cloud sessions, artifacts, and the new unified chat and cowork experience", was cut off
+  at the top of the screen, and which setting it describes was not seen. The settings screen
+  has separate entries for Claude Code and Cloud environments under Products.
+
+Not shown
+  A cogmer daemon in the sandbox: every request here was curl's, so TLS handling by the
+  daemon, the relay protocol through the proxy and a connection to a colleague are not tested.
+  The second run's setting is the user's word, not a screen. A wildcard entry such as
+  *.ipn.dev, a narrower list than five hosts, and a list that omits tailcat.dev. Whether
+  github.com's 400 is a refusal: the reply is the proxy's own and earlier runs downloaded a
+  release asset from github.com, so it is not a clean control. Whether a Pro or Max account
+  sees these controls. Whether the screenshot's setting is the one a Claude Code cloud
+  environment follows, since that environment has a network access setting of its own.

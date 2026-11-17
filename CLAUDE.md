@@ -89,15 +89,38 @@ cmd/cogmer/
   identity.go    §6 peer identity
 ```
 
-State is in `~/.cogmer/`: `identity.json`, `identity.key`, `membership.db` and
-`rooms/*.db`. The code is pure Go throughout, with `modernc.org/sqlite` and no cgo, so
+State is in `~/.cogmer/`: `identity.json`, `identity.key`, `membership.db`,
+`rooms/*.db`, and `bound-sessions/`, a file for each session in a room, which the hook
+script checks before it calls anything. The code is pure Go throughout, with `modernc.org/sqlite` and no cgo, so
 every target cross-compiles with `CGO_ENABLED=0`.
 
 - **Build with `go build -o bin/cogmer ./cmd/cogmer`.** `bin/` is untracked, because
   the binary is 17MB and the build reproduces it.
+- **A build from source refuses the real `~/.cogmer`, and so does every test (D-265, a
+  development or test build never opens the account's real state directory).** Run one
+  with `COGMER_HOME` set to a directory made for the run, such as `COGMER_HOME=$(mktemp
+  -d)`. There is no override, and a fault in real data is looked at in a copy of it. `go
+  test ./...` panics in any test that resolves the real directory.
 - **Test with `go test ./...`.** To drive a real session, run `claude -p …
   --settings <file>` with a throwaway `COGMER_HOME` per run, and `< /dev/null`, or it
   waits on stdin.
+- **A local `go test ./...` covers what a release can break in a cloud session.** There
+  cogmer carries its relay connection as a WebSocket (D-217, a cloud session's daemon
+  carries its relay connection as a WebSocket), which only a build with the
+  `ts_debug_websockets` tag can do. `scripts/release.sh` sets the tag, and
+  `TestTheTailscaleVersionInUseStillSwitchesTheRelayToAWebSocket` checks on any machine
+  that the Tailscale version in `go.mod` still has the tag and reads the variable cogmer
+  sets. What no test here can check is the cloud session's proxy itself. In a cloud
+  session, `go test -tags ts_debug_websockets ./...` also runs
+  `TestTheRealOverlayCheckPassesForALiveServerAndFailsForADeadOne` through that proxy,
+  and without the tag that test skips.
+- **Test several machines in containers with `go test -tags 'docker
+  ts_debug_websockets' -run Container ./cmd/cogmer`.** Each machine is a container
+  with its own state, driven through the commands, the hooks and the requests the
+  daemon's pages make, and the tests build images from the working tree and from
+  `main`. The images are `FROM scratch` with static binaries, because Docker Hub may
+  refuse pulls. In a cloud session `dockerd` is not running at the start, so start it
+  by hand with `dockerd > <log> 2>&1 &`. Without a Docker daemon the tests skip.
 - **Outside a host, the binary is for tests, not for users.** A user runs commands
   through the plugin, whose entry point declares the host. A test supplies one with
   `COGMER_HOST=claude` or `COGMER_HOST=codex`, or with only one of
@@ -105,7 +128,7 @@ every target cross-compiles with `CGO_ENABLED=0`.
   nothing declared is refused. `COGMER_CODEX_BIN` names a Codex executable other than
   the one on `PATH`.
 - **`cogmer doctor` checks the behaviors we rely on** in each installed host, in
-  about 13s and two Claude turns for Claude Code and one turn for Codex, and
+  about 18s and two Claude turns for Claude Code and one turn for Codex, and
   `--host` picks one, and `--host cowork` checks what Cowork relies on in the Claude Code on this machine, in one turn. `--deep` adds a Claude Code compaction, in about 40s. It runs
   by itself when a room is formed under a Claude Code version this machine has not
   checked, and `COGMER_PREFLIGHT=off` turns that off for CI.
@@ -151,10 +174,13 @@ index holds. Hooks keep it fresh, but only for edits the current session made.
 - **Claude Code prefixes every plugin command with the plugin manifest's `name`, and
   offers no unprefixed form.** A user types `/cogmer:room-create`, so changing
   the manifest name renames every command at once.
-- **Every Claude Code extension point delivers to the model, and nothing displays to a
-  person.** A person sees only what the model then says. MCP as a
-  display channel was tested exhaustively and surfaces nowhere anybody looks, so do
-  not try it again. Nothing checks this, which is why it is written here.
+- **A hook can show a person a line through its `systemMessage` or by failing.**
+  Interactive Claude Code printed a `systemMessage` as "<hook> says: ..." and never gave
+  it to the model, and printed a "hook error" block with the error text for a hook that
+  failed to run, at session start and at every prompt (`11b1294`, Claude Code 2.1.312 and
+  2.1.316). A hook form that fails on some machines is therefore loud on them. A hook's
+  standard output and MCP reach only the model, and MCP as a display channel was tested
+  exhaustively and surfaces nowhere anybody looks, so do not try it again.
 - **Whether injected context survives a compaction is the summarizer's judgment**,
   not a format guarantee, so no assertion can cover it. Re-run Test B from
   `84a0751:docs/phase0a-findings.md` when the model or the Claude Code version

@@ -4,7 +4,11 @@
 
 **Decision.** What a user does belongs in the view, the browser page the daemon serves, and
 the terminal is an operator surface for diagnostics, the daemon's lifecycle, a machine's
-identity and testing.
+identity and testing. Creating a user, recovering a user, and adding or removing one of
+the user's machines are acts in the view. Creating a user shows the recovery phrase and
+recovering takes it, and the model reads both the arguments of a command an assistant
+runs and what the command prints (D-223, the recovery phrase is typed only into the
+daemon's browser page).
 
 **Support.**
 - Every room-scoped and peer-scoped act has a slash command, and the pairing ceremony is

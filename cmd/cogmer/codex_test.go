@@ -240,7 +240,8 @@ func TestCodexCannotUseAClaudeDeliveryFallback(t *testing.T) {
 }
 
 func TestCodexHookOutputsValidContextAndFailsOpen(t *testing.T) {
-	bin := buildVersion(t, t.TempDir(), "codex-hook-test")
+	bin := buildVersion(t, t.TempDir(), testBuildVersion)
+	home := filepath.Join(t.TempDir(), stateDirName)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get(localGuardHeader) != localGuardValue {
 			t.Error("hook omitted the local guard")
@@ -255,7 +256,7 @@ func TestCodexHookOutputsValidContextAndFailsOpen(t *testing.T) {
 	run := func(addr, payload, kind string) []byte {
 		t.Helper()
 		cmd := exec.Command(bin, "hook", "--host", "codex", kind)
-		cmd.Env = append(os.Environ(), "COGMER_ADDR="+addr)
+		cmd.Env = append(os.Environ(), "COGMER_ADDR="+addr, "COGMER_HOME="+home)
 		cmd.Stdin = strings.NewReader(payload)
 		out, err := cmd.Output()
 		if err != nil {
@@ -283,7 +284,7 @@ func TestCodexHookOutputsValidContextAndFailsOpen(t *testing.T) {
 }
 
 func TestCodexCommandWrapperRequiresItsOwnSessionAndRendersItsCommands(t *testing.T) {
-	bin := buildVersion(t, t.TempDir(), "codex-command-test")
+	bin := buildVersion(t, t.TempDir(), testBuildVersion)
 	root, err := filepath.Abs("../../plugin")
 	if err != nil {
 		t.Fatal(err)
@@ -292,7 +293,7 @@ func TestCodexCommandWrapperRequiresItsOwnSessionAndRendersItsCommands(t *testin
 	run := func(sid string, args ...string) string {
 		t.Helper()
 		cmd := exec.Command("bash", append([]string{filepath.Join(root, "codex-cli.sh")}, args...)...)
-		cmd.Env = append(os.Environ(), "COGMER_BIN="+bin, "COGMER_HOME="+home, "COGMER_PREFLIGHT=off", "CODEX_THREAD_ID="+sid, "CLAUDE_CODE_SESSION_ID=ambient-claude")
+		cmd.Env = append(os.Environ(), "COGMER_BIN="+bin, "COGMER_HOME="+home, "COGMER_PREFLIGHT=off", "COGMER_IDENTITY_PAGE=off", "CODEX_THREAD_ID="+sid, "CLAUDE_CODE_SESSION_ID=ambient-claude")
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatal(err)

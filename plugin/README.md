@@ -1,7 +1,8 @@
 # cogmer
 
 This is the reference for the cogmer plugin once it is installed. What cogmer is,
-and how to install it, are in the repository's `README.md`.
+and how to install it, are in the repository's `README.md`. To install it on another
+machine, run `/plugin install cogmer --marketplace Blue-Rocket/cogmer`.
 
 ## What it adds to a session
 
@@ -10,8 +11,8 @@ Claude Code or Codex starts, and it replaces or wraps nothing.
 
 | hook | what it does |
 |---|---|
-| `SessionStart` | starts the daemon if it is not running, replaces a running daemon of another version, and fetches the binary in the background if it has not been fetched |
-| `UserPromptSubmit` | captures your prompt, and injects the colleagues' turns this session has not seen |
+| `SessionStart` | starts the daemon if it is not running, replaces a running daemon of another version, and fetches the binary in the background if it has not been fetched; in Claude Code it also shows one line when the install, the daemon or an upgrade needs repair |
+| `UserPromptSubmit` | captures your prompt, and injects the colleagues' turns this session has not seen; in Claude Code, when a first install has just finished, it also shows one line that says so |
 | `Stop` | captures the completed response |
 
 ## The first room under a new version
@@ -51,7 +52,7 @@ every room, and `self-` commands act on you.
 
 | command | what it does |
 |---|---|
-| `room-create [--show-only]` | create a room and put this session in it; with `--show-only` none of it is given to your agent, and that cannot change for the room |
+| `room-create [--show-only] [--another]` | create a room and put this session in it; a session that already has a room is refused, and `--another` makes a second room anyway, which this session cannot enter; with `--show-only` none of it is given to your agent, and that cannot change for the room |
 | `room-join <invitation> [--show-only]` | join a room you were invited to, optionally show-only |
 | `room-leave` | take this session out of its room; it may rejoin the same room later |
 | `room-invite <peer>` | admit a peer you have paired with to this room |
@@ -61,13 +62,43 @@ every room, and `self-` commands act on you.
 | `room-conflicts` | events set aside because a peer's sequence counter went backwards |
 | `room-list` | the rooms on this machine, and any waiting for you to accept |
 | `peer-list` | the peers this machine knows, and whether each is verified |
-| `peer-forget <peer>` | discard a peer and every room admission it held |
+| `peer-rename <peer> <new name>` | change what you call a colleague, on all your machines; whether they are verified, and their place in rooms, are unchanged |
+| `peer-forget <peer>` | stop recognizing a colleague on all your machines; their place in rooms is unchanged |
 | `peer-pair [their pairing string] [what you call them]` | pair with a colleague by comparing two words in your browser |
 | `self-status` | who you are, what you send colleagues, whether they can reach you, and which versions are running |
+| `self-machines` | open the page where you add, rename and remove your machines and cloud environments, or recover with your phrase |
 | `self-name [what people should call you]` | show or set the name other people see for you |
 | `self-stop` | stop the daemon on this machine; nothing is captured or shared until a new session starts one |
 | `self-restart` | stop the daemon and start it again, without a new session |
 | `self-cowork` | add the bridge to Claude Desktop and write the plugin to upload in Cowork |
+
+## Your identity and your machines
+
+The first time you pair, create or join a room, cogmer opens a page in your browser to make
+your identity. It shows a recovery phrase of 18 words, which you write down and keep, and
+asks for the name colleagues will see. The phrase is the only way to recover if you lose
+every machine, and anyone who has it can speak as you, so it is typed only into that page,
+never into a session. A second machine is added from one you already have, by comparing two
+words on both screens, and colleagues who verified you once see your turns from every one of
+your machines, each with the machine's name.
+
+## Sessions in a cloud environment
+
+A session in a cloud environment, such as Claude Code on the web, speaks as you once the
+environment holds a value made on one of your own machines. Run `/cogmer:self-machines` there,
+name the environment under "Add a cloud environment", and paste the value the page shows into the
+environment's variable `COGMER_CLOUD_KEY`. The page shows the value once, and your machine keeps
+only the certificate that names the environment, so add the environment again if you lose the
+value. Whoever holds the value speaks as you in every room you are in, so paste it only into the
+environment's settings, never into a session or a chat, and remove the environment on the same
+page if it may have been exposed.
+
+The session's daemon makes a key of its own, which the key in the value vouches for a day at a
+time, and
+fetches your colleagues, rooms and machines from one of your machines every few minutes. Until
+one of them answers, the session shares nothing, and its room view says how old the lists it
+holds are. A session joins one of your rooms by name, as a second machine does, and never asks
+for your recovery phrase.
 
 ## Pairing happens in your browser, not through the model
 
@@ -104,6 +135,15 @@ it can say so when a command does not work.
 - An image you paste into a prompt goes to the colleagues in the room, with whatever it shows. An image
   over 5 MB is not sent, and a colleague's view says so. Each colleague's machine keeps a copy as a file in
   `~/.cogmer`, and cogmer gives their model the turn's text and not the image.
+- Everything your machine sends carries the certificates that tie it to you: your identifier, the
+  version of your machines' shared key, and this machine's name and number. Your own machines
+  also send each other the shared key, your list of colleagues with their labels and whether you
+  verified them, and your list of rooms.
+- A cloud environment you add holds the value its page showed, which carries a private key, your
+  certificates and the addresses of your machines. A session there fetches from your machines
+  your list of colleagues with their labels, addresses and whether you verified them, your list of
+  rooms, and your machines' names and addresses, but never the shared key. Anything that runs in
+  that session, including the model's shell, can read the value and these lists.
 - A relay introduces two machines on different networks. cogmer uses the free relays that
   Tailscale runs for its tailcat library. The conversation is encrypted between the two machines
   and the relay cannot read it. The daemon holds a connection to the relay for as long as it

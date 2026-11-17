@@ -6,7 +6,9 @@
 `installing` when the work begins and `failed` with the reason when it does not, and it is
 removed on success. An `installing` mark older than five minutes is reported as `stalled`.
 The command wrapper names the state and what to do, and the session-start hook gives it to
-the model as `additionalContext` while the binary is absent and at no other time.
+the model as `additionalContext` while the binary is absent and at no other time. The person
+is shown the states that need action, and the end of a successful install, by D-282 (the
+person is shown one line when the install finishes and when cogmer needs repair).
 
 **Support.**
 - A missing binary meant three things, that nothing had started, that a download was in
@@ -19,10 +21,8 @@ the model as `additionalContext` while the binary is absent and at no other time
 - A crash between setting the mark and clearing it would leave a download in progress for
   ever, which is the one answer worse than silence, so an old `installing` reads as
   stalled. `plugin/hooks-handlers/common.sh`, `install_state`.
-- Everything a person learns arrives by way of what the model says, so the hook gives the
-  state to the model, and a session asked why nothing works answers from the fact and does
-  not speculate. D-033 (the room cannot be displayed inside Claude Code), D-036 (MCP
-  logging notifications are not a display channel), `plugin/hooks-handlers/session-start.sh`.
+- The hook gives the state to the model, so a session asked why nothing works answers from
+  the fact and does not speculate. `plugin/hooks-handlers/session-start.sh`.
 - The hook emits nothing when the binary is present, so an ordinary session carries
   nothing. `plugin/hooks-handlers/session-start.sh`.
 

@@ -2,10 +2,13 @@
 
 **Date:** 2026-09-20 · **Status:** active · **Areas:** pairing, identity
 
-**Decision.** A pairing string may end in `#<name>`, as in `ed25519:KEY@ENDPOINT#Alice`,
-carrying the name its sender chose. A guessed name is never carried. The receiver uses it as
-the default label after what they typed and before asking, says so when it does, and reduces
-it with `sanitizeName` before use.
+**Decision.** A pairing string carries the user's identifier and the address of one of the
+user's machines, and may end in `#<name>`, as in `ed25519:KEY@ENDPOINT#Alice`, carrying the
+name its sender chose when the user identity was made (D-230, a user identity is made in
+the daemon's page the first time the user needs one). `KEY` is the user's master public key
+(D-042, peer identity is an Ed25519 key pair). A guessed name is never carried. The receiver
+uses the name as the default label after what they typed and before asking, says so when it
+does, and reduces it with `sanitizeName` before use.
 
 **Support.**
 - `#` matches the invitation format's use of the same character for a trailing identifier. A

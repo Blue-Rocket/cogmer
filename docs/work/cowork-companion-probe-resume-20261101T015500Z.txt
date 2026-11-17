@@ -1,0 +1,44 @@
+Cowork companion probe, an earlier session resumed after the plugin was replaced, on 2026-11-01 at 01:44:35Z, written at 2026-11-01T01:55:00Z
+(UTC; the probe's lines carry the sandbox's UTC clock)
+
+What was asked
+  Whether a Cowork cloud session that began before a plugin was replaced sees the replaced file
+  once the user returns to it. This continues dab6794, which holds the replacement of version
+  0.1.0 (file digits 7b4fb771) by version 0.1.1 (file digits 475d99a3) and a new session that saw
+  only the new file, and 7a362f6, which holds the first upload and its plugin, machine and
+  versions.
+
+Machine and versions
+  The same as in 7a362f6: Mac with Apple silicon, macOS 26.6.2, Claude desktop app 4.4212.0, a
+  Team plan, sessions on host vm as root with CLAUDE_CODE_REMOTE true. The plugin was the one in
+  dab6794. The session was one of the two the user started before the replacement, from the
+  browser or the phone, which the user did not say.
+
+Clicks
+  After the replacement, the user went back to that session and asked what the companion probe
+  says now. The report below is the answer the session's model gave, which the user pasted.
+
+Seen
+  Two lines, which the model said had fired since its last check:
+    01:44:35Z SessionStart: cloud.value present, 2400 bytes, mode 600, owner root:root uid 0,
+      sha256 starts 7b4fb771; plugin folder
+      /root/.claude/plugins/synced/66bf4325-2c04-41c9-b5a7-5961be7defb3_2b8c305b-86ee-46d6-88cd-e46e64ac604d/cogmer-companion-probe;
+      hook runs as uid 0; CLAUDE_CODE_REMOTE true; host vm. The line has no plugin version,
+      which is how version 0.1.0's check.sh wrote it.
+    01:44:43Z UserPromptSubmit: plugin version 0.1.1, cloud.value present, 2400 bytes, mode 600,
+      owner root:root uid 0, sha256 starts 475d99a3; plugin folder the same path with the name
+      cogmer-companion-probe~g2 in place of cogmer-companion-probe; hook runs as uid 0;
+      CLAUDE_CODE_REMOTE true; host vm.
+  So the SessionStart hook that ran when the user returned used the version 0.1.0 files, and the
+  UserPromptSubmit hook 8s later used the version 0.1.1 files, from a folder whose name ends in
+  ~g2.
+
+Not shown
+  Whether the folder without the suffix, which held the old file, was still on the sandbox's disk
+  after the second line, which the probe did not look at. What the suffix ~g2 stands for: that it
+  names a second generation of the plugin's folder is a reading. What caused the SessionStart at
+  01:44:35Z, whether a resume or a start, since its source field was not recorded. How long the
+  gap between a session's start and the new files arriving can be, which is one observation of
+  8s. Whether a session running without a prompt, such as a daemon the first hook started, sees
+  the new file at all. The answer is the model's repetition of the hook's context, not the file
+  the probe wrote.

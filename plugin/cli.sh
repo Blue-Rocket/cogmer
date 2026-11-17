@@ -56,7 +56,7 @@ restart_daemon() {
   echo "The daemon was started and is not answering on ${addr} yet."
   if [ -r "$state_file" ]; then
     IFS=$'\t' read -r state when detail < "$state_file"
-    if [ "$state" = blocked ] && [ -n "$detail" ]; then
+    if { [ "$state" = blocked ] || [ "$state" = upgrade-failed ]; } && [ -n "$detail" ]; then
       echo
       echo "It recorded why: $detail"
     fi
@@ -81,7 +81,8 @@ home_dir="${COGMER_HOME:-$HOME/.cogmer}"
 # itself whether there is anything to do, so starting it twice is harmless.
 start_install() {
   local log="$home_dir/install.log"
-  mkdir -p "$home_dir" 2>/dev/null
+  ct_state_dir
+  (umask 077; : >> "$log") 2>/dev/null
   if command -v setsid > /dev/null 2>&1; then
     setsid nohup bash "$CLAUDE_PLUGIN_ROOT/hooks-handlers/install.sh" >> "$log" 2>&1 < /dev/null &
   else

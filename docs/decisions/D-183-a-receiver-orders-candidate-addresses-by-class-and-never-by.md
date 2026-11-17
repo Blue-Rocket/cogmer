@@ -9,7 +9,7 @@ configurable sort, and a requirement that arrives as an order is met as a filter
 
 **Support.**
 - The receiver holds the information, so any order the sender expresses is a preference and
-  not knowledge, and the receiver would honor it on the word of the peer whose address it is.
+  not knowledge, and the receiver would honor it on the word of the machine whose address it is.
   RFC 8305 (Happy Eyeballs version 2), https://www.rfc-editor.org/rfc/rfc8305.
 - Trying the first few at once makes a dead candidate cost a round trip and not a timeout, and
   a learned winner dominates any static order after the first success, which makes a

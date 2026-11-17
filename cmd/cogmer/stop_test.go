@@ -107,6 +107,9 @@ func TestADaemonOfAnotherVersionIsReplaced(t *testing.T) {
 	if _, err := exec.LookPath("lsof"); err != nil {
 		t.Skip("no lsof on this machine")
 	}
+	// It starts daemons on ports and in a state directory of its own and gives each program its own
+	// environment, so it can run beside the others.
+	t.Parallel()
 	dir := t.TempDir()
 	old := buildVersion(t, dir, "0.0.1")
 	cur := buildVersion(t, dir, "0.0.2")
@@ -151,39 +154,6 @@ func TestADaemonOfAnotherVersionIsReplaced(t *testing.T) {
 	}
 }
 
-func buildVersion(t *testing.T, dir, v string) string {
-	t.Helper()
-	out := filepath.Join(dir, v, "cogmer")
-	b, err := exec.Command("go", "build", "-ldflags", "-X main.version="+v, "-o", out, ".").CombinedOutput()
-	if err != nil {
-		t.Fatalf("build %s: %v\n%s", v, err, b)
-	}
-	return out
-}
-
-func waitForVersion(t *testing.T, addr, want string) {
-	t.Helper()
-	deadline := time.Now().Add(20 * time.Second)
-	for time.Now().Before(deadline) {
-		if v, ok := daemonVersionAt(addr); ok && v == want {
-			return
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	got, ok := daemonVersionAt(addr)
-	t.Fatalf("no daemon reporting %s on %s within 20s (got %q, answering %v)", want, addr, got, ok)
-}
-
-func freeAddr(t *testing.T) string {
-	t.Helper()
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer l.Close()
-	return l.Addr().String()
-}
-
 // The 09-22 case: a cogmer daemon left running from another state directory holds
 // the peer-sync port, and a second daemon says so and names `stop`. Real builds,
 // real processes, the overlay off.
@@ -194,6 +164,9 @@ func TestADaemonBlockedByAnotherCogmerSaysSoAndNamesStop(t *testing.T) {
 	if _, err := exec.LookPath("lsof"); err != nil {
 		t.Skip("no lsof on this machine")
 	}
+	// It starts daemons on ports and in a state directory of its own and gives each program its own
+	// environment, so it can run beside the others.
+	t.Parallel()
 	dir := t.TempDir()
 	bin := buildVersion(t, dir, "0.0.1")
 	if resolved, err := filepath.EvalSymlinks(bin); err == nil {

@@ -1,13 +1,13 @@
 ---
 description: Join a room you were invited to
 argument-hint: <invitation> [--show-only]
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/cli.sh" join:*)
+allowed-tools: Bash(bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" join:*)
 disable-model-invocation: true
 ---
 
 ## What happened
 
-!`"${CLAUDE_PLUGIN_ROOT}/cli.sh" join $ARGUMENTS`
+!`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" join $ARGUMENTS`
 
 ## Your task
 

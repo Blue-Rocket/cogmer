@@ -5,10 +5,12 @@ import (
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -71,7 +73,7 @@ func loadOrCreateKey() (ed25519.PrivateKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(homeDir(), 0o700); err != nil {
+	if err := ensureStateDir(); err != nil {
 		return nil, err
 	}
 	enc := base64.RawStdEncoding.EncodeToString(priv)
@@ -79,6 +81,91 @@ func loadOrCreateKey() (ed25519.PrivateKey, error) {
 		return nil, err
 	}
 	return priv, nil
+}
+
+func sharedKeyPath() string { return sharedKeyPathIn(homeDir()) }
+
+func sharedKeyPathIn(dir string) string { return filepath.Join(dir, "shared.key") }
+
+// sharedKeyFile is the form of shared.key: the private half of the user's shared
+// key and the version the master key certified it under.
+type sharedKeyFile struct {
+	Version    uint64 `json:"version"`
+	PrivateKey string `json:"privateKey"`
+}
+
+// loadSharedKey reads the user's shared key, reporting false when this machine
+// holds none. The shared key certifies the user's machines (D-219, a user is a
+// master key that certifies machines through a shared key), so it is kept in a
+// file of its own, apart from identity.json, which whoami prints and a user may
+// hand to a colleague (D-153, the private key is kept in a file of its own).
+func loadSharedKey() (ed25519.PrivateKey, uint64, bool, error) {
+	return loadSharedKeyIn(homeDir())
+}
+
+// loadSharedKeyIn is loadSharedKey for the state directory dir.
+func loadSharedKeyIn(dir string) (ed25519.PrivateKey, uint64, bool, error) {
+	path := sharedKeyPathIn(dir)
+	raw, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil, 0, false, nil
+	}
+	if err != nil {
+		return nil, 0, false, err
+	}
+	var f sharedKeyFile
+	if err := json.Unmarshal(raw, &f); err != nil {
+		return nil, 0, false, fmt.Errorf("%s is not a usable shared key", path)
+	}
+	key, err := base64.RawURLEncoding.DecodeString(f.PrivateKey)
+	if err != nil || len(key) != ed25519.PrivateKeySize {
+		return nil, 0, false, fmt.Errorf("%s is not a usable shared key", path)
+	}
+	if f.Version == 0 {
+		return nil, 0, false, fmt.Errorf("%s names shared key version 0; versions start at 1", path)
+	}
+	return ed25519.PrivateKey(key), f.Version, true, nil
+}
+
+// saveSharedKey writes the user's shared key, readable by this account alone. It
+// writes a temporary file and renames it over the old one, so that a crash leaves
+// either the old key or the new one and never half of either.
+func saveSharedKey(priv ed25519.PrivateKey, version uint64) error {
+	return saveSharedKeyIn(homeDir(), priv, version)
+}
+
+// saveSharedKeyIn is saveSharedKey for the state directory dir.
+func saveSharedKeyIn(dir string, priv ed25519.PrivateKey, version uint64) error {
+	if len(priv) != ed25519.PrivateKeySize {
+		return errors.New("a shared key to save is not an Ed25519 private key")
+	}
+	if version == 0 {
+		return errors.New("shared key version is 0; versions start at 1")
+	}
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	buf, err := json.Marshal(sharedKeyFile{Version: version, PrivateKey: base64.RawURLEncoding.EncodeToString(priv)})
+	if err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(dir, "shared.key.*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	if err := tmp.Chmod(0o600); err != nil {
+		tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(append(buf, '\n')); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), sharedKeyPathIn(dir))
 }
 
 // signingBytes is the exact sequence an event's signature covers.
@@ -127,6 +214,8 @@ func (e *Event) signingBytes(version int) ([]byte, error) {
 	switch version {
 	case 3:
 		return e.signingBytesV3(), nil
+	case 4:
+		return e.signingBytesV4(), nil
 	default:
 		return nil, fmt.Errorf("event %.12s is signed under scheme v%d, which this build does not know; upgrade rather than discard it",
 			e.EventID, version)
@@ -159,10 +248,61 @@ func (e *Event) eventBytes(tag string) []byte {
 	return b.Bytes()
 }
 
-// Sign attaches a signature made by the event's originating peer.
+// signingBytesV4 is v3's field list under a tag of its own, followed by the key
+// that signed, the shared-key version that key's machine holds and the hashes of
+// the removals it has seen, each a signed field (D-239, an event a machine signs for
+// its user names the user, the signing key, the shared-key version and the removals
+// seen, all as signed fields). A number is 8 bytes big-endian, as in the identity
+// records (D-238, identity records are signed over length-prefixed fields), and the count of removals comes before them so that no boundary
+// between the hashes can move.
+func (e *Event) signingBytesV4() []byte {
+	b := e.eventBytes(protocolNamespace + "/event/v4")
+	put := func(s string) {
+		b = binary.BigEndian.AppendUint32(b, uint32(len(s)))
+		b = append(b, s...)
+	}
+	put(e.Signer)
+	b = binary.BigEndian.AppendUint64(b, e.IdentityVersion)
+	b = binary.BigEndian.AppendUint64(b, uint64(len(e.RemovalsSeen)))
+	for _, h := range e.RemovalsSeen {
+		put(h)
+	}
+	return b
+}
+
+// Sign attaches a signature made by the event's originating peer, under v3, where
+// the peer's own key signs.
 func (e *Event) Sign(priv ed25519.PrivateKey) {
 	e.SigVersion = currentSigVersion
 	e.Signature = base64.RawURLEncoding.EncodeToString(ed25519.Sign(priv, e.signingBytesV3()))
+}
+
+// SignV4 signs the event under v4 with a machine's key on behalf of the user its
+// chain ends at. PeerID must already name that user. The removals seen are sorted,
+// so that two machines that have seen the same removals sign the same field.
+func (e *Event) SignV4(priv ed25519.PrivateKey, chain Chain, removalsSeen []string) {
+	e.SigVersion = 4
+	e.Signer = PeerIDFromPublic(priv.Public().(ed25519.PublicKey))
+	e.IdentityVersion = chain.Shared.Version
+	e.RemovalsSeen = nil
+	if len(removalsSeen) > 0 {
+		e.RemovalsSeen = append([]string(nil), removalsSeen...)
+		sort.Strings(e.RemovalsSeen)
+	}
+	c := chain
+	e.Chain = &c
+	e.Signature = base64.RawURLEncoding.EncodeToString(ed25519.Sign(priv, e.signingBytesV4()))
+}
+
+// SignAs signs an event this machine writes: under v4 when the machine speaks for a
+// user, and under v3 otherwise, so that a machine without a user identity signs
+// as it always has.
+func (e *Event) SignAs(id *Identity, removalsSeen []string) {
+	if id.HasUser() {
+		e.SignV4(id.private, *id.Chain, removalsSeen)
+		return
+	}
+	e.Sign(id.private)
 }
 
 var errUnsigned = errors.New("event carries no signature")
@@ -176,6 +316,9 @@ var errUnsigned = errors.New("event carries no signature")
 func (e *Event) Verify() error {
 	if e.Signature == "" {
 		return errUnsigned
+	}
+	if e.SigVersion == 4 {
+		return e.verifyV4()
 	}
 	pub, err := PublicFromPeerID(e.PeerID)
 	if err != nil {
@@ -191,6 +334,36 @@ func (e *Event) Verify() error {
 	}
 	if !ed25519.Verify(pub, msg, sig) {
 		return errors.New("signature does not match the peer id that claims to have made it")
+	}
+	return nil
+}
+
+// verifyV4 checks the signature against the key the event names as its signer,
+// then that the event's chain ties that key to the user its peer names (D-152,
+// events are signed at origin over length-prefixed fields; D-219, a user is a master key that certifies machines through a shared key). Whether the
+// user's other records remove or suspend the machine is the receiver's question,
+// since it needs those records.
+func (e *Event) verifyV4() error {
+	pub, err := PublicFromPeerID(e.Signer)
+	if err != nil {
+		return fmt.Errorf("signer: %w", err)
+	}
+	sig, err := base64.RawURLEncoding.DecodeString(e.Signature)
+	if err != nil {
+		return fmt.Errorf("signature is not valid base64url: %w", err)
+	}
+	msg, err := e.signingBytes(e.SigVersion)
+	if err != nil {
+		return err
+	}
+	if !ed25519.Verify(pub, msg, sig) {
+		return errors.New("signature does not match the signer that claims to have made it")
+	}
+	if e.Chain == nil {
+		return errors.New("an event signed for a user carries no chain to that user")
+	}
+	if _, err := e.Chain.Verify(e.PeerID, e.Signer); err != nil {
+		return fmt.Errorf("chain: %w", err)
 	}
 	return nil
 }

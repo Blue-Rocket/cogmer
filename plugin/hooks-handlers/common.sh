@@ -27,6 +27,48 @@ cogmer_binary() {
   return 1
 }
 
+# ct_state_dir creates the state directory with mode 0700 and tightens one that exists, so
+# the databases and logs in it are not readable by other accounts whatever the umask is.
+# The umask is set in a subshell, so the caller's files keep the mode they had.
+ct_state_dir() {
+  local d="${COGMER_HOME:-$HOME/.cogmer}"
+  (umask 077; mkdir -p "$d") 2>/dev/null
+  chmod 700 "$d" 2>/dev/null
+}
+
+# hook_for_session_in_no_room succeeds when a hook's payload comes from a session in
+# no room and holds no cogmer command, so the hook can end without calling anything
+# (D-284). Its arguments are the payload and then the hook's own arguments, such as
+# `hook --host codex prompt`.
+#
+# Every doubt fails it, and failing it calls the daemon, which answers for a session
+# in no room exactly as it did before this check: no directory of bound sessions yet,
+# an argument list that is not a hook's, a host it does not know, no session
+# identifier, an identifier holding anything but letters, digits, `-` and `_`, and any
+# mention of a command. A command has to reach the daemon even from a session in no
+# room, because the daemon records it so that the reply to it is never captured once
+# the command has put the session in a room (D-209). The reverse error, answering "no
+# room" for a session that is in one, would stop capture with nothing saying so.
+hook_for_session_in_no_room() {
+  local payload="$1" host=claude dir id
+  shift
+  [ "${1:-}" = hook ] || return 1
+  shift
+  if [ "${1:-}" = --host ]; then host="${2:-}"; fi
+  dir="${COGMER_HOME:-$HOME/.cogmer}/bound-sessions"
+  [ -d "$dir" ] || return 1
+  case "$payload" in *'/cogmer:'*|*'$cogmer'*) return 1 ;; esac
+  local re='"session_id"[[:space:]]*:[[:space:]]*"([A-Za-z0-9_-]+)"'
+  [[ $payload =~ $re ]] || return 1
+  id="${BASH_REMATCH[1]}"
+  case "$host" in
+    claude) ;;
+    codex) id="codex_$id" ;;
+    *) return 1 ;;
+  esac
+  [ ! -e "$dir/$id" ]
+}
+
 # ct_say appends one timestamped line to a log under the state directory.
 #
 # §3.1 requires failure to be silent TO THE PERSON AT THE KEYBOARD. It does not require silence
@@ -36,8 +78,8 @@ cogmer_binary() {
 ct_say() {
   local f
   f="${COGMER_HOME:-$HOME/.cogmer}/$1"; shift
-  mkdir -p "$(dirname "$f")" 2>/dev/null
-  printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >> "$f" 2>/dev/null
+  ct_state_dir
+  (umask 077; printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >> "$f") 2>/dev/null
 }
 
 # json_safe strips what would break a JSON string literal.
@@ -87,7 +129,8 @@ start_daemon_if_needed() {
   fi
 
   log="${COGMER_HOME:-$HOME/.cogmer}/daemon.log"
-  mkdir -p "$(dirname "$log")" 2>/dev/null
+  ct_state_dir
+  (umask 077; : >> "$log") 2>/dev/null
 
   # Detached, so the daemon outlives the session that started it: a room may have
   # members in several sessions, and starting it repeatedly is worse than leaving
@@ -143,11 +186,21 @@ install_state_file() { printf '%s' "${COGMER_HOME:-$HOME/.cogmer}/install-state"
 # set_install_state <installing|failed> <detail>
 set_install_state() {
   local f; f="$(install_state_file)"
-  mkdir -p "$(dirname "$f")" 2>/dev/null
-  printf '%s\t%s\t%s\n' "$1" "$(date +%s)" "${2:-}" > "$f" 2>/dev/null
+  ct_state_dir
+  (umask 077; printf '%s\t%s\t%s\n' "$1" "$(date +%s)" "${2:-}" > "$f") 2>/dev/null
 }
 
 clear_install_state() { rm -f "$(install_state_file)" 2>/dev/null; }
+
+# The mark that says a first install has finished and the person has not been told. The
+# installer writes the version into it, and the first hook that runs afterwards shows the person
+# one line and removes it (D-282).
+install_notice_file() { printf '%s' "${COGMER_HOME:-$HOME/.cogmer}/install-notice"; }
+
+write_install_notice() {
+  ct_state_dir
+  (umask 077; printf '%s\n' "$1" > "$(install_notice_file)") 2>/dev/null
+}
 
 # install_state prints "<state> <age-seconds> <detail>".
 #

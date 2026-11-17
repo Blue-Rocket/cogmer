@@ -2,9 +2,13 @@
 
 **Date:** 2026-09-20 · **Status:** active · **Areas:** identity
 
-**Decision.** `NameChosen` is false when an identity is created and is set by any deliberate
-act of naming, including naming it as the guess. It is never inferred by comparing the name
-with the guess computed from the operating system user.
+**Decision.** `NameChosen` records whether the user's display name was chosen, and is
+never inferred by comparing the name with the guess computed from the operating system
+user. The user chooses the name in the daemon's page when the user identity is made
+(D-230, a user identity is made in the daemon's page the first time the user needs one),
+and any deliberate act of naming sets it, including naming it as the guess. A machine's
+name is a different name: the one the user gives that machine, which its certificate
+carries (D-219, a user is a master key that certifies machines through a shared key).
 
 **Support.**
 - The name has one function, which is to be seen by other people, and a user never sees

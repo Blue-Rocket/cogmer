@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -39,6 +40,33 @@ type Identity struct {
 	// name (D-095).
 	NameChosen bool   `json:"nameChosen"`
 	MachineID  string `json:"machineId"`
+	// User is the identifier of this machine's user, the master public key, and
+	// Chain the certificates by which this machine speaks for the user (D-219, a
+	// user is a master key that certifies machines through a shared key). Both are
+	// empty until the user identity is made on this machine. Every part of them is
+	// public, so they belong in this file, which whoami prints; the shared key's
+	// private half is in shared.key and never here (D-153, the private key is kept
+	// in a file of its own).
+	User  string `json:"user,omitempty"`
+	Chain *Chain `json:"chain,omitempty"`
+}
+
+// HasUser reports whether this machine speaks for a user: identity.json holds the
+// user and the chain that ties this machine's key to the user's master key (D-219,
+// a user is a master key that certifies machines through a shared key). Every path
+// the user identity adds is taken only when this is true, so a machine without one
+// behaves as it did before the user identity existed.
+func (id *Identity) HasUser() bool { return id != nil && id.User != "" && id.Chain != nil }
+
+// Peer is the identifier this machine is known by to colleagues: its user's when it
+// has one, and otherwise its own key's, which is what PeerID always holds. PeerID
+// stays the machine key, since the key is what signs (D-239, an event a machine
+// signs for its user names the user and the signing key).
+func (id *Identity) Peer() string {
+	if id.HasUser() {
+		return id.User
+	}
+	return id.PeerID
 }
 
 // Config separates room membership (shareable) from identity (personal), per §28.
@@ -57,6 +85,19 @@ const stateDirName = ".cogmer"
 // person who set it got a binary in one place and its state in another, and
 // nothing said so.
 func homeDir() string {
+	dir := resolvedHomeDir()
+	if err := refusedHome(dir); err != nil {
+		// A development build never reaches here from main, which refuses first
+		// (guardRealHome). In a test, a refusal is a test that forgot to name a
+		// directory of its own, and failing it loudly is what protects the real one.
+		panic(err)
+	}
+	return dir
+}
+
+// resolvedHomeDir is the state directory homeDir names, before the check that a
+// development build may use it.
+func resolvedHomeDir() string {
 	if v := strings.TrimSpace(os.Getenv("COGMER_HOME")); v != "" {
 		return v
 	}
@@ -65,6 +106,65 @@ func homeDir() string {
 		return "."
 	}
 	return filepath.Join(h, stateDirName)
+}
+
+// ensureStateDir creates the state directory with mode 0700 and tightens one that
+// exists with group or other bits, so the databases, logs and keys inside it are not
+// readable by other accounts whatever the umask was when something first made it. A
+// state directory made by a shell script under a umask of 022, or by an older program,
+// is 0755, and nothing but this call would change that. Windows has no such bits, so
+// it only creates the directory there.
+func ensureStateDir() error {
+	dir := homeDir()
+	if err := ensureDir(dir); err != nil {
+		return err
+	}
+	writeStateGitignore(dir)
+	return nil
+}
+
+// stateGitignore ignores everything in the state directory, itself included, so that a
+// bulk `git add` in a repository that holds the directory, such as a dotfiles repository
+// that adds the home folder, skips the keys and the rooms, and an explicit add of one is
+// refused unless forced (D-266, the state directory carries a .gitignore that ignores
+// everything).
+const stateGitignore = "# Made by cogmer. This folder holds your identity key and your rooms, and git must not track it.\n*\n"
+
+// writeStateGitignore makes the file when the directory has none, so one a user wrote is
+// left as it is, and does nothing about a failure, since the file is a protection and not
+// a requirement.
+func writeStateGitignore(dir string) {
+	f, err := os.OpenFile(filepath.Join(dir, ".gitignore"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return
+	}
+	_, _ = f.WriteString(stateGitignore)
+	_ = f.Close()
+}
+
+// ensureRoomsDir does the same for the folder of room databases.
+func ensureRoomsDir() error {
+	if err := ensureStateDir(); err != nil {
+		return err
+	}
+	return ensureDir(filepath.Join(homeDir(), "rooms"))
+}
+
+func ensureDir(dir string) error {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	fi, err := os.Stat(dir)
+	if err != nil {
+		return err
+	}
+	if fi.Mode().Perm()&0o077 != 0 {
+		return os.Chmod(dir, 0o700)
+	}
+	return nil
 }
 
 func randomID() string {
@@ -87,6 +187,21 @@ func LoadIdentity() (*Identity, error) {
 		var id Identity
 		if err := json.Unmarshal(data, &id); err != nil {
 			return nil, fmt.Errorf("parse %s: %w", path, err)
+		}
+		// A cloud session signs with its session key, kept in session.key, and the
+		// file names that key as the end of its chain (D-216, a cloud session signs with
+		// a key of its own). The daemon writes both; until it has written a key that
+		// matches, the session speaks for nobody, and the file is left for the daemon.
+		if id.Chain != nil && id.Chain.Session != nil {
+			id.private = priv
+			if sk, ok := loadSessionKeyIn(homeDir()); ok && PeerIDFromPublic(sk.Public().(ed25519.PublicKey)) == id.Chain.Session.Session {
+				id.private = sk
+				id.PeerID = id.Chain.Session.Session
+			} else {
+				id.PeerID, id.User, id.Chain = derived, "", nil
+			}
+			id.PeerName = PeerName(id.PeerID)
+			return &id, nil
 		}
 		// An identifier that is not this key names an identity nothing can verify.
 		// Adopt the key's identifier rather than keep a claim we cannot support.
@@ -124,7 +239,7 @@ func LoadIdentity() (*Identity, error) {
 		NameChosen:      false, // guessed, and said so
 		MachineID:       host,
 	}
-	if err := os.MkdirAll(homeDir(), 0o755); err != nil {
+	if err := ensureStateDir(); err != nil {
 		return nil, err
 	}
 	buf, _ := json.MarshalIndent(id, "", "  ")

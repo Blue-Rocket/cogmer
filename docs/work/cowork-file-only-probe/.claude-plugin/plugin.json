@@ -1,0 +1,5 @@
+{
+  "name": "cogmer-file-probe",
+  "version": "0.2.0",
+  "description": "Throwaway probe: whether a personal plugin that holds only a data file, with no hook and no command, is accepted by the upload and synced into cloud sessions."
+}

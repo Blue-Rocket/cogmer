@@ -1,0 +1,57 @@
+Cowork companion probe, two cloud sessions on 2026-11-01 at 01:19Z and 01:24Z, written at 2026-11-01T01:30:00Z
+(UTC; the probe's lines carry the sandbox's UTC clock)
+
+What was asked
+  Whether a file inside an uploaded personal plugin reaches a Cowork cloud session that was
+  started from a browser, and from a phone, with the desktop app not involved in the session,
+  and what the file's length, mode and owner are there. The file stands in for the value that a
+  cogmer cloud environment would need, which holds a secret and which this test does not use.
+
+Machine and versions
+  The plugin was uploaded from a Mac with Apple silicon, macOS 26.6.2, in Claude desktop app
+  4.4212.0 (read at 01:28Z), on a Team plan, organization Blue Rocket. The sessions ran on
+  host vm, as root, with CLAUDE_CODE_REMOTE true. The browser and the phone app were not
+  identified further.
+
+The plugin
+  docs/work/cowork-companion-probe/ at this commit, named cogmer-companion-probe, version 0.1.0,
+  built by its build.sh into a zip of the plugin's files and cloud.value, a file of 2400 random
+  base64url characters made for the run with mode 600, which holds no secret and is not in the
+  repository. The file's sha256 starts 7b4fb771. The plugin's SessionStart and UserPromptSubmit
+  command hooks run hooks/check.sh, which on Linux reports whether cloud.value is in the plugin's
+  folder and its length, mode, owner and the first eight hex digits of its sha256, never its
+  content, with the plugin's folder, the hook's user id, CLAUDE_CODE_REMOTE and the host, and
+  returns that line as additionalContext. `claude plugin validate` passed with warnings. Before
+  the run the hook was run in a Linux container, where it printed the line for the present file
+  and for an absent one, and the zip kept mode 600.
+
+Clicks
+  Customize > Plugins > Add > Upload plugin with the zip. The upload completed with no message
+  about the file. The plugin's page read "by you", showed the buttons "Publish to org", "Share"
+  and "Try in Cowork", a switch turned on, and the tabs Overview, Contents, Commands 1 and
+  Hooks 2. Neither button was used. A new Cowork session was then started from the browser at
+  claude.ai, where the user asked what the companion probe says, and another from the phone,
+  with the same question. The reports below are the answers the sessions' models gave, which
+  the user pasted. The probe's own file, /tmp/cogmer-companion-probe.txt, was not read.
+
+Seen
+  From the browser, at 01:19:52Z, the model gave two lines, one for SessionStart and one for
+  UserPromptSubmit, the same but for the hook's name:
+    cloud.value present, 2400 bytes, mode 600, owner root:root uid 0, sha256 starts 7b4fb771;
+    plugin folder /root/.claude/plugins/synced/66bf4325-2c04-41c9-b5a7-5961be7defb3_2b8c305b-86ee-46d6-88cd-e46e64ac604d/cogmer-companion-probe;
+    hook runs as uid 0; CLAUDE_CODE_REMOTE true; host vm.
+  From the phone, at 01:24:44Z, the model gave the same two lines with the same values and the
+  same folder.
+
+Not shown
+  That anyone else in the organization cannot see or receive the plugin: its page offers
+  "Publish to org" and "Share" and Anthropic's pages say a personal plugin is shared only by
+  those, but no other account was looked at, and neither button was used. Whether the upload is
+  scanned or reviewed: it completed without a message. Whether a value of the real shape, a
+  base64url encoding of a structure that holds keys, passes the same upload. Whether a new
+  version of the plugin replaces the file in a later session, which a rotation needs. Whether
+  the plugin reaches a Claude Code cloud session, which the folder name "synced" suggests and
+  which was not tried. Whether the sessions were started with "Only on this computer" off, and
+  what the browser and phone sessions loaded besides this plugin. The answers are the models'
+  repetition of the hook's context, not the file the probe wrote, although each carries the
+  expected length, mode and sha256 digits.
