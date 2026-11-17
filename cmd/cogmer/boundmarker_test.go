@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -223,5 +224,53 @@ func TestACloudSessionInNoRoomNeverStartsTheProgram(t *testing.T) {
 	t.Cleanup(func() { hookEnv = nil })
 	if ran, _ := runHookScript(t, root, home, `{"session_id":"sess-1","prompt":"hello"}`, "hook", "prompt"); ran {
 		t.Error("a prompt from a cloud session in no room started the program")
+	}
+}
+
+// A first install is announced at the first prompt after it finishes (D-282, the person is
+// shown one line when the install finishes and when cogmer needs repair), and the session that
+// started the install is in no room. The line is taken by the real program, while the prompt
+// still reaches nothing, and is shown once.
+func TestTheFirstPromptAfterAFirstInstallShowsTheNoticeFromASessionInNoRoom(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds a binary")
+	}
+	root, home := hookHarness(t)
+	openHookMembership(t)
+	bin := buildVersion(t, t.TempDir(), testBuildVersion)
+	if err := os.Rename(bin, filepath.Join(home, "bin", "cogmer")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(home, "install-notice"), []byte("0.10.6\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	prompt := func(args ...string) string {
+		t.Helper()
+		cmd := exec.Command("bash", append([]string{filepath.Join(root, "hooks-handlers", "run.sh")}, args...)...)
+		cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + home, "COGMER_HOME=" + home, "CLAUDE_PLUGIN_ROOT=" + root}
+		cmd.Stdin = strings.NewReader(`{"session_id":"sess-1","prompt":"hello"}`)
+		out, err := cmd.Output()
+		if err != nil {
+			t.Fatalf("run.sh %v failed: %v", args, err)
+		}
+		return string(out)
+	}
+
+	// Codex shows no hook line, so its prompt leaves the mark for a host that does.
+	if out := prompt("hook", "--host", "codex", "prompt"); out != "" {
+		t.Errorf("a Codex prompt in no room wrote %q", out)
+	}
+	if out := prompt("hook", "stop"); out != "" {
+		t.Errorf("a stop in no room wrote %q", out)
+	}
+	out := prompt("hook", "prompt")
+	var got struct {
+		SystemMessage string `json:"systemMessage"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil || !strings.Contains(got.SystemMessage, "cogmer 0.10.6 is installed") {
+		t.Errorf("the first prompt in no room after the install wrote %q, want the notice", out)
+	}
+	if out := prompt("hook", "prompt"); out != "" {
+		t.Errorf("the notice was shown again: %q", out)
 	}
 }
