@@ -1,0 +1,12 @@
+{
+  "name": "host-observer-probe",
+  "interface": { "displayName": "Host observer probe" },
+  "plugins": [
+    {
+      "name": "host-observer",
+      "source": { "source": "local", "path": "./" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}

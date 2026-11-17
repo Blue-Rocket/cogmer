@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [{
+      "hooks": [{ "type": "command", "command": "bash \"${PLUGIN_ROOT}/hooks/observe.sh\" codex SessionStart", "timeout": 10 }]
+    }],
+    "UserPromptSubmit": [{
+      "hooks": [{ "type": "command", "command": "bash \"${PLUGIN_ROOT}/hooks/observe.sh\" codex UserPromptSubmit", "timeout": 10 }]
+    }],
+    "PreToolUse": [{
+      "hooks": [{ "type": "command", "command": "bash \"${PLUGIN_ROOT}/hooks/observe.sh\" codex PreToolUse", "timeout": 10 }]
+    }],
+    "Stop": [{
+      "hooks": [{ "type": "command", "command": "bash \"${PLUGIN_ROOT}/hooks/observe.sh\" codex Stop", "timeout": 10 }]
+    }]
+  }
+}

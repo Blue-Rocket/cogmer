@@ -1,0 +1,6 @@
+{
+  "name": "host-observer",
+  "version": "0.1.0",
+  "description": "A throwaway probe for cogmer: records which hooks fire, where each runs, and the names of what it receives, never their content. Sends nothing anywhere.",
+  "author": { "name": "David Foote" }
+}

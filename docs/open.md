@@ -493,6 +493,7 @@ A run would install the marketplace plugin on a Mac whose Desktop configuration 
 `cogmer` entry, create a room in a local Cowork session, and check that a colleague receives
 its turns and that the session receives the colleague's. It would also show which host the
 binary resolves there (D-203, a host is declared by its entry point and resolved per request).
+The steps are probe 1 in `docs/work/host-probes.md`.
 
 **Whether a merged Chat and Cowork conversation runs the plugin's hooks is not known.** Since
 Chat and Cowork merged, Cowork is available from any conversation and Claude decides what a
@@ -504,6 +505,7 @@ Team plan, whose "Chat and Cowork unified" setting was off. Capture has to be au
 host to be in reach, so a conversation whose turns before Cowork joins it are not captured is
 only partly shared. A run would turn the setting on, start a conversation with the cogmer
 plugin installed, and record which hooks fire before and after Claude first uses Cowork in it.
+The steps are probe 2 in `docs/work/host-probes.md`.
 
 ## ChatGPT Work as a host
 
@@ -523,7 +525,8 @@ commands, capture and injection with a colleague. It would also show whether a W
 carries `CODEX_THREAD_ID` (B28, `CODEX_THREAD_ID` in a shell tool equals the hook session
 identifier) and whether a typed `$cogmer` command reaches the hook as Codex's does. If they
 work, a ChatGPT Work user is reached with no new design, and the README and §29 (the
-experience we want) would name ChatGPT Work as a way in.
+experience we want) would name ChatGPT Work as a way in. The steps are probe 3 in
+`docs/work/host-probes.md`.
 
 ## Cloud sessions in a room
 

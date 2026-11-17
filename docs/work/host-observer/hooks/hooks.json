@@ -1,0 +1,17 @@
+{
+  "description": "Records which hook events fire, where each runs, and the names of the fields each receives.",
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/observe.sh\" claude SessionStart", "timeout": 10 }] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/observe.sh\" claude UserPromptSubmit", "timeout": 10 }] }
+    ],
+    "PreToolUse": [
+      { "matcher": "*", "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/observe.sh\" claude PreToolUse", "timeout": 10 }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/observe.sh\" claude Stop", "timeout": 10 }] }
+    ]
+  }
+}
