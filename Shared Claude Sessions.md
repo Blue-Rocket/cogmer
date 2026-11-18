@@ -1,8 +1,8 @@
 # Peer-to-Peer Shared Real-Time Collaboration for Claude Code and Codex
 
 cogmer is a peer-to-peer daemon that replicates a conversation between Claude Code
-and Codex sessions for users working separately, with no central collaboration server or account
-anywhere. Each session talks only to a daemon on the same machine. Section 3.1 governs
+and Codex sessions for users working separately, with no central collaboration server, and with
+no account anywhere for a user who runs it on a computer of their own. Each session talks only to a daemon on the same machine. Section 3.1 governs
 everything else: a user's session is never worse for having cogmer installed.
 
 ## 1\. Objective
@@ -746,6 +746,45 @@ A machine that has been added receives from the machine that added it the user's
 machines and how to reach them, the user's colleagues, their verifications and labels,
 and the user's room list, so that it works as the user from its first session.
 
+## A hosted machine
+
+A user whose sessions run only in the cloud can have one of their machines hosted by cogmer
+or by an organization cogmer has certified as an operator, so that a user with no computer
+that runs cogmer can use it at all.
+
+A hosted machine is one of the user's machines like any other, and answers for the user
+while every other machine of theirs is off, so that a cloud session started from a phone
+finds the user's identity.
+
+A hosted machine joins every room its user's sessions join and keeps the room's turns,
+so that a turn sent from a cloud session that ends before a colleague's machine has the
+turn is not lost, and a new cloud session has the room's history while every colleague's
+machine is off.
+
+Before a machine is hosted for a user, the user is told that its operator holds what
+lets it speak as them and keeps every turn of their rooms, so that the user chooses
+hosting knowing what they give the operator.
+
+Before a colleague joins a room, they are shown which of its guests have a hosted
+machine and which operator runs it, and a guest of the room is shown when another guest
+gains one, so that a colleague can decline to join, or leave, a room whose turns an
+operator's server keeps.
+
+A user who creates a room can make it a room for self-hosted machines only, which no
+hosted machine joins, so that its guests' words are on no operator's server.
+
+A user with a hosted machine takes part in a room for self-hosted machines only from a
+cloud session, whose turns there are kept by the room's other machines, so that such a
+room need not shut a hosted colleague out.
+
+Whether a room is for self-hosted machines only is set when the room is created and
+never changes, so that no guest can later open the room to an operator.
+
+A user's cloud session shows the machines certified in the user's name and points out
+one the user did not add, and a colleague's view shows each guest's machines, so that a
+machine added in a user's name by anyone else is seen from somewhere its operator does
+not control.
+
 ## What a user's machines share
 
 A user's colleagues, their verifications, the labels the user gave them and the
@@ -769,7 +808,8 @@ guests or turns, so that a session on any of the user's machines can join the ro
 name while its conversation stays on the machines that joined it.
 
 A machine on which no session has joined a room holds none of the room's guests or
-turns, so that a room's conversation is on no machine the user has not brought into it.
+turns, except a hosted machine, which the user brought into every room by choosing it, so
+that a room's conversation is on no machine the user has not brought into it.
 
 A room's guest list belongs to the room, not to the user, and is the same on every
 machine of every guest that has joined the room (section 12), so that who may enter does
