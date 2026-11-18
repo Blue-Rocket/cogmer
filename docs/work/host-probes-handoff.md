@@ -23,7 +23,9 @@ In a local Cowork session on the Mac with "Only on this computer" on, no bridge:
 - A command's `!` line is refused ("[shell command execution disabled by policy]"), and the model's
   shell tool runs in a Linux VM that cannot reach the Mac's daemon. So no `/cogmer:` command runs.
 - Anthropic documents the refusal: https://code.claude.com/docs/en/skills.md says a Cowork session on
-  the desktop replaces every `!` command line with that placeholder. Managed skills are exempt.
+  the desktop replaces every `!` command line with that placeholder. The Claude Code program replaces
+  them in Cowork before it reads any setting, and a plugin installed as managed is not exempt, as the
+  open item says.
 
 The open item "A Cowork session that runs on the user's computer captures and injects…" in
 `docs/open.md` states this with its options for commands.
