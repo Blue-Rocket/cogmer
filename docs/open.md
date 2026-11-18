@@ -479,21 +479,14 @@ session in no room never runs for it (read from `cmd/cogmer/cowork_setup.go`,
 relays a call, which needs the bridge to read `bound-sessions/` under the state directory
 of the daemon it relays to.
 
-**Whether the ordinary cogmer plugin captures and injects in a Cowork session that runs on
-the user's computer, with no bridge, is not known.** Anthropic's page on plugin support lists
-hooks as loading in Cowork, and a local MCP server as loading "when the Cowork session runs on
-your computer" (https://claude.com/docs/plugins/platform-support.md, read on 2026-11-16). On
-2026-10-31 a local Cowork session on a Mac ran the cogmer plugin's `session-start.sh`
-(`78477ee`), and no turn has been run through `plugin/hooks-handlers/run.sh` there. If capture,
-injection and the room commands work, a Cowork user on their own computer needs no bridge, no
-Desktop configuration and no second plugin, which would replace D-205 (Claude Cowork is a
-supported host through a bridge on the user's machine) for that case.
+**A Cowork session that runs on the user's computer captures and injects through the plugin's hooks and cannot run any `/cogmer:` command without the bridge.** On 2026-11-18 on a Mac with Claude Desktop 5.11492.5, with "Only on this computer" on, the cogmer plugin's hooks ran on the Mac, a prompt hook's plain output reached the model, a session put in a room from a terminal had its prompts and replies captured, and the model quoted a colleague's turn word for word (`e7ddab7`). A command's `!` line printed "[shell command execution disabled by policy]", so `/cogmer:room-join` did not run, and the model's shell tool ran in a Linux aarch64 sandbox with no cogmer that could not reach the Mac's daemon (`e7ddab7`). Anthropic's skills page says a Cowork session on the desktop replaces every `!` command line with that placeholder, for every skill the user supplies, and names no setting that lets a user turn it off (https://code.claude.com/docs/en/skills.md, read on 2026-11-18). A Cowork user on their own computer is therefore reached for capture and injection with no bridge, no Desktop configuration and no second plugin, and cannot create, join or leave a room, name a colleague or check status from the session. This does not replace D-205 (Claude Cowork is a supported host through a bridge on the user's machine) for commands.
 
-A run would install the marketplace plugin on a Mac whose Desktop configuration has no
-`cogmer` entry, create a room in a local Cowork session, and check that a colleague receives
-its turns and that the session receives the colleague's. It would also show which host the
-binary resolves there (D-203, a host is declared by its entry point and resolved per request).
-The steps are probe 1 in `docs/work/host-probes.md`.
+The options for commands, each with its cost:
+- Keep the bridge for commands alone. A user then installs it as D-205 describes and only for the commands.
+- Expose the commands as tools of an MCP server that the plugin bundles. Anthropic's page on plugin support says a local MCP server loads "when the Cowork session runs on your computer" (https://claude.com/docs/plugins/platform-support.md, read on 2026-11-16), and one started on the Mac on 2026-10-31 (`78477ee`), which is one run. It needs the server, a test of each tool, and a behavior check that the server still loads, and it might need no Desktop configuration.
+- An organization deploys the plugin as managed. The skills page says managed skills are not affected, and it helps only organizations.
+
+Not known: whether the plugin starts a daemon in such a session, since the daemon was started first; which cogmer plugin ran; a session outside a project folder; whether a bundled server's tools run on the Mac with the same access as a hook. The steps are probe 1 in `docs/work/host-probes.md`, and a second run would answer the first two.
 
 **Whether a merged Chat and Cowork conversation runs the plugin's hooks is not known.** Since
 Chat and Cowork merged, Cowork is available from any conversation and Claude decides what a
