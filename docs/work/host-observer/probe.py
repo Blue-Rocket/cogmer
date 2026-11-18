@@ -34,10 +34,11 @@ OBS = os.path.join(HOME, ".cogmer-host-observer")
 MARK = os.path.join(HOME, ".cogmer-probe-mark.json")
 BUILD = os.path.expanduser(os.environ.get("PROBE_BUILD", "~/host-probe-build"))
 ADDR = os.environ.get("PROBE_ADDR", "127.0.0.1:4782")
-DESKTOP = os.path.join(HOME, "Library/Application Support/Claude/claude_desktop_config.json")
+DESKTOP = os.path.join(HOME, "Library/Application Support/Claude/claude_desktop_config.json"
+                       if sys.platform == "darwin" else ".config/Claude/claude_desktop_config.json")
 # The Claude Code session that drives a run is allowed: its prompts reach the probe's daemon and are
 # ignored there, since a session in no room hands cogmer nothing (D-284).
-APPS = ("Claude", "ChatGPT", "codex")
+APPS = ("Claude", "claude-desktop", "ChatGPT", "codex")
 NOISE = re.compile(r"post-quantum|store now|server may need")
 
 os.environ.setdefault("COLLEAGUE_BIN", os.path.join(BUILD, "cogmer"))

@@ -24,7 +24,8 @@ types).
 `SessionStart`, `UserPromptSubmit`, `PreToolUse` and `Stop`. Each hook appends to
 `~/.cogmer-host-observer/log.txt`, on the machine where the hook runs, the event, the operating
 system, the user, `HOME`, the names of the fields the hook received with each value's length,
-the names of the environment variables that mention a host, and whether a cogmer daemon answers
+the names of the environment variables that mention a host, the values of six that say when
+and how the session was made, and whether a cogmer daemon answers
 at 127.0.0.1:4782. It records no prompt or reply: a prompt appears as its length, and as its
 first word when that word is a command. The `SessionStart` and `UserPromptSubmit` hooks also
 print a line starting `[host-observer]`, which shows whether a hook's plain output reaches the

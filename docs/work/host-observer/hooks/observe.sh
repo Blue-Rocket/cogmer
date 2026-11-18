@@ -3,7 +3,9 @@
 # hook runs, and the NAMES of what it receives. It never records a prompt, a reply or
 # any other content: a field is logged by name and length, except a few that hold no
 # content (the event name, the source, the tool name, the permission mode), and a prompt
-# is logged only as its first word when that word is a command (/x or $x).
+# is logged only as its first word when that word is a command (/x or $x). The values of six
+# environment variables that say when and how the session was made are logged too, cut to 40
+# characters; none holds content or a secret.
 #
 # It never fails and never delays a session: every command is bounded, and it exits 0.
 # Usage: observe.sh <claude|codex> <event>
@@ -58,6 +60,11 @@ healthz() {
   echo "  fields: ${fields:-<no input>}"
   if [ "$event" = SessionStart ] || [ "$event" = UserPromptSubmit ]; then
     echo "  CLAUDE_CODE_REMOTE=${CLAUDE_CODE_REMOTE:-unset}  CLAUDE_CODE_SESSION_ID=$(printf '%s' "${CLAUDE_CODE_SESSION_ID:-}" | cut -c1-8)  CODEX_THREAD_ID=$(printf '%s' "${CODEX_THREAD_ID:-}" | cut -c1-8)"
+    vals=""
+    for v in CLAUDE_CODE_SESSION_CREATED_AT_MS CCR_SPAWN_TIMESTAMP_MS CLAUDE_CODE_SESSION_ORIGIN CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE CLAUDE_CODE_VERSION; do
+      vals="$vals $v=$(printf '%s' "${!v:-unset}" | cut -c1-40)"
+    done
+    echo "  env values:$vals"
     echo "  env names: $(env | cut -d= -f1 | grep -iE 'claude|codex|cogmer|cowork|ccr|chatgpt|openai|plugin|session|thread' | sort | tr '\n' ' ')"
     echo "  cogmer here: dir=$([ -d "$HOME/.cogmer" ] && echo yes || echo no) bin=$([ -x "$HOME/.cogmer/bin/cogmer" ] && "$HOME/.cogmer/bin/cogmer" version 2>/dev/null || echo none) bound-sessions=$(ls "$HOME/.cogmer/bound-sessions" 2>/dev/null | wc -l | tr -d ' ') daemon-127.0.0.1:4782=$(healthz)"
   fi
