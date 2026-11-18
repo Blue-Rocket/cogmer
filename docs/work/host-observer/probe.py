@@ -3,7 +3,7 @@
 person does is only what needs the app: clicking in Claude Desktop or the ChatGPT app and sending
 prompts. It moves the real state aside and back, installs the built cogmer, starts the daemon
 under test and a mock colleague (colleague.py), pairs them, makes a room, and collects the
-record. Run it from a plain terminal: it refuses while any host app or agent session is running.
+record. Run it from a plain terminal: it refuses while Claude Desktop, the ChatGPT app or Codex is running.
 
   probe.py before <1|2|3>   check nothing is running, stop the daemon, move ~/.cogmer aside,
                             install the built cogmer in a fresh one, clear the observer's log,
@@ -35,7 +35,9 @@ MARK = os.path.join(HOME, ".cogmer-probe-mark.json")
 BUILD = os.path.expanduser(os.environ.get("PROBE_BUILD", "~/host-probe-build"))
 ADDR = os.environ.get("PROBE_ADDR", "127.0.0.1:4782")
 DESKTOP = os.path.join(HOME, "Library/Application Support/Claude/claude_desktop_config.json")
-APPS = ("Claude", "ChatGPT", "claude", "codex")
+# The Claude Code session that drives a run is allowed: its prompts reach the probe's daemon and are
+# ignored there, since a session in no room hands cogmer nothing (D-284).
+APPS = ("Claude", "ChatGPT", "codex")
 NOISE = re.compile(r"post-quantum|store now|server may need")
 
 os.environ.setdefault("COLLEAGUE_BIN", os.path.join(BUILD, "cogmer"))
@@ -85,7 +87,7 @@ def up():
 
 
 def running():
-    """Host apps and agent sessions, as lines of `pid command`, excluding this script."""
+    """Host apps and Codex, as lines of `pid command`, excluding this script."""
     out = subprocess.run(["ps", "-axo", "pid=,comm="], capture_output=True, text=True).stdout
     found = []
     for line in out.splitlines():
@@ -123,6 +125,17 @@ def stop_daemon():
     die("a daemon still answers at %s after `cogmer stop`" % ADDR)
 
 
+def describe(d):
+    """Enough of a state directory to see whether it is the one that holds the user's rooms."""
+    try:
+        ident = json.load(open(os.path.join(d, "identity.json")))
+        who = "%s on %s" % (ident.get("userDisplayName"), ident.get("machineId"))
+    except (OSError, ValueError):
+        who = "no identity"
+    rooms = len(glob.glob(os.path.join(d, "rooms", "*.db")))
+    return "%s, %d rooms" % (who, rooms)
+
+
 def before(probe):
     if probe not in ("1", "2", "3"):
         die("before takes the probe's number, 1, 2 or 3")
@@ -138,6 +151,7 @@ def before(probe):
     mark = {"probe": probe, "at": datetime.datetime.now(datetime.timezone.utc).isoformat(), "desktop": None,
             "moved": os.path.exists(STATE)}
     if os.path.exists(STATE):
+        say("moving aside %s: %s" % (STATE, describe(STATE)))
         os.rename(STATE, ASIDE)
     os.makedirs(os.path.join(STATE, "bin"))
     shutil.copy(binary, os.path.join(STATE, "bin", "cogmer"))
@@ -152,6 +166,7 @@ def before(probe):
             if os.path.exists(backup):
                 die("%s exists already" % backup)
             shutil.copy(DESKTOP, backup)
+            mark["desktop_removed"] = {k: servers[k] for k in gone}
             for k in gone:
                 del servers[k]
             json.dump(cfg, open(DESKTOP, "w"), indent=2)
@@ -269,7 +284,7 @@ def say_turn(text):
 
 def events():
     try:
-        return call("/events?room=" + room()).get("events", [])
+        return call("/events?room=" + room()).get("events") or []
     except Exception as e:  # the daemon may be down
         return [{"error": str(e)}]
 
@@ -345,10 +360,16 @@ def after():
         die("%s exists already" % dest)
     os.rename(STATE, dest)
     if mark["moved"]:
+        say("restoring %s: %s" % (ASIDE, describe(ASIDE)))
         os.rename(ASIDE, STATE)
     if mark.get("desktop"):
-        shutil.move(mark["desktop"], DESKTOP)
-        say("Desktop's configuration put back from its copy")
+        # Desktop writes this file itself while it runs, so the entries taken out are added back to
+        # the file as it is now, and the copy is kept beside it.
+        cfg = json.load(open(DESKTOP))
+        cfg.setdefault("mcpServers", {}).update(mark.get("desktop_removed", {}))
+        json.dump(cfg, open(DESKTOP, "w"), indent=2)
+        say("Desktop's configuration: put back %s; the copy from before is at %s" % (
+            ", ".join(mark.get("desktop_removed", {})) or "nothing", mark["desktop"]))
     os.remove(MARK)
     if os.path.exists(os.path.join(HOME, ".cogmer-probe-token")):
         os.remove(os.path.join(HOME, ".cogmer-probe-token"))

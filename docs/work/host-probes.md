@@ -12,9 +12,11 @@ does not carry the user identity.
 A person does only what needs the app: upload plugins, start a session, send prompts and read
 what the screen shows. `docs/work/host-observer/probe.py` does the rest: moving state, starting
 the daemon under test and a mock colleague, pairing them with the two words compared in the
-script, making a room, and collecting the record. It runs from a plain terminal, and it refuses
-while a host app or an agent session is running, which includes the Claude Code session an
-assistant works in.
+script, making a room, and collecting the record. It refuses while Claude Desktop, the ChatGPT app
+or Codex is running. A Claude Code session may run alongside it to resolve what comes up: that
+session's prompts reach the probe's daemon and are ignored there, since a session in no room hands
+cogmer nothing (D-284, a session in no room reaches cogmer only through the commands its user
+types).
 
 ## What a run installs
 
@@ -45,7 +47,7 @@ a program from `main` then refuses to touch it (D-244, a program that finds newe
 nothing). The Mac's `~/.cogmer` holds real pairings and rooms, so a run moves it aside and
 works in a fresh one.
 
-Before, with Claude Desktop, the ChatGPT app and every Claude Code and Codex session quit:
+Before, with Claude Desktop, the ChatGPT app and Codex quit:
 
 ```sh
 python3 docs/work/host-observer/probe.py before <1|2|3>
@@ -96,7 +98,7 @@ local session run its command hooks on the Mac and its shell in a Linux VM, so t
 reach the Mac's daemon and a command's `!` line may not. Which side the `!` line runs on is
 the first thing the run shows.
 
-1. Quit every app and session, then run `probe.py before 1`.
+1. Quit Claude Desktop, the ChatGPT app and Codex, then run `probe.py before 1`.
 2. Open Claude Desktop. In the plugin settings, disable or remove any cogmer plugin, then upload
    `cogmer-plugin.zip` and `host-observer.zip`.
 3. Start a Cowork session that runs on this computer. Record the setting that says so, and what
@@ -126,7 +128,7 @@ in which Claude later uses Cowork. Only the observer is needed, since the questi
 hooks fire at all.
 
 1. As the Team plan's admin, turn on the setting "Chat and Cowork unified", and record when.
-   Quit every app and session, then run `probe.py before 2`.
+   Quit the apps, then run `probe.py before 2`.
 2. Upload `host-observer.zip` in Claude Desktop, if probe 1 has not.
 3. Start a new conversation. Send two prompts that need no tool, such as asking for a word that
    rhymes with orange.
@@ -148,7 +150,7 @@ The question is whether cogmer's Codex plugin captures and injects in a local Wo
 Codex's hooks do. OpenAI's page on hooks (https://learn.chatgpt.com/docs/hooks, read on
 2026-11-16) says local Work threads run a plugin's hooks once they are trusted.
 
-1. Quit every app and session, then run `probe.py before 3`.
+1. Quit the apps, then run `probe.py before 3`.
 2. Add two Codex marketplaces: `codex plugin marketplace add <checkout>`, whose
    `.agents/plugins/marketplace.json` names the cogmer plugin, and
    `codex plugin marketplace add <checkout>/docs/work/host-observer`, whose marketplace file

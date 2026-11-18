@@ -17,15 +17,15 @@ hand-written transcripts, as docs/work/windows-mac-relay-probe/probe.py did.
   colleague.py stop               stop the mock's daemon
 
 Settings, as environment variables: COLLEAGUE_BIN (the cogmer program, default
-~/host-probe-build/cogmer), COLLEAGUE_HOME (default ~/cogmer-colleague), COLLEAGUE_ADDR (default
-127.0.0.1:4792) and COLLEAGUE_PEER_ADDR (default 127.0.0.1:4793).
+~/host-probe-build/cogmer), COLLEAGUE_HOME (default ~/cogmer-mock), COLLEAGUE_ADDR (default
+127.0.0.1:47792) and COLLEAGUE_PEER_ADDR (default 127.0.0.1:47793).
 """
 import json, os, re, subprocess, sys, time, urllib.request
 
 BIN = os.path.expanduser(os.environ.get("COLLEAGUE_BIN", "~/host-probe-build/cogmer"))
-HOME = os.path.expanduser(os.environ.get("COLLEAGUE_HOME", "~/cogmer-colleague"))
-ADDR = os.environ.get("COLLEAGUE_ADDR", "127.0.0.1:4792")
-PEER = os.environ.get("COLLEAGUE_PEER_ADDR", "127.0.0.1:4793")
+HOME = os.path.expanduser(os.environ.get("COLLEAGUE_HOME", "~/cogmer-mock"))
+ADDR = os.environ.get("COLLEAGUE_ADDR", "127.0.0.1:47792")
+PEER = os.environ.get("COLLEAGUE_PEER_ADDR", "127.0.0.1:47793")
 SESSION = os.environ.get("COLLEAGUE_SESSION", "mock-colleague-session")
 ROOM_FILE = os.path.join(HOME, "mock-room")
 TRANSCRIPTS = os.path.join(HOME, "mock-transcripts")
@@ -164,7 +164,7 @@ def say(prompt, reply):
 
 def view():
     r = room()
-    events = call("/events?room=" + r).get("events", [])
+    events = call("/events?room=" + r).get("events") or []
     print("room %s holds %d events:" % (r, len(events)))
     for e in events:
         print("  ", json.dumps({k: (v if len(str(v)) < 120 else str(v)[:117] + "...") for k, v in e.items()}))
