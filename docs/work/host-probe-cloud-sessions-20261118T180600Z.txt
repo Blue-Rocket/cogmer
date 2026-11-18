@@ -1,0 +1,92 @@
+Cowork cloud sessions on 2026-11-18 from 15:57Z to 18:06Z, after probe 2: when the session starts, a cloud value read in a real session, and the released plugin's daemon there. Written by hand.
+
+Machine and versions
+  The droplet of probe 2 (DigitalOcean, Ubuntu 24.04.5 on x86_64, 16 GB, nested KVM), Claude Desktop 5.11492.5
+  for Linux, signed in to the Team organization Blue Rocket with "Chat and Cowork unified" on. Desktop was
+  driven by xdotool and read from screenshots and from the clipboard after a click on a code block's copy
+  icon. Built from ffe2f33 for linux/amd64: host-observer.zip b957f26a1a72, cogmer fbdd71d64749 (the start of
+  each sha256). Every cloud session reported CLAUDE_CODE_VERSION=2.1.42, CLAUDE_CODE_REMOTE=true,
+  CLAUDE_CODE_ENTRYPOINT=remote_cowork, CLAUDE_CODE_SESSION_ORIGIN=claude_ai_chat and
+  CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE=cloud_default, and ran as root on a host named vm.
+  Plugins created by the user on the account: Cogmer (0.10.5, uploaded about 12h earlier), Host observer,
+  and for run E only, Cogmer cloud 24d47949 and Cogmer carrier probe.
+
+A. A conversation whose first message was /host-observer:where
+  Sent at 15:57:21. CLAUDE_CODE_SESSION_CREATED_AT_MS gives 15:57:24.850 and CCR_SPAWN_TIMESTAMP_MS 15:57:26.685.
+  The observer's log in the VM:
+    15:57:28 #1 SessionStart  source=startup  cogmer bin=none daemon=000fail
+    15:57:29 #2 PreToolUse
+    15:57:33 #3 UserPromptSubmit  prompt=<0 chars>  cogmer bin=0.10.5 daemon-127.0.0.1:4782=200
+    15:57:39 #4 PreToolUse
+  The PreToolUse of #2 came before the turn's UserPromptSubmit, and that UserPromptSubmit carried an empty
+  prompt.
+
+B. A conversation that began as chat
+  Two prompts asking for rhymes, at 15:59:15 and 15:59:36, were answered with no session: no observer log
+  existed and Desktop's logs named no session. A prompt at 15:59:59 asking the model to run a shell command
+  made one: created 16:00:00.694, VM spawned 16:00:03.451. Desktop's main log wrote
+  remote_cowork.late_link_offer_verdict at that send. The observer's log:
+    16:00:05 #1 SessionStart  source=resume
+    16:00:06 #2 PreToolUse
+    16:00:06 #3 UserPromptSubmit  prompt=<0 chars>
+    16:00:08 #4 Stop  last_assistant_message=<116 chars>
+    16:01:26 #5 UserPromptSubmit  prompt=<260 chars>
+    16:01:28 #6 PreToolUse
+  The rhyme turns left no hook record in the VM or on the droplet.
+
+C. A conversation with a local folder chosen
+  Choosing ~/probe-folder in the composer's folder picker made Desktop say the task would run in the cloud,
+  and sending asked "Verify this device to continue". The device was not verified, so nothing ran.
+
+E. A cloud value read in a Cowork cloud session
+  A throwaway identity "Cloud Probe" (machine probe-droplet) was made on the droplet under its own state
+  folder, its machines page made a cloud value for a cloud environment named probe-cowork, and the page's
+  plugin zip (1326 bytes) was uploaded as Cogmer cloud 24d47949. No person or program printed the value.
+  A second plugin, Cogmer carrier probe (carrier.zip c4dc95b9b97b), carried the cogmer build from ffe2f33 in
+  libexec/ and a SessionStart and UserPromptSubmit hook that, only where CLAUDE_CODE_ENTRYPOINT was
+  remote_cowork, started that build with its own state folder and ports and logged whoami in summary. Its
+  first upload, with the build in bin/, was refused: "claude.ai-hosted plugins may not ship bin/ executables
+  because they are added to PATH on the CLI but are not shown on the admin approval surface".
+  A conversation whose first message asked for the carrier's log was sent at 16:31:23. The carrier's log:
+    16:31:30 SessionStart  daemon 200  synced: cogmer-cloud-24d47949 cogmer-cloud-24d47949.meta.json
+             whoami: user=ed25519:FE1Z-U4e display='Cloud Probe' chain=['machine', 'session', 'shared'] session-cert=True
+    16:31:42 and 16:33:03 UserPromptSubmit, the same
+  The daemon's output, filtered for these words by the model's shell and copied from the conversation:
+    16:31:30 cloud: this session speaks for steady-harrier as probe-cowork, with a key certified until 2026-11-19T16:31:30Z
+    16:31:34 cogmer daemon  peer=Cloud Probe (fond-razorbill)  serving 0 room(s)
+    16:31:35 peer tc://tco2FwWCAH1-… is unreachable: 500 Internal Server Error: the lists could not be read
+    16:31:35 cloud: none of your machines answered for your lists, so this session waits for one: probe-droplet: 500 …
+    16:31:36 … Reading: the relay path works, so the failure is above it, in the tunnel's TCP connection or the peer's server.
+    16:31:51 peer tc://tco2FwWCAH1-… is reachable again after 15s
+    16:31:51 cloud: your lists arrived from probe-droplet
+    16:31:59, 16:32:55, 16:33:24, 16:35:37 http: TLS handshake error from [fd7a:…]:<port>: read tcp …:4783->…: i/o timeout
+  The unfiltered output showed "websocket: connected to https://tc302a.ipn.dev/derp" after each restart of the
+  relay client, at 16:34:12 and 16:35:16, each registering a new address. The source of the 16:35:37 handshake
+  error, fd7a:115c:a1e0:fbd1:eaa0:2d35:cbeb:569a, is the address registered at 16:35:16.
+
+F. The released plugin in a Cowork cloud session
+  A conversation whose first message asked the model to run a shell command was sent at 18:04:41. The
+  session's synced folder held cogmer (VERSION 0.10.5), cogmer-carrier-probe, cogmer-cloud-24d47949 and
+  host-observer. No COGMER_ variable was set. ~/.cogmer/install.log:
+    18:04:46 downloading https://github.com/Blue-Rocket/cogmer/releases/download/v0.10.5/cogmer_0.10.5_linux_amd64
+    18:04:48 installed 0.10.5 from release
+  ~/.cogmer/daemon.log:
+    18:04:46 hook: no binary yet (searched COGMER_BIN, /root/.cogmer/bin, plugin bin, PATH); not starting
+    18:04:49 hook: starting /root/.cogmer/bin/cogmer on 127.0.0.1:4782 (pid 380)
+    18:04:53 relay connection carried as a WebSocket (TS_DEBUG_DERP_WS_CLIENT=1; …)
+    18:04:53 cogmer daemon  peer=Someone (kindly-bluejay)  serving 0 room(s)
+    18:04:53 reachable at tc://tco2FwWCB3aa… (186 chars)
+  At 18:06:13 its healthz answered {"ok":true,…,"rooms":0,"version":"0.10.5"}. ~/.cogmer held identity.json,
+  identity.key, membership.db, tailcat.key and no shared.key.
+
+Afterwards
+  At 19:40Z both plugins of run E were removed from the account in Desktop's Customize page, and the
+  throwaway identity removed its cloud key probe-cowork from its machines.
+
+What the runs do not show
+  What the session's first, empty UserPromptSubmit stands for, and whether a hook can read the prompt that
+  started the session anywhere else. What a session made in the middle of a conversation receives of the
+  turns before it. A session run after device verification, or with a local folder. Why the user's machine
+  answered the first request for the lists with a 500, and what dialed the cloud daemon's peer port and
+  timed out. Whether the released daemon of run F stays up between prompts. A Pro or Max account, another
+  organization's network setting, macOS, Windows, and Claude Code versions other than 2.1.42.
