@@ -1,0 +1,65 @@
+A Cowork cloud conversation on 2026-11-19 from 04:49Z to 05:12Z: what a session made in the middle of a conversation holds of the turns before it, and whether a hook's systemMessage or a file in the outputs folder reaches the person in Desktop or in the mobile app. Written by hand.
+
+Machine and versions
+  The droplet and Desktop of 9c88af4:docs/work/host-probe-cloud-sessions-20261118T180600Z.txt, signed in
+  to the Team organization Blue Rocket with "Chat and Cowork unified" on, driven the same way. The user
+  opened the same conversation in the Claude app on an iPhone. Plugins on the account: Cogmer (0.10.5),
+  Host observer, and Phone probe, uploaded at 04:48:52 for this run.
+
+The plugin
+  Phone probe (phone-probe.zip, 3 files) ran one script at SessionStart and at UserPromptSubmit. Only where
+  CLAUDE_CODE_ENTRYPOINT was remote_cowork, it appended a line "- <time> <event>: a line the hook wrote" to
+  /mnt/attach/outputs/phone-probe-room.md and printed {"systemMessage":"PHONE-PROBE systemMessage at <time>
+  on <event>"}. It read no prompt.
+
+The conversation
+  04:49:12 and 04:49:41, from Desktop: two prompts asking for two-line rhymes, about a pelican with the word
+  KESTREL-ALPHA-7 and about a heron with KESTREL-BETA-8. They were answered with no session. The pelican
+  reply held the word "radioed", which no prompt held.
+  04:51:06, from Desktop: a prompt asking the model to run a shell command over the newest transcript under
+  ~/.claude/projects. The command spelled each word in two quoted halves, so the prompt held none of them.
+  The output:
+    transcript=/root/.claude/projects/-home-claude/3f18a490-b76d-5e75-ad68-27a34d922c4b.jsonl lines=17
+    {'attachment': 6, 'user': 3, 'assistant': 3, 'atis-latch': 1, 'queue-operation': 2, 'tools-used': 1, 'system': 1}
+    KESTREL-ALPHA-7: 2   KESTREL-BETA-8: 2   pelican: 2   heron: 2   radioed: 1
+  At 04:52 a later prompt listed the transcript's records, each with its type, timestamp and the start of
+  its text. The first five, before any hook record:
+    1 attachment 04:49:13 cowork_memory_context
+    2 user       04:49:13 text, starting with a <system-reminder> naming the user's timezone
+    3 assistant  04:49:14 text 'A pelican scooped up fish galore,\nthen radioed KESTREL-ALPHA-7, "…'
+    4 user       04:49:41 text, starting the same way
+    5 assistant  04:49:43 text 'A heron stood still by the water to wait,\nthen flew off to report…'
+  Records 6 to 9 had no timestamp or 04:51:12, and the hook records began at record 10, 04:51:12. Each
+  prompt from then on added a hook_system_message attachment and a hook_success attachment.
+  At 04:53:57 the file held a SessionStart line at 04:51:12 and a UserPromptSubmit line for each prompt
+  from 04:51:13 on.
+  At about 05:06, from the phone: the user sent "hi" and Desktop showed a reply greeting the user by
+  name. At 05:07:36 a prompt from Desktop showed the file's last lines:
+    - 04:53:57 UserPromptSubmit: a line the hook wrote
+    - 05:06:06 SessionStart: a line the hook wrote
+    - 05:06:06 UserPromptSubmit: a line the hook wrote
+    - 05:07:36 UserPromptSubmit: a line the hook wrote
+
+What the Host observer logged
+  At 05:12 a prompt showed, from the observer's log in the sandbox, each SessionStart's source and each
+  UserPromptSubmit's prompt length:
+    04:51:12 #1  SessionStart source=resume        05:06:06 #15 SessionStart source=resume
+    04:51:13 #3  UserPromptSubmit <0 chars>        05:06:06 #16 UserPromptSubmit <140 chars>
+    04:52:14 #5, 04:52:17 #7, 04:52:20 #9, 04:53:57 #12, UserPromptSubmit of 276, 250, 621 and 284 chars
+    05:07:36 #18 UserPromptSubmit <244 chars>      05:12:02 #21 SessionStart source=resume
+  The observer numbers its events from a file in ~/.cogmer-host-observer, and the numbers ran on across
+  the SessionStarts of 05:06:06 and 05:12:02, so those sessions found the home folder of 04:51:12.
+
+What the person saw
+  Desktop showed no PHONE-PROBE line and no file at any prompt: each prompt was followed by the model's
+  collapsed step and reply. The user reported that the mobile app showed no system message and no file in
+  the conversation, before or after sending "hi".
+
+Some prompts typed into Desktop were sent in parts: xdotool typed the line breaks of one prompt as
+separate sends, and twice the Return after a long prompt did not send it until pressed again.
+
+What the run does not show
+  How long the sandbox's home folder and the outputs folder last after the last prompt. What the 140
+  characters of the phone's "hi" held. Whether the mobile app or Desktop shows the outputs folder anywhere
+  outside the conversation, or a file the model names in its reply. A Pro or Max account, Android, and a Cowork session with a local
+  folder.
