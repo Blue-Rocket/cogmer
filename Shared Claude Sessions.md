@@ -2709,7 +2709,9 @@ plugin a user has installed, and an unprefixed `create` or `status` would collid
 
 A user never has to start the daemon, notice that it has stopped, or know that it
 exists. The session-start hook starts it when it is not already running, so installing
-is the whole of setup.
+is the whole of setup. In a Cowork cloud session that holds no cloud value the hook
+fetches and starts nothing, since a daemon there would have no user to speak for and
+could join no room.
 
 When cogmer's first install has finished, the user is told once, in one line, that cogmer is installed
 and what to run next, so that a user knows the install worked. After that line, a session

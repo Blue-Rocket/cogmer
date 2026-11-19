@@ -69,6 +69,26 @@ hook_for_session_in_no_room() {
   [ ! -e "$dir/$id" ]
 }
 
+# cowork_cloud_without_value succeeds in a Cowork cloud session that holds no cloud value,
+# where a daemon would speak for nobody and could join no room, so the session-start hook
+# fetches and starts nothing (D-286). A value is the variable, or a cloud.value in a synced
+# plugin folder of the name the daemon reads one from (D-279, a cloud session's daemon reads
+# its cloud value from the plugin files it finds), and the file is never read here. Any doubt
+# fails the check, which starts the daemon. COGMER_SYNCED_PLUGINS names another folder, for a
+# test, as it does for the daemon.
+cowork_cloud_without_value() {
+  local root f name re='^cogmer-cloud-[0-9a-f]{8}(~g[0-9]+)?$'
+  [ "${CLAUDE_CODE_ENTRYPOINT:-}" = remote_cowork ] || return 1
+  [ -z "${COGMER_CLOUD_KEY:-}" ] || return 1
+  root="${COGMER_SYNCED_PLUGINS:-$HOME/.claude/plugins/synced}"
+  for f in "$root"/*/cogmer-cloud-*/cloud.value; do
+    [ -e "$f" ] || continue
+    name="$(basename "$(dirname "$f")")"
+    [[ $name =~ $re ]] && return 1
+  done
+  return 0
+}
+
 # ct_say appends one timestamped line to a log under the state directory.
 #
 # §3.1 requires failure to be silent TO THE PERSON AT THE KEYBOARD. It does not require silence

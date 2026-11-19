@@ -13,6 +13,12 @@
 #   log; the session says nothing about any of it.
 . "$(dirname "$0")/common.sh"
 
+# A Cowork cloud session with no cloud value gets nothing: no download, no daemon and no
+# context, since a daemon there would speak for nobody (D-286).
+if cowork_cloud_without_value; then
+  exit 0
+fi
+
 # The host this hook is for: Claude Code's hook line passes none, and Codex's passes codex.
 host="${1:-claude}"
 
