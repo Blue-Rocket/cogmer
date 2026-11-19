@@ -1,0 +1,120 @@
+{
+  "description": "Calls the cprobe connector under both names and the computer's cogmer-host-probe server through remote-devices, from mcp_tool hooks on UserPromptSubmit, after the model's call to either, and at Stop, and records in a file in the sandbox that each event's hooks ran.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/mark.sh\" UserPromptSubmit",
+            "timeout": 15
+          },
+          {
+            "type": "mcp_tool",
+            "server": "cprobe",
+            "tool": "ping",
+            "input": {
+              "via": "hook v8 UserPromptSubmit cprobe"
+            },
+            "timeout": 25
+          },
+          {
+            "type": "mcp_tool",
+            "server": "claude.ai cprobe",
+            "tool": "ping",
+            "input": {
+              "via": "hook v8 UserPromptSubmit claude.ai cprobe"
+            },
+            "timeout": 25
+          },
+          {
+            "type": "mcp_tool",
+            "server": "remote-devices",
+            "tool": "cogmer-host-probe__ping",
+            "input": {
+              "event": "hook v8 UserPromptSubmit remote-devices"
+            },
+            "timeout": 25
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/mark.sh\" PostToolUse",
+            "timeout": 15
+          },
+          {
+            "type": "mcp_tool",
+            "server": "cprobe",
+            "tool": "ping",
+            "input": {
+              "via": "hook v8 PostToolUse cprobe"
+            },
+            "timeout": 25
+          },
+          {
+            "type": "mcp_tool",
+            "server": "claude.ai cprobe",
+            "tool": "ping",
+            "input": {
+              "via": "hook v8 PostToolUse claude.ai cprobe"
+            },
+            "timeout": 25
+          },
+          {
+            "type": "mcp_tool",
+            "server": "remote-devices",
+            "tool": "cogmer-host-probe__ping",
+            "input": {
+              "event": "hook v8 PostToolUse remote-devices"
+            },
+            "timeout": 25
+          }
+        ],
+        "matcher": "mcp__cprobe__ping|mcp__remote-devices__cogmer-host-probe__ping"
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/mark.sh\" Stop",
+            "timeout": 15
+          },
+          {
+            "type": "mcp_tool",
+            "server": "cprobe",
+            "tool": "ping",
+            "input": {
+              "via": "hook v8 Stop cprobe"
+            },
+            "timeout": 25
+          },
+          {
+            "type": "mcp_tool",
+            "server": "claude.ai cprobe",
+            "tool": "ping",
+            "input": {
+              "via": "hook v8 Stop claude.ai cprobe"
+            },
+            "timeout": 25
+          },
+          {
+            "type": "mcp_tool",
+            "server": "remote-devices",
+            "tool": "cogmer-host-probe__ping",
+            "input": {
+              "event": "hook v8 Stop remote-devices"
+            },
+            "timeout": 25
+          }
+        ]
+      }
+    ]
+  }
+}

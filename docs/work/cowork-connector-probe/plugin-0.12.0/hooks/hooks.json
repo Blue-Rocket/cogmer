@@ -1,0 +1,21 @@
+{
+  "description": "At Stop, records that the hooks ran and asks an agent hook to call the cprobe connector's ping and report, through its reason, what tools it had and what the call returned.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/mark.sh\" Stop",
+            "timeout": 15
+          },
+          {
+            "type": "agent",
+            "prompt": "This is a connectivity probe, not a check of the conversation. The hook input is: $ARGUMENTS\nIf that input has stop_hook_active set to true, return ok=true at once with reason \"second pass\" and do nothing else.\nOtherwise: 1. Note the names of every tool available to you whose name contains mcp, cprobe or ping, including tools you can find with a tool search. 2. Call the ping tool of the cprobe MCP server once, with via set to \"agent hook v12\", and note its result or error. 3. Return ok=false with a reason that begins \"PROBE REPORT:\" and gives the tool names from step 1 and the result from step 2. Never fail to return a result.",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}

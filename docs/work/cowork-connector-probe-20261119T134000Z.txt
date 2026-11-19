@@ -1,0 +1,122 @@
+Cowork cloud conversations on 2026-11-19 from 13:41Z to 16:05Z, with matching local runs: whether anything a plugin adds to a Cowork cloud session can reach a server outside the sandbox without an owner allowing the host, by mcp_tool hooks, http hooks or agent hooks, through a connector, the computer link or a server the plugin declares. Written by hand.
+
+Machines and versions
+  Cowork: Claude Desktop on the user's Mac (host name pushover.local) and the Claude app on an iPhone, signed in
+  to the Team organization Blue Rocket with "Chat and Cowork unified" on, "Only on this computer" on and "Enable
+  computer use" off in Settings > Capabilities, as a screenshot the user sent showed. Desktop's version was not
+  read. Every conversation ran in the cloud: hooks reported host vm, CLAUDE_CODE_ENTRYPOINT remote_cowork and
+  CLAUDE_CODE_REMOTE true, and the session's Claude Code named itself claude-code 2.1.329-ccs.shaf73479eeed3c when
+  it connected to the connector. Plugins on the account: Cogmer (0.10.5) and one version at a time of the probe
+  plugin in cowork-connector-probe/plugin-0.N.0. Desktop's configuration on the Mac held the server
+  cogmer-host-probe of 06749a0:docs/work/cowork-probe/host-mcp/server.py, which logs each call to
+  ~/.cogmer-host-probe.log on the Mac.
+  Local: the droplet that holds this repository, Ubuntu 24.04 on 4 vCPUs, with Claude Code 2.1.328, signed in to
+  the same account, running claude -p with the probe plugin given by --plugin-dir.
+
+The server
+  cowork-connector-probe/server/server.py, in its last form, ran on the droplet at 127.0.0.1:8790 behind two
+  Cloudflare quick tunnels, written TUNNEL-1 and TUNNEL-2 in the copies here. It speaks MCP over streamable HTTP
+  with no authentication on any path that starts /mcp, offers one tool, ping, and logs each request's time, path,
+  JSON-RPC method, the caller's address, its user-agent and a call's arguments. From 15:48 it also took /http-hook
+  and logged only the event name and field names of what it received. Until 15:30 a call's reply was a JSON
+  hookSpecificOutput naming UserPromptSubmit, and from 15:30 it was plain text.
+
+The connector
+  The user added TUNNEL-1/mcp as an individual custom connector named cprobe at 13:41. Every request that came
+  through it, from claude.ai and from every session, came from an address in 160.79.106.0/24.
+
+The cloud runs, one conversation for each probe version
+  0.1.0, from Desktop, 13:41 to 13:55. Five mcp_tool hooks at UserPromptSubmit called ping on "claude.ai cprobe",
+  "claude_ai_cprobe", "cprobe", "remote-devices" (tool plugin_cogmer-connector-probe_local__ping) and
+  "plugin:cogmer-connector-probe:local"; a command hook posted to TUNNEL-1/egress; the plugin bundled a stdio
+  server, local, that posts to TUNNEL-1/egress when it starts. The session connected to the connector at
+  13:46:35, when the model was asked to use it, and the model called ping at 13:46:36. The model named the tool
+  mcp__cprobe__ping. Nothing else reached the server. A shell POST to TUNNEL-1/egress printed "egress 000", and the
+  model said the proxy refused the host. The Cogmer plugin's SessionStart hook started a daemon at 13:45.
+  0.2.0, from the phone, 14:25 to 14:32. A command hook appended each event to /tmp/cprobe-hooks.log in the sandbox,
+  and mcp_tool hooks called "cprobe" and "claude.ai cprobe". The file held UserPromptSubmit and SessionStart at
+  14:25:26 and UserPromptSubmit at 14:27:25 and 14:28:25. The session first connected to the connector at 14:30:36,
+  when the model called it; no hook call reached the server before or after, including at a prompt sent after
+  the connection.
+  0.3.0, from Desktop, 14:56 to 14:58. mcp_tool hooks called "cprobe" and "claude.ai cprobe" at UserPromptSubmit,
+  at PostToolUse after the model's call to the connector and at Stop. The file held UserPromptSubmit at 14:56:14,
+  14:56:52 and 14:57:33, PostToolUse at 14:57:02 and Stop at 14:56:18 and 14:57:03. The model's call arrived at
+  14:57:02; no hook call arrived.
+  0.4.0, 15:03 to 15:04. As 0.3.0, and the command hook recorded the PostToolUse input's field names and its
+  mcp_server field: mcp_server {"name": "cprobe", "source": "dynamic"} for mcp__cprobe__ping at 15:03:42, the
+  second the model's call arrived. No hook call arrived.
+  0.5.0, 15:11 to 15:16. The plugin declared a server remote, type http, at TUNNEL-1/mcp-plugin, and mcp_tool
+  hooks called "plugin:cogmer-connector-probe:remote". The model listed 404 tools whose names start mcp__, none
+  from the plugin's server, and nothing reached /mcp-plugin. The file held UserPromptSubmit and Stop for each prompt.
+  0.6.0, 15:18 to 15:21. As 0.5.0 with the server at TUNNEL-2/mcp-plugin, a host nothing else used. The same result.
+  0.7.0, 15:28 to 15:29. mcp_tool hooks called "remote-devices" with tool "cogmer-host-probe__ping" at
+  UserPromptSubmit, at PostToolUse after the model's call to that tool and at Stop. The PostToolUse input named
+  the server {"name": "remote-devices", "source": "dynamic"}. The Mac's log gained one line, "ping event=v7
+  model" at 15:28:02, from the model's call.
+  0.8.0. The user typed /debug, and the session answered that it had no /debug command.
+  0.9.0, 15:44 to 15:46. The command hook recorded the transcript_path it was given, which was empty at every
+  event, so there was no transcript to read hook outcomes from.
+  0.10.0, 15:50 to 15:51. http hooks at UserPromptSubmit and Stop posted to TUNNEL-1/http-hook. The file held
+  each event, and nothing reached the server. A shell search of the sandbox for files over 50MB containing "does
+  not run command, script, HTTP or MCP tool hooks" found /opt/claude-code/bin/claude, "Version: 2.1.328", which
+  also contained 'type==="mcp_tool")&&o.settingsSource==="projectSettings"', and
+  /usr/local/lib/python3.13/dist-packages/claude_agent_sdk/_bundled/claude, "Version: 2.1.308", which did not.
+  0.11.0, 16:01. A Stop agent hook asked its model to call the cprobe connector's ping and answer ok. The file held
+  Stop at 16:01:49, and nothing reached the server.
+  0.12.0, about 16:04. The same agent hook answered not ok with its findings as its reason, which the session's
+  model quoted: "PROBE REPORT: Step 1: No available tool has a name containing "mcp", "cprobe", or "ping". The
+  tools I can see are Bash, Edit, NotebookEdit, Read, Write, and StructuredOutput. No ToolSearch tool is
+  available, so I could not search for deferred tools. Step 2: I could not call the ping tool of the cprobe MCP
+  server because no such tool is available to me. Result: error, tool not found. The stop_hook_active flag was
+  false, so the full probe ran." The session's model said ToolSearch, mcp__cprobe__ping and
+  mcp__remote-devices__cogmer-host-probe__ping were available to it.
+
+The local runs, Claude Code 2.1.328 on the droplet
+  14:34, hooks from a settings file: an mcp_tool hook on "claude.ai cprobe" reached the server at UserPromptSubmit
+  and at Stop, through https://mcp-proxy.anthropic.com, after waiting 151ms for the server to finish connecting.
+  The debug log said "mcp_tool hook skipped — MCP server 'cprobe' not connected" for the hook on "cprobe". The
+  model named the tool mcp__claude_ai_cprobe__ping.
+  14:53 and 15:01, plugins 0.3.0 and 0.4.0: the hooks on "claude.ai cprobe" reached the server at
+  UserPromptSubmit, PostToolUse and Stop, and the PostToolUse input named the server {"name": "claude.ai cprobe",
+  "source": "claudeai"}.
+  15:06, plugin 0.5.0 with its server at TUNNEL-1/mcp, the connector's URL: the debug log said "Lazy dedup:
+  suppressing 1 plugin server(s) that duplicate claude.ai connectors". At 15:07, with the server at
+  TUNNEL-1/mcp-plugin, the model's call and the hooks at all three events reached it from the droplet's own
+  address, and PostToolUse named the server {"name": "plugin:cogmer-connector-probe:remote", "source": "plugin"}.
+  15:16, plugin 0.6.0: the same through TUNNEL-2.
+  15:42, plugin 0.9.0: the transcript recorded each hook outcome as an attachment, among them
+  hook_non_blocking_error with stderr "MCP server 'cprobe' not connected" and "MCP server 'remote-devices' not
+  connected", and hook_success with command "claude.ai cprobe/ping".
+  15:48, plugin 0.10.0: both http hooks reached the server from the droplet's address.
+  15:59, plugin 0.11.0: the agent hook's model found mcp__claude_ai_cprobe__ping by tool search and did not call
+  it. At 16:00, with --allowedTools naming that tool, it called it and the call reached the server at 16:00:12.
+  16:02, plugin 0.12.0: the main model quoted a report naming mcp__claude_ai_cprobe__ping and the reply "connector
+  probe reached via agent hook v12".
+
+Read in the code of Claude Code 2.1.328 on the droplet, not observed
+  A diskless session, one whose launch options say diskless, filters the hooks it runs. From a plugin it keeps
+  command and prompt hooks, agent hooks and http hooks, and it keeps mcp_tool hooks only from project settings.
+  The function that runs an mcp_tool hook refuses in a diskless session with "MCP tool hook not run: a cloud
+  session does not run command, script, HTTP or MCP tool hooks from the shared server it runs on".
+  Where CLAUDE_CODE_REMOTE is true, an mcp_tool hook naming remote-devices is refused with "Hooks can't call
+  tools of MCP server '…' in a cloud session, because that server acts on your computer or browser and a hook's
+  call skips the permission check."
+  An agent hook's model gets the session's tools less a few, and when the launch option toolsMayBeOnHost holds,
+  only one tool that is not from an MCP server. A message reads "A hook agent evaluating a call served for a cloud
+  session may not run a destructive command here".
+  "dynamic" is a configuration scope that Claude Code gives a server added while it runs rather than read from a
+  settings file, among them a plugin's servers and a connector a host hands in, which one place in the code
+  describes as type http, scope dynamic, source dynamic and provenance connector.
+  A bundled command, /debug, turns on debug logging while a session runs.
+
+What the runs show
+  In a Cowork cloud session on Claude Code 2.1.329-ccs, no mcp_tool hook of a plugin reached a connector or the
+  user's computer, at any of UserPromptSubmit, PostToolUse and Stop and under the exact server name the session
+  reported, while the same hooks did locally; no http or command hook reached a host no owner allowed; and an
+  agent hook ran with no MCP tool. The session's model reached the connector and the computer. The rule read in
+  2.1.328, the version found in the sandbox, accounts for every mcp_tool result.
+
+What the runs do not show
+  The code of 2.1.329-ccs, the build that decided which hooks ran, which is not in the sandbox. An organization
+  connector. A Pro or Max account. Whether an http hook or a plugin's declared server would reach a host an owner
+  had allowed. Desktop's version. Why the local server of 0.1.0 never reported starting.

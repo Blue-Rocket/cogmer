@@ -1,0 +1,5 @@
+{
+  "name": "cogmer-connector-probe",
+  "version": "0.10.0",
+  "description": "Throwaway probe: whether a plugin's http hook in a Cowork cloud session reaches a host no owner allowed."
+}

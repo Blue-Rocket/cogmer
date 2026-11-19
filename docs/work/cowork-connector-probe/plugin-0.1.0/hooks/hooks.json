@@ -1,0 +1,20 @@
+{
+  "description": "Calls the connector probe under each name a remote connector or a bundled server may have, and reports where the command hook runs.",
+  "hooks": {
+    "SessionStart": [
+      {"hooks": [{"type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/egress.sh\" SessionStart", "timeout": 15}]}
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {"type": "mcp_tool", "server": "claude.ai cprobe", "tool": "ping", "input": {"via": "hook claude.ai cprobe / ping", "session": "${session_id}"}, "timeout": 15},
+          {"type": "mcp_tool", "server": "claude_ai_cprobe", "tool": "ping", "input": {"via": "hook claude_ai_cprobe / ping", "session": "${session_id}"}, "timeout": 15},
+          {"type": "mcp_tool", "server": "cprobe", "tool": "ping", "input": {"via": "hook cprobe / ping", "session": "${session_id}"}, "timeout": 15},
+          {"type": "mcp_tool", "server": "remote-devices", "tool": "plugin_cogmer-connector-probe_local__ping", "input": {"via": "hook remote-devices / plugin_cogmer-connector-probe_local__ping", "session": "${session_id}"}, "timeout": 15},
+          {"type": "mcp_tool", "server": "plugin:cogmer-connector-probe:local", "tool": "ping", "input": {"via": "hook plugin:cogmer-connector-probe:local / ping", "session": "${session_id}"}, "timeout": 15},
+          {"type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/egress.sh\" UserPromptSubmit", "timeout": 15}
+        ]
+      }
+    ]
+  }
+}

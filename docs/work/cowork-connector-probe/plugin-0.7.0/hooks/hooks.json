@@ -1,0 +1,66 @@
+{
+  "description": "Calls the cogmer-host-probe server on the user's computer through remote-devices from mcp_tool hooks on UserPromptSubmit, after the model's own call to it, and at Stop, and records in a file in the sandbox that each event's hooks ran.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/mark.sh\" UserPromptSubmit",
+            "timeout": 15
+          },
+          {
+            "type": "mcp_tool",
+            "server": "remote-devices",
+            "tool": "cogmer-host-probe__ping",
+            "input": {
+              "event": "v7 hook UserPromptSubmit"
+            },
+            "timeout": 25
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/mark.sh\" PostToolUse",
+            "timeout": 15
+          },
+          {
+            "type": "mcp_tool",
+            "server": "remote-devices",
+            "tool": "cogmer-host-probe__ping",
+            "input": {
+              "event": "v7 hook PostToolUse"
+            },
+            "timeout": 25
+          }
+        ],
+        "matcher": "mcp__remote-devices__cogmer-host-probe__ping"
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/mark.sh\" Stop",
+            "timeout": 15
+          },
+          {
+            "type": "mcp_tool",
+            "server": "remote-devices",
+            "tool": "cogmer-host-probe__ping",
+            "input": {
+              "event": "v7 hook Stop"
+            },
+            "timeout": 25
+          }
+        ]
+      }
+    ]
+  }
+}

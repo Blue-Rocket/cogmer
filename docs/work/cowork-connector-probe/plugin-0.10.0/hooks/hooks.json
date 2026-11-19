@@ -1,0 +1,37 @@
+{
+  "description": "Sends each UserPromptSubmit and Stop to the probe server as an http hook, and records in a file in the sandbox that the event's hooks ran.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/mark.sh\" UserPromptSubmit",
+            "timeout": 15
+          },
+          {
+            "type": "http",
+            "url": "https://TUNNEL-1.trycloudflare.com/http-hook/v10-UserPromptSubmit",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/mark.sh\" Stop",
+            "timeout": 15
+          },
+          {
+            "type": "http",
+            "url": "https://TUNNEL-1.trycloudflare.com/http-hook/v10-Stop",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "name": "cogmer-connector-probe",
+  "version": "0.3.0",
+  "description": "Throwaway probe: whether a Cowork cloud session's mcp_tool hook reaches a remote connector on UserPromptSubmit, PostToolUse or Stop, with a command hook that records each event in the sandbox."
+}

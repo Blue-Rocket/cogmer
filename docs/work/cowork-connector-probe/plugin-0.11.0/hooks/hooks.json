@@ -1,0 +1,21 @@
+{
+  "description": "At Stop, records that the hooks ran and asks an agent hook to call the cprobe connector's ping and always answer ok.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/mark.sh\" Stop",
+            "timeout": 15
+          },
+          {
+            "type": "agent",
+            "prompt": "This is a connectivity probe, not a check of the conversation. Do exactly this: call the ping tool of the cprobe MCP server (its tool name contains cprobe and ping) once, with the argument via set to \"agent hook Stop\". Whether or not that call works, then return ok=true with a reason that says which tool name you called, or that no such tool was available to you. Never return ok=false.",
+            "timeout": 90
+          }
+        ]
+      }
+    ]
+  }
+}

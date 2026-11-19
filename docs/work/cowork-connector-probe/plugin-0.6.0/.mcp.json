@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "remote": {
+      "type": "http",
+      "url": "https://TUNNEL-2.trycloudflare.com/mcp-plugin"
+    }
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "description": "Calls the cprobe connector's ping from mcp_tool hooks on UserPromptSubmit, after the model's own call to it, and at Stop, under both names a connector may have, and records in a file in the sandbox that each event's hooks ran.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/mark.sh\" UserPromptSubmit",
+            "timeout": 15
+          },
+          {
+            "type": "mcp_tool",
+            "server": "cprobe",
+            "tool": "ping",
+            "input": {
+              "via": "hook v3 UserPromptSubmit cprobe",
+              "session": "${session_id}"
+            },
+            "timeout": 25
+          },
+          {
+            "type": "mcp_tool",
+            "server": "claude.ai cprobe",
+            "tool": "ping",
+            "input": {
+              "via": "hook v3 UserPromptSubmit claude.ai cprobe",
+              "session": "${session_id}"
+            },
+            "timeout": 25
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/mark.sh\" PostToolUse",
+            "timeout": 15
+          },
+          {
+            "type": "mcp_tool",
+            "server": "cprobe",
+            "tool": "ping",
+            "input": {
+              "via": "hook v3 PostToolUse cprobe",
+              "session": "${session_id}"
+            },
+            "timeout": 25
+          },
+          {
+            "type": "mcp_tool",
+            "server": "claude.ai cprobe",
+            "tool": "ping",
+            "input": {
+              "via": "hook v3 PostToolUse claude.ai cprobe",
+              "session": "${session_id}"
+            },
+            "timeout": 25
+          }
+        ],
+        "matcher": "mcp__cprobe__ping|mcp__claude_ai_cprobe__ping"
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/mark.sh\" Stop",
+            "timeout": 15
+          },
+          {
+            "type": "mcp_tool",
+            "server": "cprobe",
+            "tool": "ping",
+            "input": {
+              "via": "hook v3 Stop cprobe",
+              "session": "${session_id}"
+            },
+            "timeout": 25
+          },
+          {
+            "type": "mcp_tool",
+            "server": "claude.ai cprobe",
+            "tool": "ping",
+            "input": {
+              "via": "hook v3 Stop claude.ai cprobe",
+              "session": "${session_id}"
+            },
+            "timeout": 25
+          }
+        ]
+      }
+    ]
+  }
+}

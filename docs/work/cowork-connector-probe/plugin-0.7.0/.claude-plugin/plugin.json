@@ -1,0 +1,5 @@
+{
+  "name": "cogmer-connector-probe",
+  "version": "0.7.0",
+  "description": "Throwaway probe: whether a Cowork cloud session's mcp_tool hook reaches a server on the user's computer through remote-devices."
+}

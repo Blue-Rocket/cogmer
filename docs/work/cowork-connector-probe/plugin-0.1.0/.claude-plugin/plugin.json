@@ -1,0 +1,5 @@
+{
+  "name": "cogmer-connector-probe",
+  "version": "0.1.0",
+  "description": "Throwaway probe: whether a Cowork cloud session's hooks and model reach a remote connector, and a bundled server on the computer."
+}

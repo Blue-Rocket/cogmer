@@ -1,0 +1,5 @@
+{
+  "name": "cogmer-connector-probe",
+  "version": "0.12.0",
+  "description": "Throwaway probe: whether a plugin's agent hook in a Cowork cloud session can call the cprobe connector, reporting what it found through its reason."
+}

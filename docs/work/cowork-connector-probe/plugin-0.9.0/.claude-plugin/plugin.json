@@ -1,0 +1,5 @@
+{
+  "name": "cogmer-connector-probe",
+  "version": "0.9.0",
+  "description": "Throwaway probe: why a Cowork cloud session's mcp_tool hooks do not reach the cprobe connector or a server on the computer, read from the session's transcript."
+}

@@ -1,0 +1,18 @@
+{
+  "description": "Calls the cprobe connector's ping from an mcp_tool hook and records, in a file in the sandbox, that the plugin's hooks ran.",
+  "hooks": {
+    "SessionStart": [
+      {"hooks": [
+        {"type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/mark.sh\" SessionStart", "timeout": 15},
+        {"type": "mcp_tool", "server": "cprobe", "tool": "ping", "input": {"via": "hook v2 SessionStart cprobe", "session": "${session_id}"}, "timeout": 15}
+      ]}
+    ],
+    "UserPromptSubmit": [
+      {"hooks": [
+        {"type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/mark.sh\" UserPromptSubmit", "timeout": 15},
+        {"type": "mcp_tool", "server": "cprobe", "tool": "ping", "input": {"via": "hook v2 UserPromptSubmit cprobe", "session": "${session_id}"}, "timeout": 15},
+        {"type": "mcp_tool", "server": "claude.ai cprobe", "tool": "ping", "input": {"via": "hook v2 UserPromptSubmit claude.ai cprobe", "session": "${session_id}"}, "timeout": 15}
+      ]}
+    ]
+  }
+}

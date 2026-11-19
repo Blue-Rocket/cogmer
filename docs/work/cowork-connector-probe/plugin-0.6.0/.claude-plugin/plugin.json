@@ -1,0 +1,5 @@
+{
+  "name": "cogmer-connector-probe",
+  "version": "0.6.0",
+  "description": "Throwaway probe: whether a remote MCP server that a plugin declares by URL is reached in a Cowork cloud session, by the model and by mcp_tool hooks, and from where."
+}
