@@ -132,8 +132,9 @@ The other accepts it by name:
 In Codex, use `$cogmer room-create`, `$cogmer room-invite David`, and
 `$cogmer room-join misty-canyon` for the same steps.
 
-Then work as you normally would. A session that has been in one room can never join
-a second, so start a new session to join a different room.
+Then work as you normally would. Only what your session does once it is in the room
+is shared, and nothing it did before. A session that has been in one room can never
+join a second, so start a new session to join a different room.
 
 The room is also a page in your browser, at `http://127.0.0.1:4782`, which updates as
 turns arrive. It shows who said what, and when. Each colleague is labeled with a name
