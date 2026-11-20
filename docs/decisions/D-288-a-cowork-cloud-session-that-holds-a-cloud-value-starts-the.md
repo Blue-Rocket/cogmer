@@ -1,0 +1,10 @@
+# D-288 — A Cowork cloud session that holds a cloud value starts the daemon as its user
+
+**Date:** 2026-11-20 · **Status:** active · **Areas:** hosts, daemon, identity
+
+**Decision.** When a Cowork cloud session holds a cloud value, in `COGMER_CLOUD_KEY` or in a synced plugin of the name the daemon reads one from (D-279, a cloud session's daemon reads its cloud value from the plugin files it finds), the session-start hook starts the daemon, which speaks as the user the value names with a key of its own (D-216, a cloud session signs with a key of its own that the user's shared key vouches for). It is the only way shown to capture a Cowork cloud session, and a build from `ffe2f33` did it in one, speaking for a throwaway user and taking that user's lists from the user's machine through the relay (`9c88af4`). Every new Cowork task on Pro, Max and Ultra runs in the cloud (https://support.claude.com/en/articles/15520349, read on 2026-11-18), so a Cowork user who is in a room is most often in a cloud session.
+
+**Rejected.**
+- *Starting nothing in a Cowork cloud session, and reaching Cowork only through the bridge on the user's computer.* The bridge's hooks did not reach the user's computer from a Cowork cloud session (`263fd33`), so a user whose tasks run in the cloud would share nothing.
+
+**Limits.** The daemon reaches a colleague only where the sandbox may reach the relay's hosts, which for a Team or Enterprise organization an owner allows for every member (`ce962eb`). It shares nothing until one of the user's machines answers for the lists (D-245, a cloud session takes its user's lists only from one of the user's machines), and anything that runs in the session, the model's shell included, can read the value (D-278, the machines page offers the cloud value as a plugin for the user to upload once).

@@ -2730,6 +2730,10 @@ is the whole of setup. In a Cowork cloud session that holds no cloud value the h
 fetches and starts nothing, since a daemon there would have no user to speak for and
 could join no room.
 
+A Cowork session that runs in the cloud and holds the user's cloud value starts the daemon
+as its user, as a session in a cloud environment does, so that a user whose Cowork tasks
+run in the cloud takes part in their rooms.
+
 When cogmer's first install has finished, the user is told once, in one line, that cogmer is installed
 and what to run next, so that a user knows the install worked. After that line, a session
 shows nothing of cogmer unless something needs repair.

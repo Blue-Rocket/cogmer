@@ -72,9 +72,24 @@ only after that version has been published.
 
 ## Use it from Claude Cowork
 
-Claude Cowork runs its session in a sandbox that cannot reach other machines, so cogmer runs on your
-own computer and a small bridge connects the two. cogmer has to be installed on that computer first,
-through Claude Code or Codex as above, since that fetches and verifies the program. Then, in a Claude
+A Cowork task runs either in the cloud or on your computer. Tasks on Pro and Max plans run in the
+cloud, and Team organizations are moving to the same. Either way, cogmer has to be installed first on
+one of your own computers, through Claude Code or Codex as above, since that is where your identity is
+made.
+
+In a task that runs in the cloud, cogmer runs inside the task's sandbox and speaks as you. Run
+`/cogmer:self-machines` on your computer, add a cloud environment, and download the plugin the page
+offers. Upload it once in Cowork under Customize, Plugins, as a personal plugin, and share or publish it
+nowhere: it holds a value that lets whoever has it speak as you, and anything that runs in the task,
+including the model's shell, can read it. The sandbox then needs to reach the relay cogmer uses, which an owner
+of your organization allows under Organization settings, Capabilities, by adding `tailcat.dev`,
+`tc301a.ipn.dev`, `tc302a.ipn.dev`, `tc303a.ipn.dev` and `tc304a.ipn.dev` as allowed domains. That
+setting applies to every member of the organization. A task shares nothing until one of your own
+machines is awake to send it your colleagues and rooms. Whether a Pro or Max plan can allow those
+domains is not yet known.
+
+In a task that runs on your computer, the sandbox cannot reach other machines, so cogmer runs on your
+own computer and a small bridge connects the two. In a Claude
 Code session, run `/cogmer:self-cowork`, or in a Codex session `$cogmer self-cowork`. It adds the
 bridge to Claude Desktop's configuration, keeping a copy of the file as it was, and writes a plugin
 for Cowork. Quit Claude Desktop completely and open it again, upload that plugin in Cowork under

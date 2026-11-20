@@ -87,7 +87,9 @@ your machines, each with the machine's name.
 A session in a cloud environment, such as Claude Code on the web, speaks as you once the
 environment holds a value made on one of your own machines. Run `/cogmer:self-machines` there,
 name the environment under "Add a cloud environment", and paste the value the page shows into the
-environment's variable `COGMER_CLOUD_KEY`. The page shows the value once, and your machine keeps
+environment's variable `COGMER_CLOUD_KEY`. A Cowork task that runs in the cloud has no variable to set,
+so the page also offers the value as a plugin, which you upload once in Cowork under Customize,
+Plugins. The page shows the value once, and your machine keeps
 only the certificate that names the environment, so add the environment again if you lose the
 value. Whoever holds the value speaks as you in every room you are in, so paste it only into the
 environment's settings, never into a session or a chat, and remove the environment on the same
