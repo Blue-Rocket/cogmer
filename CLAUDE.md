@@ -28,8 +28,17 @@ and how to run it.
 - **Never commit or push past a failing test.** A pipeline such as
   `go test ./... | tail && git commit` reports the status of its last command, so a
   failing test does not stop the commit, and the test result has to gate the command
-  itself. `.git/hooks/pre-push` runs the suite and refuses the push, on this clone
-  only, since `.git/hooks` is not versioned.
+  itself. Stage the change and gate the commit on `scripts/test-and-record.sh`, which
+  runs the suite and records the staged tree as passed. `.githooks/pre-push` refuses a
+  push whose tree the suite has not passed on this clone, and runs the suite on that
+  commit when no record says it passed, which covers a merge or a rebase. Git runs it
+  because the project's Claude Code settings set `core.hooksPath` to `.githooks` at
+  each session start, so a clone used without Claude Code needs
+  `git config core.hooksPath .githooks` once.
+- **Check changed decisions against the rest before pushing them.** No test reads two
+  decisions against each other. A push that changes `docs/decisions/` is stopped by a
+  hook in the project's Claude Code settings until the `decision-consistency` skill has
+  run for that commit, in a subagent, and its findings go to the person.
 - **Corrections are clean replacements.** Leave no superseded text, and do not narrate
   what the old text said.
 - **Give every `§`, `D-NNN` and `B-NN` a few words**, such as "D-054 (verification
