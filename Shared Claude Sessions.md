@@ -368,6 +368,11 @@ is persisted with the identity, so the address survives both moving and restarti
 An address assembled afresh at each start would silently invalidate every pairing
 string and invitation the machine had issued.
 
+A change to the servers that carry cogmer's traffic asks nothing of a user. No pairing
+string, invitation or colleague's record of a machine stops working because a relay
+moved, closed or was replaced, because a user who cannot weigh what a server is meets
+such a change only as cogmer breaking.
+
 An address contains no secret. A pairing string is pasted into chat and read aloud,
 and who may enter a room is decided by who is on its guest list, never by who holds a
 string.
@@ -649,6 +654,14 @@ A label means one key. Recording a second key under a label already in use is
 refused, and the refusal says so in full, because it is the one moment at which a
 changed key and a substituted key look the same. A machine the peer adds is not a
 second key, and is covered by the label already given.
+
+## How a colleague finds a user
+
+What a user gives a colleague so that the colleague can reach them reads as a name and
+stays the same. It does not change with the user's machines, their networks or the
+servers cogmer uses, and it is not a string of random characters. A user who cannot
+judge a technical string can still tell a name they know from one they do not, and a
+string that looks random or changes gives them nothing to recognize.
 
 ## Choosing the name others see
 

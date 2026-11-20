@@ -229,6 +229,20 @@ no change is needed in the code, and a user who sees the status change on that r
 room status how long the colleague has been out of reach (D-194, a colleague this machine cannot
 reach is named, with how long, in the room status and the view).
 
+**A relay change would break addresses users already hold, which §4 (networking) says a change to cogmer's servers never does.** A machine's overlay address names the relay region it pinned at its first start, including the relay's host names, and colleagues hold that address (D-187, the overlay's relay region is chosen once and stored with the node key; `loadTailcatRegion` and `StartTailcat` in `cmd/cogmer/tailcat.go`, read on 2026-11-20). D-192 (the public relay is an accepted dependency, and `plugin/README.md` discloses it) has the overlay, which is on by default, meet through the free relays on tailcat's map, whose documentation promises no availability and says they are rate-limited. A Cowork cloud session's daemon reaches those relays only after an organization owner allows five hosts, the map at tailcat.dev and four relay servers (`ce962eb`). No daemon in a sandbox has been seen to reach a colleague directly, and a daemon that cannot sends all of its traffic through the relay. The cost of moving grows with each user, since every address handed out names the present relay.
+
+The options, each with its cost:
+
+- An address of keys only, on one relay region that cogmer runs at cogmer.ai. Nothing a user holds then names a server, so cogmer can move, add or replace relay servers without any user noticing; a region can be several meshed servers in several places. Every user depends on the one relay network cogmer runs, and a user who runs their own relay needs a build or a setting that names that relay. The address format changes, which D-091 (identity is advertised and location is discovered) and the description of an overlay address in §4 would follow.
+- A region number and a map that cogmer serves, which tailcat supports through its `DERPMapURL` option. Host names leave the address and a relay can move by changing the map, but each address still pins a region number, so retiring a region still breaks the addresses that name it. This option is the least new code and a step towards the first option, and every daemon fetches the map at start, from a host an owner then has to allow.
+- Keys only and a lookup of which relay a key is on now, from DNS records or a service at cogmer.ai. This option is the most flexible, and the service is a central component that learns who looks for whom, which D-115 (a centralized component must trace to a disclosed tradeoff that benefits the person) asks to be justified to the user.
+
+Any relay at cogmer.ai makes cogmer the operator that sees each machine's network address and key, which machines connect, when and how much passes, as D-192 says the present relay does. The user has to be told, and only a benefit to the user can justify it. The relayed traffic of every cloud session is cogmer's bandwidth to pay for, and the relay must stay up and limit abuse. It would cut what an owner allows to one or two cogmer names, and it would run beside the servers cogmer would run for D-285 (a user with no computer of their own has a machine hosted for them).
+
+A machine that starts advertising a new address moves the colleagues it reaches, since a stored address is replaced when a peer advertises another (`known_peers`, read on 2026-09-28), and an endpoint matters only until the first contact (D-018, identity and reachability are separate). Pairing strings and invitations not yet used when the old relay stops would fail.
+
+A relay at cogmer.ai does not help where a sandbox's allowlist cannot be edited. Whether a Pro or Max user can add domains to the allowlist for a Cowork cloud session is not known, and running cogmer in a Cowork cloud session on a Pro account with the relay's hosts added would answer it. Whether a wildcard such as `*.cogmer.ai` works in the allowlist is not known either.
+
 ## Somebody else uses it
 
 A colleague who did not write cogmer installs it, pairs, joins a room and works in it.
@@ -294,6 +308,18 @@ place for a decision that matters. The alternative is to accept requests only wh
 the host has said they are expecting someone. That is not a token and does not reopen
 D-026 (no join token): arriving in such a window admits nobody, it only earns the
 right to ask, and the host still approves.
+
+**A colleague reaches a user only through a pairing string of random characters, where §6 (identity) says what a user gives a colleague reads as a name and stays the same.** A pairing string carries an identifier, an address and a name. D-142 (identities are exchanged through pairing strings, with no directory) rejected a directory because needing one before two people could work together would defeat an invitation, and because it is a central component. D-142's revisit condition is users needing to find a colleague's identity without the colleague sending it.
+
+An email address the user has proved they receive mail at would be the handle a colleague knows already, and a Cowork user's Claude account has one. The handle would name the user's key and never be the identity: the key stays the identity, and the recovery phrase stays the only way back to it once every machine is gone (§6, identity). A user can attach more than one address and detach one that is lost or reassigned without the identity changing. A handle says where to find a key and not whose it is, so the two words are still checked at pairing (D-054, verification gates synchronization and injection, not just a marker). An address never restores an identity, because whoever controls the mailbox would then hold the identity.
+
+Who vouches that an address belongs to a key, each with its cost:
+
+- The organization's domain, through a file or a DNS record on the domain that lists its members' keys. No directory of cogmer's is involved. The organization's admin sets the file or record up once, and this form reaches only users whose organization has set one up.
+- A one-time code that a service at cogmer.ai sends to the address, for every other user. It is a directory cogmer runs, which reverses D-142 and needs the benefit to the user that D-115 (a centralized component must trace to a disclosed tradeoff that benefits the person) asks for, here reaching a colleague by an address the colleague knows. Anyone can ask it whether an address uses cogmer. Answering only an exact address and limiting how often one caller asks narrows that and does not remove it. The service holds a list of addresses.
+- A name at cogmer.ai that is not an email address, for a user who wants a handle not tied to an employer. cogmer decides who may hold a name and what happens to a name given up.
+
+Every form leaves pairing strings working, so no directory is needed before two people can work together. An address changes when its user changes jobs, and a former employer can give it to somebody else, so how long a vouching lasts and how a colleague learns it was withdrawn is not decided. How a handle relates to the display name, which is not unique, and to the label a colleague gives, is not decided either.
 
 ## Discovery on a local network
 
