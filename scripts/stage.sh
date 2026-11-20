@@ -43,6 +43,6 @@ if [ -n "$only" ]; then echo "$commit"; exit 0; fi
 
 read -r repo _ <<< "$(scripts/publish.sh --where "$commit")"
 [ "$repo" = "$staging" ] || { echo "the staging commit names $repo, not $staging" >&2; exit 1; }
-git push --force "https://github.com/${staging}.git" "${commit}:refs/heads/main"
+git push --force "git@github.com:${staging}.git" "${commit}:refs/heads/main"
 scripts/publish.sh "$commit"
 echo "staged $(git rev-parse --short "$release") as ${staging} $(git rev-parse --short "$commit")"
