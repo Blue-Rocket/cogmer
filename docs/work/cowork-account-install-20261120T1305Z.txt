@@ -47,12 +47,12 @@ The account install
   "http: TLS handshake error from %!s(<nil>): EOF", and "Device closed". Which overlay device closed, the
   daemon's or the one the status check uses to test reachability from outside, the 20 lines do not say.
 
-  /cogmer:self-status, typed in the same task, answered. The user reported that it did not run the first time
-  it was asked for and ran when typed again; what the first attempt showed was not copied. Its answer gave a
-  pairing string, said colleagues could reach the machine now because a test connection from outside got
+  /cogmer:self-status, typed in the same task, did not run its shell line. The model reported that the line
+  reached it as "[a shell command here was not run: typing a command's name runs none]", and that it found
+  cli.sh and ran `cli.sh whoami` itself with its Bash tool. Its account of that output gave a pairing string, said colleagues could reach the machine now because a test connection from outside got
   through the nyc relay in 669 ms, named the user "Someone" from the computer's username, said the session was in
-  no room, and reported plugin 0.10.5, binary 0.10.5 and daemon 0.10.5. It did not print the "[shell command
-  execution disabled by policy]" line.
+  no room, and reported plugin 0.10.5, binary 0.10.5 and daemon 0.10.5. The model also reported that
+  CLAUDE_PLUGIN_ROOT was not set in its Bash tool's environment.
 
 What the runs do not show
   The identity in the sandbox was a new one, since 0.10.5 reads no cloud value, so no room was joined and no turn

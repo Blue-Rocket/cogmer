@@ -1,0 +1,31 @@
+Local runs on 2026-11-20 at about 14:00Z on the droplet that holds this repository, Ubuntu 24.04, Claude Code
+2.1.328, with claude -p and --plugin-dir: what a command's text holds when its shell lines are not run, and
+whether the model runs a command's repeated lines once and only when they were not run.
+
+Substitution
+  A throwaway plugin substprobe had a command whose body held the shell line !`echo RAN-OK` and the text
+  ROOT=[${CLAUDE_PLUGIN_ROOT}] ARGS=[$ARGUMENTS], and asked the model to repeat its sections verbatim. Run as
+  `claude -p "/substprobe:show alpha beta"` with settings {"disableSkillShellExecution":true}, the reply was:
+
+    ## What happened
+
+    [shell command execution disabled by policy]
+
+    ## Fallback
+
+    ROOT=[<the plugin's folder>] ARGS=[alpha beta]
+
+  So with shell lines disabled the plugin's root and the arguments were still filled in in the rest of the text.
+
+The fallback section
+  plugin/ as in the working tree after every command file had the section "If the output above is missing",
+  with a COGMER_HOME made for each run, COGMER_BIN set to a build of the working tree and COGMER_PREFLIGHT=off.
+  `claude -p "/cogmer:self-status" --output-format stream-json`:
+    with {"disableSkillShellExecution":true}: one tool call, Bash with
+      bash "/home/claude/code/cogmer/plugin/cli.sh" whoami
+      and the reply reported its output, an identity not yet made and the page to make it.
+    with {}: no tool call, and the reply reported the same output from the shell line.
+
+What the runs do not show
+  One run of each. No Cowork session, cloud or local, ran these files, and the runs did not read
+  CLAUDE_CODE_SESSION_ID in the model's Bash tool, which a behavior check covers for Claude Code.
