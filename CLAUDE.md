@@ -162,8 +162,10 @@ index is old", a failure grep cannot have. `.codegraph/` is gitignored and belon
 one machine. `codegraph sync` takes about 0.2s, and `codegraph status` says what the
 index holds. Hooks keep it fresh, but only for edits the current session made.
 
-**Releasing is three steps in one order.** Bump `plugin/VERSION`, run
-`scripts/release.sh <that same version>`, then run `scripts/publish.sh`.
+**Releasing is four steps in one order.** Bump `plugin/VERSION` and run
+`scripts/release.sh <that same version>`. Run `scripts/stage.sh` on that commit, and
+install from `Blue-Rocket/cogmer-staging` as `README.md` says. Then push the commit to
+`main`, and run `scripts/publish.sh` on it.
 
 - **`release.sh` builds five targets and rewrites every file that names the
   version:** `plugin/checksums.txt`, computed from the bytes it just built,
@@ -175,8 +177,15 @@ index holds. Hooks keep it fresh, but only for edits the current session made.
   that string moves. A test fails if it and `plugin/VERSION` disagree.
 - **Publishing without rerunning `release.sh` leaves the installer refusing the new
   asset.** That is the correct failure, not a bug to work around.
-- **`publish.sh` reads `plugin/VERSION`, requires `dist/`**, and ships to the host
-  named in `plugin/release-url.txt`.
+- **`publish.sh` reads the version, the hashes and the address from the commit it
+  is given, requires `dist/`**, and publishes to the repository that
+  `plugin/release-url.txt` names in that commit.
+- **`stage.sh` adds one commit that points `plugin/release-url.txt` at the staging
+  repository's releases** and changes nothing else. It replaces that repository's
+  `main` with the commit and publishes `dist/` there, so a plugin installed from the
+  staging repository downloads from it (D-292, a release is tested from a staging
+  repository whose plugin downloads from that repository's releases). The commit
+  never goes to `Blue-Rocket/cogmer`.
 
 ## Facts that are not obvious from the code
 
