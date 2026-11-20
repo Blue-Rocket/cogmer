@@ -8,6 +8,6 @@
 - *Ending the hook in every cloud session with no value, as `CLAUDE_CODE_REMOTE` marks one.* A Claude Code cloud session sets it too, and what a Claude Code cloud session needs at its start was not part of the runs that showed the idle daemon.
 - *Ending the hook in every Cowork cloud session.* A user who has uploaded a cloud value would then have no daemon in any cloud session, which ends the route D-279 makes.
 
-**Limits.** A `/cogmer:` command typed in such a session runs through the command script, which installs the program and runs it as it does anywhere, so a daemon with no user can still start when the user asks for one.
+**Limits.** A `/cogmer:` command typed in such a session runs through the command script once the model runs the command's line (D-291, a command gives the model its shell lines to run when the host did not run them), and the script installs the program and runs it as it does anywhere, so a daemon with no user can still start when the user asks for one.
 
 **Revisit when** Cowork sets a different `CLAUDE_CODE_ENTRYPOINT` in its cloud sessions, so that the check matches none.

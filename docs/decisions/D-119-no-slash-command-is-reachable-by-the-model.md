@@ -14,8 +14,9 @@ Codex manifest names, and `plugin/skills/` does not exist, since Claude Code loa
   (the plugin manifest name is the command namespace, and commands keep their prefixes under it).
 - The model could run a command that changes something: `room-create` and `room-join` bind a
   session to a room, which cannot be undone because injected context cannot be withdrawn,
-  `room-invite` and `room-revoke` reach another person's machine, and `peer-forget` discards
-  admissions that a pairing ceremony established. D-056 (a session's room is fixed when its first
+  `room-invite` and `room-revoke` reach another person's machine, and `peer-forget` deletes
+  a colleague whom a pairing ceremony verified from every machine of the user (D-073, forgetting a
+  peer changes no room's guest list). D-056 (a session's room is fixed when its first
   hook fires, and never changes).
 - The read-only commands are included, because the model gains nothing from a reachable
   `room-status`. A user who wants it types it, and every extension point delivers to the model and
