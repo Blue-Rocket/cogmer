@@ -1,7 +1,6 @@
 package main
 
 import (
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,19 +8,8 @@ import (
 	"time"
 )
 
-// roomsPage is the view's front page: every room on this machine, most recently active
-// first, with the room a reader picks shown beside the list (D-289, the view's front page
-// lists every room with its activity and shows the one picked beside the list).
-//
-//go:embed rooms.html
-var roomsPage []byte
-
-// roomsPagePolicy lets the front page run its own script and style, read this daemon's
-// list of rooms, and frame the daemon's own room pages, and nothing else.
-const roomsPagePolicy = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
-	"connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-
-// roomSummary is one room as the front page lists it. Everything in it is read from the
+// roomSummary is one room as the rooms pane lists it (D-289, every page of the view lists every
+// room in a pane beside the room it shows). Everything in it is read from the
 // snapshot the room's own page streams, so the list and the room never disagree.
 type roomSummary struct {
 	Name     string `json:"name"`

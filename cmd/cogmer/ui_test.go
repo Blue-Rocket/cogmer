@@ -44,8 +44,9 @@ func TestEachRoomHasItsOwnURL(t *testing.T) {
 		t.Errorf("an unknown room answered %d rather than 404", rec.Code)
 	}
 
-	// The front page is the same page with one room as with two, and goes to neither,
-	// so a reader's bookmark never changes what it opens (D-289).
+	// The front page is the room page with no room picked, the same with one room as
+	// with two, and goes to neither, so a reader's bookmark never changes what it opens
+	// (D-289).
 	for i := 0; i < 2; i++ {
 		rec = httptest.NewRecorder()
 		d.LocalRoutes().ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))

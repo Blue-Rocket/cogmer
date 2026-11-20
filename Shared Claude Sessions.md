@@ -1913,14 +1913,13 @@ Each room has its own address:
 http://127.0.0.1:4782/room/misty-canyon
 ```
 
-The view's front page lists every room on the machine and is the same page however many
-rooms there are, so that a user who keeps it open, or keeps its address, always finds every
-room in one place. It puts the most recently active room first, and for each room says who
-wrote the newest turn and when, how many of the colleagues' turns arrived since the user
-last looked, how many no session on the machine has been given, whether a session on the
-machine is in the room, and how many of the room's colleagues can be reached. It updates as
-rooms change, and shows the room the user picks beside the list, keeping each room's place
-while the user reads another.
+Every page of the view lists every room on the machine in a pane beside the room it shows,
+so that a user in several rooms sees which are active from wherever they are reading. The
+pane puts the most recently active room first, and for each room says who wrote the newest
+turn and when, how many of the colleagues' turns arrived since the user last looked, how
+many no session on the machine has been given, whether a session on the machine is in the
+room, and how many of the room's colleagues can be reached. It updates as rooms change. The
+view's own address with no room named shows the pane alone, however many rooms there are.
 
 Machines synchronize their event stores, so every user sees roughly the same room:
 

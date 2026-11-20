@@ -407,20 +407,19 @@ func (d *Daemon) roomFromPath(path string) (Room, bool) {
 
 // roomPagePolicy lets the room page run its own script and style, and read this daemon's
 // stream, and nothing else. Its images are none, so an address a colleague put in a turn
-// cannot be fetched even if the renderer let one through (D-212). Only a page of this
-// daemon's may frame it, which the front page does (D-289).
+// cannot be fetched even if the renderer let one through (D-212).
 const roomPagePolicy = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
-	"connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'"
+	"connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 
 func (d *Daemon) handleUI(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/":
-		// The front page is the same page whatever rooms exist, and picks none on a
-		// reader's behalf (D-289).
+		// The front page is the room page with no room picked, which shows the rooms
+		// pane alone, whatever rooms exist (D-289).
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Header().Set("Content-Security-Policy", roomsPagePolicy)
+		w.Header().Set("Content-Security-Policy", roomPagePolicy)
 		w.Header().Set("Referrer-Policy", "no-referrer")
-		_, _ = w.Write(roomsPage)
+		_, _ = w.Write(uiPage)
 		return
 	case strings.HasPrefix(r.URL.Path, "/room/"):
 		if _, ok := d.roomFromPath(r.URL.Path); !ok {

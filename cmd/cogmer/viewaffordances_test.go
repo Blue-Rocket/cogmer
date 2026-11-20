@@ -244,7 +244,7 @@ func TestTheRoomPageAllowsOnlyTheDaemonsOwnImagesAndRequests(t *testing.T) {
 		t.Fatalf("the room page gave %d", rec.Code)
 	}
 	csp := rec.Header().Get("Content-Security-Policy")
-	for _, want := range []string{"default-src 'none'", "img-src 'self'", "connect-src 'self'", "frame-ancestors 'self'"} {
+	for _, want := range []string{"default-src 'none'", "img-src 'self'", "connect-src 'self'", "frame-ancestors 'none'"} {
 		if !strings.Contains(csp, want) {
 			t.Errorf("the policy lacks %q: %s", want, csp)
 		}

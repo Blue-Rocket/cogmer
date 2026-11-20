@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// The front page lists every room, the most recently active first, with what a reader
+// The rooms pane lists every room, the most recently active first, with what a reader
 // needs to tell the rooms apart without opening each: who wrote last, how many of the
 // colleagues' turns there are to compare with the last look, how many no session here
 // has been given, and whether a session here is in the room (D-289).
@@ -65,27 +65,21 @@ func TestTheRoomListPutsTheLatestRoomFirstAndCountsItsTurns(t *testing.T) {
 	}
 }
 
-// The list carries a colleague's chosen name, so the page writes every value as text and
-// never as markup.
-func TestTheRoomListPageWritesValuesOnlyAsText(t *testing.T) {
-	src := string(roomsPage)
-	if !strings.Contains(src, "textContent") {
-		t.Error("the front page no longer writes values with textContent")
+// The list carries a colleague's chosen name, so the rooms pane writes every value as text
+// and never as markup.
+func TestTheRoomsPaneWritesValuesOnlyAsText(t *testing.T) {
+	src := string(uiPage)
+	i := strings.Index(src, "// The rooms pane lists every room")
+	if i < 0 {
+		t.Fatal("the room page has no rooms pane")
+	}
+	pane := src[i:]
+	if !strings.Contains(pane, "textContent") || !strings.Contains(pane, "/rooms/stream") {
+		t.Error("the rooms pane no longer reads /rooms/stream and writes with textContent")
 	}
 	for _, frag := range []string{"innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"} {
-		if strings.Contains(src, frag) {
-			t.Errorf("the front page uses %s, which would read a value as markup", frag)
+		if strings.Contains(pane, frag) {
+			t.Errorf("the rooms pane uses %s, which would read a value as markup", frag)
 		}
-	}
-}
-
-// Only the daemon's own front page may frame a room page, and the front page may frame
-// nothing but the daemon's own pages (D-289).
-func TestOnlyTheDaemonsOwnPagesFrameARoom(t *testing.T) {
-	if !strings.Contains(roomPagePolicy, "frame-ancestors 'self'") {
-		t.Errorf("the room page's policy lets other pages frame it: %s", roomPagePolicy)
-	}
-	if !strings.Contains(roomsPagePolicy, "frame-src 'self'") || !strings.Contains(roomsPagePolicy, "frame-ancestors 'none'") {
-		t.Errorf("the front page's policy frames or is framed beyond this daemon: %s", roomsPagePolicy)
 	}
 }
