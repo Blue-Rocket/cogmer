@@ -9,6 +9,16 @@ disable-model-invocation: true
 
 !`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" pair $ARGUMENTS`
 
+## If the output above is missing
+
+If the section above shows a note in place of cogmer's output, such as one saying that a shell command was not run or was disabled, or shows the command line itself, the host did not run it. Run it yourself with the Bash tool, once, and take what it prints as that section's output:
+
+```
+bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" pair $ARGUMENTS
+```
+
+If the section above shows cogmer's output, run nothing.
+
 ## Your task
 
 The output is one of four things and says which.

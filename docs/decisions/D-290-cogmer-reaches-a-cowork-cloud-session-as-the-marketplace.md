@@ -1,0 +1,11 @@
+# D-290 — cogmer reaches a Cowork cloud session as the marketplace plugin installed on the user's Claude account
+
+**Date:** 2026-11-20 · **Status:** active · **Areas:** hosts, release
+
+**Decision.** A user whose Cowork tasks run in the cloud adds the cogmer marketplace on their Claude account and installs the cogmer plugin from it there, which is the plugin Claude Code installs, under the same name. A Cowork cloud session loads plugins from the account and not from the user's computer: a plugin installed with Claude Code's command line never reached one, and the plugin installed on the account did, fetched its binary and started a daemon, which reached the relay (`db8eced`, `ffe2f33`). One plugin then serves every host, so a release reaches a Cowork user through the marketplace as it reaches a Claude Code user.
+
+**Rejected.**
+- *A second plugin that the machines page offers for Cowork, with hooks that run only where `CLAUDE_CODE_REMOTE` is true.* A user would download and upload it again for every release, and its commands would need a name other than `cogmer`, which adds a second command prefix (D-118, the plugin manifest name is the command namespace).
+- *Uploading the marketplace plugin's files as a personal plugin named `cogmer`.* While that upload was on the account the marketplace plugin of the same name was disabled (`db8eced`), and the user would upload again for every release.
+
+**Limits.** The account's copy of the marketplace followed main only when the user chose "Check for updates", and sat at the v0.10.4 commit for a month with "Sync automatically" on (`db8eced`), so a Cowork cloud session can run an older plugin than the user's computer. Whether a Claude Code on the user's computer that syncs account plugins loads this copy beside one installed from its command line, and runs cogmer's hooks twice, has not been seen.

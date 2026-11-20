@@ -178,6 +178,11 @@ The Claude Code desktop app has no switch for it. In a terminal, run `claude`, t
 open the Marketplaces tab, select `blue-rocket` and turn on auto-update. This is done
 once on each machine.
 
+Cowork tasks that run in the cloud use the copy of cogmer on your Claude account, which
+does not always follow a release by itself. After a release, on claude.ai under Settings,
+Customize, Plugins, open Manage marketplaces and choose Check for updates on the `cogmer`
+marketplace. Cogmer's page there then shows the version a cloud task will run.
+
 The next session after an update fetches the new binary in the background and
 replaces the daemon that is running, so there is nothing to stop or restart.
 
