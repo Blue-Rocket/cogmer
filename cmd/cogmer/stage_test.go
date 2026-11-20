@@ -34,17 +34,23 @@ func TestTheStagingCommitChangesOnlyWhereThePluginDownloads(t *testing.T) {
 		return strings.TrimSpace(string(out))
 	}
 
-	staged := run("scripts/stage.sh", "--commit-only", "HEAD")
-	if got := run("git", "rev-parse", staged+"^"); got != run("git", "rev-parse", "HEAD") {
+	// The suite also runs on a staging commit, when the push hook checks it, and the
+	// release commit is then its parent.
+	release := run("git", "rev-parse", "HEAD")
+	if strings.HasPrefix(run("scripts/publish.sh", "--where", release), "Blue-Rocket/cogmer-staging ") {
+		release = run("git", "rev-parse", release+"^")
+	}
+	staged := run("scripts/stage.sh", "--commit-only", release)
+	if got := run("git", "rev-parse", staged+"^"); got != release {
 		t.Errorf("the staging commit's parent is %s, not the release commit", got)
 	}
-	if changed := run("git", "diff", "--name-only", "HEAD", staged); changed != "plugin/release-url.txt" {
+	if changed := run("git", "diff", "--name-only", release, staged); changed != "plugin/release-url.txt" {
 		t.Errorf("the staging commit changes %q; it must change plugin/release-url.txt alone", changed)
 	}
 	if got, want := run("scripts/publish.sh", "--where", staged), "Blue-Rocket/cogmer-staging "; !strings.HasPrefix(got, want) {
 		t.Errorf("publish.sh would publish the staging commit to %q, not the staging repository", got)
 	}
-	if got, want := run("scripts/publish.sh", "--where", "HEAD"), "Blue-Rocket/cogmer "; !strings.HasPrefix(got, want) {
+	if got, want := run("scripts/publish.sh", "--where", release), "Blue-Rocket/cogmer "; !strings.HasPrefix(got, want) {
 		t.Errorf("publish.sh would publish the release commit to %q, not Blue-Rocket/cogmer", got)
 	}
 }
