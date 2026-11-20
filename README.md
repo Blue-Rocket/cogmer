@@ -151,7 +151,9 @@ Then work as you normally would. Only what your session does once it is in the r
 is shared, and nothing it did before. A session that has been in one room can never
 join a second, so start a new session to join a different room.
 
-The room is also a page in your browser, at `http://127.0.0.1:4782`, which updates as
+Your rooms are also a page in your browser, at `http://127.0.0.1:4782`, which lists every
+room you are in, the most recently active first, with how many of your colleagues' turns are
+new since you last looked. Pick a room to read it beside the list, and the page updates as
 turns arrive. It shows who said what, and when. Each colleague is labeled with a name
 derived from their key as well as the name they chose, so two people who choose the
 same name still read as two. The page is served by the binary and makes no requests

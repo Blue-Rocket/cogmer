@@ -407,22 +407,20 @@ func (d *Daemon) roomFromPath(path string) (Room, bool) {
 
 // roomPagePolicy lets the room page run its own script and style, and read this daemon's
 // stream, and nothing else. Its images are none, so an address a colleague put in a turn
-// cannot be fetched even if the renderer let one through (D-212).
+// cannot be fetched even if the renderer let one through (D-212). Only a page of this
+// daemon's may frame it, which the front page does (D-289).
 const roomPagePolicy = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
-	"connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+	"connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'"
 
 func (d *Daemon) handleUI(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/":
-		// The index lists rooms rather than picking one. Picking is what the
-		// pointer did.
-		rooms, _ := d.members.Rooms()
-		if len(rooms) == 1 {
-			http.Redirect(w, r, "/room/"+rooms[0].RoomName, http.StatusFound)
-			return
-		}
+		// The front page is the same page whatever rooms exist, and picks none on a
+		// reader's behalf (D-289).
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write(roomIndex(rooms))
+		w.Header().Set("Content-Security-Policy", roomsPagePolicy)
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		_, _ = w.Write(roomsPage)
 		return
 	case strings.HasPrefix(r.URL.Path, "/room/"):
 		if _, ok := d.roomFromPath(r.URL.Path); !ok {
@@ -436,23 +434,6 @@ func (d *Daemon) handleUI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.NotFound(w, r)
-}
-
-// roomIndex is the page shown when the daemon serves more than one room. It is
-// deliberately plain: it exists so that no room is chosen on a reader's behalf.
-func roomIndex(rooms []Room) []byte {
-	var b strings.Builder
-	b.WriteString("<!doctype html><meta charset=utf-8><title>rooms</title>")
-	b.WriteString("<style>body{font:16px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;max-width:40rem;margin:4rem auto;padding:0 1.5rem}")
-	b.WriteString("a{display:block;padding:.6rem 0;border-bottom:1px solid #8883}h1{font-size:1rem;letter-spacing:.1em;text-transform:uppercase;opacity:.6}</style>")
-	b.WriteString("<h1>rooms on this machine</h1>")
-	if len(rooms) == 0 {
-		b.WriteString("<p>None yet. Create a room in your session: <code>/cogmer:room-create</code> in Claude Code or <code>$cogmer room-create</code> in Codex.</p>")
-	}
-	for _, r := range rooms {
-		fmt.Fprintf(&b, "<a href=\"/room/%s\">%s</a>", template.HTMLEscapeString(r.RoomName), template.HTMLEscapeString(r.RoomName))
-	}
-	return []byte(b.String())
 }
 
 // handleStream pushes the room over server-sent events.

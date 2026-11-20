@@ -238,6 +238,8 @@ func (d *Daemon) LocalRoutes() *http.ServeMux {
 	mux.HandleFunc("/self", d.handleSelf)
 	mux.HandleFunc("/", d.handleUI)
 	mux.HandleFunc("/stream", d.handleStream)
+	mux.HandleFunc("/rooms", d.handleRooms)
+	mux.HandleFunc("/rooms/stream", d.handleRoomsStream)
 	mux.HandleFunc("/export", d.handleExport)
 	mux.HandleFunc("/image/", d.handleImage)
 	mux.HandleFunc("/pair/new", guardLocal(d.handlePairNew))

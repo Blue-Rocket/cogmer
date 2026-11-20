@@ -17,7 +17,7 @@ func uiDaemon(t *testing.T) *Daemon {
 // would hand the room to anyone who can reach the sync port (§25, D-030).
 func TestUIIsNotServedToPeers(t *testing.T) {
 	d := uiDaemon(t)
-	for _, path := range []string{"/", "/stream", "/export", "/room/anything", "/events"} {
+	for _, path := range []string{"/", "/stream", "/export", "/room/anything", "/events", "/rooms", "/rooms/stream"} {
 		rec := httptest.NewRecorder()
 		d.PeerRoutes().ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
 		if rec.Code != 404 {
@@ -44,25 +44,17 @@ func TestEachRoomHasItsOwnURL(t *testing.T) {
 		t.Errorf("an unknown room answered %d rather than 404", rec.Code)
 	}
 
-	// With one room, the index goes straight there rather than making somebody
-	// choose from a list of one.
-	rec = httptest.NewRecorder()
-	d.LocalRoutes().ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
-	if rec.Code != 302 || rec.Header().Get("Location") != "/room/"+room.RoomName {
-		t.Errorf("the index gave %d → %q", rec.Code, rec.Header().Get("Location"))
-	}
-
-	// With two, it lists them and chooses nothing.
-	if _, err := d.members.CreateRoom(d.id.PeerID, false); err != nil {
-		t.Fatal(err)
-	}
-	rec = httptest.NewRecorder()
-	d.LocalRoutes().ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
-	if rec.Code != 200 {
-		t.Fatalf("with two rooms the index gave %d", rec.Code)
-	}
-	if !strings.Contains(rec.Body.String(), room.RoomName) {
-		t.Error("the index does not list the rooms it is meant to be listing")
+	// The front page is the same page with one room as with two, and goes to neither,
+	// so a reader's bookmark never changes what it opens (D-289).
+	for i := 0; i < 2; i++ {
+		rec = httptest.NewRecorder()
+		d.LocalRoutes().ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
+		if rec.Code != 200 || rec.Header().Get("Location") != "" || !strings.Contains(rec.Body.String(), "/rooms/stream") {
+			t.Errorf("with %d room(s) the front page gave %d → %q", i+1, rec.Code, rec.Header().Get("Location"))
+		}
+		if _, err := d.members.CreateRoom(d.id.PeerID, false); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
