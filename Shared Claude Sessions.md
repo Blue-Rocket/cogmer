@@ -761,9 +761,13 @@ and the user's room list, so that it works as the user from its first session.
 
 ## A hosted machine
 
-A user whose sessions run only in the cloud can have one of their machines hosted by cogmer
-or by an organization cogmer has certified as an operator, so that a user with no computer
-that runs cogmer can use it at all.
+A user can have one of their machines hosted by cogmer or by an organization cogmer has
+certified as an operator, so that a user with no computer that runs cogmer can use it at
+all.
+
+A user who runs cogmer on a computer of their own can add a hosted machine beside it, so
+that their cloud sessions are answered and their rooms' turns are kept while that
+computer is asleep, shut or away.
 
 A hosted machine is one of the user's machines like any other, and answers for the user
 while every other machine of theirs is off, so that a cloud session started from a phone
@@ -786,7 +790,7 @@ operator's server keeps.
 A user who creates a room can make it a room for self-hosted machines only, which no
 hosted machine joins, so that its guests' words are on no operator's server.
 
-A user with a hosted machine takes part in a room for self-hosted machines only from a
+A user with a hosted machine can take part in a room for self-hosted machines only from a
 cloud session, whose turns there are kept by the room's other machines, so that such a
 room need not shut a hosted colleague out.
 
