@@ -185,7 +185,8 @@ install from `Blue-Rocket/cogmer-staging` as `README.md` says. Then push the com
   `main` with the commit and publishes `dist/` there, so a plugin installed from the
   staging repository downloads from it (D-292, a release is tested from a staging
   repository whose plugin downloads from that repository's releases). The commit
-  never goes to `Blue-Rocket/cogmer`.
+  never goes to `Blue-Rocket/cogmer`. A candidate rebuilt after a failed test takes
+  the next version, or it never reaches a machine that installed the first.
 
 ## Facts that are not obvious from the code
 

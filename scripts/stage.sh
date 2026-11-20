@@ -15,8 +15,11 @@
 # pushes and publishes nothing.
 #
 # The staging repository's main is replaced each time, since every staging commit sits
-# on a different release commit. A release of the same version that is already there is
-# deleted with its tag first, so a candidate can be rebuilt and staged again.
+# on a different release commit. A candidate rebuilt after a failed test takes the next
+# version: a plugin updates only when its version moves, and the installer replaces a
+# program only with a newer one, so a rebuild under the same version never reaches a
+# machine that installed the first. scripts/publish.sh refuses different binaries under
+# a tag that exists.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -38,11 +41,8 @@ commit="$(git commit-tree "$tree" -p "$release" \
 
 if [ -n "$only" ]; then echo "$commit"; exit 0; fi
 
-read -r repo tag <<< "$(scripts/publish.sh --where "$commit")"
+read -r repo _ <<< "$(scripts/publish.sh --where "$commit")"
 [ "$repo" = "$staging" ] || { echo "the staging commit names $repo, not $staging" >&2; exit 1; }
 git push --force "https://github.com/${staging}.git" "${commit}:refs/heads/main"
-if gh release view "$tag" -R "$staging" > /dev/null 2>&1; then
-  gh release delete "$tag" -R "$staging" --cleanup-tag --yes
-fi
 scripts/publish.sh "$commit"
 echo "staged $(git rev-parse --short "$release") as ${staging} $(git rev-parse --short "$commit")"
