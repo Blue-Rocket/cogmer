@@ -12,4 +12,4 @@
 **Rejected.**
 - *Ordering CoWork before Codex and deferring OpenAI hosts.* Codex provides the extension mechanisms this integration uses. `plugin/.codex-plugin/plugin.json`, `plugin/hooks/codex-hooks.json`.
 
-**Limits.** A session in a remote sandbox runs the plugin's scripts and a daemon of its own in that sandbox only when it holds a cloud value (D-279, a cloud session's daemon reads its cloud value from the plugin files it finds; D-288, a Cowork cloud session that holds a cloud value starts the daemon as its user). A Cowork session on the user's computer reaches the daemon there through the bridge that D-205 (Claude Cowork is a supported host through a bridge on the user's machine) describes.
+**Limits.** A daemon in a remote sandbox speaks for a user and joins rooms only when the session holds a cloud value (D-279, a cloud session's daemon reads its cloud value from the plugin files it finds; D-288, a Cowork cloud session that holds a cloud value starts the daemon as its user). A Cowork session on the user's computer reaches the daemon there through the bridge that D-205 (Claude Cowork is a supported host through a bridge on the user's machine) describes.
