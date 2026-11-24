@@ -136,15 +136,33 @@ func TestHomeDirPanicsInsteadOfReturningTheAccountsStateDirectory(t *testing.T) 
 	}
 }
 
-func buildWithFlags(t *testing.T, ldflags string) string {
+// startBuild starts a build of the program with the flags given, and returns a function
+// that waits for it and returns the binary's path, so that several builds can run at once.
+func startBuild(t *testing.T, ldflags string) func() string {
 	t.Helper()
 	out := filepath.Join(t.TempDir(), "cogmer"+exeSuffix)
 	cmd := exec.Command("go", "build", "-ldflags", ldflags, "-o", out, ".")
 	cmd.Env = append(os.Environ(), realGoCaches...)
-	if b, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("build: %v\n%s", err, b)
+	var log bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &log, &log
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("build: %v", err)
 	}
-	return out
+	waited := false
+	t.Cleanup(func() {
+		if !waited {
+			_ = cmd.Process.Kill()
+			_ = cmd.Wait()
+		}
+	})
+	return func() string {
+		t.Helper()
+		waited = true
+		if err := cmd.Wait(); err != nil {
+			t.Fatalf("build: %v\n%s", err, log.String())
+		}
+		return out
+	}
 }
 
 func TestADevelopmentBuildStopsBeforeTouchingTheRealDirectoryAndAReleaseBuildDoesNot(t *testing.T) {
@@ -153,8 +171,12 @@ func TestADevelopmentBuildStopsBeforeTouchingTheRealDirectoryAndAReleaseBuildDoe
 	}
 	stand := t.TempDir()
 	real := filepath.Join(stand, stateDirName)
-	dev := buildWithFlags(t, "-X main.realHomeForGuard="+stand)
-	built := buildWithFlags(t, "-X main.version=0.0.1-guard -X main.noBrowser=1 -X main.realHomeForGuard="+stand)
+	// The three builds start together, since none depends on another, and each is waited
+	// for where it is first run.
+	devBuild := startBuild(t, "-X main.realHomeForGuard="+stand)
+	builtBuild := startBuild(t, "-X main.version=0.0.1-guard -X main.noBrowser=1 -X main.realHomeForGuard="+stand)
+	releaseBuild := startBuild(t, "-X main.version=0.0.1-guard-release -X main.realHomeForGuard="+stand)
+	dev, built := devBuild(), builtBuild()
 	run := func(bin string, stdin string, args ...string) (string, int, time.Duration) {
 		cmd := exec.Command(bin, args...)
 		cmd.Env = append(os.Environ(), "COGMER_HOME="+real, "COGMER_ADDR="+freeAddr(t), "COGMER_PEER_ADDR="+freeAddr(t),
@@ -204,7 +226,7 @@ func TestADevelopmentBuildStopsBeforeTouchingTheRealDirectoryAndAReleaseBuildDoe
 	}
 	untouched("the daemon")
 
-	release := buildWithFlags(t, "-X main.version=0.0.1-guard-release -X main.realHomeForGuard="+stand)
+	release := releaseBuild()
 	if out, code, _ := run(release, "", "whoami"); code != 0 || strings.Contains(out, "development build") {
 		t.Errorf("a release build was refused its own state directory: exit %d, output %q", code, out)
 	}
