@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Refuses to push a commit whose tree the whole suite has not passed on this clone.
-# A tree that scripts/test-and-record.sh recorded goes through at once. Any other commit,
+# A tree that scripts/test-and-record.sh --full recorded goes through at once. One that
+# only the short suite passed, which is what a commit waits on, is not enough. Any other commit,
 # such as a merge or a rebased one, is checked out into a temporary worktree and the
 # suite runs on exactly that commit, which takes some minutes.
 #
@@ -22,7 +23,7 @@ while read -r _ local_sha _ _; do
   work=$(mktemp -d) || { status=1; continue; }
   echo "pre-push: the suite has not passed on $local_sha here; running it on that commit" >&2
   if git worktree add --quiet --detach "$work/tree" "$local_sha" &&
-     (cd "$work/tree" && go test -count=1 ./... > "$work/test.log" 2>&1); then
+     (cd "$work/tree" && if [ -d cmd/suiterun ]; then go run ./cmd/suiterun "$work/times"; else go test -count=1 ./...; fi > "$work/test.log" 2>&1); then
     mkdir -p "$dir" && touch "$dir/$tree"
     echo "pre-push: the suite passed on $local_sha" >&2
   else

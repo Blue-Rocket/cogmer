@@ -29,9 +29,11 @@ and how to run it.
   `go test ./... | tail && git commit` reports the status of its last command, so a
   failing test does not stop the commit, and the test result has to gate the command
   itself. Stage the change and gate the commit on `scripts/test-and-record.sh`, which
-  runs the suite and records the staged tree as passed. `.githooks/pre-push` refuses a
-  push whose tree the suite has not passed on this clone, and runs the suite on that
-  commit when no record says it passed, which covers a merge or a rebase. Git runs it
+  runs the suite with `-short` and records the staged tree as passed it. With `--full`
+  it runs the whole suite, which `.githooks/pre-push` requires: the hook refuses a push
+  whose tree the whole suite has not passed on this clone, and runs the whole suite on
+  that commit when no record says it passed, which covers a merge, a rebase and a commit
+  that passed only the short suite. Git runs it
   because the project's Claude Code settings set `core.hooksPath` to `.githooks` at
   each session start, so a clone used without Claude Code needs
   `git config core.hooksPath .githooks` once.
@@ -110,8 +112,10 @@ every target cross-compiles with `CGO_ENABLED=0`.
   with `COGMER_HOME` set to a directory made for the run, such as `COGMER_HOME=$(mktemp
   -d)`. There is no override, and a fault in real data is looked at in a copy of it. `go
   test ./...` panics in any test that resolves the real directory.
-- **Test with `go test ./...`.** To drive a real session, run `claude -p …
-  --settings <file>` with a throwaway `COGMER_HOME` per run, and `< /dev/null`, or it
+- **Test with `go test ./...`, or faster with `go run ./cmd/suiterun [-short] <times
+  file>`,** which runs the same tests in several processes at once, each with its own
+  environment, and is what `scripts/test-and-record.sh` and `.githooks/pre-push` run. To drive a real session, run
+  `claude -p … --settings <file>` with a throwaway `COGMER_HOME` per run, and `< /dev/null`, or it
   waits on stdin.
 - **A local `go test ./...` covers what a release can break in a cloud session.** There
   cogmer carries its relay connection as a WebSocket (D-217, a cloud session's daemon
@@ -162,8 +166,10 @@ index is old", a failure grep cannot have. `.codegraph/` is gitignored and belon
 one machine. `codegraph sync` takes about 0.2s, and `codegraph status` says what the
 index holds. Hooks keep it fresh, but only for edits the current session made.
 
-**Releasing is three steps in one order.** Bump `plugin/VERSION`, run
-`scripts/release.sh <that same version>`, then run `scripts/publish.sh`.
+**Releasing is four steps in one order.** Bump `plugin/VERSION` and run
+`scripts/release.sh <that same version>`. Run `scripts/stage.sh` on that commit, and
+install from `Blue-Rocket/cogmer-staging` as `README.md` says. Then push the commit to
+`main`, and run `scripts/publish.sh` on it.
 
 - **`release.sh` builds five targets and rewrites every file that names the
   version:** `plugin/checksums.txt`, computed from the bytes it just built,
@@ -175,8 +181,16 @@ index holds. Hooks keep it fresh, but only for edits the current session made.
   that string moves. A test fails if it and `plugin/VERSION` disagree.
 - **Publishing without rerunning `release.sh` leaves the installer refusing the new
   asset.** That is the correct failure, not a bug to work around.
-- **`publish.sh` reads `plugin/VERSION`, requires `dist/`**, and ships to the host
-  named in `plugin/release-url.txt`.
+- **`publish.sh` reads the version, the hashes and the address from the commit it
+  is given, requires `dist/`**, and publishes to the repository that
+  `plugin/release-url.txt` names in that commit.
+- **`stage.sh` adds one commit that points `plugin/release-url.txt` at the staging
+  repository's releases** and changes nothing else. It replaces that repository's
+  `main` with the commit and publishes `dist/` there, so a plugin installed from the
+  staging repository downloads from it (D-292, a release is tested from a staging
+  repository whose plugin downloads from that repository's releases). The commit
+  never goes to `Blue-Rocket/cogmer`. A candidate rebuilt after a failed test takes
+  the next version, or it never reaches a machine that installed the first.
 
 ## Facts that are not obvious from the code
 
@@ -200,7 +214,7 @@ index holds. Hooks keep it fresh, but only for edits the current session made.
   check that cannot fail reads as protection. Write its `Reliance` for someone
   debugging at 2am: what breaks, not what the behavior is.
 - **Assistant records carry no `promptId`** (B09), which is why turns are segmented by
-  position rather than by key. B04, B05 and B09 would report improvements as well as
+  position rather than by key. B04 and B09 would report improvements as well as
   breakage, so watch for those, since they would let us simplify.
 - **Nothing cryptographic depends on the product name.** Signing uses the
   `protocolNamespace` constant, which is arbitrary on purpose and never changes.

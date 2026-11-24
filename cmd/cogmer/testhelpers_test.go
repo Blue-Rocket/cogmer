@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -45,19 +47,66 @@ var realGoCaches = func() []string {
 // Tests that name a version of their own, because they compare versions, still get their own.
 const testBuildVersion = "test-build"
 
-// A build links the whole program and takes about 4.5s, and 17 tests wanted one, so the process
-// builds each version once, in a directory of its own, and hands every test a copy at the path it
-// asked for. A copy and not a link, since a test may write over its binary.
+// A build links the whole program and takes about 12s on four cores, and many tests want one, so
+// the process builds the program once, stamped with stampedVersion, and makes each version a test
+// asks for by overwriting the stamp in a copy of that build (D-293, a test gives a build its
+// version by overwriting the stamped bytes). It hands every test a copy of that version at the
+// path it asked for. A copy and not a link, since a test may write over its binary.
+//
+// COGMER_TEST_BUILD names a build made in advance, as scripts/test-and-record.sh makes one for
+// all the test processes it runs at once, so that each does not build its own.
 var (
 	sharedBuildsMu  sync.Mutex
 	sharedBuildsDir string
 	sharedBuilds    = map[string]*sharedBuild{}
+	stampedBuild    sharedBuild
 )
 
 type sharedBuild struct {
 	once sync.Once
 	path string
 	err  string
+}
+
+// stampedVersion is the version the one build carries until a copy is given another. It is
+// padded with versionPad, which the program trims, to a length that leaves room for any version.
+var stampedVersion = "cogmer-test-stamp" + strings.Repeat(versionPad, 47)
+
+// stampedBuildFlags are the flags of the one build. scripts/test-and-record.sh builds with the
+// same flags when it makes the build in advance.
+func stampedBuildFlags() string {
+	return "-X main.version=" + stampedVersion + " -X main.noBrowser=1"
+}
+
+// stamp writes a copy of the build at from to to, with the version v in place of
+// stampedVersion everywhere it occurs.
+func stamp(from, to, v string) error {
+	if len(v) > len(stampedVersion) || strings.Contains(v, versionPad) {
+		return fmt.Errorf("version %q is longer than the stamp or contains %q", v, versionPad)
+	}
+	data, err := os.ReadFile(from)
+	if err != nil {
+		return err
+	}
+	old := []byte(stampedVersion)
+	if bytes.Count(data, old) == 0 {
+		return fmt.Errorf("%s carries no stamp %q", from, stampedVersion)
+	}
+	data = bytes.ReplaceAll(data, old, []byte(v+strings.Repeat(versionPad, len(stampedVersion)-len(v))))
+	if err := os.MkdirAll(filepath.Dir(to), 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(to, data, 0o755); err != nil {
+		return err
+	}
+	if runtime.GOOS == "darwin" {
+		// The bytes changed, so the signature the linker made no longer matches, and macOS on
+		// Apple silicon kills a program whose signature does not.
+		if out, err := exec.Command("codesign", "--force", "--sign", "-", to).CombinedOutput(); err != nil {
+			return fmt.Errorf("codesign: %v\n%s", err, out)
+		}
+	}
+	return nil
 }
 
 func buildVersion(t *testing.T, dir, v string) string {
@@ -79,12 +128,31 @@ func buildVersion(t *testing.T, dir, v string) string {
 	root := sharedBuildsDir
 	sharedBuildsMu.Unlock()
 
-	b.once.Do(func() {
-		b.path = filepath.Join(root, v, "cogmer"+exeSuffix)
-		cmd := exec.Command("go", "build", "-ldflags", "-X main.version="+v+" -X main.noBrowser=1", "-o", b.path, ".")
+	stampedBuild.once.Do(func() {
+		if pre := os.Getenv("COGMER_TEST_BUILD"); pre != "" {
+			// A build made with other flags would carry no stamp, or would open browsers.
+			out, err := exec.Command("go", "version", "-m", pre).Output()
+			if err != nil || !strings.Contains(string(out), "-ldflags=\""+stampedBuildFlags()+"\"") {
+				stampedBuild.err = fmt.Sprintf("COGMER_TEST_BUILD %s was not built with %s:\n%s", pre, stampedBuildFlags(), out)
+				return
+			}
+			stampedBuild.path = pre
+			return
+		}
+		stampedBuild.path = filepath.Join(root, "stamped", "cogmer"+exeSuffix)
+		cmd := exec.Command("go", "build", "-ldflags", stampedBuildFlags(), "-o", stampedBuild.path, ".")
 		cmd.Env = append(os.Environ(), realGoCaches...)
 		if out, err := cmd.CombinedOutput(); err != nil {
-			b.err = err.Error() + "\n" + string(out)
+			stampedBuild.err = err.Error() + "\n" + string(out)
+		}
+	})
+	if stampedBuild.err != "" {
+		t.Fatalf("build: %s", stampedBuild.err)
+	}
+	b.once.Do(func() {
+		b.path = filepath.Join(root, v, "cogmer"+exeSuffix)
+		if err := stamp(stampedBuild.path, b.path, v); err != nil {
+			b.err = err.Error()
 		}
 	})
 	if b.err != "" {
@@ -109,6 +177,18 @@ func buildVersion(t *testing.T, dir, v string) string {
 	}
 	if err := dst.Close(); err != nil {
 		t.Fatal(err)
+	}
+	if runtime.GOOS == "darwin" {
+		// macOS checks a file the first time it runs it, and a copy is a new file, so the copy the
+		// test runs is checked even though the build it came from has run. The check took about half
+		// a second on an Apple silicon Mac and queued, so that sixteen new copies started at once
+		// took up to 8.6s each. A test that times its first run of the copy, such as the hook on
+		// newer data, then timed the check and failed under the parallel runner. Running the copy
+		// once here, with a subcommand that opens no state, pays for the check before a test starts
+		// a clock.
+		if o, err := exec.Command(out, "version").CombinedOutput(); err != nil {
+			t.Fatalf("the first run of %s: %v\n%s", out, err, o)
+		}
 	}
 	return out
 }

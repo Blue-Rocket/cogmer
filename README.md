@@ -77,7 +77,10 @@ cloud, and Team organizations are moving to the same. Either way, cogmer has to 
 one of your own computers, through Claude Code or Codex as above, since that is where your identity is
 made.
 
-In a task that runs in the cloud, cogmer runs inside the task's sandbox and speaks as you. Run
+In a task that runs in the cloud, cogmer runs inside the task's sandbox and speaks as you. A cloud
+task loads plugins from your Claude account, not from your computer, so cogmer installed in Claude Code
+does not reach it. On claude.ai, under Settings, Customize, Plugins, add the marketplace
+`Blue-Rocket/cogmer`, then add Cogmer from it. Then run
 `/cogmer:self-machines` on your computer, add a cloud environment, and download the plugin the page
 offers. Upload it once in Cowork under Customize, Plugins, as a personal plugin, and share or publish it
 nowhere: it holds a value that lets whoever has it speak as you, and anything that runs in the task,

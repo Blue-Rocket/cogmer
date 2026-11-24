@@ -338,7 +338,12 @@ an order to do things in, becomes a tombstone of a third kind. A plan is ephemer
 
 W-38. When a later decision changes only part of an earlier one, rewrite the earlier
 entry so that it states only what still holds, and name the removed part in the
-later decision's **Rejected.** in the same way.
+later decision's **Rejected.** in the same way. A later decision that makes an
+exception to an earlier one for a narrower case changes no part of it, so the earlier
+entry is left as it is, and the later one says it is an exception, citing the earlier
+one. The later entry states only how it departs from the earlier one, and neither
+restates the earlier one nor says where else it holds. An earlier entry then never has
+to name every exception made after it.
 
 W-39. When rewriting an entry, keep every fact, reference and number from the
 original, either in the entry or in the commit it now cites. Remove one

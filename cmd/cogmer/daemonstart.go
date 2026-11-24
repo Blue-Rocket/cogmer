@@ -34,6 +34,7 @@ func startDaemon() error {
 		return err
 	}
 	defer logFile.Close()
+	markDaemonStarting()
 	cmd := exec.Command(exe, "daemon")
 	cmd.Stdin = nil
 	cmd.Stdout, cmd.Stderr = logFile, logFile

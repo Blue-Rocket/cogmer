@@ -4,7 +4,9 @@
 
 **Decision.** The session-start hook starts the daemon when it is not running. Starting it
 never delays the session, finding it running is the ordinary case, and a failure
-to start is silent to the user and recorded by the daemon.
+to start is silent to the user and recorded by the daemon. A start also touches a marker that
+says a daemon is starting, which lets a prompt hook hold a prompt for it (D-294, a prompt that
+finds no daemon listening just after one was started is held for it).
 
 **Support.**
 - A user never has to start the daemon, notice that it has stopped, or know that it

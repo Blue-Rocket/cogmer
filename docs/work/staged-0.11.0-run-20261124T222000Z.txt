@@ -1,0 +1,126 @@
+The staged 0.11.0 plugin on a Mac and in a Cowork cloud task, on 2026-11-24 from about 20:00Z to 22:20Z, written at 2026-11-24T22:20:00Z
+(UTC; the Mac's clock is UTC+00:00)
+
+What was asked
+  Step 3 of the release plan in the item "The next release moves every installed machine to user
+  identities…": follow README.md alone on a Mac with cogmer's state saved and every other trace
+  removed, with Blue-Rocket/cogmer-staging in place of Blue-Rocket/cogmer, through Claude Code and
+  then a Cowork cloud task.
+
+Machines and versions
+  A Mac with Apple silicon, macOS 26.6.2, Claude Code 2.1.331 on the command line and in Claude
+  Desktop 5.11492.5 (its claude-code folder is named 2.1.325), on a Team plan, organization Blue
+  Rocket. The plugin was 0.11.0 from the marketplace Blue-Rocket/cogmer-staging, whose main was
+  f7696a3 (staging 9a97eb2, 2026-11-20), and the program was cogmer_0.11.0_darwin_arm64 from that
+  repository's release v0.11.0. The release branch has since moved on: peer-forget's wording, the
+  version trim in main.go, and changes to tests and tooling are not in the staged build.
+
+Before
+  The real state was saved twice, in ~/.cogmer-moved and ~/cogmer-backup-2026-11-24. The account
+  marketplace Blue-Rocket/cogmer was removed on claude.ai, a stale synced copy of the plugin
+  (cogmer~g2) was moved aside because the next session start loaded it once more, and the entries
+  for cogmer in ~/.claude/settings.json and in Claude Desktop's configuration were taken out.
+  claude plugin list showed no cogmer, ~/.cogmer did not exist, and the only cogmer process was a
+  daemon from 2026-10-26 that is unrelated.
+
+What was done, and what each showed
+  1. In Claude Code on the Mac: /plugin marketplace add Blue-Rocket/cogmer-staging printed "Added
+     marketplace: blue-rocket". /plugin install cogmer@blue-rocket printed "Installed cogmer. Plugin
+     is now active." (reload-plugins before it counted 2 plugins and 0 hooks.)
+  2. The first /cogmer:self-status said cogmer was still installing and to run it again in 15 to 20
+     seconds. install.log: downloading 20:11:08Z, installed 0.11.0 from release 20:11:13Z.
+  3. The second /cogmer:self-status showed a line "UserPromptSubmit says: cogmer 0.11.0 is
+     installed…" and that no identity existed, and opened http://127.0.0.1:4782/identity.
+  4. The identity page showed eighteen numbered words in three columns, a "Copy the words" button
+     and "I have saved them". The words were read from a screenshot in a Claude session, so that
+     identity is exposed and was made for this test. The user retyped some words on a page whose
+     screenshot was not captured, and the page then said "DONE: Your identity is made, and the phrase
+     has been forgotten by this machine."
+  5. /cogmer:self-status then printed the pairing string, "a connection from outside reached this
+     machine through the Frankfurt relay in 235ms", the names David Foote and "Tonka Truck", and
+     "this session isn't in a room".
+  6. /cogmer:room-create made morning-steppe. It reported that Claude Code 2.1.331 had not been
+     checked, and that four assumptions, B05, B33, B34 and B24, did not hold. cogmer doctor --host
+     claude gave the same four. B05 is a change that harms nothing, and the other three came from the
+     probe taking output as a model turn. Both were corrected on the release branch afterwards, in
+     394376e and b35c5ea.
+  7. A new Claude Code session reported "3 plugins · 20 skills · 7 agents · 3 hooks", the slash menu
+     showed one set of /cogmer: commands, and one cogmer daemon ran. Claude Desktop's Claude Code
+     session reported "4 plugins · 36 skills · 7 agents · 3 hooks" with one cogmer in its list.
+     claude plugin list showed only cogmer@blue-rocket. The account's copy, "from cogmer-staging", was
+     in ~/.claude/plugins/synced/ with version 0.11.0 once the staging marketplace was added on the
+     account.
+  8. On claude.ai, Organization settings, Cowork: "Cowork in the cloud" on, "Chat and Cowork
+     unified" on. Capabilities: domain allowlist "Package managers only" with tailcat.dev and
+     tc301a.ipn.dev to tc304a.ipn.dev added (the tailcat.dev row looked dimmed). Claude Desktop,
+     Settings, Capabilities: "Only on this computer" was on and was turned off, after which a new
+     session described itself as "a private Linux workspace in Anthropic's cloud" with working
+     folder /home/claude.
+  9. The staging marketplace was added to the account, which showed "Cogmer … from cogmer-staging ·
+     0.11.0 · 19 commands · 3 hooks". /cogmer:self-machines made the cloud environment "cloud test",
+     and the plugin it offered, cogmer-cloud-8a4b1b80 1.0.2 holding .claude-plugin/plugin.json and
+     cloud.value, was uploaded as a personal plugin.
+ 10. In a new Cowork cloud task, /cogmer:self-status first said there was no pairing string and that
+     the daemon had not answered, and about 20 seconds later printed a string for the same user key
+     with another address, "a connection from outside reached this machine through the NYC relay in
+     619ms", versions 0.11.0 throughout. The sandbox's daemon.log held "cloud: this session speaks
+     for northern-sparrow as cloud test 0.11.0, with a key certified until 2026-11-25T21:49:30Z" and
+     six seconds later "cloud: your lists arrived from Tonka Truck".
+ 11. /cogmer:room-join morning-steppe in the task said the session had joined, and that the behavior
+     check could not run because its probe session hit an authentication error. The task did not ask
+     the user's permission before the model ran cli.sh.
+ 12. A prompt from the task, "Hi from this nifty cloud session", appeared in the room's page on the
+     Mac. A turn from Claude Code reached the task later than the user expected.
+ 13. Timing, with a marker turn posted from the Mac by a script through the daemon's hook commands:
+     posted 22:03:41.261, found by the task's loop at 22:03:44 on its first poll, with the task
+     active. Posted 22:08:21.471 after the task had been idle for about 4 minutes, the loop started at
+     22:11:09 and found it at 22:11:13 on its first poll. The Mac's daemon.log recorded the cloud
+     machine "reachable again after 4m31s" at 22:03:47, "unreachable" at 22:07:03, and "reachable
+     again after 4m11s" at 22:11:13.
+ 14. The room's record on the Mac held one turn from the task, its first prompt (21:55:53) with no
+     reply, then another at 22:13:21. The task's own copy listed the same two of its seven prompts and
+     none of its replies. Both recorded prompts began with "<system-reminder>The user's timezone is
+     Europe/Lisbon (UTC+00:00). Message sent at …</system-reminder>" before what the user typed.
+ 15. The sandbox's daemon.log held "assistant: session ece15fa0 sent a transcript path cogmer will
+     not open (transcript path refused: not a .jsonl name); the turn is not captured" after each of
+     five turns, USER_PROMPT lines only at 21:55:53, 22:13:21 and 22:15:04, and two daemon starts
+     (pids 169 and 189) at 22:03:36 and again at 22:11:08. The sandbox's ~/.claude/projects held one
+     transcript, dcba50c4-….jsonl (39416 bytes, 21:53), which is the behavior check's probe session,
+     and nothing named for the user's session ece15fa0 outside /tmp/claude-0/-home-claude/ece15fa0-…,
+     a directory that holds one empty directory "started".
+
+Later the same night, with a browser
+  Claude in Chrome let a Claude Code session on the Mac drive the Cowork task's page on claude.ai, so
+  no prompt was pasted by hand. At 22:29:46Z the Mac's daemon.log had the sandbox's daemon unreachable
+  since 22:22:37. The session sent "Reply with only the word PING-1." at about 22:29:55 and got
+  "PING-1" back. The Mac's log then showed "peer … is reachable again after 7m26s" at 22:30:02, and
+  the room held no turn for PING-1 at 22:30:11 or at 22:30:25, with the task's six earlier recorded
+  prompts at sequences 1 to 6, the last at 22:19:05. The session sent "Reply with only the word
+  PING-2." at 22:30:33, the task answered "PING-2", and the room held it as sequence 7 at 22:30:33.
+  Neither prompt's reply was recorded. The task's sequence numbers have no gap for PING-1, and the
+  prompts sent at 22:03:44 and 22:11:09 also left none, so a prompt sent while the daemon is asleep
+  never reached it.
+
+Seen
+  The README route installs and runs on a clean Mac in Claude Code with no restart, and the
+  first-install line showed at the second prompt. The account's copy of the plugin and the one
+  installed from the command line did not give two sets of commands, hooks or daemons in the sessions
+  looked at. In a Cowork cloud task, the sandbox's daemon read the cloud value from the uploaded
+  plugin (by the key and the certificate it holds, not by a log line naming the file), reached the
+  relay with the allowlist above, took its lists from the Mac, and bound the session through the
+  command's repeated shell lines without asking for permission. A turn written on the Mac reached
+  the sandbox's copy of the room within about 4 seconds of the loop's start, including after about 4
+  minutes of idle. The sandbox's daemon is not reachable from the Mac while the task is idle. No
+  reply from the task was captured, and the prompts that arrived while the daemon was starting were
+  not.
+
+Not shown
+  What transcript_path the hooks send in a Cowork cloud task on Claude Code 2.1.331: the log names
+  the refusal and not the path, and an earlier record has a .jsonl transcript under
+  /root/.claude/projects/-home-claude/ (7adc75c). Why the first prompt after idle is lost, which is
+  read from the log's timing. How long delivery takes, since both timing runs found the marker on the
+  first poll. Which copy of the plugin loads on the Mac when both are present. The fourth plugin
+  that Claude Desktop's session counted. The page that asked the user to retype words (its
+  screenshot was not captured). Whether the Mac's daemon can reach the sandbox's daemon at times
+  other than when a prompt starts it. A session outside a project folder, a Cowork task on the
+  computer with the bridge, Windows, Codex.

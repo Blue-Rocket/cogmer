@@ -2649,9 +2649,18 @@ They bind the session that invoked them, never a session selected for the machin
 
 ## Claude Cowork installation
 
-Claude Cowork runs its sessions in a sandbox that cannot reach other machines, so cogmer runs on
-the user's own machine, where it was installed through Claude Code or Codex, and a small bridge
-connects the two. A user runs the self-cowork command once in a Claude Code or Codex session. It
+A Claude Cowork task that runs in the cloud loads plugins from the user's Claude account, so the
+user installs cogmer there from the same marketplace as in Claude Code, and uploads once the plugin
+that holds their cloud value. One plugin then serves every host, so a release reaches a Cowork user
+as it reaches a Claude Code user.
+
+A command typed in a Cowork cloud task does the same as in Claude Code, although the task does not
+run the shell lines a command holds, so that a cloud user can join and leave rooms and check status
+from the task itself.
+
+A Claude Cowork task that runs on the user's computer has a sandbox that cannot reach other
+machines, so cogmer runs on the user's own machine, where it was installed through Claude Code or
+Codex, and a small bridge connects the two. A user runs the self-cowork command once in a Claude Code or Codex session. It
 adds the bridge to Claude Desktop's configuration, keeping a copy of the file it changed, and
 writes a plugin for Cowork that names the bridge. The user restarts Claude Desktop and installs
 that plugin in Cowork, and the commands then work there as they do in Claude Code, and the turns
@@ -2749,6 +2758,11 @@ shows nothing of cogmer unless something needs repair.
 Starting the daemon never delays the session. The hook returns at once, and the daemon
 becomes useful when it is ready, so a session that begins before the daemon is
 listening simply has nothing to inject yet.
+
+A prompt sent in the first seconds after a daemon is started is kept for it when nothing is
+listening yet, and the daemon records it in the room once it is up, although that prompt is
+given nothing from the room. A command is never kept, and a prompt sent to a daemon that is not
+running and was not just started is not recorded.
 
 A daemon already running is the ordinary case, not an error. Several sessions often
 begin at once on one machine, each tries to start the daemon, at most one succeeds, and

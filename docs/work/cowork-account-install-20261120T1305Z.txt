@@ -1,0 +1,62 @@
+Cowork cloud sessions on 2026-11-20, from about 10:50Z to 13:10Z: whether the cogmer marketplace plugin, installed
+on the claude.ai account rather than from Claude Code's command line, reaches a Cowork cloud session and runs
+there. Written by hand from what the user pasted and the screenshots the user sent.
+
+Machines and versions
+  The Team organization Blue Rocket with "Chat and Cowork unified" on. Cowork was used from Claude Desktop on the
+  user's Mac for the first runs and from claude.ai in a browser for the last. Every run was a cloud session:
+  `uname` gave Linux vm, x86_64, and CLAUDE_CODE_REMOTE was true. The Mac's Claude Code had cogmer installed
+  from the command line with `/plugin install cogmer@blue-rocket`. The plugin released was 0.10.5, at
+  357af6b on main.
+
+Before the account install
+  At about 10:50Z an uploaded personal plugin named cogmer was on the account. Desktop's Customize > Plugins
+  listed the marketplace plugin as disabled while it was there, and the user saw it enabled again once the
+  uploaded plugin was removed.
+  At 10:52Z and 10:54Z a new Cowork cloud session, with the uploaded plugin removed, had one account folder under
+  ~/.claude/plugins/synced/ and it was empty. There was no ~/.claude/plugins/installed_plugins.json and no
+  ~/.claude/settings.json. The command-line install on the Mac did not reach the session.
+  Adding the marketplace Blue-Rocket/cogmer on claude.ai answered that it was already added. No plugin showed
+  as installed on claude.ai. Under Manage marketplaces the marketplace named cogmer read Synced, Blue-Rocket/cogmer,
+  commit be0e3bb, with "Sync automatically" on. be0e3bb is the commit tagged v0.10.4. Cogmer's page offered
+  0.10.4 (Oct 19), 0.10.3 (Oct 16) and 0.10.2 (Oct 15), with an Add button. Main had held 0.10.5 since
+  357af6b. Choosing "Check for updates" on the marketplace changed the synced commit to 357af6b.
+
+The account install
+  The user clicked Add on Cogmer's page on claude.ai and started a new Cowork task in the browser. Its shell gave:
+
+    $ ls ~/.claude/plugins/synced/*/; uname -m; echo CLAUDE_CODE_REMOTE=$CLAUDE_CODE_REMOTE
+    cogmer
+    cogmer.meta.json
+    manifest.json
+    x86_64
+    CLAUDE_CODE_REMOTE=true
+
+  cogmer.meta.json held marketplace_name cogmer, marketplace_kind account_marketplace and
+  installation_preference available, with a server plugin id not copied here. The plugin's
+  .claude-plugin/plugin.json named cogmer at version 0.10.5. ~/.cogmer held bin/cogmer, daemon.log, endpoint,
+  identity.json, identity.key, install.log, membership.db with its -shm and -wal files, tailcat-region.json and
+  tailcat.key. install.log read:
+
+    2026-11-20T13:01:45Z downloading https://github.com/Blue-Rocket/cogmer/releases/download/v0.10.5/cogmer_0.10.5_linux_amd64
+    2026-11-20T13:01:46Z installed 0.10.5 from release
+
+  The last 20 lines of daemon.log, all at 13:04:38, the time of the status check below, showed a handshake with
+  one peer, a contact after 613799 us "via=direct" at a 192.0.2.2 address, one accepted TCP connection, a netcheck
+  report of udp=false v4=false v6=false, the home relay changing from derp-0 to derp-1, the line
+  "http: TLS handshake error from %!s(<nil>): EOF", and "Device closed". Which overlay device closed, the
+  daemon's or the one the status check uses to test reachability from outside, the 20 lines do not say.
+
+  /cogmer:self-status, typed in the same task, did not run its shell line. The model reported that the line
+  reached it as "[a shell command here was not run: typing a command's name runs none]", and that it found
+  cli.sh and ran `cli.sh whoami` itself with its Bash tool. Its account of that output gave a pairing string, said colleagues could reach the machine now because a test connection from outside got
+  through the nyc relay in 669 ms, named the user "Someone" from the computer's username, said the session was in
+  no room, and reported plugin 0.10.5, binary 0.10.5 and daemon 0.10.5. The model also reported that
+  CLAUDE_PLUGIN_ROOT was not set in its Bash tool's environment.
+
+What the runs do not show
+  The identity in the sandbox was a new one, since 0.10.5 reads no cloud value, so no room was joined and no turn
+  was captured or injected. No session from Desktop was run after the account install, so whether a Desktop
+  task on the Mac, run locally, loads both the command-line install and the account copy is not known. Whether
+  "Sync automatically" ever moves the account's copy without "Check for updates" was not watched. The relay
+  hosts were already allowed in the organization's settings.

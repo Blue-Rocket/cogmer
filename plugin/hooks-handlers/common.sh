@@ -152,6 +152,10 @@ start_daemon_if_needed() {
   ct_state_dir
   (umask 077; : >> "$log") 2>/dev/null
 
+  # Says a daemon is being started, so that a prompt hook that finds nothing listening in the next
+  # few seconds keeps its prompt for it and does not lose it (D-294).
+  touch "${COGMER_HOME:-$HOME/.cogmer}/daemon-starting" 2>/dev/null
+
   # Detached, so the daemon outlives the session that started it: a room may have
   # members in several sessions, and starting it repeatedly is worse than leaving
   # it running.

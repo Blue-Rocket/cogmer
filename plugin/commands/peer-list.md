@@ -8,6 +8,16 @@ disable-model-invocation: true
 
 !`bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" peers`
 
+## If the output above is missing
+
+If the section above shows a note in place of cogmer's output, such as one saying that a shell command was not run or was disabled, or shows the command line itself, the host did not run it. Run it yourself with the Bash tool, once, and take what it prints as that section's output:
+
+```
+bash "${CLAUDE_PLUGIN_ROOT}/cli.sh" peers
+```
+
+If the section above shows cogmer's output, run nothing.
+
 ## Your task
 
 List them plainly, and give each peer's three names as the output labels them: what the

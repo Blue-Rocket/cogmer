@@ -459,3 +459,40 @@ func TestCommandFilesRunCliThroughBashAndAllowOnlyTheirOwnSubcommands(t *testing
 		}
 	}
 }
+
+// A host that does not run a command's shell lines, such as a Cowork session, shows a
+// note in their place, so each command file also gives the model its lines, in order,
+// to run with the Bash tool when the output is missing (D-291). The section comes before
+// the task, so the model reads it before it reports anything.
+func TestEachCommandGivesItsShellLinesToRunWhenTheHostDidNot(t *testing.T) {
+	files, _ := filepath.Glob("../../plugin/commands/*.md")
+	if len(files) < 10 {
+		t.Skip("plugin commands not readable")
+	}
+	const heading = "## If the output above is missing\n"
+	line := regexp.MustCompile("(?m)^!`(.*)`$")
+	fenced := regexp.MustCompile("(?m)^```\n(.*)\n```$")
+	for _, f := range files {
+		src, _ := os.ReadFile(f)
+		body := string(src)
+		start := strings.Index(body, heading)
+		task := strings.Index(body, "## Your task")
+		if start < 0 || task < start {
+			t.Errorf("%s has no %q section before its task", f, strings.TrimSpace(heading))
+			continue
+		}
+		var want, got []string
+		for _, m := range line.FindAllStringSubmatch(body[:start], -1) {
+			want = append(want, m[1])
+		}
+		for _, m := range fenced.FindAllStringSubmatch(body[start:task], -1) {
+			got = append(got, m[1])
+		}
+		if strings.Join(got, "\n") != strings.Join(want, "\n") {
+			t.Errorf("%s gives %q to run when the host did not run %q", f, got, want)
+		}
+		if line.MatchString(body[start:]) {
+			t.Errorf("%s has a shell line after its fallback section", f)
+		}
+	}
+}
