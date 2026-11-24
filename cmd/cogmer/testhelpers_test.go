@@ -178,6 +178,18 @@ func buildVersion(t *testing.T, dir, v string) string {
 	if err := dst.Close(); err != nil {
 		t.Fatal(err)
 	}
+	if runtime.GOOS == "darwin" {
+		// macOS checks a file the first time it runs it, and a copy is a new file, so the copy the
+		// test runs is checked even though the build it came from has run. The check took about half
+		// a second on an Apple silicon Mac and queued, so that sixteen new copies started at once
+		// took up to 8.6s each. A test that times its first run of the copy, such as the hook on
+		// newer data, then timed the check and failed under the parallel runner. Running the copy
+		// once here, with a subcommand that opens no state, pays for the check before a test starts
+		// a clock.
+		if o, err := exec.Command(out, "version").CombinedOutput(); err != nil {
+			t.Fatalf("the first run of %s: %v\n%s", out, err, o)
+		}
+	}
 	return out
 }
 
