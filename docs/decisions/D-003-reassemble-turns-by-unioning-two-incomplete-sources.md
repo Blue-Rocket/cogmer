@@ -8,6 +8,9 @@ of the transcript, read when the turn completes, and the Stop hook's
 
 **Support.**
 - `last_assistant_message` holds only the turn's final text block. B04.
+- A Claude Code version before 2.1.331 fires Stop before it writes that final block to
+  the transcript, so the transcript read at Stop lacks it, and 2.1.331 writes the block
+  before Stop fires. `b35c5ea:cmd/cogmer/behaviors.go`.
 - Together the two give the complete turn on either kind of version. B12, and §15
   (capturing Claude responses).
 
