@@ -41,8 +41,8 @@ Codex manifest names, and `plugin/skills/` does not exist, since Claude Code loa
 - *Disabling invocation only on the commands that change something.* The others buy no capability
   and cost context in every session, and the rule would carry an exception.
 
-**Limits.** The bridge's tools are a different route, which D-207 (the Cowork bridge offers no tool that runs a command) governs. The command script run through the model's own shell is another, which D-291 names. No registry check covers it, for the reason D-118 gives, that it is a property of plugin
-load time. Moving to the `skills/<name>/SKILL.md` layout is a separate change.
+**Limits.** The bridge's tools are a different route, which D-207 (the Cowork bridge offers no tool that runs a command) governs. No registry check covers the frontmatter, for the reason D-118 gives, that it is a property of plugin
+load time. The command script run through the model's own shell is another route, which D-291 names. Moving to the `skills/<name>/SKILL.md` layout is a separate change.
 
 **Revisit when** a command appears that the model genuinely should reach without being asked. The
 question to answer first is what it would do with the result, since it cannot show anybody anything.
