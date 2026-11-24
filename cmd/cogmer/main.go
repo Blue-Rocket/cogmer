@@ -719,9 +719,12 @@ func runHook(kind string, host Host) {
 		fmt.Fprintf(os.Stderr, "cogmer: daemon unreachable (%v); continuing without collaboration\n", err)
 		// A daemon that was just started is not listening yet, and the prompt is kept for it
 		// (D-294). Only a request that found nothing listening is kept, since one that timed
-		// out may have been handled.
-		if kind == "prompt" && isDialError(err) {
-			_ = spoolPrompt(body, time.Now())
+		// out may have been handled, and never a command, whose text can hold a pairing string
+		// or an invitation that should not sit on disk (D-209).
+		if text, _ := payload["prompt"].(string); kind == "prompt" && isDialError(err) {
+			if _, isCommand := parseTypedCommand(text, host.CommandPrefix()); !isCommand {
+				_ = spoolPrompt(body, time.Now())
+			}
 		}
 		_, _ = os.Stdout.Write(promptHookOutput(host, notice, ""))
 		os.Exit(0)

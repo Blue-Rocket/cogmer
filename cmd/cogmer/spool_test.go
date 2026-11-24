@@ -156,11 +156,12 @@ func TestAPromptHookKeepsItsPromptForAStartingDaemon(t *testing.T) {
 	if err := os.MkdirAll(home, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	run := func() (string, string) {
+	run := func(prompt string) (string, string) {
 		cmd := exec.Command(bin, "hook", "prompt")
 		cmd.Env = append(os.Environ(), "COGMER_HOME="+home, "COGMER_ADDR="+freeAddr(t), "COGMER_PEER_ADDR="+freeAddr(t),
 			"COGMER_TAILCAT=off", "COGMER_HOST=claude", "COGMER_PREFLIGHT=off", "CLAUDE_CODE_SESSION_ID=s-1")
-		cmd.Stdin = strings.NewReader(`{"session_id":"s-1","prompt":"words to keep","prompt_id":"p-1"}`)
+		b, _ := json.Marshal(map[string]string{"session_id": "s-1", "prompt": prompt, "prompt_id": "p-1"})
+		cmd.Stdin = bytes.NewReader(b)
 		var out, errOut bytes.Buffer
 		cmd.Stdout, cmd.Stderr = &out, &errOut
 		if err := cmd.Run(); err != nil {
@@ -168,7 +169,7 @@ func TestAPromptHookKeepsItsPromptForAStartingDaemon(t *testing.T) {
 		}
 		return out.String(), errOut.String()
 	}
-	if out, _ := run(); out != "" {
+	if out, _ := run("words to keep"); out != "" {
 		t.Errorf("the hook wrote %q to the model", out)
 	}
 	if entries, _ := os.ReadDir(filepath.Join(home, "spool")); len(entries) != 0 {
@@ -177,7 +178,12 @@ func TestAPromptHookKeepsItsPromptForAStartingDaemon(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(home, "daemon-starting"), nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, errOut := run(); out != "" || !strings.Contains(errOut, "daemon unreachable") {
+	// A command is never kept, since its text can hold a pairing string or an invitation (D-209).
+	run("/cogmer:peer-pair ed25519:secretish somebody")
+	if entries, _ := os.ReadDir(filepath.Join(home, "spool")); len(entries) != 0 {
+		t.Fatalf("a typed command was written to the spool: %v", entries)
+	}
+	if out, errOut := run("words to keep"); out != "" || !strings.Contains(errOut, "daemon unreachable") {
 		t.Errorf("with a fresh start the hook wrote %q to the model and %q to stderr", out, errOut)
 	}
 	entries, _ := os.ReadDir(filepath.Join(home, "spool"))

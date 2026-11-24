@@ -2759,8 +2759,10 @@ Starting the daemon never delays the session. The hook returns at once, and the 
 becomes useful when it is ready, so a session that begins before the daemon is
 listening simply has nothing to inject yet.
 
-A prompt sent in that interval is not lost. The prompt hook keeps it for the daemon, which
-records it in the room when it starts, although that prompt is given nothing from the room.
+A prompt sent in the first seconds after a daemon is started is kept for it when nothing is
+listening yet, and the daemon records it in the room once it is up, although that prompt is
+given nothing from the room. A command is never kept, and a prompt sent to a daemon that is not
+running and was not just started is not recorded.
 
 A daemon already running is the ordinary case, not an error. Several sessions often
 begin at once on one machine, each tries to start the daemon, at most one succeeds, and
