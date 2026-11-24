@@ -30,6 +30,14 @@ import (
 // update can replace a stale binary rather than silently keep using it.
 var version = "dev"
 
+// versionPad pads the version a test build is stamped with, so that a test gives a copy
+// of one build any version by overwriting the stamped bytes in the file, rather than
+// building the program again for each version (buildVersion in testhelpers_test.go). A
+// release version never contains it, so trimming it changes nothing in a release.
+const versionPad = "~"
+
+func init() { version = strings.TrimRight(version, versionPad) }
+
 const (
 	// defaultAddr carries hooks and the local UI. Loopback, always (§25).
 	defaultAddr = "127.0.0.1:4782"
