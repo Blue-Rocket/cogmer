@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Refuses to push a commit whose tree the whole suite has not passed on this clone.
-# A tree that scripts/test-and-record.sh recorded goes through at once. Any other commit,
+# A tree that scripts/test-and-record.sh --full recorded goes through at once. One that
+# only the short suite passed, which is what a commit waits on, is not enough. Any other commit,
 # such as a merge or a rebased one, is checked out into a temporary worktree and the
 # suite runs on exactly that commit, which takes some minutes.
 #

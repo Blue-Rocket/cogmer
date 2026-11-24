@@ -29,9 +29,11 @@ and how to run it.
   `go test ./... | tail && git commit` reports the status of its last command, so a
   failing test does not stop the commit, and the test result has to gate the command
   itself. Stage the change and gate the commit on `scripts/test-and-record.sh`, which
-  runs the suite and records the staged tree as passed. `.githooks/pre-push` refuses a
-  push whose tree the suite has not passed on this clone, and runs the suite on that
-  commit when no record says it passed, which covers a merge or a rebase. Git runs it
+  runs the suite with `-short` and records the staged tree as passed it. With `--full`
+  it runs the whole suite, which `.githooks/pre-push` requires: the hook refuses a push
+  whose tree the whole suite has not passed on this clone, and runs the whole suite on
+  that commit when no record says it passed, which covers a merge, a rebase and a commit
+  that passed only the short suite. Git runs it
   because the project's Claude Code settings set `core.hooksPath` to `.githooks` at
   each session start, so a clone used without Claude Code needs
   `git config core.hooksPath .githooks` once.
