@@ -28,7 +28,6 @@ type Probe struct {
 	Turn1Stop     map[string]any
 	Transcript    []transcriptRecord
 	rawTranscript []map[string]any
-	AtStop        []transcriptRecord
 	Final         string
 	Reassembled   *AssistantTurn
 
@@ -122,7 +121,7 @@ func sentinel() string {
 }
 
 // runProbeHook is the hook entry point used only by preflight. It records the
-// payload, snapshots the transcript, and injects the sentinel context.
+// payload, and injects the sentinel context.
 func runProbeHook(name, dir string) {
 	raw, err := io.ReadAll(os.Stdin)
 	if err != nil {
@@ -133,11 +132,6 @@ func runProbeHook(name, dir string) {
 		if tp, _ := payload["transcript_path"].(string); tp != "" {
 			if st, err := os.Stat(tp); err == nil {
 				payload["_transcript_bytes"] = st.Size()
-			}
-			if name == "Stop" {
-				if b, err := os.ReadFile(tp); err == nil {
-					_ = os.WriteFile(filepath.Join(dir, "at-stop.jsonl"), b, 0o600)
-				}
 			}
 		}
 		line, _ := json.Marshal(payload)
@@ -194,7 +188,7 @@ func quoteCmd(path string, args ...string) string {
 }
 
 // The Bash step does double duty: it forces a tool call between two text blocks,
-// which is what B04 and B05 measure, and it captures the session id Claude Code
+// which is what B04 measures, and it captures the session id Claude Code
 // exports into a tool call's environment, which is what B21 checks.
 const toolEnvFile = "toolenv.txt"
 
@@ -319,14 +313,6 @@ func (p *Probe) freezeSessionEvidence() {
 	if all := p.Hooks["Stop"]; len(all) > 0 {
 		p.Turn1Stop = all[len(all)-1]
 	}
-	// at-stop.jsonl is rewritten by every Stop hook; keep the probe turn's copy.
-	snap := filepath.Join(p.Dir, "at-stop.jsonl")
-	frozen := filepath.Join(p.Dir, "at-stop-turn1.jsonl")
-	if b, err := os.ReadFile(snap); err == nil {
-		_ = os.WriteFile(frozen, b, 0o600)
-	}
-	p.AtStop, _ = readTranscript(frozen)
-
 	if tp, _ := p.Turn1Stop["transcript_path"].(string); tp != "" {
 		p.ObservedBlocks, _ = InjectedBlocks(tp)
 		p.Transcript, p.rawTranscript = readTranscript(tp)

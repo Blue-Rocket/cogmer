@@ -7,7 +7,7 @@ meant to catch.
 
 **Support.**
 - A check can report the wrong result for a reason of its own: the first `--deep` run
-  reported B05 and B12 failing because of a bug in how the probe handled its evidence,
+  reported two checks failing because of a bug in how the probe handled its evidence,
   not because either behavior changed. `84a0751:docs/decisions.md`.
 - The tests that make checks fail are in `cmd/cogmer/behaviors_test.go` and
   `cmd/cogmer/behaviorchecks_test.go`.

@@ -39,20 +39,6 @@ func TestB03DetectsALostStopHookOrLostFields(t *testing.T) {
 	mustDetect(t, "B03", &Probe{Hooks: map[string][]map[string]any{"Stop": {{"last_assistant_message": nil, "session_id": "s"}}}}, "last_assistant_message present and null")
 }
 
-// B05: the final text block is not in the transcript when Stop fires. The check
-// reports the day that stops being true, so the entry can be corrected.
-func TestB05DetectsTheTranscriptGainingTheFinalBlockAtStop(t *testing.T) {
-	const s = "HERON-1"
-	preToolOnly := []transcriptRecord{assistantAt(`[{"type":"text","text":"ALPHA"},{"type":"tool_use","name":"Bash"}]`)}
-	mustPass(t, "B05", &Probe{Sentinel: s, AtStop: preToolOnly})
-	mustPass(t, "B05", &Probe{Sentinel: s})
-	// A user record that happens to hold the codeword is not the final block.
-	mustPass(t, "B05", &Probe{Sentinel: s, AtStop: []transcriptRecord{userAt(`[{"type":"text","text":"HERON-1"}]`)}})
-
-	flushed := append(append([]transcriptRecord{}, preToolOnly...), assistantAt(`[{"type":"text","text":"The codeword is HERON-1."}]`))
-	mustDetect(t, "B05", &Probe{Sentinel: s, AtStop: flushed}, "the final block already in the transcript at Stop")
-}
-
 // B07: reassembly publishes blocks of type text and counts those of type tool_use.
 // A rename of either loses text or tool counts without anything failing.
 func TestB07DetectsARenamedBlockType(t *testing.T) {

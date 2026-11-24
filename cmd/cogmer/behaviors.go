@@ -71,7 +71,7 @@ var Behaviors = []Behavior{
 	{
 		ID:       "B03",
 		Title:    "Stop fires and carries last_assistant_message",
-		Reliance: "If this changes, responses are not captured. If Stop stops firing, no response reaches the room; if it stops carrying last_assistant_message, every captured response loses its final text block, which is not yet in the transcript when Stop fires (B05). Either way the room shows prompts with incomplete or missing answers.",
+		Reliance: "If this changes, responses are not captured. If Stop stops firing, no response reaches the room; if it stops carrying last_assistant_message, every captured response loses its final text block on a Claude Code version that writes that block to the transcript after Stop fires, as the versions checked before 2.1.331 did. Either way the room shows prompts with incomplete or missing answers.",
 		Tier:     TierSession,
 		Check:    func(p *Probe) error { return p.requireFields("Stop", "last_assistant_message", "session_id") },
 	},
@@ -104,24 +104,6 @@ var Behaviors = []Behavior{
 			s, _ := p.Turn1Stop["last_assistant_message"].(string)
 			if strings.Contains(s, "ALPHA") {
 				return fmt.Errorf("last_assistant_message now includes pre-tool text (contains ALPHA) -- it is no longer final-block-only; mergeTail handles this, but B04's Title and Reliance are out of date")
-			}
-			return nil
-		},
-	},
-	{
-		ID:       "B05",
-		Title:    "The transcript at Stop time is missing the final text block",
-		Reliance: "If this changes, nothing breaks: reassembly reads both the transcript and last_assistant_message, and the second becomes redundant. The check fails so that this entry can be corrected.",
-		Tier:     TierSession,
-		Check: func(p *Probe) error {
-			for _, r := range p.AtStop {
-				if r.Type == "assistant" {
-					for _, b := range blocksOf(r) {
-						if b.Type == "text" && strings.Contains(b.Text, p.Sentinel) {
-							return fmt.Errorf("final block WAS already flushed at Stop time -- the race appears fixed; reassembly is still correct but B05's Title and Reliance are out of date")
-						}
-					}
-				}
 			}
 			return nil
 		},
@@ -212,7 +194,7 @@ var Behaviors = []Behavior{
 	{
 		ID:       "B12",
 		Title:    "Reassembly reconstructs the complete turn",
-		Reliance: "If this changes, captured turns lose text or repeat it, even while B03, B04 and B05 each pass. It is the check that shows whether they still combine into a complete turn, and it fails silently in the room.",
+		Reliance: "If this changes, captured turns lose text or repeat it, even while B03 and B04 each pass. It is the check that shows whether they still combine into a complete turn, and it fails silently in the room.",
 		Tier:     TierSession,
 		Check: func(p *Probe) error {
 			if p.Reassembled == nil {

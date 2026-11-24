@@ -29,7 +29,7 @@ If this changes, a colleague's turns never reach your Claude, while the browser 
 
 ### B03: Stop fires and carries last_assistant_message
 
-If this changes, responses are not captured. If Stop stops firing, no response reaches the room; if it stops carrying last_assistant_message, every captured response loses its final text block, which is not yet in the transcript when Stop fires (B05). Either way the room shows prompts with incomplete or missing answers.
+If this changes, responses are not captured. If Stop stops firing, no response reaches the room; if it stops carrying last_assistant_message, every captured response loses its final text block on a Claude Code version that writes that block to the transcript after Stop fires, as the versions checked before 2.1.331 did. Either way the room shows prompts with incomplete or missing answers.
 
 ### B29: Stop carries the same prompt_id as the prompt that began the turn
 
@@ -38,10 +38,6 @@ If this changes, the turns a prompt offered are never matched to its stop call, 
 ### B04: last_assistant_message contains ONLY the turn's final text block
 
 If this changes, nothing breaks: mergeTail also handles a last_assistant_message that holds the whole turn. The check fails so that this entry can be corrected, and so that the change does not pass unseen.
-
-### B05: The transcript at Stop time is missing the final text block
-
-If this changes, nothing breaks: reassembly reads both the transcript and last_assistant_message, and the second becomes redundant. The check fails so that this entry can be corrected.
 
 ### B06: Human prompts carry promptSource; tool-result records do not
 
@@ -61,7 +57,7 @@ If this changes, nothing breaks: turns are segmented by position, because assist
 
 ### B12: Reassembly reconstructs the complete turn
 
-If this changes, captured turns lose text or repeat it, even while B03, B04 and B05 each pass. It is the check that shows whether they still combine into a complete turn, and it fails silently in the room.
+If this changes, captured turns lose text or repeat it, even while B03 and B04 each pass. It is the check that shows whether they still combine into a complete turn, and it fails silently in the room.
 
 ### B20: Injected hook output is recorded as a hook_success attachment
 

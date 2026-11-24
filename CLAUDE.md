@@ -214,7 +214,7 @@ install from `Blue-Rocket/cogmer-staging` as `README.md` says. Then push the com
   check that cannot fail reads as protection. Write its `Reliance` for someone
   debugging at 2am: what breaks, not what the behavior is.
 - **Assistant records carry no `promptId`** (B09), which is why turns are segmented by
-  position rather than by key. B04, B05 and B09 would report improvements as well as
+  position rather than by key. B04 and B09 would report improvements as well as
   breakage, so watch for those, since they would let us simplify.
 - **Nothing cryptographic depends on the product name.** Signing uses the
   `protocolNamespace` constant, which is arbitrary on purpose and never changes.
