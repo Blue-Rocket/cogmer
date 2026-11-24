@@ -89,6 +89,18 @@ What was done, and what each showed
      and nothing named for the user's session ece15fa0 outside /tmp/claude-0/-home-claude/ece15fa0-…,
      a directory that holds one empty directory "started".
 
+Later the same night, with a browser
+  Claude in Chrome let a Claude Code session on the Mac drive the Cowork task's page on claude.ai, so
+  no prompt was pasted by hand. At 22:29:46Z the Mac's daemon.log had the sandbox's daemon unreachable
+  since 22:22:37. The session sent "Reply with only the word PING-1." at about 22:29:55 and got
+  "PING-1" back. The Mac's log then showed "peer … is reachable again after 7m26s" at 22:30:02, and
+  the room held no turn for PING-1 at 22:30:11 or at 22:30:25, with the task's six earlier recorded
+  prompts at sequences 1 to 6, the last at 22:19:05. The session sent "Reply with only the word
+  PING-2." at 22:30:33, the task answered "PING-2", and the room held it as sequence 7 at 22:30:33.
+  Neither prompt's reply was recorded. The task's sequence numbers have no gap for PING-1, and the
+  prompts sent at 22:03:44 and 22:11:09 also left none, so a prompt sent while the daemon is asleep
+  never reached it.
+
 Seen
   The README route installs and runs on a clean Mac in Claude Code with no restart, and the
   first-install line showed at the second prompt. The account's copy of the plugin and the one
