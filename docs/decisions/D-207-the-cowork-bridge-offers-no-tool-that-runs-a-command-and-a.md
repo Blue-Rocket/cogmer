@@ -1,6 +1,6 @@
 # D-207 — The Cowork bridge offers no tool that runs a command, and a command runs from the typed prompt
 
-**Date:** 2026-10-13 · **Status:** not built · **Areas:** commands, trust, hosts
+**Date:** 2026-10-13 · **Status:** active · **Areas:** commands, trust, hosts
 
 **Decision.** The bridge offers two tools, `prompt` and `stop`, which take what a hook supplies. A `/cogmer:` command typed in a Cowork session reaches the daemon as the text of the prompt, and the daemon runs it there for the session that sent it and returns its output as context for the model to relay. A test fails if the bridge offers any other tool. The daemon runs a command as the subcommands of its own binary that the plugin's command files call, without a shell, in a child process whose environment names the host and the session and holds no other host's session. `self-stop` and `self-restart` are not run by the daemon, since each acts on it, and the bridge runs them (D-208). A prompt that is a command needs no room, and D-209 (a command typed in a session is no turn of the room) keeps it and the model's account of it out of the room. The bridge waits longer for a call whose prompt is a command.
 
@@ -10,7 +10,7 @@
 - The plugin's commands call these subcommands of the binary, and a test compares the plugin's files with the daemon's table. `plugin/cli.sh`, `cmd/cogmer/command.go`, `typedCommands`, `cmd/cogmer/command_test.go`, `TestTheTypedCommandsAreTheOnesThePluginHas`.
 - A command typed in Cowork was kept out of the room, with the model's account of it, and answered for a session in no room. `cmd/cogmer/command_test.go`, `TestACommandTypedInCoworkIsNotATurnOfTheRoom`.
 - A session's room is fixed when its first hook fires, so a command that binds a room changes only a session that is not yet bound. D-056 (a session's room is fixed when its first hook fires, and never changes).
-- A command file lets the shell call run only while a command runs, and the command script is an ordinary file, so a model that ran it through its shell tool would be asked by the user's permission prompt, read in the files and not tried. `plugin/cli.sh`, `plugin/commands/room-invite.md`.
+- A command file lets the shell call run only while a command runs, and the command script is an ordinary file. A model in a Cowork cloud session that found the script ran it through its shell tool, and it answered as the command would have, and the run did not record whether the user's permission prompt asked first. `plugin/cli.sh`, `plugin/commands/room-invite.md`, `578833b`.
 
 **Rejected.**
 - *Running the subcommands inside the daemon's own process.* They print and exit as programs do, and one that exits would stop the daemon.
