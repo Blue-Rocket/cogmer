@@ -1,6 +1,6 @@
 # D-205 — Claude Cowork is a supported host through a bridge on the user's machine
 
-**Date:** 2026-10-13 · **Status:** not built · **Areas:** hosts, daemon
+**Date:** 2026-10-13 · **Status:** active · **Areas:** hosts, daemon
 
 **Decision.** cogmer supports Claude Cowork sessions that run on the user's computer in the same room as Claude Code and Codex sessions, and for those sessions the daemon, the identity and the rooms are on that computer. A Cowork session that runs in the cloud and holds a cloud value starts a daemon in its own sandbox, through the Claude Code plugin's hooks and as a Claude Code session (D-288, a Cowork cloud session that holds a cloud value starts the daemon as its user), and the rest of this decision is about sessions on the user's computer. A plugin installed in Cowork declares hooks of type `mcp_tool` that call the bridge, an MCP server that cogmer ships and the user adds to Claude Desktop's local servers, and the bridge relays each hook to the daemon with the host declared as `cowork`. A Cowork session's identifier begins with `cowork:`. `cogmer cowork-setup`, which `/cogmer:self-cowork` runs, writes the bridge's Desktop entry and the plugin together from one name, so that the names the hooks call agree with the entry, and keeps a copy of the configuration file it changes. The plugin's commands are the Claude Code plugin's, with their output read from the hook's context.
 
