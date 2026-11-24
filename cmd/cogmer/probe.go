@@ -434,11 +434,29 @@ func assertGUISession(manager string) error {
 		manager)
 }
 
+// The replies the two probe commands ask the model for. A run ran a model turn when
+// its output holds the reply, and anything else it printed is not a turn: Claude Code
+// 2.1.331 prints "Shell command failed for pattern ..." for a `!` line that exits 1 and
+// prints a warning in the days before a sign-in ends, and counting either as a turn made
+// B24 fail and stopped B33 and B34 from running.
+const (
+	failingReply = "TURN-RAN-AFTER-FAILURE"
+	controlReply = "TURN-RAN"
+)
+
+// turnOutput is what a probe run printed when it ran a model turn, and "" when it did not.
+func turnOutput(out, reply string) string {
+	if strings.Contains(out, reply) {
+		return out
+	}
+	return ""
+}
+
 // runCommandProbe asks Claude Code to run two project commands, one whose `!` line
-// exits 1 and one whose line exits 0, and returns what each printed (B24). The
-// control runs only when the failing command printed nothing, which is the expected
-// outcome: it costs a model turn, and its job is to show that an empty answer means
-// "no turn ran" and not "commands did not load here".
+// exits 1 and one whose line exits 0, and returns what each printed when it ran a
+// model turn (B24). The control runs only when the failing command ran no turn, which is
+// the expected outcome: it costs a model turn, and its job is to show that an empty answer
+// means "no turn ran" and not "commands did not load here".
 //
 // They run in a directory of their own and without the probe's settings, so the
 // probe's hooks do not record these prompts as if they were part of the probe turn. The
@@ -464,8 +482,8 @@ func runCommandProbe(claude, dir string) (failing, control, controlPrompt, budge
 			"!`sh -c 'echo before; exit " + exit + "'`\n\nReply with the single word " + reply + ".\n"
 		_ = os.WriteFile(filepath.Join(cmds, name+".md"), []byte(body), 0o600)
 	}
-	write("probe-fail", "1", "TURN-RAN-AFTER-FAILURE")
-	write("probe-ok", "0", "TURN-RAN")
+	write("probe-fail", "1", failingReply)
+	write("probe-ok", "0", controlReply)
 	// The control command runs with a hook that records the prompt it is given, which is
 	// what B33 reads. The failing command runs without one, as before.
 	var hookArgs []string
@@ -489,11 +507,11 @@ func runCommandProbe(claude, dir string) (failing, control, controlPrompt, budge
 		out, _ := cmd.CombinedOutput()
 		return strings.TrimSpace(string(out))
 	}
-	failing = run("/probe-fail")
+	failing = turnOutput(run("/probe-fail"), failingReply)
 	if failing != "" {
 		return failing, "", "", ""
 	}
-	control = run("/probe-ok", hookArgs...)
+	control = turnOutput(run("/probe-ok", hookArgs...), controlReply)
 	if data, err := os.ReadFile(filepath.Join(work, "UserPromptSubmit.jsonl")); err == nil {
 		lines := strings.Split(strings.TrimSpace(string(data)), "\n")
 		var m map[string]any
