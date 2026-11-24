@@ -1,0 +1,20 @@
+# D-294 — A prompt that finds no daemon listening just after one was started is held for it
+
+**Date:** 2026-11-24 · **Status:** active · **Areas:** daemon, capture
+
+**Decision.** When the prompt hook's request is refused because nothing listens, within 15 seconds of a daemon being started, the hook writes the request to a file of mode 0600 in `~/.cogmer/spool/`, and exits 0 with empty output as before (D-011, hooks fail open: exit 0, empty stdout). The daemon, once it has started, records each held prompt in its session's room, once and in the order held, and drops any older than 60 seconds, and then removes `~/.cogmer/daemon-starting`, the marker that says a start is under way. The plugin's start function and the Cowork bridge touch that marker before they start a daemon, and at most 50 prompts are held. The held prompt is recorded and nothing is offered for it, since the hook that sent it has exited, so the next prompt is given what is waiting. A command is not recorded (D-209, a command typed in a session is no turn of the room), and a session in no room records nothing. A prompt sent while the daemon starts is therefore in the room, and a user whose daemon is stopped while a task idles loses nothing but that prompt's injection.
+
+**Support.**
+- A Cowork cloud task's daemon is unreachable while the task idles. A prompt sent to the task with the daemon asleep reached no room, and a prompt sent with it awake did, with the room's sequence numbers showing that the first never reached the daemon. The commit that records the run, `685bbe6`, holds the times and the log lines, and the function that starts the daemon is in `685bbe6:plugin/hooks-handlers/common.sh`.
+- The session-start hook starts the daemon and returns at once (D-150, the session-start hook starts the daemon, and never delays the session), and the prompt hook makes one request with a 3-second timeout and no retry. `plugin/hooks-handlers/common.sh`, `cmd/cogmer/main.go`.
+- A held prompt is the user's words on disk for at most 60 seconds, in a directory that is private to the account (D-260, the state directory is private to the account). `cmd/cogmer/spool.go`.
+
+**Rejected.**
+- *Retrying the request in the prompt hook for a few seconds.* It delays the first prompt after every wake by the time the daemon takes to start, which §3.1 (first, do no harm) rules out for a prompt that is lost only in that interval.
+- *Waiting for the daemon in the session-start hook.* §29 (the experience we want) says starting the daemon never delays the session.
+- *Holding every prompt a hook fails to send.* A prompt would reach the room whenever a daemon next started, perhaps long after its turn or in a room its user has left.
+- *Holding a prompt whose request timed out.* A daemon that has bound its address may handle a request that is waiting there when it starts serving, so a held copy could record the prompt twice. Only a refused connection shows that no daemon saw it.
+
+**Limits.** A prompt held while a daemon starts is recorded without the turn's injection. The 15 seconds and the 60 seconds are chosen and not measured. A start that fails leaves its prompts held until the marker's age passes the limit, and then they are dropped. Nothing here makes the reply to a turn reach the room, which is the transcript path's matter (D-262, a transcript is opened only when it is a regular jsonl file). The hooks of Windows are not covered, since they have no start function that writes the marker.
+
+**Revisit when** a daemon answers a hook's request from the moment it starts, or a host runs a prompt hook only after its session-start hooks have finished and the daemon they started is listening.

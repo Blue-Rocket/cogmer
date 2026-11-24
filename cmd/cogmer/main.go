@@ -593,6 +593,7 @@ func runDaemon() {
 	}
 
 	go d.RunSync(peerList(), syncInterval())
+	go d.replaySpool()
 	go d.RunImages(2 * time.Second)
 	go d.RunIdentity(5 * time.Second)
 	go d.RunSelfLists(10 * time.Second)
@@ -716,6 +717,12 @@ func runHook(kind string, host Host) {
 	resp, err := localPost(client, "http://"+addr()+endpoint, body)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "cogmer: daemon unreachable (%v); continuing without collaboration\n", err)
+		// A daemon that was just started is not listening yet, and the prompt is kept for it
+		// (D-294). Only a request that found nothing listening is kept, since one that timed
+		// out may have been handled.
+		if kind == "prompt" && isDialError(err) {
+			_ = spoolPrompt(body, time.Now())
+		}
 		_, _ = os.Stdout.Write(promptHookOutput(host, notice, ""))
 		os.Exit(0)
 	}
