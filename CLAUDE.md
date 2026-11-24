@@ -112,8 +112,10 @@ every target cross-compiles with `CGO_ENABLED=0`.
   with `COGMER_HOME` set to a directory made for the run, such as `COGMER_HOME=$(mktemp
   -d)`. There is no override, and a fault in real data is looked at in a copy of it. `go
   test ./...` panics in any test that resolves the real directory.
-- **Test with `go test ./...`.** To drive a real session, run `claude -p …
-  --settings <file>` with a throwaway `COGMER_HOME` per run, and `< /dev/null`, or it
+- **Test with `go test ./...`, or faster with `go run ./cmd/suiterun [-short] <times
+  file>`,** which runs the same tests in several processes at once, each with its own
+  environment, and is what `scripts/test-and-record.sh` and `.githooks/pre-push` run. To drive a real session, run
+  `claude -p … --settings <file>` with a throwaway `COGMER_HOME` per run, and `< /dev/null`, or it
   waits on stdin.
 - **A local `go test ./...` covers what a release can break in a cloud session.** There
   cogmer carries its relay connection as a WebSocket (D-217, a cloud session's daemon

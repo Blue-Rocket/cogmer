@@ -130,6 +130,12 @@ func buildVersion(t *testing.T, dir, v string) string {
 
 	stampedBuild.once.Do(func() {
 		if pre := os.Getenv("COGMER_TEST_BUILD"); pre != "" {
+			// A build made with other flags would carry no stamp, or would open browsers.
+			out, err := exec.Command("go", "version", "-m", pre).Output()
+			if err != nil || !strings.Contains(string(out), "-ldflags=\""+stampedBuildFlags()+"\"") {
+				stampedBuild.err = fmt.Sprintf("COGMER_TEST_BUILD %s was not built with %s:\n%s", pre, stampedBuildFlags(), out)
+				return
+			}
 			stampedBuild.path = pre
 			return
 		}

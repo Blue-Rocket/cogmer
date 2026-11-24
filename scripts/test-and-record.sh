@@ -21,7 +21,6 @@
 # .git/suite-times/<tree>[-short], and copies it to .git/suite-times/latest, so that
 # where the suite spends its time is known from runs already made.
 set -u
-set -o pipefail
 full=""
 [ "${1:-}" = "--full" ] && full=1
 cd "$(git rev-parse --show-toplevel)" || exit 2
@@ -38,13 +37,14 @@ tree=$(git write-tree) || exit 2
 gitdir="$(git rev-parse --git-dir)"
 times="$gitdir/suite-times"
 mkdir -p "$times" || exit 2
-go build -o "$times/.suitetimes" ./cmd/suitetimes || exit 2
+go build -o "$times/.suiterun" ./cmd/suiterun || exit 2
 if [ -n "$full" ]; then
   name="$tree"; flags=""
 else
   name="$tree-short"; flags="-short"
 fi
-go test -count=1 $flags -json ./... | "$times/.suitetimes" "$times/$name"
+# The suite's tests run in several processes at once (cmd/suiterun).
+"$times/.suiterun" $flags "$times/$name"
 status=$?
 cp -f "$times/$name" "$times/latest" 2>/dev/null
 [ "$status" -eq 0 ] || exit 1

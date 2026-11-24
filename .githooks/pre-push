@@ -23,7 +23,7 @@ while read -r _ local_sha _ _; do
   work=$(mktemp -d) || { status=1; continue; }
   echo "pre-push: the suite has not passed on $local_sha here; running it on that commit" >&2
   if git worktree add --quiet --detach "$work/tree" "$local_sha" &&
-     (cd "$work/tree" && go test -count=1 ./... > "$work/test.log" 2>&1); then
+     (cd "$work/tree" && if [ -d cmd/suiterun ]; then go run ./cmd/suiterun "$work/times"; else go test -count=1 ./...; fi > "$work/test.log" 2>&1); then
     mkdir -p "$dir" && touch "$dir/$tree"
     echo "pre-push: the suite passed on $local_sha" >&2
   else
