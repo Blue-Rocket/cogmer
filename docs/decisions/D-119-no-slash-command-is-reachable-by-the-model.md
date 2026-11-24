@@ -25,8 +25,10 @@ Codex manifest names, and `plugin/skills/` does not exist, since Claude Code loa
   inside Claude Code), D-036 (MCP logging notifications are not a display channel).
 - Keeping them reachable would make the rule carry an exception, which makes people stop trusting a
   rule. D-096 (a command prefix names its target, and `/self-status` is where you are).
-- No file was written to be model-invoked. Each is a `!` pre-execution followed by an instruction to
-  report what the output says, which assumes a user has just typed the command.
+- No file was written to be model-invoked. Each is a `!` pre-execution, the same line for the model
+  to run when the host did not run it (D-291, a command gives the model its shell lines to run when
+  the host did not run them), and an instruction to report what the output says, all of which
+  assume a user has just typed the command.
   `plugin/commands/room-status.md`.
 - The test requires the frontmatter on every file and fails if the directory is empty, because the
   defect it guards is the command added later by somebody who does not know the frontmatter matters.
@@ -39,7 +41,7 @@ Codex manifest names, and `plugin/skills/` does not exist, since Claude Code loa
 - *Disabling invocation only on the commands that change something.* The others buy no capability
   and cost context in every session, and the rule would carry an exception.
 
-**Limits.** The bridge's tools are a different route, which D-207 (the Cowork bridge offers no tool that runs a command) governs. No registry check covers it, for the reason D-118 gives, that it is a property of plugin
+**Limits.** The bridge's tools are a different route, which D-207 (the Cowork bridge offers no tool that runs a command) governs. The command script run through the model's own shell is another, which D-291 names. No registry check covers it, for the reason D-118 gives, that it is a property of plugin
 load time. Moving to the `skills/<name>/SKILL.md` layout is a separate change.
 
 **Revisit when** a command appears that the model genuinely should reach without being asked. The
