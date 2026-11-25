@@ -1,0 +1,478 @@
+{
+ "seconds": 890,
+ "samples": 90,
+ "daemons": {
+  "u00": {
+   "cpu_s_per_h": 180.52,
+   "cpu_s_per_h_windows": [
+    175.91,
+    173.03,
+    193.03
+   ],
+   "pss_mb": 23.96,
+   "rss_mb_last": 49.46,
+   "threads_last": 10,
+   "sockets_mean": 176.8,
+   "disk_write_per_h": 19350916,
+   "loop_sent_per_h": 67166272,
+   "loop_recv_per_h": 66596402,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10290,
+   "relay_sockets_seen": 0
+  },
+  "u01": {
+   "cpu_s_per_h": 181.29,
+   "cpu_s_per_h_windows": [
+    179.15,
+    173.99,
+    191.04
+   ],
+   "pss_mb": 24.13,
+   "rss_mb_last": 50.17,
+   "threads_last": 11,
+   "sockets_mean": 176.8,
+   "disk_write_per_h": 19748538,
+   "loop_sent_per_h": 66760852,
+   "loop_recv_per_h": 65827159,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10326,
+   "relay_sockets_seen": 0
+  },
+  "u02": {
+   "cpu_s_per_h": 180.97,
+   "cpu_s_per_h_windows": [
+    176.39,
+    174.83,
+    192.04
+   ],
+   "pss_mb": 23.92,
+   "rss_mb_last": 49.18,
+   "threads_last": 11,
+   "sockets_mean": 176.8,
+   "disk_write_per_h": 19881078,
+   "loop_sent_per_h": 66953171,
+   "loop_recv_per_h": 66225845,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10262,
+   "relay_sockets_seen": 0
+  },
+  "u03": {
+   "cpu_s_per_h": 182.46,
+   "cpu_s_per_h_windows": [
+    178.79,
+    174.47,
+    194.52
+   ],
+   "pss_mb": 23.73,
+   "rss_mb_last": 50.08,
+   "threads_last": 11,
+   "sockets_mean": 176.8,
+   "disk_write_per_h": 19781673,
+   "loop_sent_per_h": 67086448,
+   "loop_recv_per_h": 66191775,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10318,
+   "relay_sockets_seen": 0
+  },
+  "u04": {
+   "cpu_s_per_h": 182.02,
+   "cpu_s_per_h_windows": [
+    179.39,
+    174.71,
+    192.28
+   ],
+   "pss_mb": 22.97,
+   "rss_mb_last": 49.16,
+   "threads_last": 11,
+   "sockets_mean": 176.7,
+   "disk_write_per_h": 19350916,
+   "loop_sent_per_h": 67049118,
+   "loop_recv_per_h": 66565071,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10237,
+   "relay_sockets_seen": 0
+  },
+  "u05": {
+   "cpu_s_per_h": 182.99,
+   "cpu_s_per_h_windows": [
+    179.51,
+    174.11,
+    195.76
+   ],
+   "pss_mb": 23.48,
+   "rss_mb_last": 49.9,
+   "threads_last": 11,
+   "sockets_mean": 176.8,
+   "disk_write_per_h": 19748538,
+   "loop_sent_per_h": 66797608,
+   "loop_recv_per_h": 65999096,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10302,
+   "relay_sockets_seen": 0
+  },
+  "u06": {
+   "cpu_s_per_h": 182.79,
+   "cpu_s_per_h_windows": [
+    179.99,
+    176.03,
+    192.66
+   ],
+   "pss_mb": 23.75,
+   "rss_mb_last": 48.78,
+   "threads_last": 11,
+   "sockets_mean": 176.8,
+   "disk_write_per_h": 19881078,
+   "loop_sent_per_h": 67389477,
+   "loop_recv_per_h": 66694667,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10318,
+   "relay_sockets_seen": 0
+  },
+  "u07": {
+   "cpu_s_per_h": 183.39,
+   "cpu_s_per_h_windows": [
+    180.71,
+    176.99,
+    192.78
+   ],
+   "pss_mb": 23.58,
+   "rss_mb_last": 49.12,
+   "threads_last": 11,
+   "sockets_mean": 176.9,
+   "disk_write_per_h": 19781673,
+   "loop_sent_per_h": 66737785,
+   "loop_recv_per_h": 65763150,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10306,
+   "relay_sockets_seen": 0
+  },
+  "u08": {
+   "cpu_s_per_h": 181.01,
+   "cpu_s_per_h_windows": [
+    177.59,
+    173.27,
+    192.53
+   ],
+   "pss_mb": 22.9,
+   "rss_mb_last": 48.23,
+   "threads_last": 11,
+   "sockets_mean": 176.7,
+   "disk_write_per_h": 19350916,
+   "loop_sent_per_h": 66519862,
+   "loop_recv_per_h": 65559433,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10322,
+   "relay_sockets_seen": 0
+  },
+  "u09": {
+   "cpu_s_per_h": 182.7,
+   "cpu_s_per_h_windows": [
+    180.11,
+    174.83,
+    193.52
+   ],
+   "pss_mb": 23.38,
+   "rss_mb_last": 48.76,
+   "threads_last": 11,
+   "sockets_mean": 176.8,
+   "disk_write_per_h": 19748538,
+   "loop_sent_per_h": 66569237,
+   "loop_recv_per_h": 65588471,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10314,
+   "relay_sockets_seen": 0
+  },
+  "u10": {
+   "cpu_s_per_h": 180.24,
+   "cpu_s_per_h_windows": [
+    176.03,
+    173.27,
+    191.79
+   ],
+   "pss_mb": 23.95,
+   "rss_mb_last": 49.17,
+   "threads_last": 11,
+   "sockets_mean": 176.8,
+   "disk_write_per_h": 19881078,
+   "loop_sent_per_h": 67077315,
+   "loop_recv_per_h": 66501968,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10229,
+   "relay_sockets_seen": 0
+  },
+  "u11": {
+   "cpu_s_per_h": 180.6,
+   "cpu_s_per_h_windows": [
+    176.51,
+    173.15,
+    192.53
+   ],
+   "pss_mb": 23.53,
+   "rss_mb_last": 48.11,
+   "threads_last": 11,
+   "sockets_mean": 176.9,
+   "disk_write_per_h": 19781673,
+   "loop_sent_per_h": 67253632,
+   "loop_recv_per_h": 66695120,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10229,
+   "relay_sockets_seen": 0
+  },
+  "u12": {
+   "cpu_s_per_h": 180.6,
+   "cpu_s_per_h_windows": [
+    177.83,
+    173.15,
+    191.17
+   ],
+   "pss_mb": 23.12,
+   "rss_mb_last": 49.1,
+   "threads_last": 10,
+   "sockets_mean": 176.9,
+   "disk_write_per_h": 19350916,
+   "loop_sent_per_h": 67181222,
+   "loop_recv_per_h": 66688483,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10266,
+   "relay_sockets_seen": 0
+  },
+  "u13": {
+   "cpu_s_per_h": 180.84,
+   "cpu_s_per_h_windows": [
+    176.03,
+    174.83,
+    192.04
+   ],
+   "pss_mb": 23.88,
+   "rss_mb_last": 49.59,
+   "threads_last": 11,
+   "sockets_mean": 176.9,
+   "disk_write_per_h": 19748538,
+   "loop_sent_per_h": 66886650,
+   "loop_recv_per_h": 66297907,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10225,
+   "relay_sockets_seen": 0
+  },
+  "u14": {
+   "cpu_s_per_h": 181.61,
+   "cpu_s_per_h_windows": [
+    175.91,
+    175.07,
+    194.27
+   ],
+   "pss_mb": 23.93,
+   "rss_mb_last": 49.44,
+   "threads_last": 11,
+   "sockets_mean": 177.0,
+   "disk_write_per_h": 19881078,
+   "loop_sent_per_h": 66053612,
+   "loop_recv_per_h": 64927600,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10262,
+   "relay_sockets_seen": 0
+  },
+  "u15": {
+   "cpu_s_per_h": 180.16,
+   "cpu_s_per_h_windows": [
+    175.91,
+    174.47,
+    190.42
+   ],
+   "pss_mb": 23.59,
+   "rss_mb_last": 49.95,
+   "threads_last": 11,
+   "sockets_mean": 177.0,
+   "disk_write_per_h": 19781673,
+   "loop_sent_per_h": 66847525,
+   "loop_recv_per_h": 65981052,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10270,
+   "relay_sockets_seen": 0
+  },
+  "u16": {
+   "cpu_s_per_h": 180.84,
+   "cpu_s_per_h_windows": [
+    177.47,
+    174.47,
+    190.92
+   ],
+   "pss_mb": 23.52,
+   "rss_mb_last": 50.1,
+   "threads_last": 11,
+   "sockets_mean": 177.0,
+   "disk_write_per_h": 18688214,
+   "loop_sent_per_h": 66767288,
+   "loop_recv_per_h": 65973998,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10286,
+   "relay_sockets_seen": 0
+  },
+  "u17": {
+   "cpu_s_per_h": 181.05,
+   "cpu_s_per_h_windows": [
+    180.11,
+    174.23,
+    189.06
+   ],
+   "pss_mb": 24.53,
+   "rss_mb_last": 50.45,
+   "threads_last": 11,
+   "sockets_mean": 177.0,
+   "disk_write_per_h": 19085835,
+   "loop_sent_per_h": 67174156,
+   "loop_recv_per_h": 66288948,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10355,
+   "relay_sockets_seen": 0
+  },
+  "u18": {
+   "cpu_s_per_h": 179.95,
+   "cpu_s_per_h_windows": [
+    176.27,
+    173.99,
+    189.92
+   ],
+   "pss_mb": 24.24,
+   "rss_mb_last": 49.51,
+   "threads_last": 11,
+   "sockets_mean": 177.0,
+   "disk_write_per_h": 18572241,
+   "loop_sent_per_h": 67319717,
+   "loop_recv_per_h": 66490667,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10371,
+   "relay_sockets_seen": 0
+  },
+  "u19": {
+   "cpu_s_per_h": 178.66,
+   "cpu_s_per_h_windows": [
+    175.67,
+    171.47,
+    189.18
+   ],
+   "pss_mb": 24.2,
+   "rss_mb_last": 49.31,
+   "threads_last": 11,
+   "sockets_mean": 177.1,
+   "disk_write_per_h": 18340295,
+   "loop_sent_per_h": 67748742,
+   "loop_recv_per_h": 67343609,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10294,
+   "relay_sockets_seen": 0
+  }
+ },
+ "box": {
+  "busy_share": 0.2822,
+  "steal_share": 0.0316,
+  "mem_available_mb_first_last": [
+   6593,
+   6484
+  ],
+  "net_bytes": {
+   "lo": {
+    "rx": 642101355,
+    "tx": 642101355
+   },
+   "eth0": {
+    "rx": 242554,
+    "tx": 448492
+   },
+   "eth1": {
+    "rx": 0,
+    "tx": 252
+   },
+   "docker0": {
+    "rx": 0,
+    "tx": 0
+   }
+  },
+  "timewait_last": 415
+ },
+ "sampler_cpu_s": 54.59,
+ "mean_daemon": {
+  "cpu_s_per_h": 181.23,
+  "pss_mb": 23.71,
+  "sockets_mean": 176.88,
+  "disk_write_per_h": 19486770.25,
+  "loop_sent_per_h": 66966984.45,
+  "loop_recv_per_h": 66210021.05,
+  "other_sent_per_h": 0.0,
+  "other_recv_per_h": 0.0,
+  "polls_made_per_h": 10289.1
+ },
+ "windows_disagree": true,
+ "turns": {
+  "written": 450,
+  "delivered": 450,
+  "undelivered": 0,
+  "median_s": 0.531,
+  "p95_s": 0.971
+ },
+ "run": {
+  "name": "turns",
+  "shape": "group4",
+  "n": 20,
+  "overlay": false,
+  "turns": true,
+  "sync_ms": 1000,
+  "warm_s": 300,
+  "sample_s": 900,
+  "build": {
+   "commit": "b91c1522e8fb6319f4cf28e105d9626b631bba4a",
+   "dirty": false,
+   "built": "2026-11-25T10:47:35Z"
+  },
+  "started": "2026-11-25T16:11:54Z"
+ },
+ "final_check": {
+  "rooms": 30,
+  "delivered": 30,
+  "max_s": 0.941
+ },
+ "unreachable_lines": {
+  "u00": 0,
+  "u01": 0,
+  "u02": 0,
+  "u03": 0,
+  "u04": 0,
+  "u05": 0,
+  "u06": 0,
+  "u07": 0,
+  "u08": 0,
+  "u09": 0,
+  "u10": 0,
+  "u11": 0,
+  "u12": 0,
+  "u13": 0,
+  "u14": 0,
+  "u15": 0,
+  "u16": 0,
+  "u17": 0,
+  "u18": 0,
+  "u19": 0
+ },
+ "exited": [],
+ "valid": true
+}

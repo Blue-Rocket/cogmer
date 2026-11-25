@@ -1,0 +1,151 @@
+{
+ "seconds": 890,
+ "samples": 90,
+ "daemons": {
+  "u00": {
+   "cpu_s_per_h": 159.33,
+   "cpu_s_per_h_windows": [
+    165.24,
+    151.08,
+    161.75
+   ],
+   "pss_mb": 26.98,
+   "rss_mb_last": 46.52,
+   "threads_last": 10,
+   "sockets_mean": 177.8,
+   "disk_write_per_h": 0,
+   "loop_sent_per_h": 66168277,
+   "loop_recv_per_h": 65418295,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10367,
+   "relay_sockets_seen": 0
+  },
+  "u01": {
+   "cpu_s_per_h": 162.68,
+   "cpu_s_per_h_windows": [
+    166.8,
+    154.92,
+    166.46
+   ],
+   "pss_mb": 27.5,
+   "rss_mb_last": 46.98,
+   "threads_last": 10,
+   "sockets_mean": 177.8,
+   "disk_write_per_h": 0,
+   "loop_sent_per_h": 65875441,
+   "loop_recv_per_h": 65022251,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10359,
+   "relay_sockets_seen": 0
+  },
+  "u02": {
+   "cpu_s_per_h": 158.84,
+   "cpu_s_per_h_windows": [
+    165.48,
+    152.16,
+    158.89
+   ],
+   "pss_mb": 27.41,
+   "rss_mb_last": 46.99,
+   "threads_last": 10,
+   "sockets_mean": 177.8,
+   "disk_write_per_h": 0,
+   "loop_sent_per_h": 66294578,
+   "loop_recv_per_h": 65694240,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10331,
+   "relay_sockets_seen": 0
+  },
+  "u03": {
+   "cpu_s_per_h": 161.23,
+   "cpu_s_per_h_windows": [
+    166.56,
+    152.76,
+    164.48
+   ],
+   "pss_mb": 27.77,
+   "rss_mb_last": 47.22,
+   "threads_last": 10,
+   "sockets_mean": 177.8,
+   "disk_write_per_h": 0,
+   "loop_sent_per_h": 66210688,
+   "loop_recv_per_h": 65376095,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 10403,
+   "relay_sockets_seen": 0
+  }
+ },
+ "box": {
+  "busy_share": 0.0529,
+  "steal_share": 0.0066,
+  "mem_available_mb_first_last": [
+   6985,
+   6960
+  ],
+  "net_bytes": {
+   "lo": {
+    "rx": 81487801,
+    "tx": 81487801
+   },
+   "eth0": {
+    "rx": 331746,
+    "tx": 414193
+   },
+   "eth1": {
+    "rx": 0,
+    "tx": 504
+   },
+   "docker0": {
+    "rx": 0,
+    "tx": 0
+   }
+  },
+  "timewait_last": 19
+ },
+ "sampler_cpu_s": 6.2,
+ "mean_daemon": {
+  "cpu_s_per_h": 160.52,
+  "pss_mb": 27.41,
+  "sockets_mean": 177.8,
+  "disk_write_per_h": 0.0,
+  "loop_sent_per_h": 66137246.0,
+  "loop_recv_per_h": 65377720.25,
+  "other_sent_per_h": 0.0,
+  "other_recv_per_h": 0.0,
+  "polls_made_per_h": 10365.0
+ },
+ "windows_disagree": false,
+ "run": {
+  "name": "run",
+  "shape": "group4",
+  "n": 4,
+  "overlay": false,
+  "turns": false,
+  "sync_ms": 1000,
+  "warm_s": 300,
+  "sample_s": 900,
+  "build": {
+   "commit": "b91c1522e8fb6319f4cf28e105d9626b631bba4a",
+   "dirty": false,
+   "built": "2026-11-25T10:47:35Z"
+  },
+  "started": "2026-11-25T12:53:24Z"
+ },
+ "final_check": {
+  "rooms": 6,
+  "delivered": 6,
+  "max_s": 0.726
+ },
+ "unreachable_lines": {
+  "u00": 0,
+  "u01": 0,
+  "u02": 0,
+  "u03": 0
+ },
+ "exited": [],
+ "valid": true
+}

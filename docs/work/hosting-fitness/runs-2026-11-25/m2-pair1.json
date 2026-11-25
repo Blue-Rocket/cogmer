@@ -1,0 +1,111 @@
+{
+ "seconds": 890,
+ "samples": 90,
+ "daemons": {
+  "u00": {
+   "cpu_s_per_h": 54.2,
+   "cpu_s_per_h_windows": [
+    55.56,
+    53.76,
+    53.25
+   ],
+   "pss_mb": 25.23,
+   "rss_mb_last": 38.39,
+   "threads_last": 10,
+   "sockets_mean": 59.4,
+   "disk_write_per_h": 0,
+   "loop_sent_per_h": 22392079,
+   "loop_recv_per_h": 22335738,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 3438,
+   "relay_sockets_seen": 0
+  },
+  "u01": {
+   "cpu_s_per_h": 53.96,
+   "cpu_s_per_h_windows": [
+    55.08,
+    52.68,
+    54.12
+   ],
+   "pss_mb": 25.12,
+   "rss_mb_last": 38.22,
+   "threads_last": 10,
+   "sockets_mean": 59.4,
+   "disk_write_per_h": 0,
+   "loop_sent_per_h": 22335738,
+   "loop_recv_per_h": 22392079,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 3390,
+   "relay_sockets_seen": 0
+  }
+ },
+ "box": {
+  "busy_share": 0.0125,
+  "steal_share": 0.0011,
+  "mem_available_mb_first_last": [
+   7013,
+   7035
+  ],
+  "net_bytes": {
+   "lo": {
+    "rx": 14053509,
+    "tx": 14053509
+   },
+   "eth0": {
+    "rx": 354330,
+    "tx": 780264
+   },
+   "eth1": {
+    "rx": 70,
+    "tx": 756
+   },
+   "docker0": {
+    "rx": 0,
+    "tx": 0
+   }
+  },
+  "timewait_last": 0
+ },
+ "sampler_cpu_s": 2.17,
+ "mean_daemon": {
+  "cpu_s_per_h": 54.08,
+  "pss_mb": 25.18,
+  "sockets_mean": 59.4,
+  "disk_write_per_h": 0.0,
+  "loop_sent_per_h": 22363908.5,
+  "loop_recv_per_h": 22363908.5,
+  "other_sent_per_h": 0.0,
+  "other_recv_per_h": 0.0,
+  "polls_made_per_h": 3414.0
+ },
+ "windows_disagree": false,
+ "run": {
+  "name": "run",
+  "shape": "pair1",
+  "n": 2,
+  "overlay": false,
+  "turns": false,
+  "sync_ms": 1000,
+  "warm_s": 300,
+  "sample_s": 900,
+  "build": {
+   "commit": "b91c1522e8fb6319f4cf28e105d9626b631bba4a",
+   "dirty": false,
+   "built": "2026-11-25T10:47:35Z"
+  },
+  "started": "2026-11-25T12:11:52Z"
+ },
+ "final_check": {
+  "rooms": 1,
+  "delivered": 1,
+  "max_s": 0.209
+ },
+ "unreachable_lines": {
+  "u00": 0,
+  "u01": 0
+ },
+ "exited": [],
+ "valid": true
+}

@@ -1,0 +1,27 @@
+{
+ "n": 20,
+ "overlay": false,
+ "starts": [
+  {
+   "all_up_s": 0.43,
+   "first_turn_delivered_max_s": 0.94,
+   "undelivered": 0,
+   "mem_available_drop_mb": 258,
+   "peak_busy_share": 0.645
+  },
+  {
+   "all_up_s": 0.39,
+   "first_turn_delivered_max_s": 0.934,
+   "undelivered": 0,
+   "mem_available_drop_mb": 252,
+   "peak_busy_share": 0.672
+  },
+  {
+   "all_up_s": 0.52,
+   "first_turn_delivered_max_s": 0.779,
+   "undelivered": 0,
+   "mem_available_drop_mb": 246,
+   "peak_busy_share": 0.903
+  }
+ ]
+}
