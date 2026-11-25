@@ -332,11 +332,14 @@ not delivered within ten intervals, or a daemon's log has a line "is unreachable
 9. A start of every daemon. The 20 daemons of measurement 8, stopped and started at once, three times. The
    answer is the time until every daemon answers at `/healthz`, the time until a turn written just after the
    start reaches its colleague, and the peak CPU and `MemAvailable` drop during the start.
-10. Growth with what a user holds. One group of four, as in measurement 6, for 6 hours, with `du` of each
-    `COGMER_HOME` and each daemon's PSS once an hour. The answer is disk for each turn, which gives disk for a
-    day of 4320 turns and for a year, and whether memory grows with the store after the first hour. A user's
-    store at a year would hold about 1.6 million turns, which no run here reaches, so growth past 6 hours is a
-    question for a later run.
+10. Growth with what a user holds. One group of four, filled by `harness.py fill`, which writes turns into
+    every room as fast as the hooks take them, up to checkpoints given in days of the reference user's
+    turns, 1440 a day in each room and 4320 a day for each user. At each checkpoint it waits for a turn in
+    every room to be delivered, reads the size of each daemon's room databases, their logs and its
+    membership database, and samples the daemons idle for 5 minutes. The answer is disk for each turn, and
+    whether memory, the cost of an idle poll and the time a hook takes grow with the store. Turns written
+    at the reference rate would reach a quarter of a day in 6 hours, so the fill replaces waiting with
+    writing. A user's store at a year would hold about 1.6 million turns, which no run here reaches.
 11. Isolation. Measurement 6 repeated with each daemon run as an OS user of its own and then with each in a
     container of its own, built `FROM scratch` as the container tests' images are. The answer is what each adds
     for one daemon. OS users need root to make, and the user makes them. Docker runs here under `sg docker`.
@@ -378,7 +381,7 @@ Each result goes in a commit that says when, on what machine and build, and what
 
 ### Order
 
-1. Measurement 10, which takes 6 hours and can run at night.
+1. Measurement 10, at a quarter, a half, one and two days of turns, which takes about an hour.
 2. Measurement 11, which needs the harness to run a daemon as an OS user of its own and in a container of its
    own, which it cannot yet do.
 3. An ARM server, once the question below is answered.

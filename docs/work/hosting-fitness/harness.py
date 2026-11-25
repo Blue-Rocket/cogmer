@@ -18,6 +18,12 @@ names 4782 or 4783, runs only a development build, which refuses the account's r
   harness.py restart <dir> <name> [--overlay] [--times K]
                                            start the seed's daemons, then stop and start all at once,
                                            K times, timing each start
+  harness.py fill <dir> <name> [--days D,D,...] [--idle S]   (days 0.25,0.5,1,2 and 300s by default)
+                                           start the seed's daemons and write turns into every room as
+                                           fast as the hooks take them, up to each checkpoint's number
+                                           of days of the reference user's turns (1440 a day in each
+                                           room); at each checkpoint wait for delivery, read each
+                                           daemon's store sizes and PSS, and sample S idle seconds
   harness.py check <dir>                   the harness's own check: two daemons, one room, one turn,
                                            with the overlay off and then on
   harness.py summary <dir>/<name>          print a run's summary again
@@ -716,6 +722,105 @@ def cmd_run(run, name, overlay, turns, sync_ms, warm, sample, du_every):
     say(json.dumps(s, indent=1))
 
 
+def store_sizes(home):
+    """Bytes of each kind of file under a COGMER_HOME: room databases, their logs, membership and the rest."""
+    out = {"rooms_db": 0, "rooms_wal": 0, "membership": 0, "other": 0}
+    for root, _, files in os.walk(home):
+        if os.path.basename(root) == "transcripts":
+            continue  # the harness's own transcript files, which a daemon does not write
+        for f in files:
+            try:
+                n = os.path.getsize(os.path.join(root, f))
+            except OSError:
+                continue
+            if os.path.basename(root) == "rooms":
+                out["rooms_wal" if f.endswith(("-wal", "-shm")) else "rooms_db"] += n
+            elif f.startswith("membership.db"):
+                out["membership"] += n
+            else:
+                out["other"] += n
+    out["total"] = sum(out.values())
+    return out
+
+
+def cmd_fill(run, name, days, idle):
+    outdir = os.path.join(run, name)
+    if os.path.exists(outdir):
+        die("%s exists already" % outdir)
+    os.makedirs(outdir)
+    fleet, rooms, meta = load_seed(run, False, None)
+    if not rooms:
+        die("the seed has no rooms")
+    info = {"name": name, "shape": meta["shape"], "n": meta["n"], "days": days, "idle_s": idle,
+            "per_room_per_day": 1440, "build": json.load(open(os.path.join(run, "build.json"))),
+            "started": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+    written = {r["id"]: 0 for r in rooms}
+    errors, checkpoints = [], []
+    seed_sizes = {d.name: store_sizes(d.home) for d in fleet.daemons}
+
+    def fill_room(r, target, times):
+        host, guest, k = fleet.daemons[r["host"]], fleet.daemons[r["guest"]], r["k"]
+        while written[r["id"]] < target:
+            writer, other = (host, guest) if r["next"] == 0 else (guest, host)
+            r["next"] ^= 1
+            t0 = time.time()
+            try:
+                write_turn(writer, other, k, "fill%08x" % random.getrandbits(32))
+            except Exception as e:
+                errors.append({"room": r["id"], "error": str(e)[:200]})
+                if len(errors) > 20:
+                    return
+            times.append(time.time() - t0)
+            written[r["id"]] += 1
+
+    fleet.start_all()
+    try:
+        for day in days:
+            target = int(1440 * day)
+            say("%s: writing to %d turns in each room" % (name, target))
+            t_start, times = time.time(), []
+            ts = [threading.Thread(target=fill_room, args=(r, target, times)) for r in rooms]
+            for t in ts:
+                t.start()
+            for t in ts:
+                t.join()
+            if len(errors) > 20:
+                die("more than 20 turns failed: %s" % errors[:3])
+            write_s = time.time() - t_start
+            check = final_check(fleet, rooms, 1)
+            for r in rooms:
+                written[r["id"]] += 1
+            time.sleep(60)
+            cp_dir = os.path.join(outdir, "day%g" % day)
+            os.makedirs(cp_dir)
+            sample_loop(os.path.join(cp_dir, "samples.jsonl"), fleet.daemons, idle)
+            idle_summary = summarize(os.path.join(cp_dir, "samples.jsonl"))
+            times.sort()
+            cp = {"days": day, "turns_per_room": written[rooms[0]["id"]],
+                  "turns_per_daemon": {d.name: sum(written[r["id"]] for r in rooms
+                                                   if fleet.daemons[r["host"]] is d or fleet.daemons[r["guest"]] is d)
+                                       for d in fleet.daemons},
+                  "write_s": round(write_s, 1),
+                  "turn_write_s": {"median": round(times[len(times) // 2], 3) if times else None,
+                                   "p95": round(times[int(len(times) * 0.95)], 3) if times else None},
+                  "delivered": sum(1 for c in check if c.get("delivery_s") is not None), "rooms": len(check),
+                  "delivery_max_s": max([c["delivery_s"] for c in check if c.get("delivery_s") is not None],
+                                        default=None),
+                  "sizes": {d.name: store_sizes(d.home) for d in fleet.daemons},
+                  "idle": {k: idle_summary["mean_daemon"][k] for k in ("cpu_s_per_h", "pss_mb", "loop_sent_per_h",
+                                                                         "disk_write_per_h")},
+                  "idle_windows_disagree": idle_summary["windows_disagree"],
+                  "exited": [d.name for d in fleet.daemons if d.proc.poll() is not None]}
+            checkpoints.append(cp)
+            say(json.dumps(cp))
+            json.dump({"run": info, "seed_sizes": seed_sizes, "errors": errors, "checkpoints": checkpoints},
+                      open(os.path.join(outdir, "fill.json"), "w"), indent=1)
+            if cp["exited"]:
+                die("daemons exited: %s" % cp["exited"])
+    finally:
+        fleet.stop_all()
+
+
 def cmd_baseline(run, sample):
     outdir = os.path.join(run, "baseline-%s" % time.strftime("%Y%m%dT%H%M%SZ", time.gmtime()))
     os.makedirs(outdir)
@@ -822,8 +927,14 @@ def main():
             return int(a[a.index(name) + 1])
         return default
 
+    def optstr(name, default):
+        if name in a:
+            return a[a.index(name) + 1]
+        return default
+
     pos = [x for i, x in enumerate(a) if not x.startswith("--") and (i == 0 or a[i - 1] not in
-                                                                      ("--sync-ms", "--warm", "--sample", "--du", "--times"))]
+                                                                      ("--sync-ms", "--warm", "--sample", "--du", "--times",
+                                                                       "--days", "--idle"))]
     if not pos:
         sys.exit(__doc__)
     cmd, rest = pos[0], [os.path.abspath(os.path.expanduser(pos[1]))] + pos[2:] if len(pos) > 1 else []
@@ -838,6 +949,8 @@ def main():
         cmd_baseline(rest[0], opt("--sample", 900))
     elif cmd == "restart" and len(rest) == 2:
         cmd_restart(rest[0], rest[1], "--overlay" in flags, opt("--times", 3))
+    elif cmd == "fill" and len(rest) == 2:
+        cmd_fill(rest[0], rest[1], [float(x) for x in optstr("--days", "0.25,0.5,1,2").split(",")], opt("--idle", 300))
     elif cmd == "check" and len(rest) == 1:
         cmd_check(rest[0])
     elif cmd == "summary" and len(rest) == 1:
