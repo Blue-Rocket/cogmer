@@ -177,6 +177,8 @@ type Daemon struct {
 	// The certificate this daemon presents to peers, derived from the identity
 	// key and cached because that key never changes (D-101, peer connections are TLS pinned).
 	tls peerTLS
+	// The client kept for each address this machine polls (D-303).
+	peerConns peerConns
 
 	// When each peer last made an authenticated request of this daemon, by peer.
 	// Held with the peer states below, and in memory like them.

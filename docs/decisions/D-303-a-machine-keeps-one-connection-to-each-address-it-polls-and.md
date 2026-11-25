@@ -1,0 +1,11 @@
+# D-303 — A machine keeps one connection to each address it polls, and checks the other side's key before each poll
+
+**Date:** 2026-11-25 · **Status:** active · **Areas:** sync, transport, trust
+
+**Decision.** A machine keeps the client, and with it the connection, that its first poll of an address made, and uses it for every later poll of that address, so that a poll each second costs a request and not a new connection and TLS handshake. Because D-101 (peer connections are TLS pinned to a key this machine has recorded) checks the other side's key at the handshake, the certificate the other side last presented on a kept connection is checked against this machine's records before each poll, by the same check a handshake makes, and the client is dropped when that check fails or when this machine's own certificate has changed since the client was made. The next poll then makes a new connection, whose handshake refuses a machine that has been removed or suspended (D-220, a removal names the last event of a machine that counts, room by room). D-044 (sync requests are signed) rejects a session established once and reused, which is state the application keeps about the other side; a kept connection is not that session, since every request on it is still signed, timestamped and checked by itself.
+
+**Rejected.**
+- *A new connection for each poll.* The handshake was about half of a poll's CPU and three quarters of its bytes, and each connection was left idle for 30 seconds before it closed, about 59 open sockets for each address. Keeping the connection took a daemon with three colleague addresses from 168.8 to 89.8 CPU seconds an hour (`42515e5`).
+- *Dropping kept connections when a count of changes to the records moves.* Every change that bears on whom this machine accepts would have to move the count, and one that does not leaves a connection open to a machine the records refuse. Checking the other side's certificate before each poll asks the records themselves.
+
+**Revisit when** a request other than a poll is made often enough that its handshake costs as much as a poll's did.
