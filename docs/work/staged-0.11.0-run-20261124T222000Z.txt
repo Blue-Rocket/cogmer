@@ -257,8 +257,8 @@ Seen
   checks are skipped in a cloud container, and `extended` said the whole check is not run there. Both
   ended with "Next step: pair with a colleague" although the session was in a room.
   On the Mac, the first /cogmer:self-doctor after the plugin update ran `health` on the installed
-  0.11.1 program, which printed its usage, and the model said the versions probably disagreed. About
-  20 seconds after that session started the program was 0.11.4, and the same command reported all
+  0.11.1 program, which printed its usage, and the model said the versions probably disagreed. By about
+  30 seconds after that session started the program was 0.11.4, and the same command reported all
   three versions, no recorded check for the version, and the next step. `extended` started a run that
   wrote 19 checked, 0 failed to doctor-extended.log, and the next /cogmer:self-doctor reported it.
   An unknown argument was refused. The Codex report printed the Claude Code run's result, because both

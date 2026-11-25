@@ -78,3 +78,13 @@ func TestNoNextStepIsNamedBeforeTheUserIdentityExists(t *testing.T) {
 		t.Errorf("a machine with no user identity was told %q", got)
 	}
 }
+
+// A cloud container's own state holds no peers and no guest list of the user's, so it names no step.
+func TestNoNextStepIsNamedInACloudContainer(t *testing.T) {
+	m := testMembership(t)
+	t.Setenv("COGMER_IDENTITY_PAGE", "off")
+	t.Setenv("CLAUDE_CODE_REMOTE", "true")
+	if got := nextStepLine(m, testIdentity(t)); got != "" {
+		t.Errorf("a cloud container was told %q", got)
+	}
+}

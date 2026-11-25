@@ -37,9 +37,11 @@ func nextStep(j journey) string {
 }
 
 // nextStepLine is nextStep for this machine and this session, in the host's way of naming a
-// command, or "" when there is nothing to say or the state cannot be read.
+// command, or "" when there is nothing to say or the state cannot be read. A cloud container
+// has none: its session reaches its user's colleagues and rooms through the user's own
+// machines, so the steps are taken on one of those and its own state says nothing of them.
 func nextStepLine(m *Membership, id *Identity) string {
-	if id == nil || !(id.HasUser() || userIdentityGateOff()) {
+	if inCloudContainer() || id == nil || !(id.HasUser() || userIdentityGateOff()) {
 		return ""
 	}
 	j := journey{HasUser: true}
