@@ -100,8 +100,21 @@
     const exp = document.getElementById('export');
     if (exp) exp.hidden = true;
   });
+  const detailLine = document.createElement('div');
+  detailLine.style.cssText = 'font-size:11px;opacity:.75;margin-top:.2em';
+  banner.appendChild(document.createElement('span'));
+  banner.appendChild(detailLine);
+  const bannerText = banner.firstChild;
+  const started = performance.now();
+  const trail = [];
+  // detail adds a line to what the page says about what it is doing, with the time since it loaded, so
+  // that a user whose page does not connect can say where it stopped.
+  function detail(text) {
+    trail.push(((performance.now() - started) / 1000).toFixed(1) + 's ' + text);
+    detailLine.textContent = trail.slice(-4).join(' \u00b7 ') + ' \u00b7 ' + navigator.userAgent.replace(/^Mozilla\/5\.0 /, '').slice(0, 70);
+  }
   function say(text) {
-    banner.textContent = text || '';
+    bannerText.textContent = text || '';
     banner.hidden = !text;
   }
 
@@ -113,10 +126,10 @@
   function loadModule() {
     if (ready) return ready;
     ready = new Promise((resolve, reject) => {
-      window.onTailcatReady = resolve;
+      window.onTailcatReady = () => { detail('module ready'); resolve(); };
       const go = new Go();
       fetch('main.wasm')
-        .then((r) => WebAssembly.instantiateStreaming(r, go.importObject))
+        .then((r) => { detail('module fetched'); return WebAssembly.instantiateStreaming(r, go.importObject); })
         .then((r) => go.run(r.instance))
         .catch(reject);
     });
@@ -128,12 +141,17 @@
   // that is, the connection is kept and the banner goes.
   function startDial() {
     if (!dialAttempt) {
+      detail('dialing');
       dialAttempt = tailcatDial({ addr, port: VIEW_PORT, derpMapURL: DERP_MAP })
         .then((conn) => {
+          detail('connected');
           http = new ViewConn(conn, token);
           asleep = false;
           say('');
           return http;
+        }, (err) => {
+          detail('dial failed: ' + err);
+          throw err;
         })
         .finally(() => { dialAttempt = null; });
     }
@@ -153,9 +171,10 @@
       return Promise.race([startDial(), limit]).catch((err) => {
         if (err.message === 'asleep') {
           asleep = true;
-          say('This session looks asleep. Send a message in its Claude task to wake it; this page keeps trying.');
-        } else if (!asleep) {
-          say('Could not reach your session: ' + err);
+          say('Still connecting to your session. If it is asleep, send a message in its Claude task to wake it; this page keeps trying.');
+        } else {
+          asleep = true;
+          say('Could not reach your session (' + err + '). If it is asleep, send a message in its Claude task to wake it; this page keeps trying.');
         }
         throw err;
       });
