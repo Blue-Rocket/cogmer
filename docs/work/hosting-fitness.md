@@ -54,9 +54,9 @@ of each user a month follow for every server in the table.
 ## The user the costs are for
 
 The reference user has 3 rooms, each with one paired colleague, and each room gets one new turn a minute,
-written by either member. That is 3 turns a minute for the user and 4320 a day. The three colleagues are taken
-to be three different users, so the daemon polls 3 addresses with one room each. The other reading, one
-colleague in all three rooms, is 1 address polled for 3 rooms, and measurement 3 gives its cost too.
+written by either member. That is 3 turns a minute for the user and 4320 a day. The three colleagues are three
+different users, so the daemon polls 3 addresses with one room each. A turn is a prompt of 500 bytes and a
+reply of 4000. The user set these on 2026-11-25.
 
 At the default interval the reference user's daemon makes 3 polls a second and answers 3, one from each
 colleague's machine.
@@ -87,13 +87,19 @@ for its own entry after the measurements, not before.
 
 ## How to measure
 
-What a harness does for each measurement, from the code and the probe scripts as read on 2026-11-24 and
-2026-11-25. Nothing here has been run.
+What the harness, `docs/work/hosting-fitness/harness.py`, does for each measurement, from the code and the
+probe scripts as read on 2026-11-24 and 2026-11-25. Its own check, two daemons that pair, form a room and
+deliver a turn each way, passed on 2026-11-25 with the overlay off and on: each pairing took 1.1s, and each
+turn arrived in 0.6s to 0.9s. No measurement has been run.
 
 Each daemon on the box is the program run as `cogmer daemon` in a process of its own, with three variables set:
-`COGMER_HOME` names a directory made for it, and `COGMER_ADDR` and `COGMER_PEER_ADDR` name two loopback ports.
-The hook and page address must be loopback or the daemon stops (`runDaemon` in `cmd/cogmer/main.go`). The
-peer address may be any address, and here it is loopback too. `COGMER_PREFLIGHT=off` keeps the behavior
+`COGMER_HOME` names a directory made for it, `COGMER_ADDR` names a loopback port for hooks and the page, and
+`COGMER_PEER_ADDR` names a port on 172.17.0.1 for colleagues' machines. The hook and page address must be
+loopback or the daemon stops (`runDaemon` in `cmd/cogmer/main.go`). The peer address cannot be loopback, since
+`cogmer whoami` then gives no pairing string (`checkReachable` in `cmd/cogmer/main.go`), so it is Docker's
+bridge address on the droplet, which only the box and its containers reach. Linux carries traffic to an
+address of the box's own over `lo`, and a connection between two daemons can leave from any address the box
+holds, including its public one, as Linux picks the source. `COGMER_PREFLIGHT=off` keeps the behavior
 checks out of the numbers. The harness also removes every variable that starts with `CLAUDE_CODE_`, `CODEX_`,
 `COGMER_` or `CLAUDECODE` from what it inherits, as `env` in `docs/work/host-observer/colleague.py` does,
 because the harness runs inside a Claude Code session whose variables would otherwise reach every daemon.
@@ -132,7 +138,7 @@ with `cogmer stop` under the same variables, or with SIGTERM to the process.
 `COGMER_TAILCAT=off` turns off the overlay, the encrypted network that reaches a machine on another network
 through a relay (`tailcatEnabled` in `cmd/cogmer/tailcat.go`). With it off, the address a daemon gives in its
 pairing string is its bound peer address (`AdvertisedEndpoint` in `cmd/cogmer/transport.go`), so pairing and
-sync between daemons on the box go over loopback TCP and nothing reaches a relay. With it on, which is the
+sync between daemons on the box go over TCP within the box and nothing reaches a relay. With it on, which is the
 default, the pairing string carries the overlay address, and every sync request goes through an overlay
 client. Each run says which it used.
 
@@ -177,8 +183,7 @@ two members'.
 
 A turn is written as `say` in `colleague.py` does: `cogmer hook prompt` with the prompt, a hand-made
 transcript holding the prompt, then `cogmer hook stop` with the reply as `last_assistant_message`, under the
-room's session. Every turn has the same size, a prompt of 500 bytes and a reply of 4000, which is a guess
-listed in the questions below. Turns alternate between the room's two members, and the rooms of a run start
+room's session. Every turn has the reference user's size, a prompt of 500 bytes and a reply of 4000. Turns alternate between the room's two members, and the rooms of a run start
 their turns at times spread over the minute, so the fleet's turns do not arrive together.
 
 Once a fleet is set up, the harness stops it and keeps a copy of every `COGMER_HOME`, so a later run starts from
@@ -201,8 +206,8 @@ network namespace, which every process on the box shares. What the harness uses 
 
 - `ss -tinpH`, at each sample, lists every TCP socket with the process that owns it, its remote address and
   its `bytes_sent` and `bytes_received`, and needs no root for the account's own processes. The harness sums
-  these for each daemon, split by remote address: one in 127.0.0.0/8 is a colleague's daemon over plain TCP or
-  a command talking to the page, and any other is the relay or, at a first start, the relay map. A socket opened
+  these for each daemon, split by remote address: an address the box holds is a colleague's daemon or a
+  command talking to the page, and any other is the relay or, at a first start, the relay map. A socket opened
   and closed between two samples is missed. Each poll's connection is left idle and closes after 30 seconds
   (`IdleConnTimeout` in `clientFor`), so a sample every 10 seconds sees it after its exchange is done. The
   overlay's self-check opens a client and closes it, and is missed.
@@ -240,8 +245,7 @@ not delivered within ten intervals, or a daemon's log has a line "is unreachable
    standing term and the cost of a poll for one colleague address: CPU and bytes for each poll, counting both
    the poll a daemon makes and the one it answers, and the handshakes an hour.
 3. One colleague in three rooms. N = 2, paired once, three rooms, no turns. The answer, less measurement 2, is
-   the cost of each further room in a poll. This is also the reference user under the reading of one colleague
-   in all three rooms.
+   the cost of each further room in a poll.
 4. The reference user, idle. One group of four, no turns. The model predicts the fixed term plus 3 times
    measurement 2's colleague terms. A result more than 10% from that means the model is missing a term, and
    one more run, three daemons in which every two share a room, says whether the missing term grows with the
@@ -272,7 +276,7 @@ not delivered within ten intervals, or a daemon's log has a line "is unreachable
     question for a later run.
 11. Isolation. Measurement 6 repeated with each daemon run as an OS user of its own and then with each in a
     container of its own, built `FROM scratch` as the container tests' images are. The answer is what each adds
-    for one daemon. OS users need root to make. Docker runs here under `sg docker`.
+    for one daemon. OS users need root to make, and the user makes them. Docker runs here under `sg docker`.
 
 The results become one table of the terms with their units, the reference user's cost an hour from them, and,
 for each server in the table above, the users it holds by memory and by CPU and the cost of one user a month.
@@ -329,12 +333,7 @@ Results that change the order:
 
 ### Questions
 
-- Are the reference user's three colleagues three different users, or one colleague in three rooms? This
-  plan takes three users, and measurement 3 gives the other.
-- What size is a turn? A prompt of 500 bytes and a reply of 4000 are a guess. Real turns vary widely, and a
-  turn's cost in bytes and disk grows with its size.
 - Is there a pair of builds where the newer migrates the older's stores, so that a start after an upgrade can
   be measured? Measurement 9 measures a start with nothing to migrate.
-- Will the user make OS users for measurement 11, which needs root?
 - Should an ARM server be rented for the measurements, since the cheapest servers in the table are ARM and
   the droplet is not?
