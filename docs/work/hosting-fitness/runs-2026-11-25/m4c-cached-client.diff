@@ -1,0 +1,49 @@
+diff --git a/cmd/cogmer/daemon.go b/cmd/cogmer/daemon.go
+index 549c2fe..8cb5e22 100644
+--- a/cmd/cogmer/daemon.go
++++ b/cmd/cogmer/daemon.go
+@@ -69,8 +69,10 @@ func envInt(name string, def int) int {
+ }
+ 
+ type Daemon struct {
+-	id      *Identity
+-	members *Membership
++	// Experiment: one HTTP client per colleague address, kept across polls.
++	peerClients sync.Map
++	id          *Identity
++	members     *Membership
+ 	// The version each host reports, remembered for a few minutes. The daemon serves
+ 	// the sessions of every host at once and holds no host of its own (D-203).
+ 	versions hostVersions
+diff --git a/cmd/cogmer/sync.go b/cmd/cogmer/sync.go
+index d8abc42..fa71989 100644
+--- a/cmd/cogmer/sync.go
++++ b/cmd/cogmer/sync.go
+@@ -236,13 +236,20 @@ func (d *Daemon) pullFrom(addr string) (int, error) {
+ 	// A room records where its members listen, not which member listens where, so
+ 	// there is no single key to expect here. Any known peer is accepted, and the
+ 	// signed request inside binds identity exactly (D-044, sync requests are signed).
+-	conf, cerr := d.clientConfig("")
+-	if cerr != nil {
+-		return 0, cerr
+-	}
+-	client, err := clientFor(addr, 30*time.Second, conf)
+-	if err != nil {
+-		return 0, err
++	var client *http.Client
++	if c, ok := d.peerClients.Load(addr); ok {
++		client = c.(*http.Client)
++	} else {
++		conf, cerr := d.clientConfig("")
++		if cerr != nil {
++			return 0, cerr
++		}
++		c, err := clientFor(addr, 30*time.Second, conf)
++		if err != nil {
++			return 0, err
++		}
++		client = c
++		d.peerClients.Store(addr, client)
+ 	}
+ 	rooms, err := d.members.Rooms()
+ 	if err != nil {
