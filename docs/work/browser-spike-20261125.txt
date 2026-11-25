@@ -23,3 +23,23 @@ Not shown
   view's routes are on the loopback listener. A page served from another origin or over https, and the
   module's download time from one. A phone browser. Whether a request over the relay wakes a sleeping
   sandbox, which this run's failed dial suggests it does not.
+
+Run: the view page published to GitHub Pages, 2026-11-25 (21:23 to 21:33 UTC)
+  scripts/publish-view.sh, run on the Mac from d166ffb, force-pushed one commit, a0caa1d, to the pages
+  branch of Blue-Rocket/cogmer (public). Pages was then enabled with
+  `gh api -X POST repos/Blue-Rocket/cogmer/pages -f source[branch]=pages -f source[path]=/`, and
+  the first build finished at 21:30:45. The page was fetched with curl and loaded in Chrome with no link.
+
+Seen
+  The publish took 6 minutes 35 seconds, almost all of it the git push over this Mac's connection, which
+  sent about 6.3 MB in the first 5 minutes. GitHub serves https://blue-rocket.github.io/cogmer/view/
+  main.wasm as application/wasm, 27,147,515 bytes, with `content-encoding: gzip` when the request
+  accepts gzip. That transfer was 6,486,263 bytes and took 2.7 seconds on the Mac. The page is
+  23,640 bytes and carries the Content-Security-Policy meta tag. cache-control is max-age=600.
+  Loaded in Chrome with no fragment, the page showed the view's front page and the banner "Open this
+  page from the link a /cogmer: command gives in your Claude session." The console held messages from a
+  browser extension and none from the page.
+
+Not shown
+  The page with a link, a dial to port 4784, which no released daemon serves, and any load over a
+  phone's connection. Whether the policy blocks something the page needs once it runs a dial.
