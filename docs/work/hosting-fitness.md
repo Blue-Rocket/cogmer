@@ -1,6 +1,6 @@
 # Hosting fitness
 
-Material for the open item "Nobody has measured what many hosted machines cost one server" in
+Material for the open item "A hosted machine's cost is almost all polling" in
 `docs/open.md`. The phase measures what the daemon's present architecture costs to host, for one user and for
 many on one server, as the baseline that other architectures for mass hosting are compared against (D-285, a
 user with no computer of their own has a machine hosted for them; D-287, a user with a computer of their own can
@@ -31,8 +31,10 @@ Measured or read:
   this document does not repeat them.
 - Release builds exist for `linux/arm64` and `linux/amd64` (`scripts/release.sh`), so ARM servers can run it.
 
-Not known: what a daemon costs with colleagues and turns, which parts of that cost come from which part of the
-design, and what the relay carries.
+Measured: what a daemon costs with colleagues and turns, and which part of the design each part of that cost
+comes from, in the results below. Not known: what a colleague on another machine costs in bytes on the network,
+what the overlay costs with turns, how the store and memory grow over hours of turns, what an OS user or a
+container adds, and what an ARM server does.
 
 ## Servers
 
@@ -47,9 +49,7 @@ design, and what the relay carries.
 | Oracle Always Free Ampere A1 | 2 OCPU, 12GB, or 4 and 24GB | free | reports say it was cut to half in 2026, and instances with 95th-percentile CPU under 20% for seven days count as idle (https://docs.oracle.com/iaas/Content/FreeTier/resourceref.htm), which an idle daemon fleet would meet |
 | the droplet | 4 vCPU, 8GB | $48 a month | the box the measurements start on |
 
-On memory alone, at 45MB to 100MB for each daemon, an 8GB box holds roughly 70 to 150 daemons. The
-measurements replace that range with a cost for each user, from which the users a server holds and the cost
-of each user a month follow for every server in the table.
+The users each server holds, and the cost of each user a month, are in the last table of the results below.
 
 ## The user the costs are for
 
@@ -85,12 +85,75 @@ each poll and each turn, and handshakes an hour. A change the numbers point to, 
 a peer that has sent nothing, a long poll, or one connection that carries the polls of many daemons, is a decision
 for its own entry after the measurements, not before.
 
+## Results
+
+Measurements 0 to 9 ran on 2026-11-25 on the droplet, on a build of `b91c152`, and every run was valid. The
+record of each run, with how it was run and where it was not clean, is
+`f98fa3d:docs/work/hosting-fitness-runs-2026-11-25.md`. The terms below are derived from those runs for one
+daemon, and each counts both the polls a daemon makes and the polls it answers.
+
+| term | CPU | memory (PSS) | bytes sent | disk written | from |
+|---|---|---|---|---|---|
+| fixed, for each daemon | 4.1s an hour | 12.0MB | 0 | 0 | measurement 1 at N = 4 |
+| standing, for each colleague address | about 0 | 5.1MB at 1s polls, 2.1MB at 5s | 0 | 0 | measurement 4 against 1 and 5 |
+| each poll of a colleague address | 14.4ms to 15.1ms | not separated | 6.4KB to 6.6KB | 0 | measurements 2, 4 and 5 |
+| each further room in a poll | 5.2ms | not separated | 1.5KB | 0 | measurement 3 against 2 |
+| each turn in one of the daemon's rooms | 99ms | not separated | 7.6KB | 110KB | measurement 6 against 4 |
+| the overlay, for each daemon | 2.1s an hour | 7.2MB | 0.29MB an hour to the relay | 17KB an hour | measurement 1 |
+| the overlay, for each colleague address | 4.7ms more for each poll | 42MB | not measured | 0 | measurement 7 against 4 |
+
+The polls are almost the whole cost. In measurement 4 they took 156 of the daemon's 160 CPU seconds an hour,
+and polling every 5 seconds instead of every second cut the CPU from 160s to 35s an hour, in proportion to
+the polls, which leaves the standing term near 0. Each poll opens a new connection with a TLS handshake
+(`clientFor` in `cmd/cogmer/transport.go`). The code suggests that the handshake is most of a poll's 6.4KB,
+which was not measured on its own.
+
+The model's check passed. Measurement 4 was predicted at the fixed term plus 3 times measurement 2's colleague
+cost, 154 CPU seconds an hour, and measured 160.5, within 4%. The cost of one user did not grow with the users
+on the box: a daemon took 181 CPU seconds an hour at N = 20 and 178 at N = 4, and the box's CPU less the
+baseline and the harness's own came to 189 seconds an hour for each user in both.
+
+A turn of 4.5KB writes about 110KB to disk on each of its two daemons, about 25 times its size. A start of 20
+daemons at once had every daemon answering within 0.52s and a turn delivered within 0.94s, and took about
+250MB of `MemAvailable`.
+
+The reference user, an hour:
+
+| | without the overlay | with the overlay |
+|---|---|---|
+| the daemon's CPU | 178s | about 230s, measurement 7 plus measurement 6's turns |
+| the box's CPU for each user | 189s | about 228s, estimated the same way |
+| memory (PSS) | 28.7MB | 161MB, measured with no turns |
+| bytes the daemon sends | 67.5MB | not measured |
+| disk written | 19.8MB | not measured |
+
+A user whose colleagues are on other machines sends those 67.5MB an hour over the network, about 49GB in a
+month of 730 hours, and the price of that traffic is in no table here.
+
+The table below gives the users each server holds, taking the droplet's numbers for every server. Users by CPU are the vCPUs × 3600
+divided by the box's CPU for each user, which is every vCPU fully busy, a ceiling rather than a level to run
+at. Users by memory are the memory less 1GB, divided by the user's PSS, since the droplet's 8GB left about 7.0GB
+in `MemAvailable`.
+
+| option | users by CPU | users by memory | users | each user a month | users, overlay on | each user a month, overlay on |
+|---|---|---|---|---|---|---|
+| Hetzner CAX21 | 76 | 243 | 76 | about €0.14 | 43 | about €0.24 |
+| Hetzner CAX31 | 152 | 522 | 152 | about €0.14 | 93 | about €0.23 |
+| Contabo Cloud VPS M | 114 | 522 | 114 | about $0.09 to $0.13 | 93 | about $0.11 to $0.16 |
+| Leaseweb VPS 2 | 114 | 522 | 114 | about $0.08 | 93 | about $0.10 |
+| the droplet | 76 | 243 | 76 | about $0.63 | 43 | about $1.12 |
+
+DigitalOcean 16GB and Vultr 16GB are left out because their vCPUs are not recorded, and Oracle's free tier
+because an OCPU is not a vCPU, and Oracle's rule on idle instances depends on how busy an instance runs. With the overlay
+off, CPU limits every server in the table. With it on, memory limits every server, though on the 6-vCPU
+ones it allows 93 users against CPU's 94.
+
 ## How to measure
 
 What the harness, `docs/work/hosting-fitness/harness.py`, does for each measurement, from the code and the
 probe scripts as read on 2026-11-24 and 2026-11-25. Its own check, two daemons that pair, form a room and
 deliver a turn each way, passed on 2026-11-25 with the overlay off and on: each pairing took 1.1s, and each
-turn arrived in 0.6s to 0.9s. No measurement has been run.
+turn arrived in 0.6s to 0.9s.
 
 Each daemon on the box is the program run as `cogmer daemon` in a process of its own, with three variables set:
 `COGMER_HOME` names a directory made for it, `COGMER_ADDR` names a loopback port for hooks and the page, and
@@ -315,21 +378,10 @@ Each result goes in a commit that says when, on what machine and build, and what
 
 ### Order
 
-1. A run of two daemons that forms a room and delivers one turn, with the overlay off and then on, which checks
-   the harness itself.
-2. Measurements 0 to 4. Measurement 4's check of the model comes before any other run uses the model.
-3. Measurements 5, 6 and 7.
-4. Measurements 8 and 9.
-5. Measurement 10, which takes 6 hours and can run at night.
-6. Measurement 11, and an ARM server, once the questions below that they need are answered.
-
-Results that change the order:
-
-- If measurement 4 misses the model's prediction, the run of three daemons comes before measurement 5, and
-  the model is fixed before anything uses it.
-- If the overlay does not connect to the relay at the first try, measurement 7 waits, and the rest runs with
-  the overlay off.
-- If measurement 8 differs from measurement 6, the runs at N = 8 and 12 come before measurement 9.
+1. Measurement 10, which takes 6 hours and can run at night.
+2. Measurement 11, which needs the harness to run a daemon as an OS user of its own and in a container of its
+   own, which it cannot yet do.
+3. An ARM server, once the question below is answered.
 
 ### Questions
 
