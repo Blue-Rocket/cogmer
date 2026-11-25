@@ -243,6 +243,21 @@
 
   window.addEventListener('hashchange', () => location.reload());
 
+  // A browser on a phone or a tablet freezes a page that is not shown, and the connections it held are
+  // dead when the page is shown again, so a page that has been hidden for a while starts again, and so
+  // does one that the browser restores from its cache of pages.
+  const RELOAD_AFTER_HIDDEN = 15000;
+  let hiddenAt = null;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      hiddenAt = Date.now();
+      return;
+    }
+    if (hiddenAt !== null && Date.now() - hiddenAt > RELOAD_AFTER_HIDDEN) location.reload();
+    hiddenAt = null;
+  });
+  window.addEventListener('pageshow', (ev) => { if (ev.persisted) location.reload(); });
+
   window.cogmerView = {
     room,
     stream,
