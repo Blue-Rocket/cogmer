@@ -364,6 +364,7 @@ const ROOM = VIEW ? VIEW.room : (location.pathname.startsWith('/room/') ? decode
   const toggle=document.getElementById('roomsToggle');
   toggle.onclick=()=>document.body.classList.toggle('roomsOpen');
   let rooms=[];
+  let loaded=false;
   const seenOf=n=>{ try{ const v=localStorage.getItem('cogmer.seen.'+n); return v===null?null:+v; }catch(e){ return null; } };
   const see=(n,c)=>{ try{ localStorage.setItem('cogmer.seen.'+n,String(c)); }catch(e){} };
   const node=(tag,cls,text)=>{ const e=document.createElement(tag); if(cls) e.className=cls; if(text!==undefined) e.textContent=text; return e; };
@@ -382,6 +383,9 @@ const ROOM = VIEW ? VIEW.room : (location.pathname.startsWith('/room/') ? decode
   }
   function render(){
     list.textContent='';
+    // Until the first list arrives the pane does not know there are no rooms, and saying so tells a
+    // user whose page is still connecting to go and create one.
+    if(!loaded){ list.appendChild(node('div','none','Loading rooms\u2026')); return; }
     if(!rooms.length){ list.appendChild(node('div','none','No rooms yet. Create one in a session with /cogmer:room-create, or $cogmer room-create in Codex.')); }
     for(const r of rooms){
       const a=node('a',r.name===ROOM?'here':'');
@@ -408,7 +412,7 @@ const ROOM = VIEW ? VIEW.room : (location.pathname.startsWith('/room/') ? decode
   }
   function connect(){
     const es=VIEW ? VIEW.stream('/rooms/stream') : new EventSource('/rooms/stream');
-    es.onmessage=m=>{ rooms=JSON.parse(m.data)||[]; render(); };
+    es.onmessage=m=>{ rooms=JSON.parse(m.data)||[]; loaded=true; render(); };
     es.onerror=()=>{ es.close(); setTimeout(connect,1500); };
   }
   document.addEventListener('visibilitychange',render);
