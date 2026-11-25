@@ -151,3 +151,23 @@ func TestAPollAfterAConnectionBrokeMakesANewOne(t *testing.T) {
 		t.Errorf("the address that came back saw %d connections; want 1", n)
 	}
 }
+
+// A connection the daemon discards as stuck takes the kept client with it, so the next
+// poll makes a new connection (D-210, the daemon discards a connection that is stuck).
+func TestDiscardingAStuckConnectionMakesTheNextPollConnectAgain(t *testing.T) {
+	a := newOfflinePeer(t, "room-keep", "keep")
+	b := newOfflinePeer(t, "room-keep", "keep")
+	introduce(t, a, b, "room-keep")
+	srv := serveCounted(t, b.d, "127.0.0.1:0")
+
+	if _, err := a.d.pullFrom(srv.addr); err != nil {
+		t.Fatal(err)
+	}
+	a.d.discardConnection(srv.addr, 0)
+	if _, err := a.d.pullFrom(srv.addr); err != nil {
+		t.Fatal(err)
+	}
+	if n := srv.conns.Load(); n != 2 {
+		t.Errorf("polls before and after a discard made %d connections; want 2", n)
+	}
+}

@@ -17,8 +17,10 @@ import (
 // kept connection is checked again before each poll, with the certificate the other
 // side last presented on it, against the records as they are then. A client is dropped,
 // and the next poll makes a new connection, when that check fails, when this machine's
-// own certificate has changed since the client was made. A connection the other side
-// closed is not kept, since the transport dials again for the next request.
+// own certificate has changed since the client was made, and when the daemon discards a
+// connection that is stuck (D-210, the daemon discards a connection that is stuck). A
+// connection the other side closed is not kept, since the transport dials again for the
+// next request.
 type peerConns struct {
 	mu sync.Mutex
 	m  map[string]*peerConn
@@ -99,4 +101,14 @@ func (d *Daemon) peerConnHolds(pc *peerConn, own []byte) bool {
 		return true // no answer has come on it yet, so no connection is held
 	}
 	return pinnedVerifier(d.pinTrust(), "")([][]byte{peer.Raw}, nil) == nil
+}
+
+// dropSyncClient drops the client kept for addr, so that the next poll makes a new one.
+func (d *Daemon) dropSyncClient(addr string) {
+	d.peerConns.mu.Lock()
+	defer d.peerConns.mu.Unlock()
+	if pc := d.peerConns.m[addr]; pc != nil {
+		pc.client.CloseIdleConnections()
+		delete(d.peerConns.m, addr)
+	}
 }
