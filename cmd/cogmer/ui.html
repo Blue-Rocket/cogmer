@@ -417,6 +417,7 @@ const ROOM = VIEW ? VIEW.room : (location.pathname.startsWith('/room/') ? decode
   }
   document.addEventListener('visibilitychange',render);
   setInterval(render,60000);
+  render();
   connect();
 })();
 </script>

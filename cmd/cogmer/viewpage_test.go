@@ -73,4 +73,7 @@ func TestTheRoomsPaneDoesNotSayThereAreNoRoomsBeforeItHasAList(t *testing.T) {
 	if !strings.Contains(page, "rooms=JSON.parse(m.data)||[]; loaded=true; render();") {
 		t.Error("the first list does not end the loading state")
 	}
+	if !strings.Contains(page, "setInterval(render,60000);\n  render();\n  connect();") {
+		t.Error("the pane is not drawn until the first list or the first minute, so it is blank while connecting")
+	}
 }
