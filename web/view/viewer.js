@@ -83,7 +83,7 @@
   const DERP_MAP = 'https://tailcat.dev/derpmap.json';
   const VIEW_PORT = 4784;
   const DIAL_WITHIN = 15000;
-  const REDIAL_AFTER = 10000;
+  const REQUEST_WITHIN = 10000;
   const POLL_EVERY = 3000;
 
   const params = new URLSearchParams(location.hash.slice(1));
@@ -148,8 +148,19 @@
     return dialing;
   }
 
+  // withTimeout gives a request on a connection that is open a limit of its own. A sleeping session
+  // answers nothing and closes nothing, so without it a read waits for ever and the page keeps saying it
+  // is live.
+  function withTimeout(promise) {
+    let timer;
+    const limit = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('the session did not answer')), REQUEST_WITHIN);
+    });
+    return Promise.race([promise, limit]).finally(() => clearTimeout(timer));
+  }
+
   function request(path) {
-    return connect().then((h) => h.get(path)).catch((err) => {
+    return connect().then((h) => withTimeout(h.get(path))).catch((err) => {
       if (http) { http.close(); http = null; }
       throw err;
     });
