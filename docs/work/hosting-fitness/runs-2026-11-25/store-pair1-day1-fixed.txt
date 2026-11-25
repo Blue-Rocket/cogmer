@@ -1,0 +1,48 @@
+space by table or index (bytes, pages):
+   ('events', 9854976, 2406)
+   ('pending_injection', 1073152, 262)
+   ('idx_events_room_signer', 356352, 87)
+   ('sqlite_autoindex_events_2', 208896, 51)
+   ('idx_events_signer', 208896, 51)
+   ('idx_events_room', 180224, 44)
+   ('sqlite_autoindex_events_1', 143360, 35)
+   ('sqlite_schema', 12288, 3)
+   ('sqlite_sequence', 4096, 1)
+   ('sqlite_autoindex_session_delivered_1', 4096, 1)
+   ('sqlite_autoindex_refused_events_1', 4096, 1)
+   ('sqlite_autoindex_pending_injection_1', 4096, 1)
+   ('sqlite_autoindex_images_1', 4096, 1)
+   ('session_delivered', 4096, 1)
+   ('refused_events', 4096, 1)
+   ('images', 4096, 1)
+   ('idx_pending_session', 4096, 1)
+   ('event_conflicts', 4096, 1)
+events 2884
+sqlite_sequence 1
+event_conflicts 0
+session_delivered 0
+pending_injection 20
+images 0
+refused_events 0
+events: 2884
+  rowid_alias               4 bytes per event
+  event_id                 34 bytes per event
+  peer_id                  51 bytes per event
+  peer_sequence             3 bytes per event
+  room_id                  43 bytes per event
+  timestamp                30 bytes per event
+  user_id                   6 bytes per event
+  user_display_name         7 bytes per event
+  machine_id                3 bytes per event
+  origin_session_id        12 bytes per event
+  event_type               14 bytes per event
+  content                2248 bytes per event
+  metadata                 62 bytes per event
+  signature                86 bytes per event
+  sig_version               1 bytes per event
+  signer                   51 bytes per event
+  chain                   571 bytes per event
+  identity_version          1 bytes per event
+  removals_seen             0 bytes per event
+[('ASSISTANT_MESSAGE', 1441, 3999.9611380985425, 28.0), ('GUEST_INVITE', 2, 89.5, 0.0), ('USER_PROMPT', 1441, 500.0, 96.0)]
+(4096,) (9,)
