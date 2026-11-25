@@ -158,3 +158,25 @@ Not shown
   screenshot was not captured). Whether the Mac's daemon can reach the sandbox's daemon at times
   other than when a prompt starts it. A session outside a project folder, a Cowork task on the
   computer with the bridge, Windows, Codex.
+
+Run: 0.11.2 in a Cowork cloud task, 2026-11-25
+  The candidate was release-0.11.0 at 42f6af3 with plugin/VERSION 0.11.2, released and staged by
+  scripts/stage.sh from a droplet clone as a6d9178, which is Blue-Rocket/cogmer-staging 527bc42. The
+  account's marketplace was synced with Add > Manage marketplaces > Check for updates ("Updated to
+  527bc42"). A new task started from claude.ai/new with /cogmer:self-status, then /cogmer:room-join
+  morning-steppe, on Claude Code 2.1.332. The probe plugin was then removed from the account.
+
+Seen
+  The task reported plugin, binary and daemon all on 0.11.2. "Reply with only the word PING-A." and
+  "Reply with only the word PING-B." were each answered, and the Mac's room holds each reply as an
+  ASSISTANT_MESSAGE with the same text, recorded from the Stop hook's last message (D-295). A prompt
+  sent after 15 minutes idle (at 08:04:45, typed by the user) was recorded from the spool, with the
+  log line "kept while the daemon started, nothing offered" (D-294). A turn written on the Mac between
+  the two pings reached the sandbox. The sandbox's daemon.log, printed by the task on request, showed
+  "offered=19 events" at 07:45:31, "offered=21 events" at 08:06:35 and 08:06:58, and after each
+  of four replies "delivery: transcript unreadable (transcript path refused: not a .jsonl name);
+  nothing confirmed". The behavior check still failed in the sandbox with an authentication error.
+
+Not shown
+  Whether the task's model was given the colleague's turn in the form the format intends (it listed
+  older room traffic when asked what it saw). Replies from a second task, or after a compaction.
