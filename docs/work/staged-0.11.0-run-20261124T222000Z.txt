@@ -180,3 +180,23 @@ Seen
 Not shown
   Whether the task's model was given the colleague's turn in the form the format intends (it listed
   older room traffic when asked what it saw). Replies from a second task, or after a compaction.
+
+Run: a search of the cloud task's sandbox for a transcript, 2026-11-25 (about 08:50 UTC)
+  A read-only shell line run by the model in the same task (plugin 0.11.2, Claude Code 2.1.332). It
+  listed processes whose command line matched "claude" with their open files, the names of the
+  environment variables of the first process named claude, every *.jsonl file written in the last 120
+  minutes on the root filesystem, and the folders ~/.claude and ~/.claude/projects. Values of
+  variables were never printed.
+
+Seen
+  No process matching "claude" was visible from the task's shell, and no environment variable names
+  were listed. The one .jsonl file written in the last 120 minutes was under
+  /root/.claude/projects/-tmp-cogmer-preflight-1096568826/, from 07:45, which is the behavior
+  check's session. ~/.claude/projects held only that folder. ~/.claude held backups,
+  environment-manager, plugins, policy-limits.json (with signature and stamp files), projects,
+  rm-guard, session-env, sessions, shell-snapshots and skills. No file belonging to the task's own
+  session was found.
+
+Not shown
+  What is inside sessions, session-env, environment-manager and rm-guard. Whether a Claude Code
+  cloud session that is not a Cowork task sends a transcript path.
