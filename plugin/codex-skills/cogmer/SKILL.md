@@ -19,6 +19,7 @@ commands and ask which the user wants.
 | `self-name` | `name [name]` |
 | `self-stop` | `stop` |
 | `self-restart` | `restart` |
+| `self-doctor` | `health [extended]` |
 | `self-cowork` | `cowork-setup` |
 | `peer-list` | `peers` |
 | `peer-pair` | `pair <pairing-string> [label]` |

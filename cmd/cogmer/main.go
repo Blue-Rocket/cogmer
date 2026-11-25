@@ -112,6 +112,8 @@ func main() {
 		runRevoke(os.Args[2:])
 	case "doctor":
 		runDoctorCommand(os.Args[2:])
+	case "health":
+		runHealth(os.Args[2:])
 	case "diagnose-endpoint":
 		runDiagnoseEndpoint(os.Args[2:])
 	case "probe-bighook":
@@ -184,6 +186,9 @@ Rooms — per room, repeated as often as you like:
                          Verify the behaviors relied on in the host this session runs in,
                          or in each installed host (claude, codex); --deep adds a compaction
                          for Claude Code
+  cogmer health [extended]
+                         Report the versions, the daemon and what the behavior check recorded,
+                         at once; extended starts the whole check in the background
   cogmer behaviors       List those behaviors (--markdown to render docs)
 
 Environment:
@@ -811,6 +816,9 @@ func runDoctorCommand(args []string) {
 			log.Fatalf("doctor: %v", err)
 		}
 		allPassed = allPassed && ok
+	}
+	if os.Getenv(extendedRunVar) == "1" {
+		fmt.Println(extendedDone)
 	}
 	if !allPassed {
 		os.Exit(1)
@@ -1869,6 +1877,9 @@ func runWhoami() {
 		writeIdentityNeeded(os.Stdout)
 	}
 	writeOwnMachines(os.Stdout, m, id)
+	if line := nextStepLine(m, id); line != "" {
+		fmt.Printf("\n%s\n", line)
+	}
 
 	running, answering := daemonVersionAt(addr())
 	fmt.Printf("\n%s", versionReport(pluginVersion(), version, running, answering))
@@ -2210,6 +2221,7 @@ func beginCeremony(peerID, name, mine, label, endpoint string, preferTerminal bo
 			fmt.Printf("Opened the pairing page:\n  %s\n\n", res.URL)
 			fmt.Printf("Compare the two words there, on a call with %s.\n", name)
 			fmt.Printf("They must do the same at the same time — on their machine you are %s.\n", mine)
+			fmt.Println(commandText("\nAfter the words match, put this session in a room with /cogmer:room-create, or with /cogmer:room-join <invitation> if they invite you."))
 			return
 		}
 	}
@@ -2255,6 +2267,7 @@ func verifyWith(pairID, peerID, name string) {
 		fmt.Printf("\npaired with %s. this holds for every room you ever share,\n", name)
 		fmt.Println("and you will not be asked again. if this key changes, that is an alarm")
 		fmt.Println("rather than a new first meeting.")
+		fmt.Println(commandText("\nNext step: put this session in a room with /cogmer:room-create, or with /cogmer:room-join <invitation> if they invite you."))
 		return
 	}
 

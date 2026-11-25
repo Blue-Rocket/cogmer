@@ -88,6 +88,13 @@ type AssistantTurn struct {
 // carry no promptId, and the parentUuid chain contains gaps, so we take every
 // assistant record following the last human-sourced user record.
 func ReassembleLastTurn(path, lastMessage string) (*AssistantTurn, error) {
+	// A host that sends no transcript path has no transcript for cogmer to read: a Cowork cloud
+	// task sends transcript_path as an empty string at SessionStart, UserPromptSubmit and Stop
+	// (D-295, a turn with no transcript is recorded from the Stop hook's last message). The final
+	// text block is all there is to record, and the turn's tool calls are not known.
+	if path == "" {
+		return &AssistantTurn{Text: strings.TrimSpace(lastMessage)}, nil
+	}
 	f, err := openTranscript(path)
 	if err != nil {
 		return nil, err

@@ -47,9 +47,16 @@ changed decision.
    lists under **Rejected.**, and does not answer that decision's reason.
 3. **A rejection now done elsewhere.** An alternative the changed decision rejects is
    what another active decision does.
-4. **An earlier entry left as it was.** The changed decision reverses or narrows an
-   earlier one, and the earlier entry is not a tombstone (W-37 in `docs/writing.md`)
-   or not rewritten to what still holds (W-38).
+4. **An earlier entry left as it was.** The changed decision reverses an earlier one
+   and the earlier entry is not a tombstone (W-37 in `docs/writing.md`), or it changes
+   part of what an earlier one decides and the earlier entry is not rewritten to what
+   still holds (W-38). Read W-37 and W-38 in `docs/writing.md` before judging this, in
+   full. A decision that makes an exception to an earlier one for a narrower case
+   changes no part of it, and W-38 says the earlier entry is left as it is: never
+   report that the earlier entry should name the exception, point to the later
+   decision, or be rewritten, and never ask whether it should. The question is only
+   whether the later entry says it is an exception and cites the earlier one, and
+   whether it states only how it departs from it.
 5. **A citation whose words do not match.** A cited decision's few words, or the fact
    attributed to it, are not what that decision says (W-18).
 6. **A limit crossed.** The changed decision relies on something another decision's

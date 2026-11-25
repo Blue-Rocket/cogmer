@@ -1,0 +1,5 @@
+{
+  "name": "cogmer-path-probe",
+  "version": "0.1.0",
+  "description": "A throwaway probe: records what a hook's transcript_path looks like in a Cowork cloud task, never any content. Remove it after the run."
+}

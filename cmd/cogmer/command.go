@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -51,6 +52,7 @@ var typedCommands = map[string][]commandStep{
 	"self-name":      {{"", "name"}},
 	"self-status":    {{"", "whoami"}},
 	"self-machines":  {{"", "machines"}},
+	"self-doctor":    {{"", "health"}},
 }
 
 // typedCommandsUnavailable are the commands that cannot run from the daemon, with what a
@@ -78,11 +80,32 @@ type typedCommand struct {
 	args []string
 }
 
-// parseTypedCommand reads a prompt that begins with the host's command prefix. The first
-// line is the command and its arguments, split on white space and never interpreted by a
-// shell.
+// leadingReminder is a block of text a host puts before what the user typed, such as the
+// timezone and time a Cowork cloud task adds to every prompt.
+var leadingReminder = regexp.MustCompile(`(?s)^\s*<system-reminder>.*?</system-reminder>\s*`)
+
+// withoutHostReminders is a prompt without the blocks of host text before it, so that what is
+// left is what the user typed (D-300). A prompt that is nothing but such blocks is returned as
+// it came.
+func withoutHostReminders(prompt string) string {
+	for {
+		loc := leadingReminder.FindStringIndex(prompt)
+		if loc == nil {
+			return prompt
+		}
+		rest := prompt[loc[1]:]
+		if strings.TrimSpace(rest) == "" {
+			return prompt
+		}
+		prompt = rest
+	}
+}
+
+// parseTypedCommand reads a prompt that begins with the host's command prefix, after any text
+// the host put before what the user typed. The first line is the command and its arguments,
+// split on white space and never interpreted by a shell.
 func parseTypedCommand(prompt, prefix string) (typedCommand, bool) {
-	text := strings.TrimSpace(prompt)
+	text := strings.TrimSpace(withoutHostReminders(prompt))
 	if prefix == "" || !strings.HasPrefix(text, prefix) {
 		return typedCommand{}, false
 	}

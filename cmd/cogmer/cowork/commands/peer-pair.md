@@ -39,3 +39,7 @@ that makes it mean anything.
 
 Do not tell them to open a terminal. Pairing happens in the browser, and the command
 above already did the terminal part.
+
+If the output has a line that begins "Next step", give it as the last sentence of your answer,
+in the words it uses. It is the one thing the user does next on the way to a first shared room,
+and the command's output reaches them only through you.

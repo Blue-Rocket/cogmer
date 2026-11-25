@@ -1,0 +1,25 @@
+Run: a browser page dials a cloud task's daemon through the relay, 2026-11-25 (about 17:45 to 18:05 UTC)
+  tailcat v0.6.0, the version cogmer pins, has a js/wasm build in web/main_js.go that exposes
+  tailcatListen and tailcatDial. It was built on a Mac with `go run ./cmd/tailcat-webdist -o dist` from a
+  copy of the module's source, and served by python3 -m http.server on 127.0.0.1. The page,
+  docs/work/browser-spike/spike.html, reads a tailcat address from the URL fragment, calls
+  tailcatDial with port 4783 (the port cogmer's daemons dial) and the DERP map
+  https://tailcat.dev/derpmap.json, writes `GET /healthz HTTP/1.1`, and prints what comes back. The
+  address was the one /cogmer:self-status printed in a Cowork cloud task on plugin 0.11.5, in Chrome on
+  the Mac, from a page at http://127.0.0.1.
+
+Seen
+  main.wasm is 27,147,627 bytes, 6,562,378 gzipped and 6,140,050 with zstd. On the page, with the file
+  served from the Mac itself, the module was ready 2.7 seconds after the page loaded, the dial finished
+  3.0 seconds later, and the daemon's answer arrived 0.3 seconds after that. The answer was
+  "HTTP/1.0 400 Bad Request ... Client sent an HTTP request to an HTTPS server", so the port the
+  daemons dial speaks TLS. About 15 minutes after the task's last activity, when the Mac's daemon had
+  logged the task's daemon as unreachable since 17:51:04, the same page failed after 63.2 seconds with
+  "ping: context deadline exceeded". A first reload of an identical URL, fragment included, did not
+  run the page again and showed the first result.
+
+Not shown
+  Fetching anything the view serves, since the overlay port serves the peer protocol over TLS and the
+  view's routes are on the loopback listener. A page served from another origin or over https, and the
+  module's download time from one. A phone browser. Whether a request over the relay wakes a sleeping
+  sandbox, which this run's failed dial suggests it does not.

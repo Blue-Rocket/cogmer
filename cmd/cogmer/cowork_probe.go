@@ -224,9 +224,9 @@ func EnsureCoworkVerified(room string) {
 	key := coworkVerificationKey()
 	if v, ok := loadVerifications()[key]; ok && !probeDue(v, time.Now()) {
 		if why, couldNotRun := v.Failures[probeCouldNotRun]; couldNotRun && len(v.Failures) == 1 {
-			fmt.Fprintf(os.Stderr, "cogmer: the Cowork behavior check could not run (%s); it is tried again after an hour, or run cogmer doctor --host cowork\n", why)
+			fmt.Fprintf(os.Stderr, "cogmer: the Cowork behavior check could not run (%s); it is tried again after an hour, or run /cogmer:self-doctor extended\n", why)
 		} else if len(v.Failures) > 0 {
-			fmt.Fprintln(os.Stderr, "cogmer: Cowork behavior checks failed; run cogmer doctor --host cowork for detail")
+			fmt.Fprintln(os.Stderr, "cogmer: Cowork behavior checks failed; run /cogmer:self-doctor for detail")
 		}
 		return
 	}

@@ -148,6 +148,7 @@ func (d *Daemon) capturePrompt(req promptReq) bool {
 	if err := host.NormalizeHook(&req.SessionID, &req.PromptID, req.TurnID); err != nil {
 		return false
 	}
+	req.Prompt = withoutHostReminders(req.Prompt)
 	if _, isCommand := parseTypedCommand(req.Prompt, host.CommandPrefix()); isCommand {
 		d.commandPrompts.note(req.SessionID, req.PromptID)
 		return false

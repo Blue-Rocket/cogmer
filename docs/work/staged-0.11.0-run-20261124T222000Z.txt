@@ -101,6 +101,40 @@ Later the same night, with a browser
   prompts sent at 22:03:44 and 22:11:09 also left none, so a prompt sent while the daemon is asleep
   never reached it.
 
+0.11.1, with the spool, built on the droplet and tried in a new task
+  Commit 4a241e2 (the spool that holds a prompt for a daemon that is starting, D-294) was built on
+  the droplet as version 0.11.1 with scripts/release.sh, committed as 35d5a82, and staged with
+  scripts/stage.sh from a normal clone. Staging main became 5fc3495 and the script reported "published
+  and verified v0.11.1", all five assets matching their checksums on GitHub's side. The first
+  attempt from a git worktree failed in the pre-push hook on TestGitSkipsTheStateDirectoryInABulkAdd
+  AndRefusesAnExplicitOne: a hook in a worktree sets GIT_DIR to an absolute path, the test's git
+  commands inherit it and stage the repository's own files. The test passes without GIT_DIR and
+  fails with it, in a run on the droplet. The droplet had no git identity, so the identity was given
+  in the environment for the run.
+  On claude.ai the account's cogmer-staging marketplace still showed synced commit f7696a3 and the
+  plugin 0.11.0 after the push, with "Sync automatically" on. Add, Manage marketplaces, the marketplace's
+  menu, Check for updates moved it to 5fc3495 and the plugin to 0.11.1.
+  A new task, started at 23:46Z on 2026-11-24, reported "Plugin, binary and daemon are all on version
+  0.11.1", and joined morning-steppe with /cogmer:room-join. The Mac's daemon.log had its daemon
+  unreachable from 23:49:51 until 07:06:05 the next morning, 7h13m28s. At 07:05:59 a prompt, "Reply
+  with only the word PING-3.", was sent to the task, which answered "PING-3". The room on the Mac
+  held it as the new session key's sequence 1 at 07:05:59. The sandbox's daemon.log read "hook:
+  starting … (pid 169)" and "(pid 190)" at 07:05:59, "USER_PROMPT room=morning-steppe session=bca903a4
+  kept while the daemon started, nothing offered" and "spool: 1 prompt(s) kept for this daemon
+  recorded, 0 not recorded" at 07:05:59, and a prompt sent at 07:06:23 with the daemon awake gave
+  "offered=17 events". No ASSISTANT_MESSAGE line appeared, so the task's replies were still not
+  captured.
+
+The transcript path in a Cowork cloud task, read by a probe plugin
+  A plugin of three hooks, docs/work/transcript-path-probe/, uploaded to the account as a personal
+  plugin at about 07:12Z on 2026-11-25 and loaded by a new task, wrote to /tmp/cogmer-path-probe.log the
+  fields of each hook's JSON and the form of transcript_path, never a prompt or a reply. The task
+  printed it on request. At SessionStart the fields were cwd, hook_event_name, session_id, source
+  and transcript_path. At UserPromptSubmit they were cwd, hook_event_name, permission_mode, prompt,
+  prompt_id, session_id and transcript_path. At Stop they were background_tasks, cwd, effort,
+  hook_event_name, last_assistant_message, permission_mode, prompt_id, session_crons, session_id,
+  stop_hook_active and transcript_path. At all three, transcript_path was the empty string.
+
 Seen
   The README route installs and runs on a clean Mac in Claude Code with no restart, and the
   first-install line showed at the second prompt. The account's copy of the plugin and the one
@@ -124,3 +158,170 @@ Not shown
   screenshot was not captured). Whether the Mac's daemon can reach the sandbox's daemon at times
   other than when a prompt starts it. A session outside a project folder, a Cowork task on the
   computer with the bridge, Windows, Codex.
+
+Run: 0.11.2 in a Cowork cloud task, 2026-11-25
+  The candidate was release-0.11.0 at 42f6af3 with plugin/VERSION 0.11.2, released and staged by
+  scripts/stage.sh from a droplet clone as a6d9178, which is Blue-Rocket/cogmer-staging 527bc42. The
+  account's marketplace was synced with Add > Manage marketplaces > Check for updates ("Updated to
+  527bc42"). A new task started from claude.ai/new with /cogmer:self-status, then /cogmer:room-join
+  morning-steppe, on Claude Code 2.1.332. The probe plugin was then removed from the account.
+
+Seen
+  The task reported plugin, binary and daemon all on 0.11.2. "Reply with only the word PING-A." and
+  "Reply with only the word PING-B." were each answered, and the Mac's room holds each reply as an
+  ASSISTANT_MESSAGE with the same text, recorded from the Stop hook's last message (D-295). A prompt
+  sent after 15 minutes idle (at 08:04:45, typed by the user) was recorded from the spool, with the
+  log line "kept while the daemon started, nothing offered" (D-294). A turn written on the Mac between
+  the two pings reached the sandbox. The sandbox's daemon.log, printed by the task on request, showed
+  "offered=19 events" at 07:45:31, "offered=21 events" at 08:06:35 and 08:06:58, and after each
+  of four replies "delivery: transcript unreadable (transcript path refused: not a .jsonl name);
+  nothing confirmed". The behavior check still failed in the sandbox with an authentication error.
+
+Not shown
+  Whether the task's model was given the colleague's turn in the form the format intends (it listed
+  older room traffic when asked what it saw). Replies from a second task, or after a compaction.
+
+Run: a search of the cloud task's sandbox for a transcript, 2026-11-25 (about 08:50 UTC)
+  A read-only shell line run by the model in the same task (plugin 0.11.2, Claude Code 2.1.332). It
+  listed processes whose command line matched "claude" with their open files, the names of the
+  environment variables of the first process named claude, every *.jsonl file written in the last 120
+  minutes on the root filesystem, and the folders ~/.claude and ~/.claude/projects. Values of
+  variables were never printed.
+
+Seen
+  No process matching "claude" was visible from the task's shell, and no environment variable names
+  were listed. The one .jsonl file written in the last 120 minutes was under
+  /root/.claude/projects/-tmp-cogmer-preflight-1096568826/, from 07:45, which is the behavior
+  check's session. ~/.claude/projects held only that folder. ~/.claude held backups,
+  environment-manager, plugins, policy-limits.json (with signature and stamp files), projects,
+  rm-guard, session-env, sessions, shell-snapshots and skills. No file belonging to the task's own
+  session was found.
+
+Not shown
+  What is inside sessions, session-env, environment-manager and rm-guard. Whether a Claude Code
+  cloud session that is not a Cowork task sends a transcript path.
+
+Run: 0.11.3 in a Cowork cloud task, 2026-11-25 (about 10:17 to 10:22 UTC)
+  The candidate was release-0.11.0 at 38ecde4 (D-296) with plugin/VERSION 0.11.3, released and staged
+  by scripts/stage.sh from a clone of its own on the droplet as 1f45b16, which is
+  Blue-Rocket/cogmer-staging f3d9ecb. The account's marketplace was synced to it by the user. A new
+  task started from claude.ai/new with /cogmer:self-status, then /cogmer:room-join morning-steppe, on
+  Claude Code 2.1.332. Prompts: "Reply with only the word PING-A.", then a turn written on the Mac as
+  a colleague's, then "Reply with only the word PING-B.", then a request to print the sandbox's
+  daemon.log lines.
+
+Seen
+  The task reported plugin, binary and daemon all on 0.11.3. The sandbox's daemon.log showed, at the
+  first ping, "offered=32 events" (the room's whole history, given to a session that had just
+  joined), then "delivery: no transcript path from session a761a878, so 32 event(s) offered at its
+  prompt are counted delivered at stop". At the second ping it showed "offered=2 events" (the Mac turn's
+  prompt and reply) and the same line for 2. At the third prompt it showed "offered=0 events". Both
+  replies reached the Mac's room as ASSISTANT_MESSAGE events with the text PING-A and PING-B.
+
+Not shown
+  Whether the model was given the two events at the second ping in the intended form, which the log
+  does not say. A task after a compaction, and a task that idles long enough for its daemon to sleep
+  and wake between prompts that offer turns.
+
+Run: 0.11.3 in the same task after its daemon slept, 2026-11-25 (10:24 to 10:28 UTC)
+  The Mac's log showed the task's peer unreachable from 10:24:11, which is the daemon asleep. At
+  about 10:27 a turn written on the Mac as a colleague's was added to the room, and then, in the
+  task, "Reply with only the word PING-C.", "Reply with only the word PING-D." and a request to print
+  the sandbox's daemon.log lines.
+
+Seen
+  The sandbox's daemon.log showed the first prompt after the sleep as "kept while the daemon started,
+  nothing offered" at 10:27:50, then "spool: 1 prompt(s) kept for this daemon recorded, 0 not
+  recorded". The second prompt showed "offered=2 events" at 10:28:11, which are the Mac turn's prompt
+  and reply, followed by "no transcript path from session a761a878, so 2 event(s) offered at its
+  prompt are counted delivered at stop". The third showed "offered=0 events". The replies to both
+  pings are in the Mac's room, and so is the held prompt.
+
+Not shown
+  Whether the model was given the two events in the intended form, which the log does not say. A
+  turn that arrives while the task is awake and mid-reply. A task after a compaction.
+
+Run: 0.11.4 in a Cowork cloud task and in Claude Code and Codex on a Mac, 2026-11-25
+  The candidate was release-0.11.0 at d4622e9 with plugin/VERSION 0.11.4, staged from a clone on the
+  Mac as cef282f, which is Blue-Rocket/cogmer-staging e64b2e9. The user synced the account's
+  marketplace to it. A new cloud task ran /cogmer:self-doctor, /cogmer:self-doctor extended,
+  /cogmer:room-join morning-steppe and /cogmer:self-doctor again. On the Mac, `claude plugin update
+  cogmer@blue-rocket` moved Claude Code 2.1.332 from 0.11.0 to 0.11.4, and `claude -p` ran
+  /cogmer:self-doctor, /cogmer:self-doctor extended and /cogmer:self-doctor bogus. A development
+  build ran `health extended` for Codex 0.159.3 with a throwaway state directory.
+
+Seen
+  In the cloud task, plugin, binary and daemon were all on 0.11.4. The room-join output held no
+  line about a failed behavior check, where 0.11.2 and 0.11.3 had one. The first /cogmer:self-doctor
+  said the daemon was not running, and the third, after the join, said it was. The report said the
+  checks are skipped in a cloud container, and `extended` said the whole check is not run there. Both
+  ended with "Next step: pair with a colleague" although the session was in a room.
+  On the Mac, the first /cogmer:self-doctor after the plugin update ran `health` on the installed
+  0.11.1 program, which printed its usage, and the model said the versions probably disagreed. By about
+  30 seconds after that session started the program was 0.11.4, and the same command reported all
+  three versions, no recorded check for the version, and the next step. `extended` started a run that
+  wrote 19 checked, 0 failed to doctor-extended.log, and the next /cogmer:self-doctor reported it.
+  An unknown argument was refused. The Codex report printed the Claude Code run's result, because both
+  hosts shared one log, and each host has a log of its own after the fix. The Codex run passed B25,
+  B26, B27, B28 and B36.
+
+Not shown
+  A Codex session that types $cogmer self-doctor, which needs a model turn in the user's Codex.
+  Cowork on a computer. The extended run on Windows.
+
+Run: 0.11.5 in a Cowork cloud task and in Claude Code and Codex on a Mac, 2026-11-25 (about 14:00 UTC)
+  The candidate was release-0.11.0 at d59f5fd with plugin/VERSION 0.11.5, staged from a clone on the
+  Mac as 7e71806, which is Blue-Rocket/cogmer-staging 74c41dd. The user synced the account's
+  marketplace. A new cloud task ran /cogmer:self-doctor, /cogmer:room-join morning-steppe and
+  /cogmer:self-doctor. On the Mac, `claude plugin update` moved the plugin from 0.11.4 to 0.11.5 and
+  the installed program ran `health extended` for Claude Code and for Codex 0.159.3.
+
+Seen
+  In the cloud task the report named plugin and binary 0.11.5 and said the checks are skipped in a
+  cloud container, and it had no next-step line before or after the join. On the Mac, with the plugin
+  at 0.11.5 and the program at 0.11.4, the report said the binary and daemon were older than the
+  plugin and that a new session fetches one, and the program was 0.11.5 afterwards. Each host's run
+  wrote a log of its own. The Claude Code report read "19 checked, 0 failed". The Codex report said
+  the whole check was running 60 seconds after it had passed its five checks, because the Codex
+  doctor prints no closing count and the report took a closing count for the end of a run.
+
+Not shown
+  The Codex report after a run finishes, which the change that follows this record makes the process
+  that started the run write a closing line for. A Codex session that types $cogmer self-doctor.
+
+Run: 0.11.6 in Claude Code and Codex on a Mac, 2026-11-25 (about 16:44 UTC)
+  The candidate was release-0.11.0 at 560b38f with plugin/VERSION 0.11.6, staged from a clone on the
+  Mac as d4b73c5, which is Blue-Rocket/cogmer-staging b1de3cd. The user synced the account's
+  marketplace. `claude plugin update` moved the plugin from 0.11.5 to 0.11.6, and after the program
+  was fetched `health extended` ran for Claude Code through `claude -p` and for Codex 0.159.3 from the
+  installed program.
+
+Seen
+  With the plugin at 0.11.6 and the program at 0.11.5, the first report said the binary was older than
+  the plugin expects. The Codex log ended in "The whole check finished." about 21 seconds after it
+  started, and the Codex report then read "5 checked, 0 failed" and passed every check, where the
+  0.11.5 report had stayed at running. The Claude Code run passed 19 of 19, and its report said the
+  check had already run.
+
+Not shown
+  A Codex session that types $cogmer self-doctor, which needs a model turn in the user's Codex.
+  A Codex run whose probe cannot run, and Cowork on a computer.
+
+Run: the Mac's room database after the 0.11.4 and 0.11.5 cloud tasks, 2026-11-25 (read at about 17:00 UTC)
+  The database of morning-steppe on the Mac, read with sqlite3 read-only, after cloud tasks on 0.11.2 to
+  0.11.5 had joined the room and typed commands in it. In the 0.11.5 task `/cogmer:room-log` was typed
+  and the model was then asked to show the last 6 turns as recorded.
+
+Seen
+  Of 32 USER_PROMPT events, 24 begin with "<system-reminder>The user's timezone is Europe/Lisbon
+  (UTC+00:00). Message sent at ..." and are the prompts of cloud tasks. Three of them hold a command
+  after the reminder: /cogmer:self-doctor at 13:01:12, /cogmer:self-doctor at 14:04:54 and
+  /cogmer:room-log at 16:51:12. Each was typed after its task had joined the room, and the commands
+  typed before joining are not in the room. The reply to the 13:01:12 command is an ASSISTANT_MESSAGE
+  in the room, and the model's reply to the request for the last 6 turns holds turns of the room.
+  The code in cmd/cogmer/command.go at d59f5fd, parseTypedCommand, trims the prompt and then requires
+  that it begin with the command prefix, which a prompt that begins with the reminder does not.
+
+Not shown
+  Whether a host other than a Cowork cloud task puts text before the prompt, and what the first
+  prompt of a task holds when it is only the reminder.

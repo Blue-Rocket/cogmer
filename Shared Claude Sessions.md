@@ -1766,8 +1766,8 @@ Anything said before a tool was called is missing, and narrating before acting i
 ordinary shape of a turn, so publishing that value alone would lose part of most
 substantive responses.
 
-The transcript on disk, read when that hook fires, lacks that final block, because
-the hook runs before the closing record is written.
+The transcript on disk, read when that hook fires, lacks that final block on a Claude Code
+version that writes the closing record after the hook runs.
 
 The two omissions are complementary, and together they make the whole turn:
 
@@ -1776,6 +1776,10 @@ transcript, read at completion   →  every block except the last
 turn-completion hook             →  the last block
 union                            →  the complete turn
 ```
+
+A Claude Code session whose host sends no transcript, as a Cowork task in the cloud does,
+is recorded from the hook's final text block alone. A colleague sees the closing text of each
+response, and nothing said before a tool was called, and no count of tool calls.
 
 ## The union tolerates the hook being fixed
 
@@ -2053,6 +2057,11 @@ A copy quoted by the assistant or pasted by a user is not evidence of injection.
 If Codex records no matching evidence, the turns remain pending and are offered
 again at the next prompt. A failed host behavior check cannot confirm delivery
 to a Codex session.
+
+A Claude Code session whose host sends no transcript, as a Cowork task in the cloud does,
+has no recorded context to confirm from. Its turns count as delivered when the completion
+hook for the prompt that offered them arrives, so that a colleague's turn is not offered
+at every prompt of that session.
 
 The whole room is never injected again. The exception is a session that joins a room
 already in progress, which receives the room from its beginning, the room's and not
@@ -2720,6 +2729,18 @@ their machines in one place. `/cogmer:self-machines` opens it.
 `/cogmer:self-status` lists the user's machines one by one, by name, with whether this
 machine can reach each, so that a user can see which of their machines are in step
 without opening the page.
+
+`/cogmer:self-doctor` reports at once the versions of the plugin, the program and the daemon,
+whether the daemon answers, and what the check of the host's behaviors recorded, so that a user who
+suspects cogmer is not working learns why inside the session, with no terminal and no turn spent.
+Only its argument `extended` starts the whole check, which drives real turns on the user's own
+subscription, and it starts it in the background so that the session is never held while it runs.
+
+A user who runs `/cogmer:self-status` or `/cogmer:self-doctor` is told the one step to take next on
+the way to a first shared room: to pair with a colleague, to finish a pairing, to create or join a
+room, or to invite a colleague. A user whose room already has a colleague in it is told nothing, so
+that a fresh install never leaves a user guessing what comes after pairing, and a user past it is
+never nagged.
 
 At a terminal, as a separate program, is what operates cogmer rather than what a user
 does: diagnostics that must work when the plugin path is broken, the daemon's own

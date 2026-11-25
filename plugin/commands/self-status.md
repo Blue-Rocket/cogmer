@@ -54,3 +54,7 @@ says resolves it.
 Do not print the key on its own. It identifies them exactly and is useless to a
 colleague without the address attached, so handing it over alone sends them into a
 pairing that cannot finish.
+
+If the output has a line that begins "Next step", give it as the last sentence of your answer,
+in the words it uses. It is the one thing the user does next on the way to a first shared room,
+and the command's output reaches them only through you.
