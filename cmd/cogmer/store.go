@@ -276,7 +276,16 @@ func migrate(db *sql.DB) error {
 			return fmt.Errorf("migrate signer: %w", err)
 		}
 	}
-	return rekeyEventsOnSigner(db)
+	if err := rekeyEventsOnSigner(db); err != nil {
+		return err
+	}
+	// A poll asks what each signer has issued in a room after a sequence, and what
+	// this machine holds of each signer's run. Both are read through this index, so
+	// neither reads the content of every event the room holds or sorts the room's
+	// history on every poll. It is made after the rekey, which rebuilds the table
+	// without it.
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_events_room_signer ON events(room_id, signer, peer_sequence)`)
+	return err
 }
 
 // rekeyEventsOnSigner rebuilds an events table whose uniqueness is on (peer_id,
@@ -842,6 +851,24 @@ func (s *Store) commitPendingRow(sessionID, promptID, idsJSON string) (int, erro
 	return len(ids), tx.Commit()
 }
 
+// The queries a poll makes, read through idx_events_room_signer so that none reads
+// the content of every event in the room or sorts the room's history
+// (TestAnIdlePollReadsNeitherTheRoomsContentNorSortsItsHistory).
+const (
+	heldSequencesQuery = `SELECT signer, peer_sequence FROM events WHERE room_id = ? ORDER BY signer, peer_sequence`
+	nextSignerQuery    = `SELECT signer FROM events WHERE room_id = ? AND signer > ? ORDER BY signer LIMIT 1`
+)
+
+// eventsAfterQuery reads the events after a sequence for each of n signers, each
+// condition naming the room, a signer and the sequence the asker holds.
+func eventsAfterQuery(n int) string {
+	conds := make([]string, n)
+	for i := range conds {
+		conds[i] = `(room_id = ? AND signer = ? AND peer_sequence > ?)`
+	}
+	return `SELECT ` + selectCols + ` FROM events WHERE ` + strings.Join(conds, " OR ") + ` ` + orderBy
+}
+
 // SyncState reports the highest CONTIGUOUS sequence held from each peer (§9).
 //
 // Contiguous, not maximum: a gap means the events after it have not truly been
@@ -860,47 +887,104 @@ func (s *Store) commitPendingRow(sessionID, promptID, idsJSON string) (int, erro
 // is quarantined once rather than asked for on every poll (D-027, a sequence
 // conflict is quarantined).
 func (s *Store) SyncState(room string) (map[string]int64, error) {
-	rows, err := s.db.Query(`SELECT k, seq FROM (
-		  SELECT COALESCE(signer, peer_id) AS k, peer_sequence AS seq FROM events WHERE room_id = ?
-		  UNION SELECT signer, peer_sequence FROM refused_events
-		  UNION SELECT COALESCE(signer, peer_id), peer_sequence FROM event_conflicts WHERE room_id = ?)
-		ORDER BY k, seq`, room, room)
+	// Refused and quarantined sequences are few, and are read whole.
+	extra := map[string]map[int64]bool{}
+	for _, q := range []struct {
+		sql  string
+		args []any
+	}{
+		{`SELECT signer, peer_sequence FROM refused_events`, nil},
+		{`SELECT COALESCE(signer, peer_id), peer_sequence FROM event_conflicts WHERE room_id = ?`, []any{room}},
+	} {
+		rows, err := s.db.Query(q.sql, q.args...)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var k string
+			var seq int64
+			if err := rows.Scan(&k, &seq); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			if extra[k] == nil {
+				extra[k] = map[int64]bool{}
+			}
+			extra[k][seq] = true
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+	}
+	state := map[string]int64{}
+	advance := func(k string) {
+		for extra[k][state[k]+1] {
+			state[k]++
+		}
+	}
+	// The stored events come in order of signer and sequence from the index alone.
+	// Every row's signer column holds the key signerKey gives (Insert writes it, and
+	// migrate fills the rows from before the column).
+	rows, err := s.db.Query(heldSequencesQuery, room)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	state := map[string]int64{}
 	for rows.Next() {
-		var peer string
+		var k string
 		var seq int64
-		if err := rows.Scan(&peer, &seq); err != nil {
+		if err := rows.Scan(&k, &seq); err != nil {
 			return nil, err
 		}
-		if seq == state[peer]+1 {
-			state[peer] = seq
+		advance(k)
+		if seq == state[k]+1 {
+			state[k] = seq
 		}
 	}
-	return state, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	for k := range extra {
+		advance(k)
+	}
+	for k := range state {
+		advance(k)
+		if state[k] == 0 {
+			delete(state, k)
+		}
+	}
+	return state, nil
 }
 
 // EventsSince returns what a peer reporting `have` is missing from this room,
 // in the deterministic order so a receiver sees them as this peer does.
 func (s *Store) EventsSince(room string, have map[string]int64) ([]Event, error) {
-	rows, err := s.db.Query(`SELECT `+selectCols+` FROM events WHERE room_id = ? `+orderBy, room)
-	if err != nil {
-		return nil, err
-	}
-	all, err := scanEvents(rows)
-	if err != nil {
-		return nil, err
-	}
-	var out []Event
-	for _, e := range all {
-		if e.PeerSequence > have[e.signerKey()] {
-			out = append(out, e)
+	// The signers in the room, found by stepping through the index one key at a time,
+	// so that the room's history is never read to list them.
+	var args []any
+	last := ""
+	for {
+		var k string
+		err := s.db.QueryRow(nextSignerQuery, room, last).Scan(&k)
+		if err == sql.ErrNoRows {
+			break
 		}
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, room, k, have[k])
+		last = k
 	}
-	return out, nil
+	if len(args) == 0 {
+		return nil, nil
+	}
+	// Only the events after what the asker holds are read and sorted.
+	rows, err := s.db.Query(eventsAfterQuery(len(args)/3), args...)
+	if err != nil {
+		return nil, err
+	}
+	return scanEvents(rows)
 }
 
 // PendingCount reports how many injections are awaiting confirmation.
