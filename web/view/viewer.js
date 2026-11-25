@@ -107,7 +107,8 @@
 
   let ready;
   let http = null;
-  let dialing = null;
+  let dialAttempt = null;
+  let asleep = false;
 
   function loadModule() {
     if (ready) return ready;
@@ -122,30 +123,43 @@
     return ready;
   }
 
-  // connect dials the daemon, and says the session is asleep when it does not answer in time. One dial
-  // is in flight at a time, since the module gives up on its own only after a minute.
+  // startDial dials the daemon, once at a time: the module gives up on its own only after a minute, so
+  // the dial in flight is kept until it settles and every caller waits on it. When it succeeds, whenever
+  // that is, the connection is kept and the banner goes.
+  function startDial() {
+    if (!dialAttempt) {
+      dialAttempt = tailcatDial({ addr, port: VIEW_PORT, derpMapURL: DERP_MAP })
+        .then((conn) => {
+          http = new ViewConn(conn, token);
+          asleep = false;
+          say('');
+          return http;
+        })
+        .finally(() => { dialAttempt = null; });
+    }
+    return dialAttempt;
+  }
+
+  // connect gives the connection, dialing if there is none. It says the session is asleep when the dial
+  // takes longer than DIAL_WITHIN, and keeps saying so, since every later try finds the same dial, until
+  // a dial succeeds.
   function connect() {
     if (http) return Promise.resolve(http);
-    if (dialing) return dialing;
     if (!addr || !token) return Promise.reject(new Error('this page needs the link from your Claude session'));
-    say('Loading the viewer…');
-    dialing = loadModule().then(() => {
-      say('Connecting to your session…');
-      const dial = tailcatDial({ addr, port: VIEW_PORT, derpMapURL: DERP_MAP });
-      const timer = new Promise((_, reject) => setTimeout(() => reject(new Error('asleep')), DIAL_WITHIN));
-      return Promise.race([dial, timer]).then(
-        (conn) => { http = new ViewConn(conn, token); say(''); return http; },
-        (err) => {
-          if (err.message === 'asleep') {
-            say('This session looks asleep. Send a message in its Claude task to wake it; this page keeps trying.');
-            dial.then((conn) => { http = new ViewConn(conn, token); say(''); }, () => {});
-          } else {
-            say('Could not reach your session: ' + err);
-          }
-          throw err;
-        });
-    }).finally(() => { dialing = null; });
-    return dialing;
+    if (!asleep) say('Loading the viewer…');
+    return loadModule().then(() => {
+      if (!asleep) say('Connecting to your session…');
+      const limit = new Promise((_, reject) => setTimeout(() => reject(new Error('asleep')), DIAL_WITHIN));
+      return Promise.race([startDial(), limit]).catch((err) => {
+        if (err.message === 'asleep') {
+          asleep = true;
+          say('This session looks asleep. Send a message in its Claude task to wake it; this page keeps trying.');
+        } else if (!asleep) {
+          say('Could not reach your session: ' + err);
+        }
+        throw err;
+      });
+    });
   }
 
   // withTimeout gives a request on a connection that is open a limit of its own. A sleeping session
