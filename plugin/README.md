@@ -149,7 +149,7 @@ it can say so when a command does not work.
   that session, including the model's shell, can read the value and these lists.
 - The link that a cloud session prints for reading its room opens a page that GitHub serves, at
   `blue-rocket.github.io`. GitHub sees your network address and that you opened the page, and serves it
-  the page's script and a module of 27 MB, which is 6.6 MB if GitHub compresses it. It does not receive the address of your
+  the page's script and a module of 27 MB, which GitHub sends as 6.5 MB compressed. It does not receive the address of your
   session or the token, which are the part of the link after the `#`. The page then asks `tailcat.dev`
   for the list of relays, connects to a relay, which sees your browser's network address as it sees a
   daemon's, and reads the room from your session while its daemon is awake. Anyone who has the link
