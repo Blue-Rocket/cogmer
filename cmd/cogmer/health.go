@@ -139,6 +139,14 @@ func healthReport(h Host, now time.Time) string {
 	b.WriteString("\nWhat the behavior check recorded:\n")
 	b.WriteString(checksReport(h))
 	b.WriteString(extendedReport(now))
+	if m, err := OpenMembership(); err == nil {
+		defer m.Close()
+		if id, err := LoadIdentity(); err == nil {
+			if line := nextStepLine(m, id); line != "" {
+				b.WriteString("\n" + line + "\n")
+			}
+		}
+	}
 	if !inCloudContainer() {
 		b.WriteString("\nThe whole check drives real turns on your subscription and takes about 20 seconds. " +
 			"Start it with `extended`, and run this command again to read what it found.\n")

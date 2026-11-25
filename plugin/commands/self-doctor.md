@@ -32,3 +32,7 @@ and do not wait for it.
 If the output says the whole check drives real turns on the user's subscription, say that once,
 and offer `/cogmer:self-doctor extended` only if something above looks wrong or the user asked
 for the whole check. Do not offer it when every check passed.
+
+If the output has a line that begins "Next step", give it as the last sentence of your answer,
+in the words it uses. It is the one thing the user does next on the way to a first shared room,
+and the command's output reaches them only through you.

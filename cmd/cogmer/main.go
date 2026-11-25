@@ -1874,6 +1874,9 @@ func runWhoami() {
 		writeIdentityNeeded(os.Stdout)
 	}
 	writeOwnMachines(os.Stdout, m, id)
+	if line := nextStepLine(m, id); line != "" {
+		fmt.Printf("\n%s\n", line)
+	}
 
 	running, answering := daemonVersionAt(addr())
 	fmt.Printf("\n%s", versionReport(pluginVersion(), version, running, answering))
@@ -2215,6 +2218,7 @@ func beginCeremony(peerID, name, mine, label, endpoint string, preferTerminal bo
 			fmt.Printf("Opened the pairing page:\n  %s\n\n", res.URL)
 			fmt.Printf("Compare the two words there, on a call with %s.\n", name)
 			fmt.Printf("They must do the same at the same time — on their machine you are %s.\n", mine)
+			fmt.Println(commandText("\nAfter the words match, put this session in a room with /cogmer:room-create, or with /cogmer:room-join <invitation> if they invite you."))
 			return
 		}
 	}
@@ -2260,6 +2264,7 @@ func verifyWith(pairID, peerID, name string) {
 		fmt.Printf("\npaired with %s. this holds for every room you ever share,\n", name)
 		fmt.Println("and you will not be asked again. if this key changes, that is an alarm")
 		fmt.Println("rather than a new first meeting.")
+		fmt.Println(commandText("\nNext step: put this session in a room with /cogmer:room-create, or with /cogmer:room-join <invitation> if they invite you."))
 		return
 	}
 

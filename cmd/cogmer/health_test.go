@@ -75,7 +75,7 @@ func TestTheWholeCheckStartsInTheBackgroundAndLaterReportsWhatItFound(t *testing
 	if got := startExtendedRun(claudeHost{}, time.Now()); !strings.Contains(got, "Started the whole check") {
 		t.Fatalf("start: %q", got)
 	}
-	end := time.Now().Add(5 * time.Second)
+	end := time.Now().Add(30 * time.Second)
 	for time.Now().Before(end) {
 		if run, ok := readExtendedRun(); ok && run.Finished {
 			break

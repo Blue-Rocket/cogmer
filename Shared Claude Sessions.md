@@ -2736,6 +2736,12 @@ suspects cogmer is not working learns why inside the session, with no terminal a
 Only its argument `extended` starts the whole check, which drives real turns on the user's own
 subscription, and it starts it in the background so that the session is never held while it runs.
 
+A user who runs `/cogmer:self-status` or `/cogmer:self-doctor` is told the one step to take next on
+the way to a first shared room: to pair with a colleague, to finish a pairing, to create or join a
+room, or to invite a colleague. A user whose room already has a colleague in it is told nothing, so
+that a fresh install never leaves a user guessing what comes after pairing, and a user past it is
+never nagged.
+
 At a terminal, as a separate program, is what operates cogmer rather than what a user
 does: diagnostics that must work when the plugin path is broken, the daemon's own
 lifecycle, this machine's own state, and testing. The comparison also runs at a terminal
