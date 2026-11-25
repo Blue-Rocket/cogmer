@@ -101,6 +101,30 @@ Later the same night, with a browser
   prompts sent at 22:03:44 and 22:11:09 also left none, so a prompt sent while the daemon is asleep
   never reached it.
 
+0.11.1, with the spool, built on the droplet and tried in a new task
+  Commit 4a241e2 (the spool that holds a prompt for a daemon that is starting, D-294) was built on
+  the droplet as version 0.11.1 with scripts/release.sh, committed as 35d5a82, and staged with
+  scripts/stage.sh from a normal clone. Staging main became 5fc3495 and the script reported "published
+  and verified v0.11.1", all five assets matching their checksums on GitHub's side. The first
+  attempt from a git worktree failed in the pre-push hook on TestGitSkipsTheStateDirectoryInABulkAdd
+  AndRefusesAnExplicitOne: a hook in a worktree sets GIT_DIR to an absolute path, the test's git
+  commands inherit it and stage the repository's own files. The test passes without GIT_DIR and
+  fails with it, in a run on the droplet. The droplet had no git identity, so the identity was given
+  in the environment for the run.
+  On claude.ai the account's cogmer-staging marketplace still showed synced commit f7696a3 and the
+  plugin 0.11.0 after the push, with "Sync automatically" on. Add, Manage marketplaces, the marketplace's
+  menu, Check for updates moved it to 5fc3495 and the plugin to 0.11.1.
+  A new task, started at 23:46Z on 2026-11-24, reported "Plugin, binary and daemon are all on version
+  0.11.1", and joined morning-steppe with /cogmer:room-join. The Mac's daemon.log had its daemon
+  unreachable from 23:49:51 until 07:06:05 the next morning, 7h13m28s. At 07:05:59 a prompt, "Reply
+  with only the word PING-3.", was sent to the task, which answered "PING-3". The room on the Mac
+  held it as the new session key's sequence 1 at 07:05:59. The sandbox's daemon.log read "hook:
+  starting … (pid 169)" and "(pid 190)" at 07:05:59, "USER_PROMPT room=morning-steppe session=bca903a4
+  kept while the daemon started, nothing offered" and "spool: 1 prompt(s) kept for this daemon
+  recorded, 0 not recorded" at 07:05:59, and a prompt sent at 07:06:23 with the daemon awake gave
+  "offered=17 events". No ASSISTANT_MESSAGE line appeared, so the task's replies were still not
+  captured.
+
 Seen
   The README route installs and runs on a clean Mac in Claude Code with no restart, and the
   first-install line showed at the second prompt. The account's copy of the plugin and the one
