@@ -817,6 +817,9 @@ func runDoctorCommand(args []string) {
 		}
 		allPassed = allPassed && ok
 	}
+	if os.Getenv(extendedRunVar) == "1" {
+		fmt.Println(extendedDone)
+	}
 	if !allPassed {
 		os.Exit(1)
 	}

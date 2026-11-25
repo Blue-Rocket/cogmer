@@ -57,7 +57,7 @@ func standInForTheWholeCheck(t *testing.T) {
 		t.Skip("the stand-in is a shell script")
 	}
 	path := filepath.Join(t.TempDir(), "cogmer")
-	script := "#!/bin/sh\necho 'cogmer doctor'\necho '  FAIL  B20  injected output is recorded'\necho\necho '2 checked, 1 failed'\n"
+	script := "#!/bin/sh\necho 'cogmer doctor'\necho '  ok    B11  a hook fails open'\necho '  FAIL  B20  injected output is recorded'\n[ \"$COGMER_EXTENDED_RUN\" = 1 ] && echo '" + extendedDone + "'\nexit 0\n"
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TestEachHostReadsOnlyItsOwnRunOfTheWholeCheck(t *testing.T) {
 	if err := ensureStateDir(); err != nil {
 		t.Fatal(err)
 	}
-	log := extendedStart + time.Now().UTC().Format(time.RFC3339) + "\n2 checked, 1 failed\n"
+	log := extendedStart + time.Now().UTC().Format(time.RFC3339) + "\n  ok    B11  x\n  FAIL  B20  y\n" + extendedDone + "\n"
 	if err := os.WriteFile(extendedLogPath(claudeHost{}), []byte(log), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -143,5 +143,33 @@ func TestEachHostReadsOnlyItsOwnRunOfTheWholeCheck(t *testing.T) {
 	}
 	if got := extendedReport(codexHost{}, time.Now()); got != "" {
 		t.Errorf("Codex was shown the Claude Code run: %q", got)
+	}
+}
+
+// Only the Claude Code and Cowork doctors print a count, so a run is finished by the line the
+// process that started it writes, and what it found is counted from the lines.
+func TestARunIsFinishedByItsClosingLineAndCountedFromItsLines(t *testing.T) {
+	t.Setenv("COGMER_HOME", t.TempDir())
+	if err := ensureStateDir(); err != nil {
+		t.Fatal(err)
+	}
+	write := func(body string) {
+		t.Helper()
+		log := extendedStart + time.Now().UTC().Format(time.RFC3339) + "\n" + body
+		if err := os.WriteFile(extendedLogPath(codexHost{}), []byte(log), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("cogmer doctor: codex\n  ok    B25  a\n  ok    B26  b\n")
+	if got := extendedReport(codexHost{}, time.Now()); !strings.Contains(got, "is running") {
+		t.Errorf("a run with no closing line was not running: %q", got)
+	}
+	write("cogmer doctor: codex\n  ok    B25  a\n  ok    B26  b\n" + extendedDone + "\n")
+	if got := extendedReport(codexHost{}, time.Now()); !strings.Contains(got, "2 checked, 0 failed") {
+		t.Errorf("a Codex run with no count of its own: %q", got)
+	}
+	write("cogmer: Codex probe could not run: no login\n" + extendedDone + "\n")
+	if got := extendedReport(codexHost{}, time.Now()); !strings.Contains(got, "ran no behavior check") {
+		t.Errorf("a run that could not run was reported as passing: %q", got)
 	}
 }

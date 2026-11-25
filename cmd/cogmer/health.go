@@ -23,6 +23,9 @@ const (
 	// check takes about 20 seconds, so a run past this has died.
 	extendedWithin = 3 * time.Minute
 	extendedStart  = "started "
+	// extendedDone is the last line of a finished run, and extendedRunVar tells the doctor to write it.
+	extendedDone   = "The whole check finished."
+	extendedRunVar = "COGMER_EXTENDED_RUN"
 )
 
 // extendedProgram is the program the whole check runs in, as a variable so a test can stand in for it.
@@ -36,10 +39,13 @@ func extendedLogPath(h Host) string {
 type extendedRun struct {
 	Started  time.Time
 	Finished bool
-	Findings []string // the FAIL lines and the closing count
+	Passed   int
+	Failures []string // the FAIL lines
 }
 
-// readExtendedRun reads the log, and reports false when no run was ever started.
+// readExtendedRun reads the log, and reports false when no run was ever started. The run is
+// finished when its process wrote the closing line, which every host's doctor leaves to the process
+// that started it, since only the Claude Code and Cowork doctors print a count.
 func readExtendedRun(h Host) (extendedRun, bool) {
 	b, err := os.ReadFile(extendedLogPath(h))
 	if err != nil {
@@ -47,14 +53,16 @@ func readExtendedRun(h Host) (extendedRun, bool) {
 	}
 	var run extendedRun
 	for _, line := range strings.Split(string(b), "\n") {
+		trimmed := strings.TrimSpace(line)
 		switch {
 		case strings.HasPrefix(line, extendedStart):
 			run.Started, _ = time.Parse(time.RFC3339, strings.TrimPrefix(line, extendedStart))
-		case strings.Contains(line, " checked, ") && strings.HasSuffix(line, " failed"):
+		case trimmed == extendedDone:
 			run.Finished = true
-			run.Findings = append(run.Findings, strings.TrimSpace(line))
-		case strings.HasPrefix(strings.TrimSpace(line), "FAIL"):
-			run.Findings = append(run.Findings, strings.TrimSpace(line))
+		case strings.HasPrefix(trimmed, "ok "):
+			run.Passed++
+		case strings.HasPrefix(trimmed, "FAIL"):
+			run.Failures = append(run.Failures, trimmed)
 		}
 	}
 	return run, true
@@ -125,8 +133,14 @@ func extendedReport(h Host, now time.Time) string {
 	switch {
 	case !ok:
 		return ""
+	case run.Finished && run.Passed+len(run.Failures) == 0:
+		return "\nThe whole check, started " + run.Started.Format(time.RFC3339) + ", ran no behavior check. Its output is in " + extendedLogPath(h) + ".\n"
 	case run.Finished:
-		return "\nThe whole check, started " + run.Started.Format(time.RFC3339) + ":\n  " + strings.Join(run.Findings, "\n  ") + "\n"
+		out := fmt.Sprintf("\nThe whole check, started %s: %d checked, %d failed.\n", run.Started.Format(time.RFC3339), run.Passed+len(run.Failures), len(run.Failures))
+		for _, f := range run.Failures {
+			out += "  " + f + "\n"
+		}
+		return out
 	case now.Sub(run.Started) < extendedWithin:
 		return "\nThe whole check is running, started " + run.Started.Format(time.RFC3339) + ". Run this command again in a minute.\n"
 	default:
@@ -181,6 +195,7 @@ func startExtendedRun(h Host, now time.Time) string {
 	fmt.Fprintf(f, "%s%s\n", extendedStart, now.UTC().Format(time.RFC3339))
 	cmd := exec.Command(exe, "doctor", "--host", h.Name())
 	cmd.Stdin = nil
+	cmd.Env = append(os.Environ(), extendedRunVar+"=1")
 	cmd.Stdout, cmd.Stderr = f, f
 	detach(cmd)
 	if err := cmd.Start(); err != nil {

@@ -268,3 +268,23 @@ Seen
 Not shown
   A Codex session that types $cogmer self-doctor, which needs a model turn in the user's Codex.
   Cowork on a computer. The extended run on Windows.
+
+Run: 0.11.5 in a Cowork cloud task and in Claude Code and Codex on a Mac, 2026-11-25 (about 14:00 UTC)
+  The candidate was release-0.11.0 at d59f5fd with plugin/VERSION 0.11.5, staged from a clone on the
+  Mac as 7e71806, which is Blue-Rocket/cogmer-staging 74c41dd. The user synced the account's
+  marketplace. A new cloud task ran /cogmer:self-doctor, /cogmer:room-join morning-steppe and
+  /cogmer:self-doctor. On the Mac, `claude plugin update` moved the plugin from 0.11.4 to 0.11.5 and
+  the installed program ran `health extended` for Claude Code and for Codex 0.159.3.
+
+Seen
+  In the cloud task the report named plugin and binary 0.11.5 and said the checks are skipped in a
+  cloud container, and it had no next-step line before or after the join. On the Mac, with the plugin
+  at 0.11.5 and the program at 0.11.4, the report said the binary and daemon were older than the
+  plugin and that a new session fetches one, and the program was 0.11.5 afterwards. Each host's run
+  wrote a log of its own. The Claude Code report read "19 checked, 0 failed". The Codex report said
+  the whole check was running 60 seconds after it had passed its five checks, because the Codex
+  doctor prints no closing count and the report took a closing count for the end of a run.
+
+Not shown
+  The Codex report after a run finishes, which the change that follows this record makes the process
+  that started the run write a closing line for. A Codex session that types $cogmer self-doctor.
