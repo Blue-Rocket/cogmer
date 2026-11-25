@@ -1,0 +1,29 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>cogmer spike</title>
+<pre id="out">loading…</pre>
+<script src="wasm_exec.js"></script>
+<script>
+const out = document.getElementById('out');
+const t0 = performance.now();
+const log = m => { out.textContent += '\n' + ((performance.now()-t0)/1000).toFixed(1) + 's  ' + m; };
+out.textContent = 'start';
+window.onTailcatReady = async () => {
+  log('wasm ready');
+  const addr = decodeURIComponent(location.hash.slice(1));
+  if (!addr) { log('no address in the fragment'); return; }
+  try {
+    const conn = await tailcatDial({addr, port: 4783, derpMapURL: 'https://tailcat.dev/derpmap.json'});
+    log('dialed port 4783');
+    const req = 'GET /healthz HTTP/1.1\r\nHost: peer\r\nConnection: close\r\n\r\n';
+    await conn.write(new TextEncoder().encode(req));
+    let body = '';
+    for (;;) { const c = await conn.read(); if (c === null) break; body += new TextDecoder().decode(c); }
+    log('response:\n' + body.split('\r\n\r\n')[0].split('\r\n')[0] + '\n' + body.split('\r\n\r\n').slice(1).join('\n').slice(0, 300));
+    conn.close();
+  } catch (e) { log('failed: ' + e); }
+};
+const go = new Go();
+fetch('main.wasm').then(r => { log('wasm fetched, ' + r.headers.get('content-length') + ' bytes'); return WebAssembly.instantiateStreaming(r, go.importObject); })
+  .then(r => go.run(r.instance)).catch(e => log('load failed: ' + e));
+</script>
