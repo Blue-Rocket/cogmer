@@ -112,6 +112,8 @@ func main() {
 		runRevoke(os.Args[2:])
 	case "doctor":
 		runDoctorCommand(os.Args[2:])
+	case "health":
+		runHealth(os.Args[2:])
 	case "diagnose-endpoint":
 		runDiagnoseEndpoint(os.Args[2:])
 	case "probe-bighook":
@@ -184,6 +186,9 @@ Rooms — per room, repeated as often as you like:
                          Verify the behaviors relied on in the host this session runs in,
                          or in each installed host (claude, codex); --deep adds a compaction
                          for Claude Code
+  cogmer health [extended]
+                         Report the versions, the daemon and what the behavior check recorded,
+                         at once; extended starts the whole check in the background
   cogmer behaviors       List those behaviors (--markdown to render docs)
 
 Environment:

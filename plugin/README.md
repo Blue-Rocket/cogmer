@@ -20,7 +20,7 @@ Claude Code or Codex starts, and it replaces or wraps nothing.
 The first time you form a room under a Claude Code version this machine has not checked, cogmer
 runs two isolated Claude turns, about 13 seconds, to check the behaviors it relies on. That happens
 once for each version, and `COGMER_PREFLIGHT=off` skips it. If the check cannot run, cogmer says so
-and tries again after an hour.
+and tries again after an hour. A cloud session never runs it.
 
 ## Commands in Codex
 
@@ -70,6 +70,7 @@ every room, and `self-` commands act on you.
 | `self-name [what people should call you]` | show or set the name other people see for you |
 | `self-stop` | stop the daemon on this machine; nothing is captured or shared until a new session starts one |
 | `self-restart` | stop the daemon and start it again, without a new session |
+| `self-doctor [extended]` | check the versions, the daemon and what cogmer's behavior check recorded, at once and with no turn spent; `extended` runs the whole check in the background, which drives real turns, and the command again shows what it found |
 | `self-cowork` | add the bridge to Claude Desktop and write the plugin to upload in Cowork |
 
 ## Your identity and your machines

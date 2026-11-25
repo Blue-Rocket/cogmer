@@ -144,3 +144,31 @@ func TestNoUserFacingMessageSendsAUserToTheBinaryForForgetOrDoctor(t *testing.T)
 		}
 	}
 }
+
+// A cloud container runs a Claude Code that Anthropic chooses and that holds no login for the probe
+// session, so the checks neither run nor record anything there (D-297).
+func TestAClaudePreflightIsNotRunInACloudContainer(t *testing.T) {
+	for name, env := range map[string][2]string{
+		"a Claude Code cloud session":     {"CLAUDE_CODE_REMOTE", "true"},
+		"a machine holding the cloud key": {cloudKeyVar, "cogmer-cloud-v1:x"},
+	} {
+		claudePreflightHome(t)
+		t.Setenv(env[0], env[1])
+		calls := standInForClaudeChecks(t, []Result{{B: Behavior{ID: "B01"}}}, nil)
+		EnsureVerified("room")
+		if *calls != 0 {
+			t.Errorf("%s ran the behavior checks", name)
+		}
+		if _, ok := loadVerifications()["9.9.9"]; ok {
+			t.Errorf("%s recorded a result for the version", name)
+		}
+	}
+	claudePreflightHome(t)
+	t.Setenv("CLAUDE_CODE_REMOTE", "false")
+	t.Setenv(cloudKeyVar, "")
+	calls := standInForClaudeChecks(t, []Result{{B: Behavior{ID: "B01"}}}, nil)
+	EnsureVerified("room")
+	if *calls != 1 {
+		t.Errorf("a machine of the user's own ran the checks %d times, want once", *calls)
+	}
+}

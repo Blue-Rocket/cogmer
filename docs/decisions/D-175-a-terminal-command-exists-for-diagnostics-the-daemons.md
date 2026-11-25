@@ -9,9 +9,8 @@ this machine and no room, as `whoami`, `peers`, `forget` and `allow` do. Or it i
 fixture, such as `seed`. Every other command has a slash command.
 
 **Support.**
-- A diagnostic that works only when things work is not a diagnostic, so `doctor` and
-  `behaviors` have no slash command, which would suggest the plugin path is a reasonable
-  way to diagnose the plugin path. `cmd/cogmer/main.go`.
+- A diagnostic that works only when things work is not a diagnostic, so the check that must
+  work when the plugin path is broken is a terminal command. `cmd/cogmer/main.go`.
 - The daemon runs when no session exists, and the user whose machine it runs on has to be
   able to find and stop it. §29 (starting the daemon).
 - Every slash command names a subcommand the binary has, and every room-scoped command
@@ -20,9 +19,6 @@ fixture, such as `seed`. Every other command has a slash command.
 - The two words of a pairing must reach a person without passing through the model, and the
   view shows them without a terminal. D-088 (the pairing ceremony lives in the view, and
   every pairing gets its own URL).
-
-**Rejected.**
-- *A slash command for `doctor` or `behaviors`.* The plugin path would diagnose itself.
 
 **Limits.** `daemon`, `hook`, `probe-hook` and `seed` are machinery or fixtures that no user
 types, and `allow` is the unverified form for scripts. D-165 (`allow` records a peer

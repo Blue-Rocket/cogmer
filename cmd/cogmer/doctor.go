@@ -226,6 +226,14 @@ func recordProbeNotRun(key string, err error) {
 		Failures: map[string]string{probeCouldNotRun: why}})
 }
 
+// inCloudContainer reports whether this process runs in a Cowork cloud task or another Claude
+// Code cloud session, where the Claude Code is the one Anthropic runs and holds no login the
+// probe session could use. The behavior checks are of the Claude Code on a user's own computer
+// (D-297), so a cloud container records no result and says nothing.
+func inCloudContainer() bool {
+	return os.Getenv("CLAUDE_CODE_REMOTE") == "true" || os.Getenv(cloudKeyVar) != ""
+}
+
 // runChecks is RunChecks, as a variable so a test can stand in for real Claude turns.
 var runChecks = RunChecks
 
@@ -239,7 +247,7 @@ var runChecks = RunChecks
 //
 // Set COGMER_PREFLIGHT=off to skip, which is what CI and the test suite do.
 func EnsureVerified(room string) {
-	if strings.EqualFold(os.Getenv("COGMER_PREFLIGHT"), "off") {
+	if strings.EqualFold(os.Getenv("COGMER_PREFLIGHT"), "off") || inCloudContainer() {
 		return
 	}
 	version := ClaudeVersion()
@@ -248,11 +256,11 @@ func EnsureVerified(room string) {
 	}
 	if v, ok := loadVerifications()[version]; ok && !probeDue(v, time.Now()) {
 		if why, couldNotRun := v.Failures[probeCouldNotRun]; couldNotRun && len(v.Failures) == 1 {
-			fmt.Fprintf(os.Stderr, "cogmer: the Claude Code behavior check could not run on %s (%s); it is tried again after an hour, or run cogmer doctor --host claude\n", version, why)
+			fmt.Fprintf(os.Stderr, "cogmer: the Claude Code behavior check could not run on %s (%s); it is tried again after an hour, or run /cogmer:self-doctor extended\n", version, why)
 		} else if len(v.Failures) > 0 {
 			fmt.Fprintf(os.Stderr, "cogmer: WARNING — Claude Code %s previously failed %d behavior check(s): %s\n",
 				version, len(v.Failures), strings.Join(keysOfStr(v.Failures), ", "))
-			fmt.Fprintln(os.Stderr, "cogmer: run `cogmer doctor` for detail.")
+			fmt.Fprintln(os.Stderr, "cogmer: run /cogmer:self-doctor for detail.")
 		}
 		return
 	}
@@ -282,7 +290,7 @@ func EnsureVerified(room string) {
 			fmt.Fprintf(os.Stderr, "cogmer: FAILED %s (%s): %v\n", r.B.ID, r.B.Title, r.Err)
 		}
 	}
-	fmt.Fprintln(os.Stderr, "cogmer: the room still works, but the failed assumptions above do not hold. Run `cogmer doctor`.")
+	fmt.Fprintln(os.Stderr, "cogmer: the room still works, but the failed assumptions above do not hold. Run /cogmer:self-doctor extended.")
 }
 
 func keysOfStr(m map[string]string) []string {

@@ -2730,6 +2730,12 @@ their machines in one place. `/cogmer:self-machines` opens it.
 machine can reach each, so that a user can see which of their machines are in step
 without opening the page.
 
+`/cogmer:self-doctor` reports at once the versions of the plugin, the program and the daemon,
+whether the daemon answers, and what the check of the host's behaviors recorded, so that a user who
+suspects cogmer is not working learns why inside the session, with no terminal and no turn spent.
+Only its argument `extended` starts the whole check, which drives real turns on the user's own
+subscription, and it starts it in the background so that the session is never held while it runs.
+
 At a terminal, as a separate program, is what operates cogmer rather than what a user
 does: diagnostics that must work when the plugin path is broken, the daemon's own
 lifecycle, this machine's own state, and testing. The comparison also runs at a terminal
