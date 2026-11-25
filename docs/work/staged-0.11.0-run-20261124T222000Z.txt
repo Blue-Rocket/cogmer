@@ -240,3 +240,31 @@ Seen
 Not shown
   Whether the model was given the two events in the intended form, which the log does not say. A
   turn that arrives while the task is awake and mid-reply. A task after a compaction.
+
+Run: 0.11.4 in a Cowork cloud task and in Claude Code and Codex on a Mac, 2026-11-25
+  The candidate was release-0.11.0 at d4622e9 with plugin/VERSION 0.11.4, staged from a clone on the
+  Mac as cef282f, which is Blue-Rocket/cogmer-staging e64b2e9. The user synced the account's
+  marketplace to it. A new cloud task ran /cogmer:self-doctor, /cogmer:self-doctor extended,
+  /cogmer:room-join morning-steppe and /cogmer:self-doctor again. On the Mac, `claude plugin update
+  cogmer@blue-rocket` moved Claude Code 2.1.332 from 0.11.0 to 0.11.4, and `claude -p` ran
+  /cogmer:self-doctor, /cogmer:self-doctor extended and /cogmer:self-doctor bogus. A development
+  build ran `health extended` for Codex 0.159.3 with a throwaway state directory.
+
+Seen
+  In the cloud task, plugin, binary and daemon were all on 0.11.4. The room-join output held no
+  line about a failed behavior check, where 0.11.2 and 0.11.3 had one. The first /cogmer:self-doctor
+  said the daemon was not running, and the third, after the join, said it was. The report said the
+  checks are skipped in a cloud container, and `extended` said the whole check is not run there. Both
+  ended with "Next step: pair with a colleague" although the session was in a room.
+  On the Mac, the first /cogmer:self-doctor after the plugin update ran `health` on the installed
+  0.11.1 program, which printed its usage, and the model said the versions probably disagreed. About
+  20 seconds after that session started the program was 0.11.4, and the same command reported all
+  three versions, no recorded check for the version, and the next step. `extended` started a run that
+  wrote 19 checked, 0 failed to doctor-extended.log, and the next /cogmer:self-doctor reported it.
+  An unknown argument was refused. The Codex report printed the Claude Code run's result, because both
+  hosts shared one log, and each host has a log of its own after the fix. The Codex run passed B25,
+  B26, B27, B28 and B36.
+
+Not shown
+  A Codex session that types $cogmer self-doctor, which needs a model turn in the user's Codex.
+  Cowork on a computer. The extended run on Windows.

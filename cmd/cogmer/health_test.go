@@ -45,7 +45,7 @@ func TestHealthInACloudContainerSaysTheChecksAreNotRunAndRunsNone(t *testing.T) 
 	if got := startExtendedRun(claudeHost{}, time.Now()); !strings.Contains(got, "not run in a cloud container") {
 		t.Errorf("the whole check was started in a cloud container: %q", got)
 	}
-	if _, err := os.Stat(extendedLogPath()); err == nil {
+	if _, err := os.Stat(extendedLogPath(claudeHost{})); err == nil {
 		t.Error("a log was written for a run that was not started")
 	}
 }
@@ -77,16 +77,16 @@ func TestTheWholeCheckStartsInTheBackgroundAndLaterReportsWhatItFound(t *testing
 	}
 	end := time.Now().Add(30 * time.Second)
 	for time.Now().Before(end) {
-		if run, ok := readExtendedRun(); ok && run.Finished {
+		if run, ok := readExtendedRun(claudeHost{}); ok && run.Finished {
 			break
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	got := extendedReport(time.Now())
+	got := extendedReport(claudeHost{}, time.Now())
 	if !strings.Contains(got, "FAIL  B20") || !strings.Contains(got, "2 checked, 1 failed") {
 		t.Errorf("what the whole check found was not reported: %q", got)
 	}
-	if fi, err := os.Stat(extendedLogPath()); err != nil || (runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600) {
+	if fi, err := os.Stat(extendedLogPath(claudeHost{})); err != nil || (runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600) {
 		t.Errorf("the log is not private to the account: %v %v", fi, err)
 	}
 }
@@ -98,20 +98,20 @@ func TestARunThatHasNotFinishedIsLeftAloneUntilItIsTooOldToBeRunning(t *testing.
 	standInForTheWholeCheck(t)
 	now := time.Now()
 	started := func(at time.Time) {
-		if err := os.WriteFile(extendedLogPath(), []byte(extendedStart+at.UTC().Format(time.RFC3339)+"\ncogmer doctor\n"), 0o600); err != nil {
+		if err := os.WriteFile(extendedLogPath(claudeHost{}), []byte(extendedStart+at.UTC().Format(time.RFC3339)+"\ncogmer doctor\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	started(now.Add(-30 * time.Second))
-	if got := extendedReport(now); !strings.Contains(got, "is running") {
+	if got := extendedReport(claudeHost{}, now); !strings.Contains(got, "is running") {
 		t.Errorf("a run 30 seconds old: %q", got)
 	}
 	if got := startExtendedRun(claudeHost{}, now); !strings.Contains(got, "already running") {
 		t.Errorf("a second run was started over the first: %q", got)
 	}
 	started(now.Add(-10 * time.Minute))
-	if got := extendedReport(now); !strings.Contains(got, "did not finish") {
+	if got := extendedReport(claudeHost{}, now); !strings.Contains(got, "did not finish") {
 		t.Errorf("a run 10 minutes old: %q", got)
 	}
 	if got := startExtendedRun(claudeHost{}, now); !strings.Contains(got, "Started the whole check") {
@@ -123,7 +123,25 @@ func TestHealthTakesNoArgumentOrExtended(t *testing.T) {
 	t.Setenv("COGMER_HOME", t.TempDir())
 	// Neither prints a turn's worth of anything, and anything else is refused without starting a run.
 	runHealth([]string{"deep"})
-	if _, err := os.Stat(extendedLogPath()); err == nil {
+	if _, err := os.Stat(extendedLogPath(claudeHost{})); err == nil {
 		t.Error("an unknown argument started a run")
+	}
+}
+
+// One host's run of the whole check says nothing about another's, so each reads only its own log.
+func TestEachHostReadsOnlyItsOwnRunOfTheWholeCheck(t *testing.T) {
+	t.Setenv("COGMER_HOME", t.TempDir())
+	if err := ensureStateDir(); err != nil {
+		t.Fatal(err)
+	}
+	log := extendedStart + time.Now().UTC().Format(time.RFC3339) + "\n2 checked, 1 failed\n"
+	if err := os.WriteFile(extendedLogPath(claudeHost{}), []byte(log), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := extendedReport(claudeHost{}, time.Now()); !strings.Contains(got, "2 checked, 1 failed") {
+		t.Errorf("a host did not read its own run: %q", got)
+	}
+	if got := extendedReport(codexHost{}, time.Now()); got != "" {
+		t.Errorf("Codex was shown the Claude Code run: %q", got)
 	}
 }

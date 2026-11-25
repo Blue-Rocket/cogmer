@@ -15,9 +15,10 @@ import (
 // host's version. `health extended` starts the whole check, which drives real turns, in the
 // background and answers at once, and a later `health` shows what it found.
 const (
-	// extendedLogName holds the output of a background run of the whole check, after a first line
-	// that says when it was started.
-	extendedLogName = "doctor-extended.log"
+	// extendedLogPrefix begins the name of the log that holds the output of a background run of the
+	// whole check, after a first line that says when it was started. Each host has a log of its own,
+	// since one host's result says nothing about another's.
+	extendedLogPrefix = "doctor-extended-"
 	// extendedWithin is how long a run that has not finished is taken to be still running. The
 	// check takes about 20 seconds, so a run past this has died.
 	extendedWithin = 3 * time.Minute
@@ -27,7 +28,9 @@ const (
 // extendedProgram is the program the whole check runs in, as a variable so a test can stand in for it.
 var extendedProgram = os.Executable
 
-func extendedLogPath() string { return filepath.Join(homeDir(), extendedLogName) }
+func extendedLogPath(h Host) string {
+	return filepath.Join(homeDir(), extendedLogPrefix+h.Name()+".log")
+}
 
 // extendedRun is what the log of the whole check says.
 type extendedRun struct {
@@ -37,8 +40,8 @@ type extendedRun struct {
 }
 
 // readExtendedRun reads the log, and reports false when no run was ever started.
-func readExtendedRun() (extendedRun, bool) {
-	b, err := os.ReadFile(extendedLogPath())
+func readExtendedRun(h Host) (extendedRun, bool) {
+	b, err := os.ReadFile(extendedLogPath(h))
 	if err != nil {
 		return extendedRun{}, false
 	}
@@ -117,8 +120,8 @@ func checksReport(h Host) string {
 }
 
 // extendedReport says what the whole check found, or that one is running.
-func extendedReport(now time.Time) string {
-	run, ok := readExtendedRun()
+func extendedReport(h Host, now time.Time) string {
+	run, ok := readExtendedRun(h)
 	switch {
 	case !ok:
 		return ""
@@ -138,7 +141,7 @@ func healthReport(h Host, now time.Time) string {
 	b.WriteString(versionReport(pluginVersion(), version, running, answering))
 	b.WriteString("\nWhat the behavior check recorded:\n")
 	b.WriteString(checksReport(h))
-	b.WriteString(extendedReport(now))
+	b.WriteString(extendedReport(h, now))
 	if m, err := OpenMembership(); err == nil {
 		defer m.Close()
 		if id, err := LoadIdentity(); err == nil {
@@ -160,7 +163,7 @@ func startExtendedRun(h Host, now time.Time) string {
 	if inCloudContainer() {
 		return "The whole check is not run in a cloud container.\n"
 	}
-	if run, ok := readExtendedRun(); ok && !run.Finished && now.Sub(run.Started) < extendedWithin {
+	if run, ok := readExtendedRun(h); ok && !run.Finished && now.Sub(run.Started) < extendedWithin {
 		return "The whole check is already running, started " + run.Started.Format(time.RFC3339) + ".\n"
 	}
 	exe, err := extendedProgram()
@@ -170,7 +173,7 @@ func startExtendedRun(h Host, now time.Time) string {
 	if err := ensureStateDir(); err != nil {
 		return "The whole check could not be started: " + err.Error() + "\n"
 	}
-	f, err := os.OpenFile(extendedLogPath(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+	f, err := os.OpenFile(extendedLogPath(h), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 	if err != nil {
 		return "The whole check could not be started: " + err.Error() + "\n"
 	}
