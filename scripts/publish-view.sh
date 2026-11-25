@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Publishes the static page that reads a cloud session's room to the pages branch of this
 # repository's origin, from which GitHub Pages serves it at
-# https://blue-rocket.github.io/cogmer/view/ (D-301). It replaces that branch with one commit
+# https://blue-rocket.github.io/cogmer/view/ (D-302). It replaces that branch with one commit
 # that holds the built page and nothing else. Run it from a clean checkout of the commit
 # a release was made from.
 set -euo pipefail

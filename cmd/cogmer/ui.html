@@ -125,7 +125,7 @@
 <!-- cogmer:view-hooks -->
 <script>
 // The page the daemon serves has no cogmerView. The static page that reads a cloud session's room
-// defines one before this script runs (D-301): the room, the stream of a path, and the link to a room.
+// defines one before this script runs (D-302): the room, the stream of a path, and the link to a room.
 const VIEW = window.cogmerView || null;
 const ROOM = VIEW ? VIEW.room : (location.pathname.startsWith('/room/') ? decodeURIComponent(location.pathname.slice(6)) : '');
 (function(){

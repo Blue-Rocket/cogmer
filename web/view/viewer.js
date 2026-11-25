@@ -1,4 +1,4 @@
-// The static page that reads a cloud session's room (D-301). It runs before the view's own script,
+// The static page that reads a cloud session's room (D-302). It runs before the view's own script,
 // defines the cogmerView object that script looks for, and fills it with what a browser can do:
 // dial the daemon through the relay with tailcat's WebAssembly build, speak the port's lines over the
 // connection that gives, and poll the daemon's snapshot in place of holding a stream open.

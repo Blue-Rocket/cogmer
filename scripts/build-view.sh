@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the static page that reads a cloud session's room into <output directory> (D-301).
+# Builds the static page that reads a cloud session's room into <output directory> (D-302).
 #
 # The page is the view the daemon serves, cmd/cogmer/ui.html, with web/view/viewer.js added at the
 # place the view marks, and tailcat's browser build, which is built here from the version go.mod

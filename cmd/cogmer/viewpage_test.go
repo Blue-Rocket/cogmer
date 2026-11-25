@@ -8,7 +8,7 @@ import (
 
 // One page is the daemon's view and the static page that reads a cloud session's room, so the hooks
 // that let the second replace the first's connections are in the page and nothing else differs
-// (D-301). Where no cogmerView exists the page opens an EventSource and links to /room/ as before.
+// (D-302). Where no cogmerView exists the page opens an EventSource and links to /room/ as before.
 func TestTheViewPageHasTheHooksTheStaticPageFillsAndKeepsItsOwnWays(t *testing.T) {
 	for what, want := range map[string]string{
 		"the place the build adds the script": "<!-- cogmer:view-hooks -->",
