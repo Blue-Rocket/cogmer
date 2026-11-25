@@ -396,6 +396,7 @@ func (d *Daemon) handlePrompt(w http.ResponseWriter, r *http.Request) {
 	}
 	d.hostCalls.note(host.Name())
 	d.takeNewerPluginValue()
+	req.Prompt = withoutHostReminders(req.Prompt)
 	// A prompt that is a command is answered before anything else, with no lock held
 	// because a command talks to this daemon. It is not a turn of the room, it needs no
 	// room, and it offers nothing (D-209). A host that has no process to run a command in

@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-14 · **Status:** active · **Areas:** capture, commands, hosts
 
-**Decision.** A prompt that begins with its host's command prefix is not captured as a turn of the room. The daemon offers no colleague's turn with it, and does not store what the model says about it at the turn's stop call. The prefix is `/cogmer:` for Claude Code and Cowork and `$cogmer ` for Codex.
+**Decision.** A prompt that begins with its host's command prefix is not captured as a turn of the room. The text its host puts before what the user typed is set aside first (D-300, a prompt is judged and recorded without the text its host puts before what the user typed). The daemon offers no colleague's turn with it, and does not store what the model says about it at the turn's stop call. The prefix is `/cogmer:` for Claude Code and Cowork and `$cogmer ` for Codex.
 
 **Support.**
 - A project command typed in `claude -p` reached the prompt hook with its text as typed, so the prompt would be captured as any other when its session is in a room. `a2f6dde`, B33 (a project or plugin command reaches UserPromptSubmit with the text as typed), B18 (built-in slash commands do not reach UserPromptSubmit).

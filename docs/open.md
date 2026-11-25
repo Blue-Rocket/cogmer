@@ -565,8 +565,6 @@ The options, each with its cost:
 
 A hook's `systemMessage` and a file in the session's outputs folder reach nobody. On 2026-11-19 a plugin's hook returned a `systemMessage` and added a line to a file in `/mnt/attach/outputs` at every prompt of a Cowork cloud conversation, and the transcript recorded each message, but neither Desktop nor the mobile app showed the message or the file, including at a prompt sent from the phone (`a6cffcc:docs/work/host-probe-phone-and-mid-conversation-20261119T051000Z.txt`).
 
-**A Cowork cloud task's captured prompt begins with the host's own `<system-reminder>` text, and colleagues see it.** Both prompts the room recorded from the task began "<system-reminder>The user's timezone is Europe/Lisbon (UTC+00:00). Message sent at Tue 2026-11-24 21:55 local time.</system-reminder>" and then held what the user typed (`docs/work/staged-0.11.0-run-20261124T222000Z.txt`). That puts the user's timezone and the time of each message into the room, and into what a colleague's session is given. The hook's `prompt` field holds the reminder in this host. A leading block of that kind could be removed before a prompt is published, which costs a rule about text a host adds and an entry in the behavior registry that says the host adds it.
-
 ## ChatGPT Work as a host
 
 A user of ChatGPT Work on their own computer shares a conversation with colleagues through the
