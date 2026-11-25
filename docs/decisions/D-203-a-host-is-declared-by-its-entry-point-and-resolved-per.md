@@ -28,7 +28,9 @@ host is for tests, so what a user reads does not describe how to declare one.
   program. `cmd/cogmer/host.go`, `hostVersion`, `cmd/cogmer/host_test.go`,
   `TestAHostVersionIsLookedUpInTheBackgroundAndRefreshed`.
 - A turn with no transcript evidence is counted as delivered only for Claude Code on a version where B20 is
-  recorded as failing, and never for Codex. D-202 (host-specific hooks use the shared peer protocol),
+  recorded as failing, and never for Codex. A Claude Code session that sends no transcript path at all is
+  the exception, and its turns count at the stop call (D-296, a stop call that carries no transcript path
+  counts the turns offered at its prompt as delivered). D-202 (host-specific hooks use the shared peer protocol),
   `cmd/cogmer/host_test.go`, `TestDeliveryWithoutEvidenceIsTrustedOnlyWhereThatHostsCheckFailed`.
 - `create` and `join` write a room and bind the session that ran them, and with no way to name that session
   they would leave a room with nobody in it, so they refuse before writing anything when the host cannot be

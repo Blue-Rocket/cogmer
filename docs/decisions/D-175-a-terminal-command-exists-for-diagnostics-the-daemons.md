@@ -17,8 +17,8 @@ fixture, such as `seed`. Every other command has a slash command.
   fulfills a slash command. `cmd/cogmer/membership_test.go`,
   `TestEverySlashCommandNamesARealSubcommand`.
 - The two words of a pairing must reach a person without passing through the model, and the
-  view shows them without a terminal. D-088 (the pairing ceremony lives in the view, and
-  every pairing gets its own URL).
+  view shows them without a terminal. D-088 (the pairing ceremony lives in the view) and
+  D-180 (every pairing has its own address, and the page names a pairing and never a peer).
 
 **Limits.** `daemon`, `hook`, `probe-hook` and `seed` are machinery or fixtures that no user
 types, and `allow` is the unverified form for scripts. D-165 (`allow` records a peer

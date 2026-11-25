@@ -28,6 +28,7 @@ daemon's browser page).
   naming, never by machinery).
 
 **Limits.** The pairing ceremony itself lives in the view as D-088 (the pairing ceremony
-lives in the view, and every pairing gets its own URL) states.
+lives in the view) states, at an address of its own for each pairing (D-180, every pairing has its own
+address, and the page names a pairing and never a peer).
 
 **Revisit when** the extension model of a second host is known.

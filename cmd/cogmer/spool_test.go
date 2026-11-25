@@ -184,6 +184,11 @@ func TestAPromptHookKeepsItsPromptForAStartingDaemon(t *testing.T) {
 	if entries, _ := os.ReadDir(filepath.Join(home, "spool")); len(entries) != 0 {
 		t.Fatalf("a typed command was written to the spool: %v", entries)
 	}
+	// Nor is one that has the host's reminder before it, as a Cowork cloud task puts before a prompt (D-300).
+	run(hostReminder + "/cogmer:peer-pair ed25519:secretish somebody")
+	if entries, _ := os.ReadDir(filepath.Join(home, "spool")); len(entries) != 0 {
+		t.Fatalf("a typed command after the host's reminder was written to the spool: %v", entries)
+	}
 	if out, errOut := run("words to keep"); out != "" || !strings.Contains(errOut, "daemon unreachable") {
 		t.Errorf("with a fresh start the hook wrote %q to the model and %q to stderr", out, errOut)
 	}
