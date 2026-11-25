@@ -122,8 +122,12 @@
 <div id="notice" hidden></div>
 <main id="feed"><div class="empty">Waiting for the room…</div></main>
 <button id="jump" hidden></button>
+<!-- cogmer:view-hooks -->
 <script>
-const ROOM = location.pathname.startsWith('/room/') ? decodeURIComponent(location.pathname.slice(6)) : '';
+// The page the daemon serves has no cogmerView. The static page that reads a cloud session's room
+// defines one before this script runs (D-301): the room, the stream of a path, and the link to a room.
+const VIEW = window.cogmerView || null;
+const ROOM = VIEW ? VIEW.room : (location.pathname.startsWith('/room/') ? decodeURIComponent(location.pathname.slice(6)) : '');
 (function(){
   const feed=document.getElementById('feed');
 
@@ -332,7 +336,7 @@ const ROOM = location.pathname.startsWith('/room/') ? decodeURIComponent(locatio
 
   let es;
   function connect(){
-    es=new EventSource('/stream?room=' + encodeURIComponent(ROOM));
+    es=VIEW ? VIEW.stream('/stream?room=' + encodeURIComponent(ROOM)) : new EventSource('/stream?room=' + encodeURIComponent(ROOM));
     es.onopen=()=>{document.getElementById('connDot').className='dot live';
                    document.getElementById('connText').textContent='live';};
     es.onmessage=ev=>{const s=JSON.parse(ev.data); draw(s); peers(s.peers);};
@@ -381,7 +385,7 @@ const ROOM = location.pathname.startsWith('/room/') ? decodeURIComponent(locatio
     if(!rooms.length){ list.appendChild(node('div','none','No rooms yet. Create one in a session with /cogmer:room-create, or $cogmer room-create in Codex.')); }
     for(const r of rooms){
       const a=node('a',r.name===ROOM?'here':'');
-      a.href='/room/'+encodeURIComponent(r.name);
+      a.href=VIEW ? VIEW.roomHref(r.name) : '/room/'+encodeURIComponent(r.name);
       const top=node('div','top');
       top.appendChild(node('span','rname',r.name));
       const n=fresh(r);
@@ -403,7 +407,7 @@ const ROOM = location.pathname.startsWith('/room/') ? decodeURIComponent(locatio
     }
   }
   function connect(){
-    const es=new EventSource('/rooms/stream');
+    const es=VIEW ? VIEW.stream('/rooms/stream') : new EventSource('/rooms/stream');
     es.onmessage=m=>{ rooms=JSON.parse(m.data)||[]; render(); };
     es.onerror=()=>{ es.close(); setTimeout(connect,1500); };
   }

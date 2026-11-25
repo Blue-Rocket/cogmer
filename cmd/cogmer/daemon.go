@@ -163,9 +163,12 @@ type Daemon struct {
 	// that knows what the overlay is (D-068).
 	selfCheck func(context.Context) SelfCheck
 	relayNow  func() string
-	selfMu    sync.Mutex
-	selfLast  SelfCheck
-	selfAt    time.Time
+	// viewAddr is the overlay address a page in a browser dials to read the room, set when this
+	// daemon serves the page's port (D-301).
+	viewAddr string
+	selfMu   sync.Mutex
+	selfLast SelfCheck
+	selfAt   time.Time
 
 	// What the watcher has confirmed about reachability through the relay, in memory
 	// like the peer states. failSince is zero while the daemon is reachable.
@@ -233,6 +236,7 @@ func (d *Daemon) LocalRoutes() *http.ServeMux {
 	mux.HandleFunc("/hook/prompt", guardLocal(d.handlePrompt))
 	mux.HandleFunc("/hook/stop", guardLocal(d.handleStop))
 	mux.HandleFunc("/cloud/take", guardLocal(d.handleCloudTake))
+	mux.HandleFunc("/view/link", guardLocal(d.handleViewLink))
 	mux.HandleFunc("/events", d.handleEvents)
 	mux.HandleFunc("/peers", d.handlePeers)
 	mux.HandleFunc("/self", d.handleSelf)

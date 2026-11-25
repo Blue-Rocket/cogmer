@@ -306,15 +306,28 @@ func (a tailcatAddr) String() string  { return string(a) }
 
 // StartTailcat begins listening and returns the endpoint to advertise.
 func StartTailcat() (net.Listener, string, *tailcat.Server, error) {
+	l, endpoint, srv, _, err := StartTailcatWithView(false)
+	return l, endpoint, srv, err
+}
+
+// StartTailcatWithView is StartTailcat, and with view set it serves a second port of the overlay,
+// which a page in a browser reads the room through (D-301), as the listener it returns.
+func StartTailcatWithView(view bool) (net.Listener, string, *tailcat.Server, net.Listener, error) {
 	k, err := loadTailcatKey()
 	if err != nil {
-		return nil, "", nil, err
+		return nil, "", nil, nil, err
 	}
 	l := &connListener{conns: make(chan net.Conn), closed: make(chan struct{})}
+	var v *connListener
+	last := uint16(tailcatPort)
+	if view {
+		v = &connListener{conns: make(chan net.Conn), closed: make(chan struct{})}
+		last = viewPort
+	}
 
 	region, rerr := loadTailcatRegion()
 	if rerr != nil {
-		return nil, "", nil, rerr
+		return nil, "", nil, nil, rerr
 	}
 	s := &tailcat.Server{
 		Key:    k,
@@ -338,30 +351,39 @@ func StartTailcat() (net.Listener, string, *tailcat.Server, error) {
 		// something is wrong. The packet filter drops without a reply, so a client
 		// dialing anything else times out; OnTCP returning nil sends a reset, which
 		// says "not here" promptly.
-		ServedTCPPorts: []filter.PortRange{{First: tailcatPort, Last: tailcatPort}},
+		ServedTCPPorts: []filter.PortRange{{First: tailcatPort, Last: last}},
 		OnTCP: func(port uint16) func(net.Conn) {
-			if port != tailcatPort {
+			target := l
+			switch {
+			case port == tailcatPort:
+			case port == viewPort && v != nil:
+				target = v
+			default:
 				return nil
 			}
 			return func(c net.Conn) {
 				select {
-				case l.conns <- c:
-				case <-l.closed:
+				case target.conns <- c:
+				case <-target.closed:
 					c.Close()
 				}
 			}
 		},
 	}
 	if err := s.Start(); err != nil {
-		return nil, "", nil, err
+		return nil, "", nil, nil, err
 	}
 	addr := string(s.TailcatAddr())
 	if addr == "" {
 		s.Close()
-		return nil, "", nil, errors.New("tailcat started but published no address")
+		return nil, "", nil, nil, errors.New("tailcat started but published no address")
 	}
 	l.addr = tailcatAddr(addr)
-	return l, Endpoint{Scheme: schemeTailcat, Value: addr}.String(), s, nil
+	if v != nil {
+		v.addr = l.addr
+		return l, Endpoint{Scheme: schemeTailcat, Value: addr}.String(), s, v, nil
+	}
+	return l, Endpoint{Scheme: schemeTailcat, Value: addr}.String(), s, nil, nil
 }
 
 // loadTailcatRegion pins the relay this node publishes.

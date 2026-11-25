@@ -37,3 +37,8 @@ take this session, so they enter it from another session.
 If the output says they are not in a room or that something failed, say what it said
 and stop. Do not run the command again: creating a room twice makes two rooms, and
 the second is indistinguishable from the first to everyone but them.
+
+If the output has a line that begins "Read this room in your browser", give the link whole, on a line
+of its own, and say in a sentence that anyone who has it can read the room while this session's
+daemon is awake and that the page says when it is asleep. It is how a user of a cloud session reads
+what their colleagues said, since the page of the room cannot be opened from here.

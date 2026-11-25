@@ -301,6 +301,9 @@ func sessionRoom(m *Membership) Room {
 // "watch this room" on a machine with no rooms at all, which is an invented fact in
 // the one line whose job is to send somebody somewhere.
 func watchLine(room string) string {
+	if inCloudContainer() {
+		return cloudWatchLine(room)
+	}
 	if room == "" {
 		return fmt.Sprintf("the room view is at http://%s — it will list rooms once you create or join one", addr())
 	}
@@ -544,7 +547,7 @@ func runDaemon() {
 	advertised := peerAddr()
 	var tcListener net.Listener
 	if tailcatEnabled() {
-		l, endpoint, srv, err := StartTailcat()
+		l, endpoint, srv, viewL, err := StartTailcatWithView(inCloudContainer())
 		if err != nil {
 			log.Printf("  tailcat unavailable (%v) — reachable only at %s", err, peerAddr())
 		} else {
@@ -554,6 +557,12 @@ func runDaemon() {
 			d.relayNow = newRelayProbe(srv)
 			defer l.Close()
 			defer srv.Close()
+			if viewL != nil {
+				defer viewL.Close()
+				d.viewAddr = strings.TrimPrefix(endpoint, schemeTailcat+"://")
+				go d.ServeView(viewL)
+				log.Printf("  browser view  port %d of the overlay, for a page that holds the link's token", viewPort)
+			}
 		}
 	}
 	// Recorded so that `whoami` and `invite` -- separate processes -- publish the

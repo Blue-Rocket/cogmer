@@ -56,3 +56,8 @@ suggest the fault is in this session: the colleague's daemon is the likely place
 Give them the watch address from above verbatim. It is a link they open in a
 browser and leave open beside this session, not something to summarize — the room
 is read there, and this session is read here.
+
+If the output has a line that begins "Read this room in your browser", give the link whole, on a line
+of its own, and say in a sentence that anyone who has it can read the room while this session's
+daemon is awake and that the page says when it is asleep. It is how a user of a cloud session reads
+what their colleagues said, since the page of the room cannot be opened from here.

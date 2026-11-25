@@ -49,6 +49,8 @@ var outboundCalls = map[site]struct {
 	{"bridge.go", "http.Client"}:                   {1, "the daemon on loopback, for the Cowork bridge's relay of a hook's call"},
 	{"main.go", "http.Client"}:                     {6, "the daemon on loopback, for the hooks, the commands, its list of peers and its self-check, when each host last called, and a health probe of one address"},
 	{"main.go", "http.Get"}:                        {0, ""},
+	{"viewer.go", "http.NewRequest"}:               {1, "a request made in memory to run one of the daemon's own read routes for a page, which sends nothing"},
+	{"viewer.go", "http.Client"}:                   {1, "the daemon on loopback, for a cloud session's command to ask for the link to its room"},
 	{"transport.go", "http.Client"}:                {2, "a peer, over TLS pinned to its key, by TCP or the overlay"},
 	{"sync.go", "http.Client"}:                     {1, "the peer client it is handed, which is the one above"},
 	{"verify.go", "http.Client"}:                   {1, "the peer client it is handed, which is the one above"},
