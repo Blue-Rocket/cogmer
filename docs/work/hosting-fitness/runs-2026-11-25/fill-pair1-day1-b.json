@@ -1,0 +1,77 @@
+{
+ "run": {
+  "name": "smoke-fill2",
+  "shape": "pair1",
+  "n": 2,
+  "days": [
+   1
+  ],
+  "idle_s": 300,
+  "per_room_per_day": 1440,
+  "build": {
+   "commit": "b91c1522e8fb6319f4cf28e105d9626b631bba4a",
+   "dirty": false,
+   "built": "2026-11-25T10:47:35Z"
+  },
+  "started": "2026-11-25T19:18:37Z"
+ },
+ "seed_sizes": {
+  "u00": {
+   "rooms_db": 77824,
+   "rooms_wal": 0,
+   "membership": 365560,
+   "other": 1969,
+   "total": 445353
+  },
+  "u01": {
+   "rooms_db": 0,
+   "rooms_wal": 0,
+   "membership": 410880,
+   "other": 2078,
+   "total": 412958
+  }
+ },
+ "errors": [],
+ "checkpoints": [
+  {
+   "days": 1,
+   "turns_per_room": 1441,
+   "turns_per_daemon": {
+    "u00": 1441,
+    "u01": 1441
+   },
+   "write_s": 187.3,
+   "turn_write_s": {
+    "median": 0.125,
+    "p95": 0.209
+   },
+   "delivered": 1,
+   "rooms": 1,
+   "delivery_max_s": 1.645,
+   "sizes": {
+    "u00": {
+     "rooms_db": 11739136,
+     "rooms_wal": 4309360,
+     "membership": 4324832,
+     "other": 236514,
+     "total": 20609842
+    },
+    "u01": {
+     "rooms_db": 11661312,
+     "rooms_wal": 4292880,
+     "membership": 4324832,
+     "other": 236448,
+     "total": 20515472
+    }
+   },
+   "idle": {
+    "cpu_s_per_h": 530.25,
+    "pss_mb": 60.16,
+    "loop_sent_per_h": 20688412.0,
+    "disk_write_per_h": 29968013048.0
+   },
+   "idle_windows_disagree": false,
+   "exited": []
+  }
+ ]
+}
