@@ -222,3 +222,21 @@ Not shown
   Whether the model was given the two events at the second ping in the intended form, which the log
   does not say. A task after a compaction, and a task that idles long enough for its daemon to sleep
   and wake between prompts that offer turns.
+
+Run: 0.11.3 in the same task after its daemon slept, 2026-11-25 (10:24 to 10:28 UTC)
+  The Mac's log showed the task's peer unreachable from 10:24:11, which is the daemon asleep. At
+  about 10:27 a turn written on the Mac as a colleague's was added to the room, and then, in the
+  task, "Reply with only the word PING-C.", "Reply with only the word PING-D." and a request to print
+  the sandbox's daemon.log lines.
+
+Seen
+  The sandbox's daemon.log showed the first prompt after the sleep as "kept while the daemon started,
+  nothing offered" at 10:27:50, then "spool: 1 prompt(s) kept for this daemon recorded, 0 not
+  recorded". The second prompt showed "offered=2 events" at 10:28:11, which are the Mac turn's prompt
+  and reply, followed by "no transcript path from session a761a878, so 2 event(s) offered at its
+  prompt are counted delivered at stop". The third showed "offered=0 events". The replies to both
+  pings are in the Mac's room, and so is the held prompt.
+
+Not shown
+  Whether the model was given the two events in the intended form, which the log does not say. A
+  turn that arrives while the task is awake and mid-reply. A task after a compaction.
