@@ -565,6 +565,19 @@ func (d *Daemon) handleStop(w http.ResponseWriter, r *http.Request) {
 // confirmDelivery derives §19 delivery state from what the transcript shows
 // the model actually received, rather than from the fact that a hook was called.
 func (d *Daemon) confirmDelivery(store *Store, req stopReq, host Host) {
+	// A Claude Code session whose hooks send no transcript path, as a Cowork cloud task's do,
+	// has no evidence to read. Its stop call for a prompt counts the turns offered at that
+	// prompt as delivered, so that the next prompt is not given the whole room again (D-296).
+	if _, claude := host.(claudeHost); claude && req.TranscriptPath == "" {
+		d.mu.Lock()
+		defer d.mu.Unlock()
+		if n, err := store.CommitPending(req.SessionID, req.PromptID); err != nil {
+			log.Printf("delivery: commit at stop failed: %v", err)
+		} else if n > 0 {
+			log.Printf("delivery: no transcript path from session %.8s, so %d event(s) offered at its prompt are counted delivered at stop", req.SessionID, n)
+		}
+		return
+	}
 	blocks, err := host.InjectedBlocks(req.TranscriptPath)
 	if err != nil {
 		log.Printf("delivery: transcript unreadable (%v); nothing confirmed", err)

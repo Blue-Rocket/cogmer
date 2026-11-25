@@ -2058,6 +2058,11 @@ If Codex records no matching evidence, the turns remain pending and are offered
 again at the next prompt. A failed host behavior check cannot confirm delivery
 to a Codex session.
 
+A Claude Code session whose host sends no transcript, as a Cowork task in the cloud does,
+has no recorded context to confirm from. Its turns count as delivered when the completion
+hook for the prompt that offered them arrives, so that a colleague's turn is not offered
+at every prompt of that session.
+
 The whole room is never injected again. The exception is a session that joins a room
 already in progress, which receives the room from its beginning, the room's and not
 any member session's, because a room is bounded by the work it was created for.

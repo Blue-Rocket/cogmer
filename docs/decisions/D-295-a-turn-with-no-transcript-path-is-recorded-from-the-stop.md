@@ -13,6 +13,6 @@
 - *Searching the sandbox for the session's transcript.* A search for a file named for the session found none, and the one transcript under `~/.claude/projects` was the behavior check's.
 - *Recording nothing for a reply when it is only partial.* A colleague who reads a prompt with no answer cannot tell whether the model answered.
 
-**Limits.** Text before a tool call and the count of tool calls are not recorded for such a turn. No transcript shows what the model was given, so delivery cannot be confirmed by it (D-014, delivery state is derived from transcript evidence), and what that does to a colleague's turns offered to such a session is not known.
+**Limits.** Text before a tool call and the count of tool calls are not recorded for such a turn. No transcript shows what the model was given, so delivery cannot be confirmed by it (D-014, delivery state is derived from transcript evidence), and such a session's delivery is counted at the stop call (D-296, a stop call that carries no transcript path counts the turns offered at its prompt as delivered).
 
 **Revisit when** the Cowork cloud runtime sends a transcript path, or a check of that host's hooks records the path as present.
