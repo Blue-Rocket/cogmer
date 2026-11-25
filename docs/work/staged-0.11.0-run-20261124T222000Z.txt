@@ -288,3 +288,21 @@ Seen
 Not shown
   The Codex report after a run finishes, which the change that follows this record makes the process
   that started the run write a closing line for. A Codex session that types $cogmer self-doctor.
+
+Run: 0.11.6 in Claude Code and Codex on a Mac, 2026-11-25 (about 16:44 UTC)
+  The candidate was release-0.11.0 at 560b38f with plugin/VERSION 0.11.6, staged from a clone on the
+  Mac as d4b73c5, which is Blue-Rocket/cogmer-staging b1de3cd. The user synced the account's
+  marketplace. `claude plugin update` moved the plugin from 0.11.5 to 0.11.6, and after the program
+  was fetched `health extended` ran for Claude Code through `claude -p` and for Codex 0.159.3 from the
+  installed program.
+
+Seen
+  With the plugin at 0.11.6 and the program at 0.11.5, the first report said the binary was older than
+  the plugin expects. The Codex log ended in "The whole check finished." about 21 seconds after it
+  started, and the Codex report then read "5 checked, 0 failed" and passed every check, where the
+  0.11.5 report had stayed at running. The Claude Code run passed 19 of 19, and its report said the
+  check had already run.
+
+Not shown
+  A Codex session that types $cogmer self-doctor, which needs a model turn in the user's Codex.
+  A Codex run whose probe cannot run, and Cowork on a computer.
