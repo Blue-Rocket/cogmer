@@ -86,3 +86,9 @@ Not shown
   Why the 22:33 page did not leave its banner after a message was sent. That page was one of the
   versions before bd29c0f or a copy of one, and it was not reproduced. Whether the current page, opened
   while the session is asleep and then woken, recovers in Safari. A phone, and a pasted image.
+
+  The user said afterwards that the failing attempt at 22:33 was the link opened without first sending the
+  session a message, so its daemon was asleep, and that the 22:39 attempt came after a message was sent.
+  The case that did not recover is therefore a page opened while the session sleeps and then woken, on a
+  page from before bd29c0f. The current page has recovered from that case in Chrome and has not been
+  run through it in Safari.
