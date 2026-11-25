@@ -200,3 +200,25 @@ Seen
 Not shown
   What is inside sessions, session-env, environment-manager and rm-guard. Whether a Claude Code
   cloud session that is not a Cowork task sends a transcript path.
+
+Run: 0.11.3 in a Cowork cloud task, 2026-11-25 (about 10:17 to 10:22 UTC)
+  The candidate was release-0.11.0 at 38ecde4 (D-296) with plugin/VERSION 0.11.3, released and staged
+  by scripts/stage.sh from a clone of its own on the droplet as 1f45b16, which is
+  Blue-Rocket/cogmer-staging f3d9ecb. The account's marketplace was synced to it by the user. A new
+  task started from claude.ai/new with /cogmer:self-status, then /cogmer:room-join morning-steppe, on
+  Claude Code 2.1.332. Prompts: "Reply with only the word PING-A.", then a turn written on the Mac as
+  a colleague's, then "Reply with only the word PING-B.", then a request to print the sandbox's
+  daemon.log lines.
+
+Seen
+  The task reported plugin, binary and daemon all on 0.11.3. The sandbox's daemon.log showed, at the
+  first ping, "offered=32 events" (the room's whole history, given to a session that had just
+  joined), then "delivery: no transcript path from session a761a878, so 32 event(s) offered at its
+  prompt are counted delivered at stop". At the second ping it showed "offered=2 events" (the Mac turn's
+  prompt and reply) and the same line for 2. At the third prompt it showed "offered=0 events". Both
+  replies reached the Mac's room as ASSISTANT_MESSAGE events with the text PING-A and PING-B.
+
+Not shown
+  Whether the model was given the two events at the second ping in the intended form, which the log
+  does not say. A task after a compaction, and a task that idles long enough for its daemon to sleep
+  and wake between prompts that offer turns.
