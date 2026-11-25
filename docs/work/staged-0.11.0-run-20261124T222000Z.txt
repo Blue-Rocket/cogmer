@@ -306,3 +306,22 @@ Seen
 Not shown
   A Codex session that types $cogmer self-doctor, which needs a model turn in the user's Codex.
   A Codex run whose probe cannot run, and Cowork on a computer.
+
+Run: the Mac's room database after the 0.11.4 and 0.11.5 cloud tasks, 2026-11-25 (read at about 17:00 UTC)
+  The database of morning-steppe on the Mac, read with sqlite3 read-only, after cloud tasks on 0.11.2 to
+  0.11.5 had joined the room and typed commands in it. In the 0.11.5 task `/cogmer:room-log` was typed
+  and the model was then asked to show the last 6 turns as recorded.
+
+Seen
+  Of 32 USER_PROMPT events, 24 begin with "<system-reminder>The user's timezone is Europe/Lisbon
+  (UTC+00:00). Message sent at ..." and are the prompts of cloud tasks. Three of them hold a command
+  after the reminder: /cogmer:self-doctor at 13:01:12, /cogmer:self-doctor at 14:04:54 and
+  /cogmer:room-log at 16:51:12. Each was typed after its task had joined the room, and the commands
+  typed before joining are not in the room. The reply to the 13:01:12 command is an ASSISTANT_MESSAGE
+  in the room, and the model's reply to the request for the last 6 turns holds turns of the room.
+  The code in cmd/cogmer/command.go at d59f5fd, parseTypedCommand, trims the prompt and then requires
+  that it begin with the command prefix, which a prompt that begins with the reminder does not.
+
+Not shown
+  Whether a host other than a Cowork cloud task puts text before the prompt, and what the first
+  prompt of a task holds when it is only the reminder.
