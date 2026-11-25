@@ -27,8 +27,15 @@ if [ "$(grep -cF -- "$marker" "$root/cmd/cogmer/ui.html")" != 1 ]; then
   echo "ui.html does not hold the marker exactly once" >&2
   exit 1
 fi
-awk -v marker="$marker" '
-  $0 == marker { print "<script src=\"wasm_exec.js\"></script>"; print "<script src=\"viewer.js\"></script>"; next }
+policy=$(cat "$root/web/view/policy.txt")
+awk -v marker="$marker" -v policy="$policy" '
+  $0 == marker {
+    print "<meta http-equiv=\"Content-Security-Policy\" content=\"" policy "\">"
+    print "<meta name=\"referrer\" content=\"no-referrer\">"
+    print "<script src=\"wasm_exec.js\"></script>"
+    print "<script src=\"viewer.js\"></script>"
+    next
+  }
   { print }
 ' "$root/cmd/cogmer/ui.html" > "$out/index.html"
 echo "built the page in $out ($(du -h "$out/main.wasm" | cut -f1) of WebAssembly)"
