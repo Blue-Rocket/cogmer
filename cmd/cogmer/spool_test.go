@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -210,5 +211,53 @@ func TestTheSessionStartHookMarksThatADaemonIsStarting(t *testing.T) {
 	// The function returns before the stand-in daemon has run, so the marker is there at once.
 	if fi, err := os.Stat(filepath.Join(home, "daemon-starting")); err != nil || time.Since(fi.ModTime()) > spoolMarkerFresh {
 		t.Errorf("the session-start hook left no fresh marker that a daemon is starting: %v", err)
+	}
+}
+
+// A Cowork cloud task sends transcript_path as an empty string, and its replies were refused for
+// not having a .jsonl name. With no path there is no transcript, so the turn is the Stop hook's
+// last message, and a path that is given but is not a transcript is still refused (D-262).
+func TestAReplyWithNoTranscriptPathIsRecordedFromTheLastMessage(t *testing.T) {
+	d, room, _ := promptRoom(t, false)
+	stop := func(path, message string) {
+		t.Helper()
+		b, _ := json.Marshal(stopReq{Host: "claude", SessionID: "s", PromptID: "p1", TranscriptPath: path, LastAssistantMessage: message})
+		r := httptest.NewRequest(http.MethodPost, "/hook/stop", bytes.NewReader(b))
+		r.Header.Set(localGuardHeader, localGuardValue)
+		w := httptest.NewRecorder()
+		d.LocalRoutes().ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("/hook/stop: %d %s", w.Code, w.Body.String())
+		}
+	}
+	replies := func() []string {
+		store, err := d.storeFor(room.RoomID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		evs, err := store.ListRoom(room.RoomID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, e := range evs {
+			if e.EventType == EventAssistantMessage {
+				out = append(out, e.Content)
+			}
+		}
+		return out
+	}
+
+	stop("", "  the final words  ")
+	if got := replies(); len(got) != 1 || got[0] != "the final words" {
+		t.Fatalf("with no transcript path the room holds the replies %q, want the last message", got)
+	}
+	stop("", "")
+	if got := replies(); len(got) != 1 {
+		t.Errorf("an empty last message was recorded: %q", got)
+	}
+	stop("/some/where/transcript.json", "not recorded")
+	if got := replies(); len(got) != 1 {
+		t.Errorf("a path that is not a .jsonl transcript was read or recorded: %q", got)
 	}
 }

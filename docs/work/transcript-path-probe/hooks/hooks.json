@@ -1,0 +1,8 @@
+{
+  "description": "Records the form of transcript_path at three events into /tmp/cogmer-path-probe.log, and writes nothing to the session.",
+  "hooks": {
+    "SessionStart": [{"hooks": [{"type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/record.sh\" SessionStart"}]}],
+    "UserPromptSubmit": [{"hooks": [{"type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/record.sh\" UserPromptSubmit"}]}],
+    "Stop": [{"hooks": [{"type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/record.sh\" Stop"}]}]
+  }
+}

@@ -125,6 +125,16 @@ Later the same night, with a browser
   "offered=17 events". No ASSISTANT_MESSAGE line appeared, so the task's replies were still not
   captured.
 
+The transcript path in a Cowork cloud task, read by a probe plugin
+  A plugin of three hooks, docs/work/transcript-path-probe/, uploaded to the account as a personal
+  plugin at about 07:12Z on 2026-11-25 and loaded by a new task, wrote to /tmp/cogmer-path-probe.log the
+  fields of each hook's JSON and the form of transcript_path, never a prompt or a reply. The task
+  printed it on request. At SessionStart the fields were cwd, hook_event_name, session_id, source
+  and transcript_path. At UserPromptSubmit they were cwd, hook_event_name, permission_mode, prompt,
+  prompt_id, session_id and transcript_path. At Stop they were background_tasks, cwd, effort,
+  hook_event_name, last_assistant_message, permission_mode, prompt_id, session_crons, session_id,
+  stop_hook_active and transcript_path. At all three, transcript_path was the empty string.
+
 Seen
   The README route installs and runs on a clean Mac in Claude Code with no restart, and the
   first-install line showed at the second prompt. The account's copy of the plugin and the one

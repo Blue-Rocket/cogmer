@@ -1766,8 +1766,8 @@ Anything said before a tool was called is missing, and narrating before acting i
 ordinary shape of a turn, so publishing that value alone would lose part of most
 substantive responses.
 
-The transcript on disk, read when that hook fires, lacks that final block, because
-the hook runs before the closing record is written.
+The transcript on disk, read when that hook fires, lacks that final block on a Claude Code
+version that writes the closing record after the hook runs.
 
 The two omissions are complementary, and together they make the whole turn:
 
@@ -1776,6 +1776,10 @@ transcript, read at completion   →  every block except the last
 turn-completion hook             →  the last block
 union                            →  the complete turn
 ```
+
+A Claude Code session whose host sends no transcript, as a Cowork task in the cloud does,
+is recorded from the hook's final text block alone. A colleague sees the closing text of each
+response, and nothing said before a tool was called, and no count of tool calls.
 
 ## The union tolerates the hook being fixed
 
