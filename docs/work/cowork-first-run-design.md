@@ -42,16 +42,31 @@ computer can have a passkey sign for it through a page under `cogmer.ai`.
 
 ## The route
 
+A user whose first session after installing is a cloud session needs a machine of their own to hold
+their identity, serve their lists to each task (D-245, a cloud session takes its user's lists only from one
+of the user's machines) and keep the turns their tasks write, since a task keeps nothing past its sandbox
+(spike C). cogmer provides hosted machines (D-285, a user with no computer of their own has a machine
+hosted for them), and onboarding suggests one to such a user beside the choice of a computer of their own.
+Whether the hosted machine is the default is not decided.
+
 1. The user installs the cogmer plugin on their account (D-290, cogmer reaches a Cowork cloud session as
    the marketplace plugin installed on the user's Claude account).
 2. In a task, the user runs `/cogmer:start`. The task's daemon starts with no secret of the user's, makes
    its session key, and the command prints the link to the cloud page (D-302, a cloud session's room is
    read on a static page) with a token made for this task.
-3. The user opens the link and answers the passkey prompt. The page derives the user's cloud key from the
-   passkey's PRF secret, certifies the task's session key with it, and sends the task the certificate, the
-   cloud key's own chain and what the task needs to reach the user's machines.
-4. The task speaks for the user in their rooms, as a task with an uploaded value does today. A new task
-   needs steps 2 and 3 again, since nothing persists between tasks.
+3. The first time, the page asks where the user's identity will live, suggesting a hosted machine:
+   - A hosted machine: the page registers the user's passkey, and the hosted machine is made with the
+     user's identity and certifies the passkey, in one step.
+   - A computer of their own: the page gives one line to paste into Claude Code or Codex on the computer,
+     which installs cogmer there and opens its machines page, where the identity is made and the passkey
+     registered through the page under `cogmer.ai` (spike F).
+4. The user answers the passkey prompt, and the page certifies the task's session key: by an assertion of
+   the passkey in the signing variant of Draft 1, or with a cloud key it derives from the passkey in Draft 1
+   as written. It sends the task the certificate and what the task needs to reach the user's machines. A
+   user at their own computer can instead approve the task on its machines page, which certifies it with no
+   passkey.
+5. The task speaks for the user in their rooms, as a task with an uploaded value does today. A new task
+   needs steps 2 and 4 again, since nothing persists between tasks.
 
 On a Team plan an owner still allows the hosts the task's daemon reaches. A user who would rather have
 tasks start with no tap keeps the uploaded value (D-278, the machines page offers the cloud value as a
