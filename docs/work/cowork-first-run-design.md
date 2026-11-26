@@ -84,7 +84,10 @@ holds the user's shared key, as a cloud key is certified today (D-246, a cloud e
 machines page; D-216, a cloud session signs with a key of its own that the user's shared key vouches for).
 A receiver checks the assertion's signature with that key, that its site is `cogmer.ai`, that the
 authenticator confirmed the user with Face ID, a fingerprint or a PIN, and that the page it came from is
-the cloud page, before it accepts the session key. From then on the task renews its certificate every two
+the cloud page, before it accepts the session key. The
+task sends the passkey's certificate with its events, as a machine sends its own (D-219, a user is a master
+key that certifies machines through a shared key), and the page gives it to the task from its memory or
+from the directory of Draft 4, with the addresses of the user's machines. From then on the task renews its certificate every two
 to four hours from whichever of the user's durable machines it reaches, hosted or their own computer, each
 of which holds the shared key and certifies the session key for three days more. A task that reaches none
 before its certificate ends stops publishing, keeps capturing its turns, and says that sharing is paused
@@ -166,37 +169,46 @@ Limits. cogmer runs the host, and its trust is the trust D-302's Limits give the
 
 Revisit when cogmer gives up the domain.
 
-## Draft 4: cogmer runs a directory of users' machine addresses that it cannot read
+## Draft 4: the cloud page remembers the user's machines, and a directory cogmer runs answers when it cannot
 
-Decision. cogmer runs a directory under `cogmer.ai` that holds, for each user whose machines write one, a
-record of the addresses of the user's machines, signed by one of them, stored under a hash of the user's
-identifier and encrypted under a key derived from the identifier. Whoever knows the identifier reads the
-record and checks its signature as they check any record of the user's: the user's colleagues, who hold the
-identifier from pairing, and the user's own tasks, whose passkey returns it as its user handle at every
-sign-in. A task that the passkey certified away from the user's computer finds the computer this way and
-takes its lists and renewals from it when it answers, and a colleague finds a machine the user added since
-they last spoke. The directory sees hashes, sealed records, and where each request comes from, and holds
-no name, so a user is found only by someone who already has their identifier, as D-142 (identities are
-exchanged through pairing strings, with no directory) has it. Machine addresses hold no secret (D-104, the
-overlay address holds no secret and is the same at every start), and a record that does not verify is
-ignored, so the directory can withhold a record or serve an old one and can never send a reader to a
-machine that is not the user's. Every path works without it, as before it existed.
+Decision. The cloud page keeps, in its own storage on each device, the addresses of the user's machines,
+which it reads from any task it is open on that has reached one of them, and gives them to a new task with
+its first certificate, so a task started away from the user's computer reaches the computer when it answers.
+Where the page holds none, on a new device, after its storage is cleared, or when an address has changed,
+it asks a directory that cogmer runs under `cogmer.ai`, which holds for each user a record of their
+machines' addresses with each machine's certificate chain and the passkey's certificate, signed by one of their machines and stored
+under the user's identifier. The directory takes a write only when the chain leads to that identifier, as
+any machine checks a record of the user's, and a reader checks the record the same way, so the directory
+can withhold a record or serve an old one and never send a reader to a machine that is not the user's. It
+holds no name, so a user is found only by someone who already has their identifier, as D-142 (identities
+are exchanged through pairing strings, with no directory) has it, and it keeps no log of requests and only
+the latest record of each user. The page reads the user's identifier from the passkey's user handle, which
+holds up to 64 bytes and comes back at every sign-in on every device, and the user's colleagues hold it
+from pairing, so a colleague also finds a machine the user added since they last spoke. A user with a
+hosted machine needs neither, since the user handle names the hosted machine.
 
 Rejected.
+- *A directory that cannot tell whose record it holds.* Storing records under a hash, sealing them, and
+  refusing other writers without the identifier needs a write key derived from the shared key, a new
+  identity record to publish it and a pointer to follow when the shared key changes, to hide from cogmer
+  what the relays already see: which machines reach which (D-192, the public relay is an accepted
+  dependency).
+- *A mailbox at `cogmer.ai` that carries the certificate from a small passkey page to the task.* It kept
+  the cloud page's module out of the passkey step, and the module's cost is paid once on each device: an
+  iPhone's first open took 19.6 seconds to its first data and its second 1.6 (`docs/open.md`, the item on
+  the page that reads a cloud session's room).
 - *A directory that maps a name or an email address to a user's key.* Anyone could ask it whether someone
   uses cogmer, and it reverses D-142, which the open item on reaching a user by a handle weighs on its own.
 - *Carrying the computer's addresses in the passkey's `largeBlob`.* Most passkey providers decline it, and
   none is documented to sync it (the question on where a task learns how to reach its user's machines).
-- *A lookup on a relay cogmer runs.* It needs the relay the open item on a relay change weighs, and a relay
-  sees every connection's metadata, where a directory sees only lookups.
 
-Limits. The directory learns which hashed identifiers are looked up, when, and from where, which for a
-cloud task is an address of Anthropic's (spike C) and for a colleague is their own. Its records are sealed
-by a key that any holder of the identifier derives, so they are as private as the identifier, which every
-colleague of the user holds. It is a component cogmer runs, which D-115 (a centralized component must trace
-to a disclosed tradeoff that benefits the person) admits only for a benefit to the user, recorded and
-disclosed: here, cloud tasks that reach the user's computer and colleagues who reach the user's new
-machines, said in the README's account of what leaves the user's machine.
+Limits. The directory learns each user's identifier, machines and addresses, and who looks a user up and
+when, which for a cloud task is an address of Anthropic's (spike C) and for a colleague is their own. It is
+a component cogmer runs, which D-115 (a centralized component must trace to a disclosed tradeoff that
+benefits the person) admits only for a benefit to the user, recorded and disclosed: here, tasks that reach
+the user's computer from any device and colleagues who reach the user's new machines, said in the README's
+account of what leaves the user's machine, with its promise to log nothing. The page's memory is per
+device and per browser, and a private tab keeps none.
 
 Revisit when the passkey providers most users hold carry data with a passkey to every device, so that a
 task could take its user's addresses from the passkey.
@@ -214,8 +226,8 @@ task could take its user's addresses from the passkey.
     every sign-in on every device, names the hosted machine, whose name under `cogmer.ai` the page reaches
     from any device.
   - A user whose only machine is a computer, away from it, gets the first certificate from the passkey, and
-    the passkey's user handle holds the user's identifier, from which the page finds the computer in the
-    directory of Draft 4. A machine's overlay address is about 186 characters
+    the page gives the task the computer's addresses from its memory, or from the directory, by the user's
+    identifier, which the passkey's user handle holds (Draft 4). A machine's overlay address is about 186 characters
     (`docs/work/cloud-run-20261025T171545Z.txt`), more than a user handle holds itself.
   The passkey's `largeBlob` extension, which stores up to a few kilobytes with a passkey, could carry the
   computer's addresses, and is not designed around. On 2026-11-26 the sources read said that iCloud
@@ -281,15 +293,10 @@ task could take its user's addresses from the passkey.
   reaches each colleague (D-225, a machine sends each removal and new shared key to every colleague it
   knows until each acknowledges). Onboarding does not offer it; the machines page does, for a user who
   needs it.
-- How Draft 4's directory refuses a write from anyone but the user's machines without reading the record.
-  A colleague holds the user's identifier, so a directory that took any write under its hash would let a
-  colleague fill the user's place with records that readers then discard. Checking a write against the
-  user's chain shows the directory the identifier, which the hash hides. A key that only the user's
-  machines derive, from the shared key, could sign every write, with the directory keeping the first such
-  key it sees under each hash and taking later writes only under it; whoever writes first under a hash then
-  holds it, and a colleague who wrote first would keep the user out, though never be taken for them.
-  Publishing that key's hash in one of the user's signed identity records and making it part of the place's
-  name would let the directory refuse anyone else, at the cost of a new identity record.
+- What the blank page on an iPad was. The cloud page carries the passkey step and the user's machines'
+  addresses in these drafts, and once, after a long switch away, an iPad showed a blank page that a reload
+  did not clear, which has not come back and is not explained (`docs/open.md`, the item on the page that
+  reads a cloud session's room). It is to be found before the page carries them.
 - Which earlier decisions Drafts 1 and 3 change in part. D-216 (a cloud session signs with a key of its own
   that the user's shared key vouches for) names the cloud key as the one secret given to the environment,
   and D-302 (a cloud session's room is read on a static page) serves the page from GitHub Pages, so each
