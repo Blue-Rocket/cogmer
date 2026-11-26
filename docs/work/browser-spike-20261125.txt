@@ -43,3 +43,52 @@ Seen
 Not shown
   The page with a link, a dial to port 4784, which no released daemon serves, and any load over a
   phone's connection. Whether the policy blocks something the page needs once it runs a dial.
+
+Run: the view page against a Cowork cloud task on 0.11.7, 2026-11-25 (21:55 to 22:23 UTC)
+  Plugin 0.11.7 (Blue-Rocket/cogmer-staging 64dcd9f) in a new cloud task on claude.ai, with the page
+  published from d166ffb and then from e354b51 and bd29c0f. In the task, /cogmer:self-doctor and
+  /cogmer:room-join morning-steppe, whose output carried the link. The link was opened by clicking it in the
+  conversation, since the browser tools do not return a URL that holds a token. In the task after joining:
+  /cogmer:self-doctor, then "Reply with only the word PING-E.", and later "Reply with only the word PING-F.".
+
+Seen
+  The room-join output held "Read this room in your browser: <link>", whose fragment held a, k and r. The page
+  opened from it titled morning-steppe, with the live indicator, the rooms pane and the room's turns, drawn
+  through port 4784 of the task's daemon. PING-E and its reply appeared on the page at 22:10:09 and 22:10:10,
+  within a second, without the host's timezone text. The /cogmer:self-doctor typed in the room is in neither
+  the page nor the Mac's copy of the room. The Mac's log recorded the task's daemon unreachable at 22:13:18. On
+  d166ffb the page still said live at 22:16, since a read on an open connection had no limit. On e354b51 a reload
+  said "Connecting to your session..." for over 30 seconds, because the retry started another dial and wrote over
+  the banner. On bd29c0f a reload said "This session looks asleep. Send a message in its Claude task to wake it;
+  this page keeps trying." and kept saying it. After PING-F was sent at 22:21:58 the page left the banner with no
+  reload and drew PING-F and its reply at 22:21:58 and 22:21:59. A publish of the changed page took 12.8
+  seconds, since GitHub already held the module.
+
+Not shown
+  A phone's browser or connection, a pasted image drawn through the page, and the page's time to first
+  draw over a slow connection. How many dials a long idle leaves running, and the daemon's CPU over an hour.
+
+Run: the view page on an iPad in Safari, 2026-11-25 (22:33 and 22:39 UTC)
+  The link from the 0.11.7 cloud task's /cogmer:room-join, opened in Safari on the user's iPad on the same wifi
+  as the Mac. The user reported what the page showed and sent two screenshots.
+
+Seen
+  At 22:33, about a minute before the build that added the diagnostics line, the page showed the banner
+  "This session looks asleep. Send a message in its Claude task to wake it; this page keeps trying.", the pane
+  "No rooms yet. Create one in a session with /cogmer:room-create, or $cogmer room-create in Codex.", and
+  "Waiting for the room...". The user said the session had been sent a message and the banner stayed. The
+  page was an older one than the build of 22:34:19, which Pages serves with max-age=600. At 22:39, after
+  the user closed the tab and opened the link again, the page showed the live indicator, the room
+  morning-steppe, the rooms pane with the room, "your lists from Tonka Truck, 20s old", and the turns,
+  including a prompt typed in the task at 22:38:39 and its reply at 22:38:40.
+
+Not shown
+  Why the 22:33 page did not leave its banner after a message was sent. That page was one of the
+  versions before bd29c0f or a copy of one, and it was not reproduced. Whether the current page, opened
+  while the session is asleep and then woken, recovers in Safari. A phone, and a pasted image.
+
+  The user said afterwards that the failing attempt at 22:33 was the link opened without first sending the
+  session a message, so its daemon was asleep, and that the 22:39 attempt came after a message was sent.
+  The case that did not recover is therefore a page opened while the session sleeps and then woken, on a
+  page from before bd29c0f. The current page has recovered from that case in Chrome and has not been
+  run through it in Safari.

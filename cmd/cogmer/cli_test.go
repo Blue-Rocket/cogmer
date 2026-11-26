@@ -288,3 +288,59 @@ func TestARestartReplacesARunningDaemonWithOneThatAnswers(t *testing.T) {
 		t.Error("no daemon answers on the hooks address after the restart")
 	}
 }
+
+// A command the installed program does not know is answered with its usage and status 2. Right after
+// the plugin updates, a command the new plugin has is that, until the session-start hook replaces the
+// older program, and the model read it as a fault (D-191).
+func olderProgramHarness(t *testing.T, installed, plugin, subcommandStatus string) (root, home string) {
+	t.Helper()
+	root, home = cliHarness(t)
+	if err := os.MkdirAll(filepath.Join(home, "bin"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	bin := "#!/usr/bin/env bash\n[ \"$1\" = version ] && { echo " + installed + "; exit 0; }\necho \"cogmer -- the usage\" >&2\nexit " + subcommandStatus + "\n"
+	if err := os.WriteFile(filepath.Join(home, "bin", "cogmer"), []byte(bin), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "VERSION"), []byte(plugin+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return root, home
+}
+
+func TestACommandTheOlderInstalledProgramDoesNotKnowSaysItIsUpdatingAndStartsTheUpdate(t *testing.T) {
+	root, home := olderProgramHarness(t, "0.11.1", "0.11.4", "2")
+	out, code := runCLI(t, root, home, "health")
+	if code != 0 {
+		t.Errorf("exit status %d", code)
+	}
+	for _, want := range []string{"cogmer is updating", "0.11.1", "30 seconds", "run the same command again"} {
+		if !strings.Contains(flat(out), want) {
+			t.Errorf("output lacks %q: %q", want, out)
+		}
+	}
+	if strings.Contains(out, "the usage") {
+		t.Errorf("the older program's usage was passed on as the answer: %q", out)
+	}
+	if !waitFor(t, filepath.Join(home, "started")) {
+		t.Error("the update was never started, so a session whose start hook has not run stays on the older program")
+	}
+}
+
+func TestAProgramAtThePluginsVersionOrNewerKeepsItsUsage(t *testing.T) {
+	for _, installed := range []string{"0.11.4", "0.11.9"} {
+		root, home := olderProgramHarness(t, installed, "0.11.4", "2")
+		out, code := runCLI(t, root, home, "nosuchcommand")
+		if code != 0 || !strings.Contains(out, "the usage") || strings.Contains(out, "updating") {
+			t.Errorf("with %s installed and the plugin at 0.11.4 the command answered %q, status %d", installed, out, code)
+		}
+	}
+}
+
+func TestAnOlderProgramsOtherFailuresAreNotCalledAnUpdate(t *testing.T) {
+	root, home := olderProgramHarness(t, "0.11.1", "0.11.4", "1")
+	out, _ := runCLI(t, root, home, "guests")
+	if strings.Contains(out, "updating") || !strings.Contains(out, "the usage") {
+		t.Errorf("a failure other than an unknown command was called an update: %q", out)
+	}
+}

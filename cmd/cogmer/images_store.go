@@ -171,3 +171,27 @@ func (s *Store) AttachedImageNumbers(sessionID string) (map[int]bool, error) {
 	}
 	return out, rows.Err()
 }
+
+// AttachedImageHashes is the hashes of the images a session has already sent with its prompts, from
+// the events themselves, for a host that saves an image under a name that carries no number.
+func (s *Store) AttachedImageHashes(sessionID string) (map[string]bool, error) {
+	rows, err := s.db.Query(`SELECT metadata FROM events
+		WHERE origin_session_id = ? AND event_type = ? AND metadata LIKE '%"images"%'`, sessionID, EventUserPrompt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]bool{}
+	for rows.Next() {
+		var meta sql.NullString
+		if err := rows.Scan(&meta); err != nil {
+			return nil, err
+		}
+		for _, ref := range imageRefs(json.RawMessage(meta.String)) {
+			if ref.SHA256 != "" {
+				out[ref.SHA256] = true
+			}
+		}
+	}
+	return out, rows.Err()
+}

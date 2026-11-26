@@ -138,6 +138,7 @@ it can say so when a command does not work.
 - An image you paste into a prompt goes to the colleagues in the room, with whatever it shows. An image
   over 5 MB is not sent, and a colleague's view says so. Each colleague's machine keeps a copy as a file in
   `~/.cogmer`, and cogmer gives their model the turn's text and not the image.
+  A Cowork session on your computer sends the text of a turn and no picture.
 - Everything your machine sends carries the certificates that tie it to you: your identifier, the
   version of your machines' shared key, and this machine's name and number. Your own machines
   also send each other the shared key, your list of colleagues with their labels and whether you

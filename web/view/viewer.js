@@ -83,7 +83,7 @@
   const DERP_MAP = 'https://tailcat.dev/derpmap.json';
   const VIEW_PORT = 4784;
   const DIAL_WITHIN = 15000;
-  const REDIAL_AFTER = 10000;
+  const REQUEST_WITHIN = 10000;
   const POLL_EVERY = 3000;
 
   const params = new URLSearchParams(location.hash.slice(1));
@@ -100,56 +100,100 @@
     const exp = document.getElementById('export');
     if (exp) exp.hidden = true;
   });
+  const detailLine = document.createElement('div');
+  detailLine.style.cssText = 'font-size:11px;opacity:.75;margin-top:.2em';
+  banner.appendChild(document.createElement('span'));
+  banner.appendChild(detailLine);
+  const bannerText = banner.firstChild;
+  const started = performance.now();
+  const trail = [];
+  // detail adds a line to what the page says about what it is doing, with the time since it loaded, so
+  // that a user whose page does not connect can say where it stopped.
+  function detail(text) {
+    trail.push(((performance.now() - started) / 1000).toFixed(1) + 's ' + text);
+    detailLine.textContent = trail.slice(-4).join(' \u00b7 ') + ' \u00b7 ' + navigator.userAgent.replace(/^Mozilla\/5\.0 /, '').slice(0, 70);
+  }
   function say(text) {
-    banner.textContent = text || '';
+    bannerText.textContent = text || '';
     banner.hidden = !text;
   }
 
   let ready;
   let http = null;
-  let dialing = null;
+  let dialAttempt = null;
+  let asleep = false;
 
   function loadModule() {
     if (ready) return ready;
     ready = new Promise((resolve, reject) => {
-      window.onTailcatReady = resolve;
+      window.onTailcatReady = () => { detail('module ready'); resolve(); };
       const go = new Go();
       fetch('main.wasm')
-        .then((r) => WebAssembly.instantiateStreaming(r, go.importObject))
+        .then((r) => { detail('module fetched'); return WebAssembly.instantiateStreaming(r, go.importObject); })
         .then((r) => go.run(r.instance))
         .catch(reject);
     });
     return ready;
   }
 
-  // connect dials the daemon, and says the session is asleep when it does not answer in time. One dial
-  // is in flight at a time, since the module gives up on its own only after a minute.
+  // startDial dials the daemon, once at a time: the module gives up on its own only after a minute, so
+  // the dial in flight is kept until it settles and every caller waits on it. When it succeeds, whenever
+  // that is, the connection is kept and the banner goes.
+  function startDial() {
+    if (!dialAttempt) {
+      detail('dialing');
+      dialAttempt = tailcatDial({ addr, port: VIEW_PORT, derpMapURL: DERP_MAP })
+        .then((conn) => {
+          detail('connected');
+          http = new ViewConn(conn, token);
+          asleep = false;
+          say('');
+          return http;
+        }, (err) => {
+          detail('dial failed: ' + err);
+          throw err;
+        })
+        .finally(() => { dialAttempt = null; });
+    }
+    return dialAttempt;
+  }
+
+  // connect gives the connection, dialing if there is none. It says the session is asleep when the dial
+  // takes longer than DIAL_WITHIN, and keeps saying so, since every later try finds the same dial, until
+  // a dial succeeds.
   function connect() {
     if (http) return Promise.resolve(http);
-    if (dialing) return dialing;
     if (!addr || !token) return Promise.reject(new Error('this page needs the link from your Claude session'));
-    say('Loading the viewer…');
-    dialing = loadModule().then(() => {
-      say('Connecting to your session…');
-      const dial = tailcatDial({ addr, port: VIEW_PORT, derpMapURL: DERP_MAP });
-      const timer = new Promise((_, reject) => setTimeout(() => reject(new Error('asleep')), DIAL_WITHIN));
-      return Promise.race([dial, timer]).then(
-        (conn) => { http = new ViewConn(conn, token); say(''); return http; },
-        (err) => {
-          if (err.message === 'asleep') {
-            say('This session looks asleep. Send a message in its Claude task to wake it; this page keeps trying.');
-            dial.then((conn) => { http = new ViewConn(conn, token); say(''); }, () => {});
-          } else {
-            say('Could not reach your session: ' + err);
-          }
-          throw err;
-        });
-    }).finally(() => { dialing = null; });
-    return dialing;
+    if (!asleep) say('Loading the viewer…');
+    return loadModule().then(() => {
+      if (!asleep) say('Connecting to your session…');
+      const limit = new Promise((_, reject) => setTimeout(() => reject(new Error('asleep')), DIAL_WITHIN));
+      return Promise.race([startDial(), limit]).catch((err) => {
+        if (err.message === 'asleep') {
+          asleep = true;
+          say('Still connecting to your session. If it is asleep, send a message in its Claude task to wake it; this page keeps trying.');
+        } else {
+          asleep = true;
+          say('Could not reach your session (' + err + '). If it is asleep, send a message in its Claude task to wake it; this page keeps trying.');
+        }
+        throw err;
+      });
+    });
+  }
+
+  // withTimeout gives a request on a connection that is open a limit of its own. A sleeping session
+  // answers nothing and closes nothing, so without it a read waits for ever and the page keeps saying it
+  // is live.
+  function withTimeout(promise) {
+    let timer;
+    const limit = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('the session did not answer')), REQUEST_WITHIN);
+    });
+    return Promise.race([promise, limit]).finally(() => clearTimeout(timer));
   }
 
   function request(path) {
-    return connect().then((h) => h.get(path)).catch((err) => {
+    return connect().then((h) => withTimeout(h.get(path))).catch((err) => {
       if (http) { http.close(); http = null; }
       throw err;
     });
@@ -198,6 +242,21 @@
   });
 
   window.addEventListener('hashchange', () => location.reload());
+
+  // A browser on a phone or a tablet freezes a page that is not shown, and the connections it held are
+  // dead when the page is shown again, so a page that has been hidden for a while starts again, and so
+  // does one that the browser restores from its cache of pages.
+  const RELOAD_AFTER_HIDDEN = 15000;
+  let hiddenAt = null;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      hiddenAt = Date.now();
+      return;
+    }
+    if (hiddenAt !== null && Date.now() - hiddenAt > RELOAD_AFTER_HIDDEN) location.reload();
+    hiddenAt = null;
+  });
+  window.addEventListener('pageshow', (ev) => { if (ev.persisted) location.reload(); });
 
   window.cogmerView = {
     room,

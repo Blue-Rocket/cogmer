@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
@@ -231,4 +232,23 @@ func (d *Daemon) handleSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, st)
+}
+
+// servesView says whether this daemon serves the page's port, which a cloud session's daemon does.
+func (d *Daemon) servesView() bool { return d.inCloud() }
+
+// inCloud says whether this daemon is a cloud session's: it runs in a cloud container, or it speaks
+// as a cloud session, which a cloud host that does not set CLAUDE_CODE_REMOTE still does, since the
+// daemon drops the cloud key from its own environment once it has read it.
+func (d *Daemon) inCloud() bool {
+	return inCloudContainer() || d.cloud != nil
+}
+
+// cloudUploadsDir is the folder a cloud container saves a user's attachments in (D-304), which
+// COGMER_UPLOADS_DIR names where a test needs another.
+func cloudUploadsDir() string {
+	if dir := os.Getenv("COGMER_UPLOADS_DIR"); dir != "" {
+		return dir
+	}
+	return "/mnt/user-data/uploads"
 }

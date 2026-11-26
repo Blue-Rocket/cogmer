@@ -28,10 +28,6 @@ downloaded. Shipping binaries inside the plugin removes the download entirely bu
 commits about 150MB per release into the history everybody clones, and is ruled
 out.
 
-**A command that is new in a release prints the program's usage when it is typed before the session-start fetch has replaced the older program.** On 2026-11-25 on a Mac, `claude plugin update` moved the plugin from 0.11.0 to 0.11.4, and `/cogmer:self-doctor` typed in the next session ran `health` on the installed 0.11.1 program, which has no such subcommand, and the model reported "cogmer printed its general help text" and that the versions probably disagree. By about 30 seconds after that session started the session-start hook had fetched 0.11.4 and the same command worked. `plugin/cli.sh` runs whatever program is installed and does not compare its version with the plugin's (D-191, a command answers at once and says what to do when the install is not finished, covers a program that is absent and not one that is older).
-
-`cli.sh` could compare the two versions as `self-status` does and, when the program is older than the plugin, say that a new program is being fetched and to run the command again in a minute, which costs a version read on every command.
-
 **The suite fails in a pre-push hook run from a git worktree, because a test's git commands inherit the hook's `GIT_DIR`.** On 2026-11-24 on the droplet, `scripts/stage.sh` pushed from a worktree made with `git worktree add`, and `.githooks/pre-push` ran the suite and refused the push on `TestGitSkipsTheStateDirectoryInABulkAddAndRefusesAnExplicitOne` (`cmd/cogmer/stategitignore_test.go`, "a bulk add staged" the repository's own files). The test passes with `GIT_DIR` unset and fails with it set to the worktree's absolute git directory, which is what git gives a hook run in a worktree, in runs on the droplet (`docs/work/staged-0.11.0-run-20261124T222000Z.txt`). In a normal clone the hook's `GIT_DIR` is `.git`, relative, so the test's own `git init` in a temporary directory takes it for its own. Any test that runs `git` has the same exposure. A helper that runs git for tests could clear every `GIT_*` variable, which costs a change to the helpers and a test that sets `GIT_DIR` and expects the same result. `scripts/stage.sh` can be run from a normal clone meanwhile.
 
 ## Before a wider audience
@@ -265,7 +261,9 @@ nothing has been measured about whether a reader distinguishes them.
 
 **Whether arrival wants announcing.** D-039 (the browser view is the settled
 avenue) left this open. Do not build a notification on speculation — it has a
-different answer for close pairing than for long solo stretches.
+different answer for close pairing than for long solo stretches. D-148 (arrival would
+be announced by an operating-system notification) is the decision that would build one
+on a computer, and a cloud session's daemon has no desktop to show it on.
 
 ## Reaching a peer on another network
 
@@ -285,7 +283,9 @@ silence, invalidated by a wrong key, aged at a rate set by what it names, and
 restored by evidence. `known_peers` holds one endpoint per peer with the time it was
 recorded, replaced when the peer advertises another (read on 2026-09-28). D-103 (an
 address belongs to a machine, and is stored in one place) gave each address the owner
-the lifecycle needs, and nothing past that is built.
+the lifecycle needs, and nothing past that is built. D-183 (a receiver orders candidate
+addresses by class and never by a configured sort) and D-091 (identity is advertised
+and location is discovered) are the decisions that would build it.
 
 **Whether to rebuild the post-quantum hedge.** D-104 removed the pre-shared key,
 which was the only quantum-resistant element in the stack. It could be rebuilt at
@@ -299,7 +299,8 @@ A host can admit somebody who asks to join, without a pairing string being sent 
 **Whether a host approves an unsolicited join request.** A person who is not on a
 room's guest list cannot ask to be let in; §12a (room membership) and D-051 (stranger
 pairing is not a supported case) leave open whether they should be able to, and
-nothing is built for it.
+nothing is built for it. D-144 (a refused peer's request goes to a host who is
+present) is the decision that would build it.
 
 As section 12 describes it, any peer that can reach the host's address and name the
 room could make something appear on the host's screen, and room names are guessable
@@ -557,9 +558,9 @@ Not known: the code of 2.1.329-ccs, which decides which hooks run and is not in 
 
 The chat turns before a session are not a gap. Joining a room takes a command, which is itself the turn that makes the session, so those turns always come before the room, and §12a (room membership) begins a room's history at its creation and shares nothing a session did before. The session's transcript holds them all the same (`a6cffcc`), and capture leaves them there. The empty prompt loses nothing when the first turn is the room command. Not known: whether a session that starts again in a conversation stays in the room its earlier session joined, and what the 0-character prompt stands for.
 
-**The page that reads a cloud session's room has run in no real task and on no phone.** D-301 (a cloud session's daemon serves its room on a second overlay port, in lines, with a token made from the cloud key) has tests of the daemon's port, token and link, and D-302 (a cloud session's room is read on a static page, the daemon's own view served from GitHub Pages) has a test of the page's policy and none of the page's own script, which dials, reads lines and draws. On 2026-11-25 a test page reached a cloud task's daemon on port 4783, and none dialed port 4784, which no released daemon serves (`docs/work/browser-spike-20261125.txt`). The page is published to the `pages` branch and loads from GitHub Pages with no link (`docs/work/browser-spike-20261125.txt`), and no run has opened a link from a cloud task's `/cogmer:room-join` or dialed port 4784 through the relay. A user on a phone has no other way to read the room, so colleagues' turns reach the model as context and never the person until a run shows this.
+**The page that reads a cloud session's room has not been opened on a phone or woken from sleep in Safari, and no pasted image has been drawn through it.** On 2026-11-25 the page, published to `pages`, opened from the link in a cloud task's `/cogmer:room-join` on 0.11.7 and read the room through port 4784 of the task's daemon. It drew a prompt within a second, said the session was asleep after the daemon went unreachable, and recovered without a reload when a prompt woke the task (`docs/work/browser-spike-20261125.txt`). That run was in Chrome on a computer. On an iPad in Safari the page read the room of a session that was awake and drew a prompt within a second, and a copy of the page from before two fixes stayed on its asleep banner after the session was sent a message, which was not reproduced. A user on a phone is the user the page is for, and no run has shown how long a phone takes to the first draw of a 6.5 MB module, that the current page recovers in Safari when it is opened while the session is asleep and the session is then woken, or that an image pasted into a prompt draws through the page's connection.
 
-A run would stage a candidate and open the link in a browser on a computer and then on a phone. It has to show how long a phone takes to the first draw, that the room, the list of rooms and a pasted image draw through the page's connection, that the page reconnects after a sleeping task wakes, and that the link in the conversation opens the room. Nothing publishes the page as part of a release, so the protocol of a daemon's port and the page that reads it can fall out of step, and the publish takes about 6 minutes on this Mac's connection.
+A run would open the link in a browser on a phone, and send a prompt with a pasted image in a cloud task. It would also read a long idle, since the page keeps one dial in flight and each failed dial lasts the module's full minute, and the daemon's CPU over an hour with a page open is unmeasured. Nothing publishes the page as part of a release, so the protocol of a daemon's port and the page that reads it can fall out of step. The first publish took about 6.5 minutes on this Mac's connection and later ones 13 seconds, since GitHub holds the module.
 
 ## ChatGPT Work as a host
 
@@ -707,7 +708,7 @@ remote session and a container, and its only mount that is not system code, `/mn
 cloud file store. A marker written there reached neither `~/projects/probe`, the folder the user connected to
 the session, nor the app's own folders, and the sandbox mounts no folder of the user's machine. So the image
 is not on the user's machine, and a Cowork image has no route to the daemon that runs there. A turn from
-Cowork reaches a colleague with its text and no picture, and a route would have to be built.
+Cowork reaches a colleague with its text and no picture, and a route would have to be built. On 2026-11-26 a picture pasted into a Cowork cloud task, whose room held a colleague's machine, was saved in the task's sandbox at `/mnt/user-data/uploads/<8 hex digits>-image.png`, a different folder from the one of 2026-10-15. The model described the picture, and the room recorded the turn's text with no `[Image #N]` placeholder and no image, so the page drew none. The file kept the time it was saved through a sleep and a wake, and the task's entry point was `remote_cowork`. D-304 (a cloud session's attached images are the fresh files in its uploads folder that it has not sent) is built for it and tested against a folder laid out as that task's was, and no real task has run it, since a cloud task runs only a released or staged build. In containers, a cloud session's daemon whose hooks send no transcript path sent a picture saved where Claude Code saves one to a colleague, and took one from the colleague, and the receiver's view named it by its hash and served its bytes (`b5c417a`).
 The Claude Code editor extensions are not observed and are
 read as the terminal.
 

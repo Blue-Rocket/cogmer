@@ -546,8 +546,11 @@ func runDaemon() {
 	// network is unaffected and saying nothing would be worse than saying less.
 	advertised := peerAddr()
 	var tcListener net.Listener
+	// The page is served where the daemon is a cloud session's: in a cloud container, or when it read
+	// a cloud key, which it drops from its own environment once read, so a cloud host that does not set
+	// CLAUDE_CODE_REMOTE still gets it.
 	if tailcatEnabled() {
-		l, endpoint, srv, viewL, err := StartTailcatWithView(inCloudContainer())
+		l, endpoint, srv, viewL, err := StartTailcatWithView(d.servesView())
 		if err != nil {
 			log.Printf("  tailcat unavailable (%v) — reachable only at %s", err, peerAddr())
 		} else {

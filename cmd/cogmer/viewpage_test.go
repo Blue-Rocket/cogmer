@@ -60,3 +60,20 @@ func TestTheStaticPagesPolicyLoadsNoImageFromAnAddressAndContactsOnlyTheRelay(t 
 		t.Errorf("the daemon's page policy changed: %s", roomPagePolicy)
 	}
 }
+
+// The rooms pane says it is loading until the first list arrives, and says there are no rooms only
+// after a list that holds none.
+func TestTheRoomsPaneDoesNotSayThereAreNoRoomsBeforeItHasAList(t *testing.T) {
+	page := string(uiPage)
+	loading := strings.Index(page, "if(!loaded){")
+	none := strings.Index(page, "No rooms yet.")
+	if loading < 0 || none < 0 || loading > none {
+		t.Fatalf("the pane's loading state (%d) does not come before its no-rooms message (%d)", loading, none)
+	}
+	if !strings.Contains(page, "rooms=JSON.parse(m.data)||[]; loaded=true; render();") {
+		t.Error("the first list does not end the loading state")
+	}
+	if !strings.Contains(page, "setInterval(render,60000);\n  render();\n  connect();") {
+		t.Error("the pane is not drawn until the first list or the first minute, so it is blank while connecting")
+	}
+}
