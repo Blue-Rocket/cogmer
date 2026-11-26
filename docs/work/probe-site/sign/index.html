@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Passkey signing probe</title>
+<style>
+  :root { --fg: #1b1b1b; --bg: #ffffff; --muted: #555; --warn: #a40000; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #eee; --bg: #161616; --muted: #aaa; --warn: #ff8a80; } }
+  body { font: 16px/1.5 system-ui, sans-serif; color: var(--fg); background: var(--bg); max-width: 40em; margin: 1em auto; padding: 0 16px; }
+  p { color: var(--muted); }
+  .warn { color: var(--warn); }
+  button { font: inherit; padding: .5em 1em; margin: .25em .25em .25em 0; }
+  pre { white-space: pre-wrap; word-break: break-all; }
+</style>
+</head>
+<body>
+<h1>Passkey signing probe</h1>
+<p>For cogmer's spike F. This page runs only the passkey step for a page on your own computer, and sends
+you back to it. Its passkey belongs to the site <code>cogmer.ai</code>, so any page under that name can use
+it. It returns only to an address on <code>127.0.0.1</code> or <code>localhost</code>, and sends nothing to
+any server: what it hands back travels in the part of the address after <code>#</code>.</p>
+<p id="ask"></p>
+<button id="go" hidden></button>
+<pre id="out"></pre>
+<script>
+const SITE = "cogmer.ai";
+const out = document.getElementById("out");
+const log = (s) => { out.textContent += s + "\n"; };
+const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const unb64u = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+const rnd = (n) => crypto.getRandomValues(new Uint8Array(n));
+
+const params = new URLSearchParams(location.hash.slice(1));
+const mode = params.get("mode");
+let ret = null;
+try {
+  const u = new URL(params.get("return") || "");
+  if (u.protocol === "http:" && (u.hostname === "127.0.0.1" || u.hostname === "localhost")) ret = u;
+} catch (e) { /* no return address */ }
+
+log(navigator.userAgent);
+log(`page ${location.origin}, passkey site ${SITE}`);
+const ask = document.getElementById("ask");
+const go = document.getElementById("go");
+
+function back(fields) {
+  const u = new URL(ret.href);
+  u.hash = new URLSearchParams(fields).toString();
+  log(`returning to ${u.origin}${u.pathname}`);
+  location.assign(u.href);
+}
+
+async function create() {
+  const cred = await navigator.credentials.create({ publicKey: {
+    challenge: rnd(32),
+    rp: { id: SITE, name: "cogmer" },
+    user: { id: rnd(16), name: "cogmer-sign-probe", displayName: "cogmer signing probe" },
+    pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+    authenticatorSelection: { residentKey: "required", userVerification: "required" },
+  } });
+  const r = cred.response;
+  const spki = r.getPublicKey ? r.getPublicKey() : null;
+  log(`created: credential ${b64u(cred.rawId).slice(0, 12)}..., algorithm ${r.getPublicKeyAlgorithm ? r.getPublicKeyAlgorithm() : "not reported"}, public key ${spki ? "returned" : "not returned"}`);
+  if (!spki) throw new Error("this browser did not return the public key");
+  return { mode: "created", id: b64u(cred.rawId), spki: b64u(spki), alg: String(r.getPublicKeyAlgorithm()), page: location.origin };
+}
+
+async function sign(challenge, id) {
+  const a = await navigator.credentials.get({ publicKey: {
+    challenge, rpId: SITE, userVerification: "required",
+    allowCredentials: id ? [{ type: "public-key", id: unb64u(id) }] : undefined,
+  } });
+  const r = a.response;
+  log(`signed with credential ${b64u(a.rawId).slice(0, 12)}...`);
+  return { mode: "signed", id: b64u(a.rawId), authData: b64u(r.authenticatorData), clientData: b64u(r.clientDataJSON), sig: b64u(r.signature), page: location.origin };
+}
+
+if (mode === "create" && ret) {
+  ask.textContent = `${ret.host} asks this page to register a passkey for cogmer.ai.`;
+  go.textContent = "Register a passkey"; go.hidden = false;
+  go.onclick = async () => { try { back(await create()); } catch (e) { log(`register failed: ${e.name}: ${e.message}`); } };
+} else if (mode === "sign" && ret && params.get("challenge")) {
+  const ch = params.get("challenge");
+  ask.textContent = `${ret.host} asks this page to sign the challenge ${ch.slice(0, 12)}... with your passkey.`;
+  go.textContent = "Sign with my passkey"; go.hidden = false;
+  go.onclick = async () => { try { back(await sign(unb64u(ch), params.get("id"))); } catch (e) { log(`sign failed: ${e.name}: ${e.message}`); } };
+} else if (mode === "self") {
+  ask.textContent = "Sign a random challenge here, to see whether a passkey made on another cogmer.ai name works on this one.";
+  go.textContent = "Sign with my passkey"; go.hidden = false;
+  go.onclick = async () => { try { await sign(rnd(32), null); log("a passkey for cogmer.ai answered on this page"); } catch (e) { log(`sign failed: ${e.name}: ${e.message}`); } };
+} else {
+  ask.innerHTML = '<span class="warn">Nothing to do: this page is opened by a page on your own computer, or with #mode=self.</span>';
+}
+</script>
+</body>
+</html>

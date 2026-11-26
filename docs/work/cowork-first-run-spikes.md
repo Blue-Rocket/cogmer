@@ -1,6 +1,6 @@
 # Cowork first-run spikes
 
-Five spikes that answer what stands between a Cowork-only user and starting work by installing the
+Six spikes that answer what stands between a Cowork-only user and starting work by installing the
 plugin alone. Material for the open item "A Cowork-only user cannot start by installing the plugin" in
 `docs/open.md`. Delete it with that item.
 
@@ -204,6 +204,40 @@ this option and its costs.
 4. Record each browser's name and version, which the page prints first, and the phone's system version.
 5. Ask the user to delete the passkeys named "PRF probe" for `probe.cogmer.ai` from the Mac and the phone
    afterwards.
+
+## F. Whether a page on the user's computer can use a passkey through a page under cogmer.ai
+
+The question: can the daemon's page at `127.0.0.1` send the user to a signing page under `cogmer.ai`, and
+get back the passkey's signature over a challenge it chose, by navigation alone, with no hosts-file entry,
+no local certificate and no request from one page to the other; and does a passkey made for the site
+`cogmer.ai` on one name under it sign on another. A passkey belongs to one site, a site is a domain name and
+never an address, and a page may name a parent of its own name as the site, so a page at `127.0.0.1` can use
+none itself (the open item on holding a hosted user's master key).
+
+The probe site's `/sign/` page (`docs/work/probe-site/sign/index.html`), served on all three names, makes a
+passkey whose site is `cogmer.ai` and signs a challenge given in its address after `#`, only when its button
+is pressed, and returns only to an address on `127.0.0.1` or `localhost`. The page
+`docs/work/probe-site/local/index.html` stands in for the daemon's page: it sends the user to `/sign/`, keeps
+the public key the registration returns, and checks a signature that comes back as a daemon would, printing
+one line for each check.
+
+1. On the Mac, from the repository root:
+
+   ```sh
+   python3 -m http.server 4799 --bind 127.0.0.1 --directory docs/work/probe-site/local
+   ```
+
+2. In Chrome, open `http://127.0.0.1:4799/`, press "Register a passkey on probe.cogmer.ai", then "Register
+   a passkey" on the page it opens, and have the user answer the prompt. Record where the browser offered to
+   save the passkey, the line the stand-in prints when it comes back, and any prompt or warning about the
+   local network or about leaving or returning to the page.
+3. Press "Sign on probe.cogmer.ai", then "Sign with my passkey", and record every line the stand-in prints.
+   Then do the same with "Sign on a.probe.cogmer.ai". Every check is meant to read `true`, and the last line,
+   the signature over a changed challenge, `false`.
+4. Do steps 2 and 3 in Safari, which keeps its own store for the stand-in, so it registers again.
+5. If a passkey was saved to iCloud Keychain, open `https://a.probe.cogmer.ai/sign/#mode=self` on the user's
+   iPhone, press the button, and record whether the passkey made on the Mac answered there.
+6. Stop the server, and ask the user to delete the passkeys named "cogmer signing probe" for `cogmer.ai`.
 
 ## What to bring back
 

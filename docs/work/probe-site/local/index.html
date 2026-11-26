@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daemon stand-in</title>
+<style>
+  :root { --fg: #1b1b1b; --bg: #ffffff; --muted: #555; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #eee; --bg: #161616; --muted: #aaa; } }
+  body { font: 16px/1.5 system-ui, sans-serif; color: var(--fg); background: var(--bg); max-width: 44em; margin: 1em auto; padding: 0 16px; }
+  p { color: var(--muted); }
+  button { font: inherit; padding: .5em 1em; margin: .25em .25em .25em 0; }
+  pre { white-space: pre-wrap; word-break: break-all; }
+</style>
+</head>
+<body>
+<h1>Daemon stand-in for spike F</h1>
+<p>This page stands in for cogmer's daemon page at <code>127.0.0.1</code>. It sends you to the signing page
+under <code>cogmer.ai</code> to register or use a passkey, and checks what comes back as a daemon would:
+the challenge it sent, the page it came from, the passkey's site, that you confirmed with Face ID, Touch ID or
+a PIN, and the signature against the key it stored when the passkey was registered.</p>
+<button id="reg">Register a passkey on probe.cogmer.ai</button>
+<button id="sign1">Sign on probe.cogmer.ai</button>
+<button id="sign2">Sign on a.probe.cogmer.ai</button>
+<button id="forget">Forget the stored key</button>
+<pre id="out"></pre>
+<script>
+const SITE = "cogmer.ai";
+const PAGES = ["https://probe.cogmer.ai", "https://a.probe.cogmer.ai"];
+const out = document.getElementById("out");
+const log = (s) => { out.textContent += s + "\n"; };
+const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const unb64u = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+const sha256 = async (b) => new Uint8Array(await crypto.subtle.digest("SHA-256", b));
+const eq = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+const here = location.origin + location.pathname;
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+                set(k, v) { try { localStorage.setItem(k, v); } catch (e) { log(`could not keep ${k}: ${e.message}`); } } };
+
+// An ECDSA signature from WebAuthn is DER; WebCrypto verifies the raw 64 bytes r||s.
+function derToRaw(der) {
+  let i = 2;
+  const part = () => { i++; const len = der[i++]; let v = der.slice(i, i + len); i += len;
+    while (v.length > 32 && v[0] === 0) v = v.slice(1);
+    const p = new Uint8Array(32); p.set(v, 32 - v.length); return p; };
+  const r = part(), s = part(); const raw = new Uint8Array(64); raw.set(r, 0); raw.set(s, 32); return raw;
+}
+
+function goSign(page) {
+  const ch = b64u(crypto.getRandomValues(new Uint8Array(32)));
+  try { sessionStorage.setItem("challenge", ch); } catch (e) { log(`could not keep the challenge: ${e.message}`); return; }
+  const kept = JSON.parse(store.get("passkey") || "null");
+  const f = new URLSearchParams({ mode: "sign", challenge: ch, return: here });
+  if (kept) f.set("id", kept.id);
+  location.assign(`${page}/sign/#${f}`);
+}
+document.getElementById("reg").onclick = () =>
+  location.assign(`${PAGES[0]}/sign/#${new URLSearchParams({ mode: "create", return: here })}`);
+document.getElementById("sign1").onclick = () => goSign(PAGES[0]);
+document.getElementById("sign2").onclick = () => goSign(PAGES[1]);
+document.getElementById("forget").onclick = () => { try { localStorage.removeItem("passkey"); } catch (e) {} log("forgot the stored key"); };
+
+async function check(p) {
+  const kept = JSON.parse(store.get("passkey") || "null");
+  if (!kept) { log("no passkey is registered with this stand-in"); return; }
+  const sent = (() => { try { return sessionStorage.getItem("challenge"); } catch (e) { return null; } })();
+  try { sessionStorage.removeItem("challenge"); } catch (e) {}
+  const clientData = unb64u(p.get("clientData")), authData = unb64u(p.get("authData")), sig = unb64u(p.get("sig"));
+  const cd = JSON.parse(new TextDecoder().decode(clientData));
+  const rpOK = eq(authData.slice(0, 32), await sha256(new TextEncoder().encode(SITE)));
+  const flags = authData[32];
+  log(`signed on ${p.get("page")}, by credential ${p.get("id").slice(0, 12)}...`);
+  log(`  same credential as registered: ${p.get("id") === kept.id}`);
+  log(`  type ${cd.type}: ${cd.type === "webauthn.get"}`);
+  log(`  challenge is the one this page sent, used once: ${!!sent && cd.challenge === sent}`);
+  log(`  origin ${cd.origin}: ${PAGES.includes(cd.origin) && cd.origin === p.get("page")}`);
+  log(`  passkey site is ${SITE}: ${rpOK}`);
+  log(`  user present: ${!!(flags & 1)}, user confirmed with Face ID, Touch ID or a PIN: ${!!(flags & 4)}`);
+  const key = await crypto.subtle.importKey("spki", unb64u(kept.spki), { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
+  const signed = (cdBytes) => sha256(cdBytes).then((h) => { const d = new Uint8Array(authData.length + 32); d.set(authData); d.set(h, authData.length); return d; });
+  const good = await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, key, derToRaw(sig), await signed(clientData));
+  log(`  signature verifies with the registered key: ${good}`);
+  const swapped = new TextEncoder().encode(JSON.stringify({ ...cd, challenge: b64u(crypto.getRandomValues(new Uint8Array(32))) }));
+  const forged = await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, key, derToRaw(sig), await signed(swapped));
+  log(`  the same signature over a changed challenge verifies: ${forged} (it must be false)`);
+}
+
+log(navigator.userAgent);
+log(`stand-in at ${location.origin}`);
+const p = new URLSearchParams(location.hash.slice(1));
+history.replaceState(null, "", location.pathname);
+if (p.get("mode") === "created") {
+  store.set("passkey", JSON.stringify({ id: p.get("id"), spki: p.get("spki"), alg: p.get("alg") }));
+  log(`registered on ${p.get("page")}: credential ${p.get("id").slice(0, 12)}..., algorithm ${p.get("alg")}, public key kept`);
+} else if (p.get("mode") === "signed") {
+  check(p).catch((e) => log(`check failed: ${e.name}: ${e.message}`));
+} else {
+  const kept = JSON.parse(store.get("passkey") || "null");
+  log(kept ? `a passkey is registered: credential ${kept.id.slice(0, 12)}...` : "no passkey is registered yet");
+}
+</script>
+</body>
+</html>
