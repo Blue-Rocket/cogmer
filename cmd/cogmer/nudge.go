@@ -31,7 +31,7 @@ const nudgeTimeout = 5 * time.Second
 // A nudge counts as delivered only when the receiver answers it or polls this machine
 // after it was asked for. Until then it is sent again, at nudgeRetryMin and twice as long
 // each time up to nudgeRetryMax, for up to nudgeGiveUp, so that a nudge lost on its way
-// does not leave a turn on this machine unasked for (D-306).
+// does not leave a turn on this machine unasked for (D-306, a machine nudges the machines it shares a room with when it writes an event).
 type nudger struct {
 	mu      sync.Mutex
 	sending map[string]bool      // address → a nudge is on its way
