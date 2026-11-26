@@ -144,3 +144,28 @@ Revisit when cogmer gives up the domain.
   tailcat's relays. A Pro or Max plan was not tried.
 - Whether the Mac's browsers, and the same passkey reached through iCloud Keychain, return the same secret.
   Only Safari on an iPhone was tried.
+- How Draft 2's token answers D-301 (a cloud session's daemon serves its room on a second overlay port).
+  D-301 has a daemon with no cloud key serve nothing, and rejects a token made fresh at each start, since
+  a sleeping task wakes often and each wake would break the link, and a token stored for each task, since
+  it needs a file and a rule for when it changes. A token derived from the task's session key, as today's
+  is from the cloud key, would last across wakes with no file of its own, since a resumed task kept its
+  files (spike C). Draft 2 then has to say it departs from D-301 in serving a daemon that holds no cloud
+  key.
+- Whether Draft 2 is an exception to D-281 (a command in a cloud session with no value says the user must
+  first set cogmer up on one of their own computers). In a Cowork cloud task, `/cogmer:start` would start
+  the daemon and print the page's link instead, and D-286's Limits, which Draft 2 relies on, say the
+  command says what D-281 has it say. A Claude Code cloud session could keep D-281's answer.
+- How Draft 1 answers D-247 (a cloud session's key is certified for twenty-four hours, and the session's
+  daemon certifies a new one before it expires). With no cloud key the daemon cannot renew, and D-247
+  rejects a short certificate because a daemon that misses a renewal has its turns refused. A task whose
+  certificate has expired could stop sharing and say so in the view and at its next command, or hold its
+  turns unsigned until the page is opened again and sign them then. Which, and how long the certificate
+  lasts, is to be chosen.
+- How an uploaded value and the passkey keep one cloud key (D-280, a user has one cloud key at a time). A
+  user who keeps the uploaded value would otherwise hold a second cloud key beside the one the passkey
+  derives. The cloud page can derive the key and offer the value's plugin itself, as the machines page does
+  today (D-278), which the machines page cannot, since a page at `127.0.0.1` can use no passkey.
+- Which earlier decisions Drafts 1 and 3 change in part. D-216 (a cloud session signs with a key of its own
+  that the user's shared key vouches for) names the cloud key as the one secret given to the environment,
+  and D-302 (a cloud session's room is read on a static page) serves the page from GitHub Pages, so each
+  is rewritten to what still holds when the drafts are adopted, as W-38 in `docs/writing.md` has it.
