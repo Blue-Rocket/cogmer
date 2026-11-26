@@ -232,3 +232,30 @@ func TestOpeningARoomsViewWakesItsAddresses(t *testing.T) {
 		t.Error("opening the room's view recorded that the room stored an event")
 	}
 }
+
+// A colleague whose machine answered its last poll is online while it is polled slowly
+// in a quiet room, and one whose polls fail after it answered, or that has not answered
+// for longer than the longest wait between polls, is not (D-304; D-194, a colleague this
+// machine cannot reach is named in the room status and the view).
+func TestAColleaguePolledSlowlyInAQuietRoomIsOnline(t *testing.T) {
+	d := syncDaemon(t, "", func(string) (int, error) { return 0, nil })
+	now := time.Now()
+	d.peerSeen = map[string]*peerState{
+		"quiet":   {lastSeen: now.Add(-40 * time.Second)},
+		"failing": {lastSeen: now.Add(-40 * time.Second), downSince: now.Add(-20 * time.Second)},
+		"gone":    {lastSeen: now.Add(-100 * time.Second)},
+	}
+	online := map[string]bool{}
+	for _, p := range d.statusOf([]string{"quiet", "failing", "gone"}) {
+		online[p.addr] = p.Online
+	}
+	if !online["quiet"] {
+		t.Error("a machine that answered its last poll 40s ago, in a quiet room, is shown as not online")
+	}
+	if online["failing"] {
+		t.Error("a machine whose polls have failed for 20s since it last answered is shown as online")
+	}
+	if online["gone"] {
+		t.Error("a machine that has not answered for longer than the longest wait between polls is shown as online")
+	}
+}
