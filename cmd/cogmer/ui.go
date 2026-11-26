@@ -137,6 +137,12 @@ type uiState struct {
 	NotGiven   int  `json:"notGiven,omitempty"`
 	HasEarlier bool `json:"hasEarlier,omitempty"`
 	Earlier    bool `json:"earlier,omitempty"`
+	// Hidden is the turns of the room that appear nowhere (D-234) and Marks is the turns that do not
+	// count, each with why (D-220, D-236), which a page that holds turns the newest page does not
+	// carry is told, so that those turns follow a suspension, a revocation or a removal (D-308).
+	Hidden []string          `json:"hidden,omitempty"`
+	Marks  map[string]string `json:"marks,omitempty"`
+	hidden []string
 }
 
 // subscribe registers a channel woken whenever the room changes.
@@ -215,6 +221,7 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 		// the machine again brings them back (D-234).
 		standing := judge.of(e)
 		if standing == standingHidden {
+			st.hidden = append(st.hidden, e.EventID)
 			continue
 		}
 		// Images that a host showed after their prompt belong to that prompt's turn, and are no

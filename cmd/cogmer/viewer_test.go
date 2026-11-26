@@ -441,3 +441,34 @@ func TestAPageRoomWithFewTurnsHasNoEarlierPage(t *testing.T) {
 		t.Errorf("a request before the first turn answered %+v", none)
 	}
 }
+
+// A page that opens a room wakes the addresses the room is asked of (D-305), and a page that asks again
+// with the hash it holds, or for earlier turns, does not, since it is already reading and its polls
+// would keep a quiet room polled every second.
+func TestThePagesRouteWakesTheRoomOnlyWhenAPageOpensIt(t *testing.T) {
+	d, room, post := promptRoom(t, false)
+	d.cloud = &cloudSession{setup: &cloudSetup{key: ed25519.NewKeyFromSeed(bytesOf(1, ed25519.SeedSize))}}
+	good := d.viewToken()
+	post(promptReq{SessionID: "s", PromptID: "p1", Prompt: "hello"})
+	path := "/snapshot?room=" + room.RoomName
+	woken := func() bool {
+		d.pace.mu.Lock()
+		defer d.pace.mu.Unlock()
+		_, ok := d.pace.woken[room.RoomID]
+		delete(d.pace.woken, room.RoomID)
+		return ok
+	}
+	woken()
+	viewExchange(t, d, good, path)
+	if !woken() {
+		t.Error("a page opening the room did not wake its addresses")
+	}
+	viewExchange(t, d, good, path+"&since=0123456789abcdef")
+	if woken() {
+		t.Error("a page asking again with the hash it holds woke the room's addresses")
+	}
+	viewExchange(t, d, good, path+"&before=zzz")
+	if woken() {
+		t.Error("a page asking for earlier turns woke the room's addresses")
+	}
+}

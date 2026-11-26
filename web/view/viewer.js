@@ -310,6 +310,14 @@
             const win = got.events || [];
             if (win.length) loaded = loaded.filter((e) => e.o < win[0].o).concat(win);
             else loaded = [];
+            // The turns the page holds that no newer page carries follow what the room says of them: a
+            // turn that appears nowhere goes, and one that does not count is marked.
+            if (got.hidden && got.hidden.length) {
+              const hidden = new Set(got.hidden);
+              loaded = loaded.filter((e) => !hidden.has(e.eventId));
+            }
+            const marks = got.marks || {};
+            loaded.forEach((e) => { if (marks[e.eventId]) e.marked = marks[e.eventId]; else delete e.marked; });
             if (firstState) { firstState = false; more = !!got.hasEarlier; }
             const whole = JSON.stringify(got);
             if (whole !== last) { last = whole; emit(); }

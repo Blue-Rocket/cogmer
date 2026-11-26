@@ -253,8 +253,12 @@ func (d *Daemon) handleSnapshot(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no such room", http.StatusNotFound)
 		return
 	}
-	// A page that is reading the room is about to need what colleagues wrote (D-305).
-	d.roomOpened(room.RoomID)
+	// A page that opens the room is about to need what colleagues wrote (D-305). A page that asks again
+	// with the hash it holds, or for earlier turns, is already reading it, and waking the room at each
+	// of its polls would keep a quiet room polled every second.
+	if r.URL.Query().Get("since") == "" && r.URL.Query().Get("before") == "" {
+		d.roomOpened(room.RoomID)
+	}
 	st, err := d.snapshot(room)
 	if err != nil {
 		http.Error(w, "could not read the room", http.StatusInternalServerError)
@@ -288,6 +292,15 @@ func (d *Daemon) handleSnapshot(w http.ResponseWriter, r *http.Request) {
 		st.Events[i].Order = st.Events[i].key
 	}
 	st.Paged, st.Total, st.NotGiven, st.HasEarlier = true, len(all), notGiven, start > 0
+	st.Hidden = st.hidden
+	for _, e := range all {
+		if e.Marked != "" {
+			if st.Marks == nil {
+				st.Marks = map[string]string{}
+			}
+			st.Marks[e.EventID] = e.Marked
+		}
+	}
 	lists := st.Lists
 	st.Lists = nil
 	raw, err := json.Marshal(st)

@@ -772,7 +772,7 @@ person in the room, the user included. The user's own turns are their prompts, t
 assistant, and the turns from their other sessions in the room. The page does the filtering, because the
 daemon builds the export, and D-218 (the export is the whole room as text-only Markdown) rejects controls
 that choose what the export holds, so a filter in the daemon's stream would put the export at risk of
-following it. The page has to keep the unread count and the jump button right for the turns it hides. A
+following it. The page has to keep the unread count and the jump button right for the turns it hides. On the static page the filter sees only the turns the page holds, since D-308 (the static page is sent a page of a room's turns and asks for the earlier ones) sends the newest page and the rest on request, so a person's turns hidden there could leave a page of nothing and a button asking for more. A
 choice need not survive a reload that the user makes. The user's own turns start hidden, and the other
 people's start shown.
 

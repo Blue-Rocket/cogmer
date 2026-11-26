@@ -114,6 +114,8 @@ func TestThePagedStaticPageAsksForEarlierTurnsAndTheDrawingCountsWhatItWasTold(t
 		"a newer page in place of its turns": "loaded.filter((e) => e.o < win[0].o).concat(win)",
 		"an earlier page in front":           ".concat(loaded)",
 		"the reader's place kept":            "window.scrollTo(0, y + document.documentElement.scrollHeight - h)",
+		"the turns that appear nowhere go":   "loaded = loaded.filter((e) => !hidden.has(e.eventId))",
+		"the marks follow":                   "if (marks[e.eventId]) e.marked = marks[e.eventId]; else delete e.marked;",
 	} {
 		if n := strings.Count(string(b), want); n != 1 {
 			t.Errorf("%s: viewer.js holds %q %d times, want once", what, want, n)
