@@ -1,0 +1,156 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+)
+
+// A machine that writes an event into a room tells the room's other machines to poll it
+// now, and each of them polls, of a colleague's machines in the room, only the one that
+// told it last (D-305, a machine nudges the machines it shares a room with when it writes
+// an event). The nudge carries nothing of the room. It is signed as a sync request is,
+// over the room's identifier with nudgeScope before it, so that a nudge cannot be
+// presented as a sync request or a sync request as a nudge.
+const nudgeScope = "nudge/"
+
+// nudgeTimeout bounds a nudge, which is worth nothing once a poll would have found the event.
+const nudgeTimeout = 5 * time.Second
+
+// nudger sends nudges, at most one at a time to each address. A nudge asked for while one
+// is on its way to the address is sent once that one ends, and further asks in the
+// meantime add nothing, since one poll fetches every event the address holds.
+type nudger struct {
+	mu      sync.Mutex
+	sending map[string]bool   // address → a nudge is on its way
+	again   map[string]string // address → the room of a nudge to send when that one ends
+}
+
+// nudgeRoom tells every machine this machine polls for a room to poll it now.
+func (d *Daemon) nudgeRoom(roomID string) {
+	if d.expelledFrom(roomID) {
+		return
+	}
+	for _, addr := range d.members.RoomPeers(roomID, d.id.PeerID) {
+		d.nudgeAddr(addr, roomID)
+	}
+}
+
+func (d *Daemon) nudgeAddr(addr, roomID string) {
+	n := &d.nudges
+	n.mu.Lock()
+	if n.sending == nil {
+		n.sending, n.again = map[string]bool{}, map[string]string{}
+	}
+	if n.sending[addr] {
+		n.again[addr] = roomID
+		n.mu.Unlock()
+		return
+	}
+	n.sending[addr] = true
+	n.mu.Unlock()
+	go func() {
+		for {
+			if err := d.sendNudge(addr, roomID); err != nil {
+				log.Printf("sync: could not nudge %s: %v", shortEndpoint(addr), err)
+			}
+			n.mu.Lock()
+			next, ok := n.again[addr]
+			delete(n.again, addr)
+			if !ok {
+				delete(n.sending, addr)
+				n.mu.Unlock()
+				return
+			}
+			n.mu.Unlock()
+			roomID = next
+		}
+	}()
+}
+
+// sendNudge sends one nudge on the connection kept for polling the address (D-303, a
+// machine keeps one connection to each address it polls). A machine on a version that
+// takes no nudges answers 404, which is not an error.
+func (d *Daemon) sendNudge(addr, roomID string) error {
+	client, err := d.syncClient(addr)
+	if err != nil {
+		return err
+	}
+	scoped := nudgeScope + roomID
+	cred, err := signRequestAs(d.id, scoped, AdvertisedEndpoint())
+	if err != nil {
+		return err
+	}
+	body, _ := json.Marshal(syncRequest{
+		Protocol: wireVersion, RoomID: scoped,
+		PeerID: cred.PeerID, Timestamp: cred.Timestamp, Nonce: cred.Nonce, Signature: cred.Signature,
+		Endpoint: cred.Endpoint, Signer: cred.Signer, Chain: cred.Chain,
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), nudgeTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, peerURL("/nudge"), bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<10))
+	switch resp.StatusCode {
+	case http.StatusNoContent, http.StatusNotFound:
+		return nil
+	default:
+		return fmt.Errorf("the nudge was refused: %s", resp.Status)
+	}
+}
+
+// handleNudge takes a nudge from a machine that wrote an event into a room this machine
+// shares with it. The nudge is checked as a sync request is: its signature, timestamp and
+// nonce (D-044, sync requests are signed), its signer against the connection (D-143,
+// admission is proved by a signed request bound to the connection), and its user against
+// the room's guests. The machine's recorded address is then polled at once, and becomes
+// the one address of its user this machine polls.
+func (d *Daemon) handleNudge(w http.ResponseWriter, r *http.Request) {
+	var req syncRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBody)).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if !speaks(req.Protocol) {
+		http.Error(w, "unsupported protocol", http.StatusBadRequest)
+		return
+	}
+	roomID, ok := strings.CutPrefix(req.RoomID, nudgeScope)
+	if !ok {
+		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		return
+	}
+	room, ok := d.members.RoomByID(roomID)
+	if !ok || d.expelledFrom(room.RoomID) {
+		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		return
+	}
+	machine := req.requestMachine()
+	if err := connectedAs(r, machine); err != nil {
+		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		return
+	}
+	if err := d.verifyRequest(req, room.RoomID); err != nil {
+		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		return
+	}
+	if addr, _ := d.members.MachineEndpoint(machine); addr != "" {
+		d.nudgedBy(req.PeerID, addr)
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

@@ -54,6 +54,7 @@ var outboundCalls = map[site]struct {
 	{"transport.go", "http.Client"}:                {2, "a peer, over TLS pinned to its key, by TCP or the overlay"},
 	{"sync.go", "http.Client"}:                     {1, "the peer client it is handed, which is the one above"},
 	{"peerconns.go", "http.Client"}:                {2, "the peer client above, kept from one poll of an address to the next (D-303)"},
+	{"nudge.go", "http.NewRequestWithContext"}:     {1, "a nudge to a machine this machine polls, on the peer client above, carrying a room's identifier and this machine's signature (D-305)"},
 	{"verify.go", "http.Client"}:                   {1, "the peer client it is handed, which is the one above"},
 	{"machineadd.go", "http.Client"}:               {3, "the peer client it is handed, to a machine being added, pinned to the key in the string the user entered"},
 	{"localguard.go", "http.Client"}:               {1, "the daemon on loopback, with the guard header attached in one place"},

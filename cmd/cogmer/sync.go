@@ -209,6 +209,14 @@ func (d *Daemon) syncPeer(addr string, every time.Duration, stop <-chan struct{}
 		default:
 		}
 		_, gen := d.paceWatch()
+		if d.setAside(addr) {
+			// Another machine of this address's user nudged last, so this one waits
+			// for a nudge of its own and is not polled (D-305).
+			if poll, _ := d.waitToPoll(addr, time.Hour, gen, time.Now(), true, stop); !poll {
+				return
+			}
+			continue
+		}
 		polled := time.Now()
 		n, err := pull(addr)
 		delay := every
@@ -233,6 +241,14 @@ func (d *Daemon) syncPeer(addr string, every time.Duration, stop <-chan struct{}
 		}
 		if woken {
 			empty = 0 // the waits after a wake start again from the usual interval
+			// However often it is woken, an address is polled at most every interval.
+			if rest := every - time.Since(polled); rest > 0 {
+				select {
+				case <-stop:
+					return
+				case <-time.After(rest):
+				}
+			}
 		}
 	}
 }

@@ -1,0 +1,13 @@
+# D-305 — A machine nudges the machines it shares a room with when it writes an event, and polls only the machine of each colleague that nudged it last
+
+**Date:** 2026-11-26 · **Status:** active · **Areas:** sync, transport, trust
+
+**Decision.** When a session on this machine writes an event into a room, the machine sends each machine it polls for the room a nudge, a request that asks for nothing and tells the receiver to poll the sender now, so that an event reaches its colleagues within about a second while D-304 (an address is polled less often while its rooms are quiet) leaves quiet rooms polled slowly. The nudge is signed as a sync request is, over the room's identifier with `nudge/` before it, so that neither can be presented as the other, and the receiver checks it as it checks a sync request: the signature, timestamp and nonce (D-044, sync requests are signed; authentication is not admission), the signer against the connection (D-143, admission is proved by a signed request bound to the connection), and the user among the room's guests. The receiver then polls the address recorded for the machine that signed, at once and at most once every poll interval. Of a user's machines that have nudged this machine, the receiver polls only the one that nudged last and the others not at all until one of them nudges, since a user's machine that is not in use holds nothing the machine in use has not sent, and the machine the user moves to nudges with its first event. A machine that has never nudged, such as one on a version that sends no nudges, is polled as D-304 has it.
+
+**Rejected.**
+- *Sending the events with the nudge.* The sender would need to know what each receiver holds, which is the state D-031 (peer synchronization polls) rejects push for, and the poll the nudge starts fetches what the receiver lacks.
+- *Polling a user's other machines once a minute in case a nudge is lost.* Those polls return nothing while the user works on one machine, and an event a machine writes reaches this machine through the user's machine in use when the event's own nudge is lost.
+
+**Limits.** A machine that is set aside is polled again only when it nudges, so an event it writes whose nudge is lost reaches this machine only through another machine that holds it, such as its user's machine that nudged last. Which machine of a user nudged last is held in memory, so after the daemon starts, each machine of a user is polled until it nudges again.
+
+**Revisit when** users are found to write into one room from two machines at once, or a nudge is found to be lost often enough that an event waits on another machine to arrive.

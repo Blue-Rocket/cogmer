@@ -23,11 +23,17 @@ const (
 // and wakes every poll loop when a room should wake them, so that an address polled
 // slowly is polled again at once when a room it is asked about wants it.
 type pollPace struct {
-	mu      sync.Mutex
-	stored  map[string]time.Time // room id → when it last stored an event
-	woken   map[string]time.Time // room id → when it last woke its addresses
-	gen     uint64               // counts the wakes so far
-	changed chan struct{}        // closed, and replaced, at each wake
+	mu     sync.Mutex
+	stored map[string]time.Time // room id → when it last stored an event
+	woken  map[string]time.Time // room id → when it last woke its addresses
+	// An address a nudge woke, and the user of each address that has nudged this
+	// machine with the address of each user's last nudge (D-305, a machine nudges the
+	// machines it shares a room with when it writes an event).
+	wokenAddr map[string]time.Time
+	nudgerOf  map[string]string // address → its machine's user
+	lastNudge map[string]string // user → the address of their last nudge
+	gen       uint64            // counts the wakes so far
+	changed   chan struct{}     // closed, and replaced, at each wake
 
 	// The caps and the quiet time, which are the constants above and syncBackoffCap
 	// unless a test says otherwise. A cap below the poll interval keeps every poll at
@@ -69,6 +75,36 @@ func (p *pollPace) wakeLocked(roomID string, now time.Time) {
 		p.woken = map[string]time.Time{}
 	}
 	p.woken[roomID] = now
+	p.bumpLocked()
+}
+
+// nudgedBy records that a machine of user at addr nudged this machine, which makes addr
+// the one address of user that is polled, and polls it at once (D-305).
+func (d *Daemon) nudgedBy(user, addr string) {
+	p := &d.pace
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.wokenAddr == nil {
+		p.wokenAddr, p.nudgerOf, p.lastNudge = map[string]time.Time{}, map[string]string{}, map[string]string{}
+	}
+	p.nudgerOf[addr] = user
+	p.lastNudge[user] = addr
+	p.wokenAddr[addr] = time.Now()
+	p.bumpLocked()
+}
+
+// setAside says whether addr is a machine that has nudged this machine and whose user
+// has nudged since from another address, so that addr is not polled until it nudges
+// again (D-305).
+func (d *Daemon) setAside(addr string) bool {
+	p := &d.pace
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	user, ok := p.nudgerOf[addr]
+	return ok && p.lastNudge[user] != addr
+}
+
+func (p *pollPace) bumpLocked() {
 	p.gen++
 	if p.changed != nil {
 		close(p.changed)
@@ -100,9 +136,13 @@ func (d *Daemon) askedRooms(addr string) ([]Room, error) {
 	return ask(addr, rooms), nil
 }
 
-// addrWokenSince says whether a room that addr is asked about woke its addresses after t.
+// addrWokenSince says whether addr was nudged after t, or a room that addr is asked about
+// woke its addresses after t.
 func (d *Daemon) addrWokenSince(addr string, t time.Time) bool {
-	return d.addrSince(addr, t, func(p *pollPace) map[string]time.Time { return p.woken })
+	d.pace.mu.Lock()
+	nudged := d.pace.wokenAddr[addr].After(t)
+	d.pace.mu.Unlock()
+	return nudged || d.addrSince(addr, t, func(p *pollPace) map[string]time.Time { return p.woken })
 }
 
 // addrDormant says whether no room that addr is asked about has stored an event for the
