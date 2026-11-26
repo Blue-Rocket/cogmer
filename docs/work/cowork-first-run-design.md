@@ -38,8 +38,8 @@ person a line, and a passkey's secret is available to a page in the user's brows
 1. The user installs the cogmer plugin on their account (D-290, cogmer reaches a Cowork cloud session as
    the marketplace plugin installed on the user's Claude account).
 2. In a task, the user runs `/cogmer:start`. The task's daemon starts with no secret of the user's, makes
-   its session key, and the command prints the link to the cloud page, the static page that reads a cloud task's
-   room with a token made for this task.
+   its session key, and the command prints the link to the cloud page (D-302, a cloud session's room is
+   read on a static page) with a token made for this task.
 3. The user opens the link and answers the passkey prompt. The page derives the user's cloud key from the
    passkey's PRF secret, certifies the task's session key with it, and sends the task the certificate, the
    cloud key's own chain and what the task needs to reach the user's machines.
@@ -71,7 +71,7 @@ Rejected.
   user until it is removed, as it can today.
 
 Limits. The host that serves the page serves the script that holds the cloud key while it signs, so
-that host has to be trusted, as the cloud page's decision says of the token. A passkey belongs to the site that made it,
+that host has to be trusted, as D-302's Limits say of the token. A passkey belongs to the site that made it,
 so the page's site cannot change without the user making a new passkey. Each new task needs the page
 once, so a task that nobody opens shares nothing, and a task that runs past 24 hours needs the page again.
 
@@ -111,7 +111,7 @@ Rejected.
 - *Keeping the page on GitHub Pages.* Its passkeys would belong to `blue-rocket.github.io`, which
   `Blue-Rocket` controls on GitHub, and could never be used by a page under `cogmer.ai`.
 
-Limits. cogmer runs the host, and its trust is the trust the cloud page's decision gives the page's host.
+Limits. cogmer runs the host, and its trust is the trust D-302's Limits give the page's host.
 
 Revisit when cogmer gives up the domain.
 
@@ -128,8 +128,9 @@ Revisit when cogmer gives up the domain.
   derives the master and shared keys from the passkey too, which is the PRF option of the open item on
   holding a hosted user's master key, with its costs.
 - How the page reaches a task whose daemon holds no key yet. Today the daemon serves the page on a second
-  port of the overlay, which admits by a token made from the cloud key, and Draft 2 makes the token random
-  for the task. The page's link carries it, and the link is in the conversation, as today's is.
+  port of the overlay, which admits by a token made from the cloud key (D-301, a cloud session's daemon
+  serves its room on a second overlay port), and Draft 2 makes the token random for the task. The page's
+  link carries it, and the link is in the conversation, as D-301's Limits say of today's.
 - How two Cowork-only users verify each other. A live two-word comparison needs both daemons running at
   once (D-048, verification is a live commit-then-reveal exchange that derives two words), and such a
   user's daemon runs only while a task does. An invitation link sent over a channel both people trust
