@@ -246,7 +246,8 @@ const ROOM = VIEW ? VIEW.room : (location.pathname.startsWith('/room/') ? decode
   // text nodes, since the room's name came from whoever invited them.
   const notice=document.getElementById('notice');
   function showNotice(state){
-    const n=state.events.filter(e=>e.notInSession).length;
+    // A page sent only some of a room's turns is told how many none holds (D-308).
+    const n=state.paged?(state.notGiven||0):state.events.filter(e=>e.notInSession).length;
     notice.hidden=n===0;
     if(!n) return;
     const p=document.createElement('p');
@@ -295,7 +296,8 @@ const ROOM = VIEW ? VIEW.room : (location.pathname.startsWith('/room/') ? decode
     // drawing is the history, not news.
     const ids=new Set(state.events.map(e=>e.eventId));
     let arrived=0;
-    if(seen) state.events.forEach(e=>{ if(!seen.has(e.eventId)&&e.peerId!==state.selfPeerId) arrived++; });
+    // Earlier turns the reader asked for are no news (D-308).
+    if(seen&&!state.noArrival) state.events.forEach(e=>{ if(!seen.has(e.eventId)&&e.peerId!==state.selfPeerId) arrived++; });
     seen=ids;
 
     for(const [id,t] of turns) if(!ids.has(id)){t.el.remove();turns.delete(id);}

@@ -68,6 +68,10 @@ type uiEvent struct {
 	// cutoff (D-220) or "from a removed guest" past a revocation's (D-236). Such a turn
 	// is shown and never given to an assistant.
 	Marked string `json:"marked,omitempty"`
+	// Order is where the turn sorts in its room, which the static page uses to put the pages it asks for
+	// together (D-308). It is set only for that page.
+	Order string `json:"o,omitempty"`
+	key   string
 }
 
 type uiPeer struct {
@@ -124,6 +128,15 @@ type uiState struct {
 	// Etag is a hash of the rest of the state without Lists, which only a poll of the static page asks for
 	// (D-307), so that a page can say what it already holds.
 	Etag string `json:"etag,omitempty"`
+	// The rest are for the static page, which is sent a page of a room's turns and not all of them
+	// (D-308): Paged says so, Total counts every turn of the room, NotGiven counts every turn no session
+	// holds, HasEarlier says turns come before the first sent, and Earlier marks the answer to a request
+	// for the turns before one the page holds.
+	Paged      bool `json:"paged,omitempty"`
+	Total      int  `json:"total,omitempty"`
+	NotGiven   int  `json:"notGiven,omitempty"`
+	HasEarlier bool `json:"hasEarlier,omitempty"`
+	Earlier    bool `json:"earlier,omitempty"`
 }
 
 // subscribe registers a channel woken whenever the room changes.
@@ -241,6 +254,7 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 			ue.Content = guestChangeText(e, labels)
 			ue.NotInSession = false
 		}
+		ue.key = orderKey(e)
 		ue.Images = imageRefs(e.Metadata)
 		if len(e.Metadata) > 0 {
 			var m struct {
@@ -291,17 +305,29 @@ func (d *Daemon) viewSnapshot(cur Room) (uiState, error) {
 	if err != nil {
 		return st, err
 	}
+	d.renderTurns(cur, st.Events)
+	return st, nil
+}
+
+// renderTurns writes into each turn its Markdown and the pictures this machine holds.
+func (d *Daemon) renderTurns(cur Room, evs []uiEvent) {
 	var held map[string]imageRow
 	if cur.RoomID != "" {
 		if store, serr := d.storeFor(cur.RoomID); serr == nil {
 			held, _ = store.ImageRows()
 		}
 	}
-	for i := range st.Events {
-		e := &st.Events[i]
+	for i := range evs {
+		e := &evs[i]
 		e.HTML = d.rendered.get(e.EventID, e.Content) + imagesHTML(cur.RoomName, e.Images, held)
 	}
-	return st, nil
+}
+
+// orderKey is where an event sorts in its room, in the order the store lists a room by: the time,
+// the peer, the signer and the sequence. Each part has a fixed form, so the keys compare as strings
+// in that order, and the static page puts the pages it asks for together by them (D-308).
+func orderKey(e Event) string {
+	return fmt.Sprintf("%s|%s|%s|%020d", e.Timestamp, e.PeerID, e.signerKey(), e.PeerSequence)
 }
 
 // imagesHTML is the part of a turn that shows its pasted images. The daemon writes each

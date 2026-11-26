@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/ed25519"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -326,5 +327,117 @@ func TestTheAgeOfTheListsDoesNotChangeTheHashOfARoom(t *testing.T) {
 	set(time.Hour)
 	if after := etagOf(); after != before {
 		t.Errorf("the hash moved from %s to %s when only the lists' age did", before, after)
+	}
+}
+
+// The static page is sent the newest turns of a room, and asks for the turns before the oldest it holds
+// in pages of the same size, until none are left (D-308).
+func pagedRoom(t *testing.T, turns, perPage, minTurns, bytes int) (*Daemon, Room, string) {
+	t.Helper()
+	oldTurns, oldBytes, oldMin := pageTurns, pageBytes, pageMinTurns
+	pageTurns, pageBytes, pageMinTurns = perPage, bytes, minTurns
+	t.Cleanup(func() { pageTurns, pageBytes, pageMinTurns = oldTurns, oldBytes, oldMin })
+	d, room, post := promptRoom(t, false)
+	d.cloud = &cloudSession{setup: &cloudSetup{key: ed25519.NewKeyFromSeed(bytesOf(1, ed25519.SeedSize))}}
+	for i := 1; i <= turns; i++ {
+		post(promptReq{SessionID: "s", PromptID: fmt.Sprintf("p%d", i), Prompt: fmt.Sprintf("turn %02d", i)})
+	}
+	return d, room, d.viewToken()
+}
+
+type pageAnswer struct {
+	Events []struct {
+		Content string `json:"content"`
+		Order   string `json:"o"`
+	} `json:"events"`
+	Total      int  `json:"total"`
+	HasEarlier bool `json:"hasEarlier"`
+	Earlier    bool `json:"earlier"`
+	Paged      bool `json:"paged"`
+}
+
+func askPage(t *testing.T, d *Daemon, token, path string) pageAnswer {
+	t.Helper()
+	got := viewExchange(t, d, token, path)
+	var a pageAnswer
+	if len(got) != 1 || got[0].status != 200 || json.Unmarshal([]byte(got[0].body), &a) != nil {
+		t.Fatalf("%s answered %+v", path, got)
+	}
+	return a
+}
+
+func TestTheNewestTurnsOfARoomAreSentAndTheEarlierOnesAreAskedForByCursor(t *testing.T) {
+	d, room, token := pagedRoom(t, 12, 5, 2, 1<<30)
+	path := "/snapshot?room=" + room.RoomName
+
+	first := askPage(t, d, token, path)
+	if !first.Paged || first.Earlier || len(first.Events) != 5 || first.Total != 12 || !first.HasEarlier {
+		t.Fatalf("the newest page: %+v", first)
+	}
+	if first.Events[0].Content != "turn 08" || first.Events[4].Content != "turn 12" || first.Events[0].Order == "" {
+		t.Fatalf("the newest page holds %q to %q, order %q", first.Events[0].Content, first.Events[4].Content, first.Events[0].Order)
+	}
+
+	var all []string
+	for _, e := range first.Events {
+		all = append(all, e.Content)
+	}
+	cursor, more := first.Events[0].Order, first.HasEarlier
+	for pages := 0; more; pages++ {
+		if pages > 5 {
+			t.Fatal("the earlier pages did not end")
+		}
+		p := askPage(t, d, token, path+"&before="+url.QueryEscape(cursor))
+		if !p.Earlier || len(p.Events) == 0 || len(p.Events) > 5 {
+			t.Fatalf("an earlier page: %+v", p)
+		}
+		var texts []string
+		for _, e := range p.Events {
+			texts = append(texts, e.Content)
+		}
+		all = append(texts, all...)
+		cursor, more = p.Events[0].Order, p.HasEarlier
+	}
+	if len(all) != 12 {
+		t.Fatalf("the pages hold %d turns, want 12: %v", len(all), all)
+	}
+	for i, c := range all {
+		if want := fmt.Sprintf("turn %02d", i+1); c != want {
+			t.Fatalf("turn %d is %q, want %q; the pages are out of order or repeat a turn: %v", i+1, c, want, all)
+		}
+	}
+}
+
+func TestAPageEndsAtTheByteCapOnceItHasItsMinimumOfTurns(t *testing.T) {
+	// Each short turn counts for twice its text and 300 more, 320, so 2000 is reached at 7 turns.
+	d, room, token := pagedRoom(t, 30, 100, 3, 2000)
+	if got := askPage(t, d, token, "/snapshot?room="+room.RoomName); len(got.Events) != 7 || !got.HasEarlier {
+		t.Errorf("small turns under a cap of 2000 gave %d, want 7", len(got.Events))
+	}
+}
+
+// The minimum holds for turns that are each over the cap.
+func TestAPageHoldsItsMinimumOfTurnsThatAreEachOverTheByteCap(t *testing.T) {
+	d, room, post := promptRoom(t, false)
+	pageTurns, pageBytes, pageMinTurns = 100, 2000, 3
+	t.Cleanup(func() { pageTurns, pageBytes, pageMinTurns = 20, 300<<10, 10 })
+	d.cloud = &cloudSession{setup: &cloudSetup{key: ed25519.NewKeyFromSeed(bytesOf(1, ed25519.SeedSize))}}
+	for i := 0; i < 10; i++ {
+		post(promptReq{SessionID: "s", PromptID: fmt.Sprintf("p%d", i), Prompt: strings.Repeat("x", 5000)})
+	}
+	if got := askPage(t, d, d.viewToken(), "/snapshot?room="+room.RoomName); len(got.Events) != 3 {
+		t.Errorf("turns over the cap gave %d, want the minimum of 3", len(got.Events))
+	}
+}
+
+func TestAPageRoomWithFewTurnsHasNoEarlierPage(t *testing.T) {
+	d, room, token := pagedRoom(t, 3, 20, 10, 300<<10)
+	got := askPage(t, d, token, "/snapshot?room="+room.RoomName)
+	if len(got.Events) != 3 || got.HasEarlier || got.Total != 3 {
+		t.Errorf("a room of 3 turns: %+v", got)
+	}
+	none := askPage(t, d, token, "/snapshot?room="+room.RoomName+"&before="+url.QueryEscape(got.Events[0].Order))
+	if len(none.Events) != 0 || none.HasEarlier {
+		t.Errorf("a request before the first turn answered %+v", none)
 	}
 }

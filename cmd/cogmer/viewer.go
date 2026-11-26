@@ -219,19 +219,75 @@ func cloudWatchLine(room string) string {
 	return fmt.Sprintf("Read this room in your browser: %s\nAnyone who has this link can read the room while this session's daemon is awake.", out.URL)
 }
 
+// The static page is sent a page of a room's turns and not all of them (D-308): the newest turns, up
+// to pageTurns, stopping once their text comes to pageBytes when there are pageMinTurns, and then, when
+// it asks, the turns before the oldest it holds in pages of the same size. They are variables so that
+// a test can use small ones.
+var (
+	pageTurns    = 20
+	pageBytes    = 300 << 10
+	pageMinTurns = 10
+)
+
+// pageStart is where the page of turns that ends at end begins in all, counting back from the newest.
+// A turn counts for its text and the Markdown made from it.
+func pageStart(all []uiEvent, end int) int {
+	start, size := end, 0
+	for start > 0 {
+		n := end - start
+		if n >= pageTurns || (n >= pageMinTurns && size >= pageBytes) {
+			break
+		}
+		start--
+		size += len(all[start].Content)*2 + 300
+	}
+	return start
+}
+
 // handleSnapshot is one message of the view's stream, for a page that asks for it again in place
-// of holding a stream open.
+// of holding a stream open. It answers with the newest page of the room, or with the page before the
+// turn a request names, and with the hash of the page when the page already holds it (D-307, D-308).
 func (d *Daemon) handleSnapshot(w http.ResponseWriter, r *http.Request) {
 	room, ok := d.roomFromPath("/room/" + r.URL.Query().Get("room"))
 	if !ok {
 		http.Error(w, "no such room", http.StatusNotFound)
 		return
 	}
-	st, err := d.viewSnapshot(room)
+	// A page that is reading the room is about to need what colleagues wrote (D-305).
+	d.roomOpened(room.RoomID)
+	st, err := d.snapshot(room)
 	if err != nil {
 		http.Error(w, "could not read the room", http.StatusInternalServerError)
 		return
 	}
+	all := st.Events
+	if before := r.URL.Query().Get("before"); before != "" {
+		end := 0
+		for end < len(all) && all[end].key < before {
+			end++
+		}
+		start := pageStart(all, end)
+		page := all[start:end]
+		d.renderTurns(room, page)
+		for i := range page {
+			page[i].Order = page[i].key
+		}
+		writeJSON(w, uiState{Room: st.Room, RoomName: st.RoomName, Events: page, Paged: true, Earlier: true, HasEarlier: start > 0})
+		return
+	}
+	notGiven := 0
+	for _, e := range all {
+		if e.NotInSession {
+			notGiven++
+		}
+	}
+	start := pageStart(all, len(all))
+	st.Events = all[start:]
+	d.renderTurns(room, st.Events)
+	for i := range st.Events {
+		st.Events[i].Order = st.Events[i].key
+	}
+	st.Paged, st.Total, st.NotGiven, st.HasEarlier = true, len(all), notGiven, start > 0
 	lists := st.Lists
 	st.Lists = nil
 	raw, err := json.Marshal(st)

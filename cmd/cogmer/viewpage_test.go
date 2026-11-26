@@ -100,3 +100,31 @@ func TestTheStaticPageKeepsItsTimingsOnceTheRoomHasDrawn(t *testing.T) {
 		}
 	}
 }
+
+// A page that is sent some of a room's turns asks for the earlier ones, and the room's drawing counts
+// what it was told and does not take the turns the reader asked for as news (D-308).
+func TestThePagedStaticPageAsksForEarlierTurnsAndTheDrawingCountsWhatItWasTold(t *testing.T) {
+	b, err := os.ReadFile("../../web/view/viewer.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for what, want := range map[string]string{
+		"the request for earlier turns":      "'&before=' + encodeURIComponent(first)",
+		"the button above the feed":          "earlierButton.id = 'cogmerViewEarlier'",
+		"a newer page in place of its turns": "loaded.filter((e) => e.o < win[0].o).concat(win)",
+		"an earlier page in front":           ".concat(loaded)",
+		"the reader's place kept":            "window.scrollTo(0, y + document.documentElement.scrollHeight - h)",
+	} {
+		if n := strings.Count(string(b), want); n != 1 {
+			t.Errorf("%s: viewer.js holds %q %d times, want once", what, want, n)
+		}
+	}
+	for what, want := range map[string]string{
+		"the count of turns no session holds": "state.paged?(state.notGiven||0)",
+		"no news from earlier turns":          "!state.noArrival",
+	} {
+		if n := strings.Count(string(uiPage), want); n != 1 {
+			t.Errorf("%s: the page holds %q %d times, want once", what, want, n)
+		}
+	}
+}

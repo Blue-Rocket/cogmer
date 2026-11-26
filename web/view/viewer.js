@@ -132,6 +132,23 @@
     timing.hidden = false;
   }
 
+  // The button that asks for the turns before the oldest one shown. It sits above the feed and not in
+  // it, since the room's drawing puts each turn at its own place among the feed's children (D-308).
+  let roomStream = null;
+  const earlierButton = document.createElement('button');
+  earlierButton.id = 'cogmerViewEarlier';
+  earlierButton.type = 'button';
+  earlierButton.style.cssText = 'display:none;margin:12px auto;padding:8px 14px;font:13px system-ui;cursor:pointer';
+  earlierButton.addEventListener('click', () => { if (roomStream && roomStream.loadEarlier) roomStream.loadEarlier(); });
+  document.addEventListener('DOMContentLoaded', () => {
+    const feed = document.getElementById('feed');
+    if (feed && feed.parentNode) feed.parentNode.insertBefore(earlierButton, feed);
+  });
+  function showEarlier(total, count, more) {
+    earlierButton.style.display = more ? 'block' : 'none';
+    if (more) earlierButton.textContent = 'Show earlier turns (' + Math.max(0, total - count) + ' not shown)';
+  }
+
   let ready;
   let http = null;
   let dialAttempt = null;
@@ -223,10 +240,52 @@
     // A room's state is asked for with the hash of the one this page holds, and the daemon answers that
     // it is unchanged in a few bytes when it is, with only the age of the lists, which moves as the room
     // sits quiet (D-307). The page puts that age into the state it holds.
+    //
+    // The daemon sends the newest turns of a room and not all of them, and the turns before the oldest the
+    // page holds when it asks (D-308). The page keeps every turn it has fetched, each with the place it
+    // sorts in, and hands them to the room's drawing as one list. A newer page replaces the turns from its
+    // first on, and an earlier page goes in front.
     const isRoom = target !== null && target.startsWith('/snapshot?');
     let state = null;
     let etag = '';
     let lastLists = '';
+    let loaded = [];
+    let more = false;
+    let firstState = true;
+    let noArrival = false;
+    function composed() {
+      const s = Object.assign({}, state, { events: loaded, noArrival: noArrival });
+      noArrival = false;
+      return JSON.stringify(s);
+    }
+    function emit() {
+      if (es.onmessage) es.onmessage({ data: composed() });
+      showEarlier(state ? state.total : 0, loaded.length, more);
+    }
+    if (isRoom) {
+      es.loadEarlier = async () => {
+        if (!loaded.length) return;
+        earlierButton.disabled = true;
+        try {
+          const first = loaded[0].o;
+          const r = await request(target + '&before=' + encodeURIComponent(first));
+          if (r.status !== 200) throw new Error('status ' + r.status);
+          const page = JSON.parse(dec.decode(r.body));
+          loaded = (page.events || []).filter((e) => e.o < first).concat(loaded);
+          more = !!page.hasEarlier;
+          noArrival = true;
+          const y = window.scrollY;
+          const h = document.documentElement.scrollHeight;
+          emit();
+          window.scrollTo(0, y + document.documentElement.scrollHeight - h);
+        } catch (err) {
+          earlierButton.textContent = 'Could not load earlier turns. Tap to try again.';
+        } finally {
+          earlierButton.disabled = false;
+        }
+      };
+      roomStream = es;
+    }
     async function tick() {
       if (es.closed) return;
       try {
@@ -242,14 +301,18 @@
             if (lists !== lastLists) {
               lastLists = lists;
               if (got.lists) state.lists = got.lists; else delete state.lists;
-              if (es.onmessage) es.onmessage({ data: JSON.stringify(state) });
+              emit();
             }
           } else {
             state = got;
             etag = got.etag || '';
             lastLists = JSON.stringify(got.lists || null);
+            const win = got.events || [];
+            if (win.length) loaded = loaded.filter((e) => e.o < win[0].o).concat(win);
+            else loaded = [];
+            if (firstState) { firstState = false; more = !!got.hasEarlier; }
             const whole = JSON.stringify(got);
-            if (whole !== last) { last = whole; if (es.onmessage) es.onmessage({ data: whole }); }
+            if (whole !== last) { last = whole; emit(); }
           }
         } else if (text !== last) {
           last = text;
