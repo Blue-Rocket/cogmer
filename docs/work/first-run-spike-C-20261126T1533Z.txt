@@ -80,8 +80,11 @@ What was seen: persistence
   cogmer-cloud-8a4b1b80 and first-run-spike, under one account folder.
 
 What the run does not show
-  The entry has not been removed, so the list holds "probe.cogmer.ai" until the user removes it, and no run shows the
-  list without it. The entry was added and replaced by the user and not by the session. Whether a deeper name such as
+  The entry was added, replaced and removed by the user and not by the session. After the user said it was removed,
+  the session read the Capabilities page, without changing anything (the time was not noted, after 16:15Z): "Allow
+  network egress" on, mode "Package managers only", and the additional allowed domains api.roboflow.com,
+  app.roboflow.com, source.roboflow.com, storage.googleapis.com, tailcat.dev, tc301a.ipn.dev, tc302a.ipn.dev,
+  tc303a.ipn.dev and tc304a.ipn.dev, with no probe.cogmer.ai entry of any form. No task was run after the removal. Whether a deeper name such as
   x.y.probe.cogmer.ai is honored is not tried. A Pro or Max account was not used, so what such a plan's settings show
   about network access is not known. The reports hold curl's view only: no other client, such as a language
   runtime's, was run. The Mac baseline is from one network. The P report's own fingerprint for probe.cogmer.ai was
