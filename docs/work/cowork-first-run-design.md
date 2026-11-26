@@ -60,11 +60,10 @@ Whether the hosted machine is the default is not decided.
    - A computer of their own: the page gives one line to paste into Claude Code or Codex on the computer,
      which installs cogmer there and opens its machines page, where the identity is made and the passkey
      registered through the page under `cogmer.ai` (spike F).
-4. The user answers the passkey prompt, and the page certifies the task's session key: by an assertion of
-   the passkey in the signing variant of Draft 1, or with a cloud key it derives from the passkey in Draft 1
-   as written. It sends the task the certificate and what the task needs to reach the user's machines. A
-   user at their own computer can instead approve the task on its machines page, which certifies it with no
-   passkey.
+4. The user answers the passkey prompt, and the page certifies the task's session key by an assertion of
+   the passkey (Draft 1) and sends the task the certificate and what the task needs to reach the user's
+   machines. A user at their own computer can instead approve the task on its machines page, which
+   certifies it with no passkey. The user's machines renew the certificate from then on.
 5. The task speaks for the user in their rooms, as a task with an uploaded value does today. A new task
    needs steps 2 and 4 again, since nothing persists between tasks.
 
@@ -72,69 +71,55 @@ On a Team plan an owner still allows the hosts the task's daemon reaches. A user
 tasks start with no tap keeps the uploaded value (D-278, the machines page offers the cloud value as a
 plugin for the user to upload once).
 
-## Draft 1: a cloud task's session key is certified in the cloud page, from a passkey
+## Draft 1: a cloud task's session key is certified by the user's passkey and renewed by the user's machines
 
-Decision. A cloud task holds no secret of its user's when it starts. Its daemon makes a session key,
-and the cloud page, opened from the link the task prints, asks the user's passkey for its PRF secret,
-derives the user's cloud key from it, and sends the task a certificate for the session key that expires
-in 24 hours (D-247, a cloud session's key is certified for twenty-four hours), with the cloud key's chain.
-The cloud key is certified once, when the passkey is registered, by a machine that holds the user's
-shared key, as a cloud key is certified today (D-246, a cloud environment is added from the machines
-page; D-216, a cloud session signs with a key of its own that the user's shared key vouches for). Nothing
-but an upload puts a per-user value in a task (spikes A and B), and a passkey's secret was the same at its creation and at each sign-in on the one phone tried (spike E), so the page can make the same cloud key every time without anything storing it.
-The cloud key never enters the task, so the model's shell can copy only a session key that expires within
-a day, where today it can copy the cloud key (D-216's Limits).
+Decision. A cloud task holds no secret of its user's when it starts. Its daemon makes a session key, and
+the cloud page, opened from the link the task prints, has the user's passkey sign the session key and an
+expiry three days later as the challenge of an ordinary WebAuthn assertion, which is the task's first
+certificate. The passkey's public key is certified once, when the passkey is registered, by a machine that
+holds the user's shared key, as a cloud key is certified today (D-246, a cloud environment is added from the
+machines page; D-216, a cloud session signs with a key of its own that the user's shared key vouches for).
+A receiver checks the assertion's signature with that key, that its site is `cogmer.ai`, that the
+authenticator confirmed the user with Face ID, a fingerprint or a PIN, and that the page it came from is
+the cloud page, before it accepts the session key. From then on the task renews its certificate every two
+to four hours from whichever of the user's durable machines it reaches, hosted or their own computer, each
+of which holds the shared key and certifies the session key for three days more. A task that reaches none
+before its certificate ends stops publishing, keeps capturing its turns, and says that sharing is paused
+until one of the user's machines answers, and when one does, or the user taps the page's link again, it
+signs the held turns and sends them. A script on the page that turned hostile gets, at each prompt the
+user answers, one certificate for a key it chose, and never a key it can use again or the user's master
+key; the cloud page passes the identifier of the user's registered passkey, so the user is not asked to
+choose among passkeys for `cogmer.ai`, which a chooser showed with nothing to tell apart (spike F).
+
+Three days lets a task survive its user's machines all being away for a weekend, and caps how long a
+session key copied out of a sandbox speaks for the user, unless a removal of it reaches colleagues first
+(D-250, a removal of a cloud key names a cutoff for each of its rooms). It departs from D-247 (a cloud
+session's key is certified for twenty-four hours, and the session's daemon certifies a new one before it
+expires), whose renewal is done by a cloud key in the task, since the task holds no cloud key here.
 
 Rejected.
+- *Deriving a cloud key from the passkey's PRF secret in the page.* A script that keeps the derived key
+  certifies for as long as the key is certified, where an assertion certifies one key until it expires, and
+  carrying a PRF secret between pages puts it in an address.
 - *Asking for the cloud value as a plugin option at install.* Nothing asked for an option, and options
   reached a task unset (spike B).
 - *A link that installs the user's value plugin.* No such link exists (spike A).
-- *The page sending the task the cloud key.* The task's shell could then copy a key that speaks for the
-  user until it is removed, as it can today.
-
-Limits. The host that serves the page serves the script that holds the cloud key while it signs, so
-that host has to be trusted, as D-302's Limits say of the token. A passkey belongs to the site that made it,
-so the page's site cannot change without the user making a new passkey. Each new task needs the page
-once, so a task that nobody opens shares nothing, and a task that runs past 24 hours needs the page again.
-
-Revisit when a Claude account can hold a per-user value that a cloud task's hook reads, or a browser a
-Cowork user has is found to return no PRF secret.
-
-## Draft 1, signing variant: the passkey signs the task's session key
-
-Draft 1 derives a cloud key from the passkey's PRF secret in the page, so the page's script holds a key
-that certifies for as long as it is certified. If whoever serves the page serves a script that keeps the
-key, it holds a key that speaks for the user in every cloud task until the key is removed, and if the
-master key is derived the same way, it holds the user. In this variant the page derives nothing. The
-passkey signs the task's session key and expiry as the challenge of an ordinary WebAuthn assertion, with
-the private key that never leaves the authenticator, and the task's certificate is that assertion.
-
-Decision. A cloud task's session key is certified by an assertion of the user's passkey whose challenge is
-the session key and the certificate's expiry. The passkey's public key is certified once, when the passkey
-is registered, by a machine that holds the user's shared key, as a cloud key is certified today (D-246, a
-cloud environment is added from the machines page; D-216, a cloud session signs with a key of its own that
-the user's shared key vouches for), and a receiver checks the assertion's signature with that key, that its site is `cogmer.ai`, that
-  the authenticator confirmed the user with Face ID, a fingerprint or a PIN, and that the page it came from is the cloud page, before it accepts the session key.
-A script that turns hostile gets, at each prompt the user answers, one assertion over a key it chose, which
-speaks for the user until it expires, and never a key it can use again or the user's master key.
-
-Rejected.
-- *Draft 1 as written, deriving a cloud key from the PRF secret.* A script that keeps the derived key
-  certifies for as long as the key is certified, where an assertion certifies one key until it expires.
+- *A certificate of a day, renewed by the passkey.* The user would answer a prompt every day for every task
+  that runs that long, or the task would pause.
 
 Limits. A passkey signs with P-256 and the user's records are Ed25519, so a certificate in this form is a
 new version of the records that every receiver has to read before any task uses it (D-058, signature
-schemes are kept, never replaced). D-058 leaves the scheme's version outside the signature because every
-scheme is Ed25519 and none is weaker to be downgraded to, so a P-256 scheme beside them needs that reason
-restated. The prompt names the site and the account and never what is signed,
-and the page chooses the challenge, so the user cannot see which key they certify, as the open item on
-holding a hosted user's master key says of a passkey that signs a record's hash. The page passes the
-identifier of the user's registered passkey, so the user is not asked to choose among passkeys for
-`cogmer.ai`, which a chooser showed with nothing to tell apart (spike F). A hostile script that the
-user answers can therefore certify a key of its own for one expiry at a time. A passkey that is lost takes
-the certified key with it, and the user registers a new one from a machine that holds the shared key.
+schemes are kept, never replaced). D-058 leaves the scheme's version outside the signature, which it says
+is harmless because every scheme is Ed25519 and none is weaker to be downgraded to, so a P-256 scheme
+beside them needs that reason restated. The prompt names the site and the account and never what is
+signed, and the page chooses the challenge, so the user cannot see which key they certify, as the open item
+on holding a hosted user's master key says of a passkey that signs a record's hash. A hostile script that
+the user answers can therefore certify a key of its own for one certificate at a time. A task that ends
+while paused loses the turns it held. A passkey that is lost takes the certified key with it, and the user
+registers a new one from a machine that holds the shared key.
 
-Revisit when a passkey's prompt can show the user what it signs.
+Revisit when a passkey's prompt can show the user what it signs, or users find tasks paused often enough
+that three days is too short.
 
 ## Draft 2: a cloud task with nothing set up shares nothing until the user runs `/cogmer:start`
 
@@ -176,15 +161,16 @@ Revisit when cogmer gives up the domain.
 ## Questions the route leaves
 
 - Where the task learns how to reach its user's machines. A task takes its user's lists only from one of
-  the user's machines (D-245, a cloud session takes its user's lists only from one of the user's machines), and today the cloud value carries their relay addresses. The page could
-  carry them if it can get them: from a hosted machine at a fixed name under `cogmer.ai`, from the
-  browser's storage of an earlier setup, which Safari clears after seven days of browser use without a visit to the site (https://webkit.org/blog/10218/full-third-party-cookie-blocking-and-more/, read on 2026-11-26), or as
-  public records kept beside the passkey.
-- What a Cowork-only user's identity rests on. The cloud key is certified by the shared key, which a
-  machine holds. A user with a computer certifies it on their machines page. A user with none needs a
-  hosted machine (D-285, a user with no computer of their own has a machine hosted for them), or the page
-  derives the master and shared keys from the passkey too, which is the PRF option of the open item on
-  holding a hosted user's master key, with its costs.
+  the user's machines (D-245, a cloud session takes its user's lists only from one of the user's machines),
+  and today the cloud value carries their relay addresses. A machine that approves or renews a task can
+  give it the addresses then. For the first certificate, which the page makes, the page needs them too: a
+  hosted machine at a fixed name under `cogmer.ai` could give them, or the page could carry them from the
+  browser's storage of an earlier setup, which Safari clears after seven days of browser use without a visit
+  to the site (https://webkit.org/blog/10218/full-third-party-cookie-blocking-and-more/, read on 2026-11-26).
+- What the identity of a user with no computer rests on. It rests on a hosted machine, which onboarding
+  suggests (D-285, a user with no computer of their own has a machine hosted for them): the machine holds
+  the shared key, certifies the passkey and renews the user's tasks. Deriving the master and shared keys
+  from the passkey is set aside, since the passkey signs and carries no secret.
 - How the page reaches a task whose daemon holds no key yet. Today the daemon serves the page on a second
   port of the overlay, which admits by a token made from the cloud key (D-301, a cloud session's daemon
   serves its room on a second overlay port), and Draft 2 makes the token random for the task. The page's
@@ -224,23 +210,18 @@ Revisit when cogmer gives up the domain.
   first set cogmer up on one of their own computers). In a Cowork cloud task, `/cogmer:start` would start
   the daemon and print the page's link instead, and D-286's Limits, which Draft 2 relies on, say the
   command says what D-281 has it say. A Claude Code cloud session could keep D-281's answer.
-- How Draft 1 answers D-247 (a cloud session's key is certified for twenty-four hours, and the session's
-  daemon certifies a new one before it expires). With no cloud key the daemon cannot renew, and D-247
-  rejects a short certificate because a daemon that misses a renewal has its turns refused, and because it
-  gains nothing while the cloud key in the same container can certify a new session key at any time, which
-  Draft 1 takes out of the container. A task whose
-  certificate has expired could stop sharing and say so in the view and at its next command, or hold its
-  turns unsigned until the page is opened again and sign them then. Which, and how long the certificate
-  lasts, is to be chosen.
-- How an uploaded value and the passkey keep one cloud key (D-280, a user has one cloud key at a time). A
-  user who keeps the uploaded value would otherwise hold a second cloud key beside the one the passkey
-  derives. In Draft 1 as written, the page that derives the key can offer the value's plugin, as the machines page
-  does today (D-278, the machines page offers the cloud value as a plugin for the user to upload once). In
-  the signing variant the passkey is not a cloud key but a second kind of key that certifies a task's
-  session key, and whether D-280 extends to it is to be decided. Either page can run the passkey step. The
-  machines page stays at `127.0.0.1` and sends the user to a page under `cogmer.ai` with its challenge,
-  taking back the signature by navigation alone, with no hosts-file entry or local certificate (spike F).
-  A step that returned a PRF secret would carry it in an address, which the signing variant avoids.
+- Whether a passkey that certifies tasks counts under D-280 (a user has one cloud key at a time). The
+  passkey is not a cloud key but a key of another kind that certifies a task's session key, and a user who
+  keeps the uploaded value keeps a cloud key beside it. Either page can run the passkey step: the machines
+  page stays at `127.0.0.1` and sends the user to a page under `cogmer.ai` with its challenge, taking back
+  the signature by navigation alone, with no hosts-file entry or local certificate (spike F).
+- Whether a new task needs a tap. A new task starts with nothing, so it needs the user's passkey or a
+  secret stored where tasks read it, which only an upload puts there (spikes A to C). The upload could hold
+  a token that only the user's own machines honor, in place of today's cloud key, which every colleague
+  honors: a new task presents it to one of the user's machines and gets a three-day certificate, and the
+  machine can show that a task started, limit how often the token is used, and revoke it at once, where a
+  cloud key that is copied speaks for the user until a removal reaches each colleague (D-225, a machine
+  sends each removal and new shared key to every colleague it knows until each acknowledges).
 - Which earlier decisions Drafts 1 and 3 change in part. D-216 (a cloud session signs with a key of its own
   that the user's shared key vouches for) names the cloud key as the one secret given to the environment,
   and D-302 (a cloud session's room is read on a static page) serves the page from GitHub Pages, so each
