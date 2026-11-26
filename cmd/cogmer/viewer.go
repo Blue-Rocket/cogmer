@@ -232,3 +232,10 @@ func (d *Daemon) handleSnapshot(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, st)
 }
+
+// servesView says whether this daemon serves the page's port: in a cloud container, or when it
+// speaks as a cloud session, which a cloud host that does not set CLAUDE_CODE_REMOTE still does,
+// since the daemon drops the cloud key from its own environment once it has read it.
+func (d *Daemon) servesView() bool {
+	return inCloudContainer() || d.cloud != nil
+}

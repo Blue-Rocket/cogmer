@@ -237,3 +237,23 @@ func TestTheDaemonMakesTheLinkAPageOpensTheRoomFrom(t *testing.T) {
 		t.Errorf("a request with no local header was answered %d", rec.Code)
 	}
 }
+
+// A cloud host that does not set CLAUDE_CODE_REMOTE still gets the page, because the daemon that read
+// a cloud key drops the key from its environment and then serves the port as a cloud session's.
+func TestADaemonThatReadACloudKeyServesThePageWithoutTheHostVariable(t *testing.T) {
+	t.Setenv("CLAUDE_CODE_REMOTE", "")
+	t.Setenv(cloudKeyVar, "")
+	d := &Daemon{}
+	if d.servesView() {
+		t.Fatal("a daemon with no cloud key and no cloud host variable serves the page")
+	}
+	d.cloud = &cloudSession{setup: &cloudSetup{key: ed25519.NewKeyFromSeed(bytesOf(1, ed25519.SeedSize))}}
+	if !d.servesView() {
+		t.Fatal("a daemon that speaks as a cloud session serves no page")
+	}
+	d.cloud = nil
+	t.Setenv("CLAUDE_CODE_REMOTE", "true")
+	if !d.servesView() {
+		t.Fatal("a daemon in a cloud container serves no page")
+	}
+}
