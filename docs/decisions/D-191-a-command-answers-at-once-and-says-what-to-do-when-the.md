@@ -9,6 +9,9 @@ clears the lock that install left and starts again.
 When the installed program answers a command with its usage and status 2 and is older than
 the plugin, `cli.sh` says that cogmer is updating and starts the update, since a command of a
 new plugin reaches the older program until the session-start hook has fetched the newer one.
+The installer holds off for an hour after a failure (D-172, the installer runs detached, one at
+a time, outside the plugin directory, and waits an hour after a failure), so the start is a
+request that it may decline.
 
 **Support.**
 - A command whose `!` line exits non-zero is abandoned, no model turn runs, and the explanation
