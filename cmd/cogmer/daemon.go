@@ -179,6 +179,11 @@ type Daemon struct {
 	tls peerTLS
 	// The client kept for each address this machine polls (D-303).
 	peerConns peerConns
+	// When each room last stored an event, which sets how often its addresses are polled
+	// (D-305, an address is polled less often while its rooms are quiet).
+	pace pollPace
+	// The nudges on their way to each address (D-306, a machine nudges the machines it shares a room with when it writes an event).
+	nudges nudger
 
 	// When each peer last made an authenticated request of this daemon, by peer.
 	// Held with the peer states below, and in memory like them.
@@ -278,6 +283,7 @@ func (d *Daemon) PeerRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", d.health)
 	mux.HandleFunc("/sync", d.handleSync)
+	mux.HandleFunc("/nudge", d.handleNudge)
 	mux.HandleFunc("/blob", d.handleBlob)
 	mux.HandleFunc("/verify", d.handleVerify)
 	mux.HandleFunc("/offer", d.handleOffer)
@@ -928,7 +934,12 @@ func (d *Daemon) appendLocal(store *Store, room Room, sessionID, kind, content s
 	if id.HasUser() {
 		removals = d.members.RemovalsSeen(id.User)
 	}
-	return store.AppendAs(seq, id, removals, room.RoomID, sessionID, kind, content, meta)
+	ev, err := store.AppendAs(seq, id, removals, room.RoomID, sessionID, kind, content, meta)
+	if err == nil {
+		d.roomStored(room.RoomID, true)
+		go d.nudgeRoom(room.RoomID) // the room's other machines poll this one now (D-306, a machine nudges the machines it shares a room with when it writes an event)
+	}
+	return ev, err
 }
 
 // reportLostState compares what a room holds against what this peer recorded

@@ -459,6 +459,9 @@ func (d *Daemon) handleStream(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no such room", http.StatusNotFound)
 		return
 	}
+	// Somebody opening the room is about to read it, so its addresses are polled at
+	// once (D-305, an address is polled less often while its rooms are quiet).
+	d.roomOpened(room.RoomID)
 
 	ch := d.subscribe()
 	defer d.unsubscribe(ch)
@@ -619,9 +622,8 @@ func exportMarkdown(st uiState, at time.Time) string {
 // Peer health.
 //
 // A peer that cannot be reached is reported when it STOPS being reachable and when
-// it starts again, not once per poll. Polling is every second, so the old behavior
-// wrote two lines a second saying the same thing, which fills a log during a
-// partition. A message repeated that often is not a signal; it buries
+// it starts again, not once per poll. A line for each failed poll repeats the same
+// line every few seconds, which fills a log during a partition. A message repeated that often is not a signal; it buries
 // the one line that matters, which is the transition.
 
 // peerState is what is known about one address.
@@ -697,7 +699,13 @@ func (d *Daemon) statusOf(targets []string) []uiPeer {
 		}
 		if st, ok := d.peerSeen[addr]; ok {
 			if !st.lastSeen.IsZero() {
-				if age := time.Since(st.lastSeen); age < 15*time.Second {
+				// A peer that answered its last poll and was polled within the longest
+				// wait between polls of a quiet room is online however long ago that
+				// was, since a quiet room is polled less often (D-305, an address is
+				// polled less often while its rooms are quiet).
+				age := time.Since(st.lastSeen)
+				answering := st.downSince.IsZero() && age < dormantPollCap+15*time.Second
+				if age < 15*time.Second || answering {
 					p.Online = true
 				} else if age < time.Minute {
 					p.Since = "just now"

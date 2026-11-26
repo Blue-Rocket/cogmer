@@ -115,6 +115,8 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	d.markPeerHeardFrom(req.PeerID)
+	// A machine that polls this one has every nudge this machine owed it (D-306, a machine nudges the machines it shares a room with when it writes an event).
+	d.nudges.notePolled(req.Endpoint)
 	// A machine that asked for the room and was admitted has joined it, so it is a
 	// sync target from now on, and a machine of a guest that never asked is not
 	// (D-103, a room's sync targets are the machines from which a session has joined
@@ -155,7 +157,8 @@ func peerList() []string {
 	return out
 }
 
-// syncBackoffCap is the longest a peer that does not answer is left between two polls.
+// syncBackoffCap is the longest a peer that does not answer is left between two polls
+// while its rooms are not dormant (D-305, an address is polled less often while its rooms are quiet).
 const syncBackoffCap = 15 * time.Second
 
 // RunSync polls each address worth asking, every one in a loop of its own. A failed poll
@@ -190,40 +193,95 @@ func (d *Daemon) RunSync(_ []string, every time.Duration) {
 	}
 }
 
-// syncPeer polls one address until it is told to stop.
+// syncPeer polls one address until it is told to stop. An address that answers with
+// nothing is polled less often, and at the usual interval again when it sends an event or
+// a room it is asked about is written in or opened on this machine (D-305, an address is
+// polled less often while its rooms are quiet).
 func (d *Daemon) syncPeer(addr string, every time.Duration, stop <-chan struct{}) {
 	pull := d.pull
 	if pull == nil {
 		pull = d.pullFrom
 	}
-	failures := 0
+	st := pollState{started: time.Now()}
+	var polled time.Time
+	var gen uint64 // the pacing changes seen before the last poll began, so one during it wakes the wait after it
 	for {
 		select {
 		case <-stop:
 			return
 		default:
 		}
+		changed, now := d.paceWatch()
+		if st.last == notPolled {
+			gen = now
+		}
+		dec := decidePoll(st, d.pollFactsFor(addr, st.started), d.pacing(every))
+		if dec.setAside {
+			select {
+			case <-stop:
+				return
+			case <-changed:
+			case <-time.After(time.Hour):
+			}
+			continue
+		}
+		if dec.wait > 0 {
+			poll, woken := d.waitToPoll(addr, dec, gen, polled, stop)
+			if !poll {
+				return
+			}
+			if woken {
+				st.woken()
+				if rest := dec.least - time.Since(polled); rest > 0 {
+					select {
+					case <-stop:
+						return
+					case <-time.After(rest):
+					}
+				}
+			}
+		}
+		// What is known may have changed during the wait, such as another machine of
+		// this address's user nudging, so the decision is asked again before polling.
+		if decidePoll(st, d.pollFactsFor(addr, st.started), d.pacing(every)).setAside {
+			continue
+		}
+		_, gen = d.paceWatch()
+		polled = time.Now()
 		n, err := pull(addr)
-		delay := every
+		st.polled(n, err)
 		if err != nil {
 			d.markPeerUnreachable(addr, err)
-			failures++
-			for i := 1; i < failures && delay < syncBackoffCap; i++ {
-				delay *= 2
-			}
-			if delay > syncBackoffCap {
-				delay = syncBackoffCap
-			}
+			d.pollFailed(addr)
 		} else {
-			failures = 0
+			d.pollAnswered(addr)
 			if n > 0 {
 				log.Printf("sync: received %d event(s) from %s", n, shortEndpoint(addr))
 			}
 		}
+	}
+}
+
+// waitToPoll waits the decision's wait, or less when the decision lets a wake of addr or
+// its rooms, or a nudge from addr, after polled end it, which it says as woken. It says
+// false for poll when the loop is told to stop.
+func (d *Daemon) waitToPoll(addr string, dec pollDecision, gen uint64, polled time.Time, stop <-chan struct{}) (poll, woken bool) {
+	timer := time.NewTimer(dec.wait)
+	defer timer.Stop()
+	for {
+		changed, now := d.paceWatch()
+		if (dec.wakeable || dec.nudgeable) && now != gen {
+			gen = now
+			if dec.wakeable && d.addrWokenSince(addr, polled) || dec.nudgeable && d.addrNudgedSince(addr, polled) {
+				return true, true
+			}
+		}
 		select {
 		case <-stop:
-			return
-		case <-time.After(delay):
+			return false, false
+		case <-timer.C:
+			return true, false
+		case <-changed:
 		}
 	}
 }
@@ -437,6 +495,15 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	stored, rejected, unverified, notCounting, notGuest := 0, 0, 0, 0, 0
+	ownStored := 0 // events this machine's own user wrote on another of their machines
+	late, oldest := 0, time.Duration(0)
+	noteAge := func(ev *Event) {
+		at, err := time.Parse(time.RFC3339Nano, ev.Timestamp)
+		if age := time.Since(at); err == nil && age > d.lateAfterOr() {
+			late++
+			oldest = max(oldest, age)
+		}
+	}
 	// Changes to the guest list are taken first and the list computed again from
 	// them before any other event is judged, so that a turn arriving with the
 	// invitation that admits its author is stored in the same poll (D-235, a room's
@@ -525,6 +592,10 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 			case InsertStored:
 				stored++
 				guestStored = true
+				noteAge(&ev)
+				if ev.PeerID == d.ownUser() {
+					ownStored++
+				}
 			case InsertConflict:
 				log.Printf("sync: CONFLICT from %s — %s sequence %d is already held by a different event; run `cogmer conflicts`",
 					addr, PeerName(ev.signerKey()), ev.PeerSequence)
@@ -593,6 +664,10 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 		switch res {
 		case InsertStored:
 			stored++
+			noteAge(&ev)
+			if ev.PeerID == d.ownUser() {
+				ownStored++
+			}
 			registerImages(store, &ev)
 			// Stored and shown, and withheld from every assistant until the records it
 			// names are fetched, which is off this path (D-221, an event whose identity
@@ -624,7 +699,20 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 	}
 	readList()
 	if stored > 0 {
+		d.roomStored(room.RoomID, false)
 		d.notify()
+	}
+	if late > 0 {
+		// Said once a poll, so that a turn that waited on a machine, such as one whose
+		// nudges did not arrive, shows in the log (D-306, a machine nudges the machines it shares a room with when it writes an event).
+		log.Printf("sync: %d event(s) of %s from %s arrived late, the oldest written %s ago",
+			late, room.RoomName, shortEndpoint(addr), oldest.Round(time.Second))
+	}
+	if ownStored > 0 {
+		// A turn this machine's user wrote on another of their machines reaches the
+		// room's colleagues through this one, so it nudges them as its writer did
+		// (D-306, a machine nudges the machines it shares a room with when it writes an event).
+		go d.nudgeRoomExcept(room.RoomID, addr)
 	}
 	return stored, nil
 }
