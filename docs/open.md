@@ -343,6 +343,10 @@ wants a third member.
 
 What a room, and the sessions in it, do as people create, leave, return and join from more than one session.
 
+**A user's second machine in a room reaches colleagues only through the user's first machine, so a turn written on it waits while the first is off.** On 2026-11-26, in containers running `a12ae84`, Bob's laptop joined by name a room that Bob's desktop shared with Alice. Alice's machine polled only the desktop and the laptop polled only the desktop, and a turn written on the laptop while the desktop was off the network had not reached Alice 90 seconds after her machine was back on it. A machine that joins a room from its user's lists records its user's machines and the machine that offered the room, and records its user's colleagues as places to ask only in a cloud session (`JoinFromList` and `recordColleagueRoomMachines` in `cmd/cogmer/selflists.go`, read on 2026-11-26). A colleague's machine learns a joined machine's address only from that machine's own sync requests (D-103, an address belongs to a machine and is stored in one place), so neither side asked the other. D-248 (a cloud session asks its user's colleagues for a room at the addresses its user's lists hold) is to be revisited when a user's own machines are found to need the same direct route, which this is.
+
+Recording a user's colleagues as places to ask for every machine that joins from its user's lists, as a cloud session does, would give each of the user's machines a direct route, and revisits D-248. Each colleague then polls each of the user's machines in the room, so a colleague's cost grows with the machines a user has. Why the laptop did not ask the machine that offered the room is not known: reading the rows the laptop held for the room in such a run would say whether that row was missing or matched no address.
+
 **A room records only prompts and responses, so nobody sees a session join or
 leave.** The specification's event model listed session-joined, session-left and
 status events as a minimum, and `cmd/cogmer/store.go` defines only a user's prompt
