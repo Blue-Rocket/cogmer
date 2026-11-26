@@ -703,7 +703,7 @@ remote session and a container, and its only mount that is not system code, `/mn
 cloud file store. A marker written there reached neither `~/projects/probe`, the folder the user connected to
 the session, nor the app's own folders, and the sandbox mounts no folder of the user's machine. So the image
 is not on the user's machine, and a Cowork image has no route to the daemon that runs there. A turn from
-Cowork reaches a colleague with its text and no picture, and a route would have to be built.
+Cowork reaches a colleague with its text and no picture, and a route would have to be built. On 2026-11-26 a picture pasted into a Cowork cloud task, whose room held a colleague's machine, was saved in the task's sandbox at `/mnt/user-data/uploads/<8 hex digits>-image.png`, a different folder from the one of 2026-10-15. The model described the picture, and the room recorded the turn's text with no `[Image #N]` placeholder and no image, so the page drew none. In containers, a cloud session's daemon whose hooks send no transcript path sent a picture saved where Claude Code saves one to a colleague, and took one from the colleague, and the receiver's view named it by its hash and served its bytes (`b5c417a`).
 The Claude Code editor extensions are not observed and are
 read as the terminal.
 
