@@ -6,8 +6,8 @@
 
 **Rejected.**
 - *Polling every address every second.* A machine with no turns in a group of four took 99.7 CPU seconds and sent 15.28MB an hour, almost all of it in polls that returned nothing (`d1d5db9`).
-- *A long poll, in which the answering machine holds each request until it has an event or a time limit passes.* Propagation would be under a second at the cost of a held connection for each colleague, and a change to the sync protocol, which each daemon would have to read alongside the versions before it (D-065, the daemon reads a range of wire versions so upgrading is not a flag day).
-- *Push between machines.* D-031 (peer synchronization polls) rejects it, and quiet rooms are a cost to poll, not a need for faster propagation.
+- *A long poll, in which the answering machine holds each request until it has an event or a time limit passes.* Propagation would be under a second at the cost of a request held open on the answering machine for each colleague, and a change to the sync protocol, which each daemon would have to read alongside the versions before it (D-065, the daemon reads a range of wire versions so upgrading is not a flag day).
+- *Pushing events between machines, to save the polls of quiet rooms.* Each sender would need to know what each receiver holds, the state D-031 (peer synchronization polls) rejects push for, and polling a quiet room less often saves most of what its polls cost without it.
 
 **Limits.** The first event after a quiet spell reaches this machine up to 20 seconds late, or up to 60 seconds after half an hour of quiet. In the group of four with a turn a minute in each room, a turn reached its colleague 10.09 seconds after it was written at the median (`d1d5db9`). A colleague's event reaches a session's model only when that session's next prompt is submitted (§16, propagation), so the delay shows in the view, and in what the model is given only when a prompt is submitted before the event arrives.
 
