@@ -92,6 +92,8 @@ func TestTheStaticPageKeepsItsTimingsOnceTheRoomHasDrawn(t *testing.T) {
 		"the steps shown":                   "timing.textContent = trail.join(",
 		"a tap hides it":                    "timing.addEventListener('click'",
 		"the wait it says to expect":        "the first time this opens on a phone it can take 20 seconds",
+		"the hash of the room it holds":     "target + '&since=' + etag",
+		"the answer that nothing changed":   "got.unchanged && state",
 	} {
 		if n := strings.Count(src, want); n != 1 {
 			t.Errorf("%s: viewer.js holds %q %d times, want once", what, want, n)

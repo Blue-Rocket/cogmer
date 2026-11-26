@@ -220,15 +220,41 @@
     let timer = null;
     let opened = false;
     let last = null;
+    // A room's state is asked for with the hash of the one this page holds, and the daemon answers that
+    // it is unchanged in a few bytes when it is, with only the age of the lists, which moves as the room
+    // sits quiet (D-307). The page puts that age into the state it holds.
+    const isRoom = target !== null && target.startsWith('/snapshot?');
+    let state = null;
+    let etag = '';
+    let lastLists = '';
     async function tick() {
       if (es.closed) return;
       try {
-        const r = await request(target);
+        const r = await request(isRoom && etag ? target + '&since=' + etag : target);
         if (r.status !== 200) throw new Error('status ' + r.status);
         if (es.closed) return;
         if (!opened) { opened = true; if (!dataSeen) { dataSeen = true; detail('first data'); showTiming(); } if (es.onopen) es.onopen(); }
         const text = dec.decode(r.body);
-        if (text !== last) { last = text; if (es.onmessage) es.onmessage({ data: text }); }
+        if (isRoom) {
+          const got = JSON.parse(text);
+          if (got.unchanged && state) {
+            const lists = JSON.stringify(got.lists || null);
+            if (lists !== lastLists) {
+              lastLists = lists;
+              if (got.lists) state.lists = got.lists; else delete state.lists;
+              if (es.onmessage) es.onmessage({ data: JSON.stringify(state) });
+            }
+          } else {
+            state = got;
+            etag = got.etag || '';
+            lastLists = JSON.stringify(got.lists || null);
+            const whole = JSON.stringify(got);
+            if (whole !== last) { last = whole; if (es.onmessage) es.onmessage({ data: whole }); }
+          }
+        } else if (text !== last) {
+          last = text;
+          if (es.onmessage) es.onmessage({ data: text });
+        }
         timer = setTimeout(tick, POLL_EVERY);
       } catch (err) {
         if (es.closed) return;

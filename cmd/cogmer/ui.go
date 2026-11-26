@@ -121,6 +121,9 @@ type uiState struct {
 	// Lists is, in a cloud session, which of the user's machines its lists came from
 	// and how old they are (D-245, a cloud session shows the header's age in the view).
 	Lists *listsView `json:"lists,omitempty"`
+	// Etag is a hash of the rest of the state without Lists, which only a poll of the static page asks for
+	// (D-307), so that a page can say what it already holds.
+	Etag string `json:"etag,omitempty"`
 }
 
 // subscribe registers a channel woken whenever the room changes.

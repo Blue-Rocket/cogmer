@@ -6,6 +6,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -231,6 +232,21 @@ func (d *Daemon) handleSnapshot(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "could not read the room", http.StatusInternalServerError)
 		return
 	}
+	lists := st.Lists
+	st.Lists = nil
+	raw, err := json.Marshal(st)
+	if err != nil {
+		http.Error(w, "could not read the room", http.StatusInternalServerError)
+		return
+	}
+	sum := sha256.Sum256(raw)
+	st.Etag = hex.EncodeToString(sum[:8])
+	if since := r.URL.Query().Get("since"); since != "" && since == st.Etag {
+		// The page holds this state, and only the age of the lists moves while a room is quiet.
+		writeJSON(w, map[string]any{"unchanged": true, "lists": lists})
+		return
+	}
+	st.Lists = lists
 	writeJSON(w, st)
 }
 
