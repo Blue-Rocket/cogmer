@@ -40,9 +40,14 @@ What the run does not show
   report's file time shows only that the SessionStart hook ran by 15:33:44Z, after "hello" and before the command or
   with it. Whether a person sees the message anywhere other than the conversation page, such as a banner, a
   notification or the task list, was not looked for beyond the page's text and HTML. Step 3 of the runbook,
-  the same from the user's phone, was only partly run. The user ran the report in a task on their phone and pasted
-  its text into chat (the report of 15:48:44Z in docs/work/first-run-spike-C-20261126T1533Z.txt, its run U). The
-  pasted text holds the report's own lines and none of FRS-SYS, FRS-CTX or the link, which says nothing about
-  whether the phone showed them elsewhere, since the user was not asked to look for them and did not say. The
-  question to the model was not asked on the phone, so what it was given there is not known. The app or browser
-  and the system version of the phone are not known. The page was Chrome 152 on macOS only, and the plan was Team only.
+  the same from the user's phone, was run on 2026-11-26 after 15:48Z in the task of run U of
+  docs/work/first-run-spike-C-20261126T1533Z.txt, and the user pasted its results into chat. The report's text
+  holds none of FRS-SYS, FRS-CTX or the link. Asked afterwards whether any line from the plugin showed on screen,
+  the user wrote "i didn't see any line from the plugin on screen". The user then pasted the model's answer to
+  "What did the first-run spike say?": it listed the SessionStart system message FRS-SYS-SessionStart with the
+  link, the SessionStart context FRS-CTX-SessionStart, and the UserPromptSubmit context FRS-CTX-UserPromptSubmit
+  "on each of your messages", gave the link https://example.com/first-run-spike, and added that example.com was
+  blocked from its sandbox (403) so the user should open the link on their own device. So on the phone the model
+  was given the same lines as on the Mac and the user saw none of them. Which app or browser on the phone, its
+  system version, the time of the answer and whether the user looked at a banner or notification are not known.
+  The page was Chrome 152 on macOS only, and the plan was Team only.
