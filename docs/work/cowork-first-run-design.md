@@ -158,6 +158,41 @@ Limits. cogmer runs the host, and its trust is the trust D-302's Limits give the
 
 Revisit when cogmer gives up the domain.
 
+## Draft 4: cogmer runs a directory of users' machine addresses that it cannot read
+
+Decision. cogmer runs a directory under `cogmer.ai` that holds, for each user whose machines write one, a
+record of the addresses of the user's machines, signed by one of them, stored under a hash of the user's
+identifier and encrypted under a key derived from the identifier. Whoever knows the identifier reads the
+record and checks its signature as they check any record of the user's: the user's colleagues, who hold the
+identifier from pairing, and the user's own tasks, whose passkey returns it as its user handle at every
+sign-in. A task that the passkey certified away from the user's computer finds the computer this way and
+takes its lists and renewals from it when it answers, and a colleague finds a machine the user added since
+they last spoke. The directory sees hashes, sealed records, and where each request comes from, and holds
+no name, so a user is found only by someone who already has their identifier, as D-142 (identities are
+exchanged through pairing strings, with no directory) has it. Machine addresses hold no secret (D-104, the
+overlay address holds no secret and is the same at every start), and a record that does not verify is
+ignored, so the directory can withhold a record or serve an old one and can never send a reader to a
+machine that is not the user's. Every path works without it, as before it existed.
+
+Rejected.
+- *A directory that maps a name or an email address to a user's key.* Anyone could ask it whether someone
+  uses cogmer, and it reverses D-142, which the open item on reaching a user by a handle weighs on its own.
+- *Carrying the computer's addresses in the passkey's `largeBlob`.* Most passkey providers decline it, and
+  none is documented to sync it (the question on where a task learns how to reach its user's machines).
+- *A lookup on a relay cogmer runs.* It needs the relay the open item on a relay change weighs, and a relay
+  sees every connection's metadata, where a directory sees only lookups.
+
+Limits. The directory learns which hashed identifiers are looked up, when, and from where, which for a
+cloud task is an address of Anthropic's (spike C) and for a colleague is their own. Its records are sealed
+by a key that any holder of the identifier derives, so they are as private as the identifier, which every
+colleague of the user holds. It is a component cogmer runs, which D-115 (a centralized component must trace
+to a disclosed tradeoff that benefits the person) admits only for a benefit to the user, recorded and
+disclosed: here, cloud tasks that reach the user's computer and colleagues who reach the user's new
+machines, said in the README's account of what leaves the user's machine.
+
+Revisit when the passkey providers most users hold carry data with a passkey to every device, so that a
+task could take its user's addresses from the passkey.
+
 ## Questions the route leaves
 
 - Where the task learns how to reach its user's machines. A task takes its user's lists only from one of
@@ -170,9 +205,10 @@ Revisit when cogmer gives up the domain.
   - With a hosted machine, the passkey's user handle, up to 64 bytes set at registration and returned at
     every sign-in on every device, names the hosted machine, whose name under `cogmer.ai` the page reaches
     from any device.
-  - A user whose only machine is a computer, away from it, gets the first certificate from the passkey and
-    the lists and a renewal when the computer answers. A machine's overlay address is about 186
-    characters (`docs/work/cloud-run-20261025T171545Z.txt`), more than a user handle holds.
+  - A user whose only machine is a computer, away from it, gets the first certificate from the passkey, and
+    the passkey's user handle holds the user's identifier, from which the page finds the computer in the
+    directory of Draft 4. A machine's overlay address is about 186 characters
+    (`docs/work/cloud-run-20261025T171545Z.txt`), more than a user handle holds itself.
   The passkey's `largeBlob` extension, which stores up to a few kilobytes with a passkey, could carry the
   computer's addresses, and is not designed around. On 2026-11-26 the sources read said that iCloud
   Keychain and Google Password Manager on desktop Chrome store a blob, that Windows Hello, Samsung Pass and
@@ -235,6 +271,15 @@ Revisit when cogmer gives up the domain.
   machine can show that a task started, limit how often the token is used, and revoke it at once, where a
   cloud key that is copied speaks for the user until a removal reaches each colleague (D-225, a machine
   sends each removal and new shared key to every colleague it knows until each acknowledges).
+- How Draft 4's directory refuses a write from anyone but the user's machines without reading the record.
+  A colleague holds the user's identifier, so a directory that took any write under its hash would let a
+  colleague fill the user's place with records that readers then discard. Checking a write against the
+  user's chain shows the directory the identifier, which the hash hides. A key that only the user's
+  machines derive, from the shared key, could sign every write, with the directory keeping the first such
+  key it sees under each hash and taking later writes only under it; whoever writes first under a hash then
+  holds it, and a colleague who wrote first would keep the user out, though never be taken for them.
+  Publishing that key's hash in one of the user's signed identity records and making it part of the place's
+  name would let the directory refuse anyone else, at the cost of a new identity record.
 - Which earlier decisions Drafts 1 and 3 change in part. D-216 (a cloud session signs with a key of its own
   that the user's shared key vouches for) names the cloud key as the one secret given to the environment,
   and D-302 (a cloud session's room is read on a static page) serves the page from GitHub Pages, so each
