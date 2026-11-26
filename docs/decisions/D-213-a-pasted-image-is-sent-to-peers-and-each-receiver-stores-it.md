@@ -1,6 +1,6 @@
 # D-213 — A pasted image is sent to peers and each receiver stores it as a file
 
-**Date:** 2026-10-15 · **Status:** not built · **Areas:** sync, storage, capture
+**Date:** 2026-10-15 · **Status:** active · **Areas:** sync, storage, capture
 
 **Decision.** An image a user pastes into a session travels with its turn to the room's other machines, and each receiver stores
 the image as a file, with a reference to the file in the database. The signed event carries a hash of the
