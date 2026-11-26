@@ -78,6 +78,37 @@ once, so a task that nobody opens shares nothing, and a task that runs past 24 h
 Revisit when a Claude account can hold a per-user value that a cloud task's hook reads, or a browser a
 Cowork user has is found to return no PRF secret.
 
+## Draft 1, signing variant: the passkey signs the task's session key
+
+Draft 1 derives a cloud key from the passkey's PRF secret in the page, so the page's script holds a key
+that certifies for as long as it is certified. If whoever serves the page serves a script that keeps the
+key, it holds a key that speaks for the user in every cloud task until the key is removed, and if the
+master key is derived the same way, it holds the user. In this variant the page derives nothing. The
+passkey signs the task's session key and expiry as the challenge of an ordinary WebAuthn assertion, with
+the private key that never leaves the authenticator, and the task's certificate is that assertion.
+
+Decision. A cloud task's session key is certified by an assertion of the user's passkey whose challenge is
+the session key and the certificate's expiry. The passkey's public key is certified once, when the passkey
+is registered, by a machine that holds the user's shared key, as a cloud key is certified today (D-246,
+D-216), and a receiver checks the assertion's signature with that key, that its site is `cogmer.ai`, that
+  the authenticator confirmed the user with Face ID, a fingerprint or a PIN, and that the page it came from is the cloud page, before it accepts the session key.
+A script that turns hostile gets, at each prompt the user answers, one assertion over a key it chose, which
+speaks for the user until it expires, and never a key it can use again or the user's master key.
+
+Rejected.
+- *Draft 1 as written, deriving a cloud key from the PRF secret.* A script that keeps the derived key
+  certifies for as long as the key is certified, where an assertion certifies one key until it expires.
+
+Limits. A passkey signs with P-256 and the user's records are Ed25519, so a certificate in this form is a
+new version of the records that every receiver has to read before any task uses it (D-058, signature
+schemes are kept, never replaced). The prompt names the site and the account and never what is signed,
+and the page chooses the challenge, so the user cannot see which key they certify, as the open item on
+holding a hosted user's master key says of a passkey that signs a record's hash. A hostile script that the
+user answers can therefore certify a key of its own for one expiry at a time. A passkey that is lost takes
+the certified key with it, and the user registers a new one from a machine that holds the shared key.
+
+Revisit when a passkey's prompt can show the user what it signs.
+
 ## Draft 2: a cloud task with nothing set up shares nothing until the user runs `/cogmer:start`
 
 Decision. A Cowork cloud task with no cloud value starts nothing at its start (D-286, a Cowork cloud
@@ -138,7 +169,17 @@ Revisit when cogmer gives up the domain.
   carries. That is a second way to verify, which D-055 (a peer is verified in one way, the two-word
   comparison) rejects because "a fallback is the path people reach for when the other is inconvenient", and
   its revisit condition, two users who must verify and cannot have their daemons reach each other, is the
-  case to show first.
+  case to show first. Three ways remain, each with what it trusts:
+  - The two words, with a hosted machine (D-285) answering for a user who has no computer, so the live
+    exchange runs whenever the two people are on a call. Against anyone else it is as strong as today's,
+    and against the hosted machine's operator it is no stronger than trusting the operator, who runs the
+    machine that shows the user the words.
+  - A password-authenticated key exchange, such as SPAKE2 or CPace, in place of the two words: one person
+    reads a short code to the other or sends it once, and the exchange shows that both hold the same code,
+    allowing one guess for each attempt. It trusts whatever carried the code, and both sides take part at
+    once, so a user with no computer still needs a hosted machine. Replacing the two words with it keeps one
+    way to verify, as D-055 has it, and D-048 would be rewritten.
+  - The invitation link above, which trusts the channel that carried it and everyone it was passed to.
 - Which hosts a Team owner allows. Two entries, `cogmer.ai` and `*.cogmer.ai`, would cover everything
   under the domain (spike C), if the task reached cogmer's own relay or hosted machines rather than
   tailcat's relays. A Pro or Max plan was not tried.
