@@ -423,6 +423,10 @@ worked in D-107 and D-108, which may or may not be what it said.
 A user in Claude Cowork shares a conversation with a colleague as users of Claude Code and
 Codex do, through a bridge on the user's machine.
 
+**A Cowork-only user cannot start by installing the plugin: they also need a machine to hold their identity, the cloud value uploaded as a plugin, an allowlist their organization's owner edits, and each colleague verified with two words.** A user whose Cowork tasks run in the cloud and who has no computer running cogmer installs the plugin on their account (D-290, cogmer reaches a Cowork cloud session as the marketplace plugin installed on the user's Claude account), needs a hosted machine for their identity (D-285, a user with no computer of their own has a machine hosted for them), which is not built, uploads the cloud value as a plugin zip (D-278, the machines page offers the cloud value as a plugin for the user to upload once), on a Team plan needs an owner to allow the relay's hosts (`ce962eb`), and verifies each colleague with two words (D-054, verification gates synchronization and injection), while their first task says nothing (D-286, a Cowork cloud session with no cloud value fetches and starts nothing). Read on 2026-11-26.
+
+The aim is one link from the first task, a passkey, and an invitation link from each colleague. What decides how close it can come: whether anything but an upload puts a per-user value on an account, such as a plugin option asked for at install; what a cloud task reaches by default and keeps between tasks, on each plan; what a person sees of a hook's message there; and whether the browsers such a user has return a passkey's PRF secret. `docs/work/cowork-first-run-spikes.md` holds the five spikes that answer these, for a session on the user's Mac that drives claude.ai in Chrome.
+
 **Build the Cowork host that D-205 (Claude Cowork is a supported host through a bridge on the
 user's machine), D-206 (a Cowork turn counts as delivered when the stop call for its prompt
 arrives) and D-207 (the Cowork bridge offers no tool that runs a command) decide.** The probe

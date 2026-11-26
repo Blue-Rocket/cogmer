@@ -1,0 +1,11 @@
+{
+  "description": "Records reach, persistence and option delivery at session start, and answers each hook with marked messages.",
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/spike.sh\" SessionStart", "timeout": 15 } ] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [ { "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/spike.sh\" UserPromptSubmit", "timeout": 15 } ] }
+    ]
+  }
+}
