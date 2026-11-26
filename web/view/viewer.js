@@ -118,9 +118,24 @@
     banner.hidden = !text;
   }
 
+  // The banner goes when the page connects, and with it the times, so the steps stay in a dim line at the
+  // foot of the page once the room has drawn, which a tap hides. A user timing a first draw on a phone
+  // reads it there.
+  const timing = document.createElement('div');
+  timing.id = 'cogmerViewTiming';
+  timing.style.cssText = 'position:fixed;right:8px;bottom:6px;z-index:8;max-width:92vw;font:11px system-ui;opacity:.6;text-align:right';
+  timing.hidden = true;
+  timing.addEventListener('click', () => { timing.hidden = true; });
+  document.addEventListener('DOMContentLoaded', () => document.body.appendChild(timing));
+  function showTiming() {
+    timing.textContent = trail.join(' · ');
+    timing.hidden = false;
+  }
+
   let ready;
   let http = null;
   let dialAttempt = null;
+  let dataSeen = false;
   let asleep = false;
 
   function loadModule() {
@@ -211,7 +226,7 @@
         const r = await request(target);
         if (r.status !== 200) throw new Error('status ' + r.status);
         if (es.closed) return;
-        if (!opened) { opened = true; if (es.onopen) es.onopen(); }
+        if (!opened) { opened = true; if (!dataSeen) { dataSeen = true; detail('first data'); showTiming(); } if (es.onopen) es.onopen(); }
         const text = dec.decode(r.body);
         if (text !== last) { last = text; if (es.onmessage) es.onmessage({ data: text }); }
         timer = setTimeout(tick, POLL_EVERY);

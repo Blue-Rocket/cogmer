@@ -77,3 +77,23 @@ func TestTheRoomsPaneDoesNotSayThereAreNoRoomsBeforeItHasAList(t *testing.T) {
 		t.Error("the pane is not drawn until the first list or the first minute, so it is blank while connecting")
 	}
 }
+
+// The banner that holds the page's timings goes when the page connects, so the steps stay in a line
+// at the foot of the page once the first data arrives, for a user timing a first draw on a phone.
+func TestTheStaticPageKeepsItsTimingsOnceTheRoomHasDrawn(t *testing.T) {
+	b, err := os.ReadFile("../../web/view/viewer.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := string(b)
+	for what, want := range map[string]string{
+		"a line of its own for the timings": "timing.id = 'cogmerViewTiming'",
+		"the first data marks the trail":    "detail('first data'); showTiming();",
+		"the steps shown":                   "timing.textContent = trail.join(",
+		"a tap hides it":                    "timing.addEventListener('click'",
+	} {
+		if n := strings.Count(src, want); n != 1 {
+			t.Errorf("%s: viewer.js holds %q %d times, want once", what, want, n)
+		}
+	}
+}
