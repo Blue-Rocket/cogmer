@@ -1,8 +1,11 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -303,6 +306,11 @@ type imageContext struct {
 	Entrypoint string
 	// Attached is the numbers of the images this session has already sent.
 	Attached map[int]bool
+	// UploadsDir is the folder a cloud container saves a user's attachments in, and empty where there
+	// is none (D-304).
+	UploadsDir string
+	// SentHashes is the hashes of the images this session has already sent.
+	SentHashes map[string]bool
 	// Now is when the prompt arrived.
 	Now time.Time
 }
@@ -328,6 +336,11 @@ var imageFileName = regexp.MustCompile(`^(\d+)\.[A-Za-z0-9]+$`)
 // sent before was sent with this prompt. Any other entry point is read as the terminal is,
 // since that sends nothing the user did not name.
 func (claudeHost) PastedImages(prompt string, ctx imageContext) []pastedFile {
+	if ctx.UploadsDir != "" {
+		if out := uploadedImages(ctx); len(out) > 0 {
+			return out
+		}
+	}
 	if ctx.ScratchpadDir == "" {
 		return nil
 	}
@@ -543,4 +556,70 @@ func (coworkHost) Doctor(deep bool) (bool, error) {
 		return true, errDeepUnsupported
 	}
 	return runCoworkDoctor(), nil
+}
+
+// uploadImageExtensions are the file types of an upload that can be an image cogmer shows.
+var uploadImageExtensions = map[string]bool{".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".webp": true}
+
+// uploadedImages finds the images a cloud container saved for a prompt among a user's attachments
+// (D-304). A cloud task puts no placeholder in the text and no number in the file's name, so an
+// image was sent with this prompt when its file was saved in the last 30 seconds and this session
+// has not sent the same bytes before. Files of any other kind, and images saved earlier, are never
+// read, since the folder holds everything the user attached to the task.
+func uploadedImages(ctx imageContext) []pastedFile {
+	entries, err := os.ReadDir(ctx.UploadsDir)
+	if err != nil {
+		return nil
+	}
+	type found struct {
+		path string
+		at   time.Time
+	}
+	var fresh []found
+	for _, e := range entries {
+		if !uploadImageExtensions[strings.ToLower(filepath.Ext(e.Name()))] {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil || !info.Mode().IsRegular() {
+			continue
+		}
+		if age := ctx.Now.Sub(info.ModTime()); age > desktopImageWindow || age < -desktopImageWindow {
+			continue
+		}
+		fresh = append(fresh, found{filepath.Join(ctx.UploadsDir, e.Name()), info.ModTime()})
+	}
+	sort.Slice(fresh, func(i, j int) bool { return fresh[i].at.Before(fresh[j].at) })
+	next := 1
+	for n := range ctx.Attached {
+		if n >= next {
+			next = n + 1
+		}
+	}
+	var out []pastedFile
+	for _, f := range fresh {
+		if sum, ok := fileHash(f.path); !ok || ctx.SentHashes[sum] {
+			continue
+		}
+		out = append(out, pastedFile{N: next, Path: f.path})
+		next++
+		if len(out) == maxImagesPerTurn {
+			break
+		}
+	}
+	return out
+}
+
+// fileHash is the lower-case hexadecimal SHA-256 of a file, and false when it cannot be read.
+func fileHash(path string) (string, bool) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", false
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", false
+	}
+	return hex.EncodeToString(h.Sum(nil)), true
 }

@@ -108,3 +108,29 @@ func TestContainerAPastedImageCrossesBetweenACloudSessionAndAColleague(t *testin
 	pasteTurn(t, r.bob, r.bobS, "look at [Image #1] from bob", fromBob, false)
 	seesImage(t, cloud, r.name, "look at [Image #1] from bob", fromBob)
 }
+
+// A picture attached in a cloud task is saved in its uploads folder, with no placeholder in the
+// prompt and no transcript path in the hooks (D-304), and reaches a colleague.
+func TestContainerAnImageAttachedInACloudTaskReachesAColleague(t *testing.T) {
+	c := newCluster(t)
+	r := pairedRoom(t, c, harnessImage(t, imageWork), true)
+	var added cloudAddResponse
+	r.alice.mustPost("/machines/cloud/add", cloudAddRequest{Name: "alice-web"}, &added)
+	cloud := c.startWith("alice-web", harnessImage(t, imageWork), cloudKeyVar+"="+added.Value, "COGMER_UPLOADS_DIR=/mnt/user-data/uploads")
+	cloudS := "session-cloud-1"
+	cloudJoinByName(t, cloud, cloudS, r.name, 60*time.Second)
+
+	attached := pngBytes(t, 99)
+	if _, err := cloud.drive("write", "/mnt/user-data/uploads/8d4b5751-image.png", attached); err != nil {
+		t.Fatal(err)
+	}
+	text := "describe the attached picture"
+	prompt, _ := json.Marshal(map[string]any{
+		"session_id": cloudS, "prompt": text, "prompt_id": randomHex(8), "cwd": "/h",
+		"transcript_path": "", "hook_event_name": "UserPromptSubmit",
+	})
+	if _, errOut, err := cloud.exec(nil, prompt, "/cogmer", "hook", "prompt"); err != nil || strings.Contains(errOut, "daemon unreachable") {
+		t.Fatalf("the prompt hook failed: %v %s", err, errOut)
+	}
+	seesImage(t, r.bob, r.name, text, attached)
+}
