@@ -13,6 +13,19 @@ import (
 // its rooms are dormant (failDelay). Both caps are under the 90 seconds a kept connection
 // waits idle (clientFor in transport.go), so a slow poll still uses the connection it kept
 // (D-303, a machine keeps one connection to each address it polls).
+// lateArrival is how long after it was written an event that is stored is logged as late:
+// longer than the longest wait between polls and a nudge sent again after it, so an event
+// on any path that works arrives in less (D-305).
+const lateArrival = 2 * time.Minute
+
+// lateAfterOr is lateArrival unless a test says otherwise.
+func (d *Daemon) lateAfterOr() time.Duration {
+	if d.pace.lateAfter != 0 {
+		return d.pace.lateAfter
+	}
+	return lateArrival
+}
+
 const (
 	quietPollCap   = 20 * time.Second
 	dormantPollCap = 60 * time.Second
@@ -40,6 +53,7 @@ type pollPace struct {
 	// unless a test says otherwise. A cap below the poll interval keeps every poll at
 	// the interval.
 	quietCap, dormantCap, dormantAfter, failCap time.Duration
+	lateAfter                                   time.Duration
 }
 
 // roomStored records that a room stored an event now, and wakes the addresses it is

@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -356,4 +359,32 @@ func TestTakingATurnTheUserWroteOnAnotherMachineNudgesTheRoom(t *testing.T) {
 		}
 	}
 	t.Error("taking a turn its user wrote on the laptop did not make the desktop nudge ben")
+}
+
+// An event stored long after it was written is logged as late, once a poll, and one that
+// arrives promptly is not.
+func TestAnEventStoredLongAfterItWasWrittenIsLoggedAsLate(t *testing.T) {
+	a := newOfflinePeer(t, "room-nudge", "nudge")
+	b := newOfflinePeer(t, "room-nudge", "nudge")
+	introduce(t, a, b, "room-nudge")
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
+
+	b.say(t, "room-nudge", "s", EventUserPrompt, "prompt")
+	if _, err := a.d.pullFrom(b.addr); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(buf.String(), "arrived late") {
+		t.Fatalf("an event taken at once was logged as late:\n%s", buf.String())
+	}
+	a.d.pace.lateAfter = time.Nanosecond // every event is now older than the limit
+	b.say(t, "room-nudge", "s", EventUserPrompt, "one")
+	b.say(t, "room-nudge", "s", EventUserPrompt, "two")
+	if _, err := a.d.pullFrom(b.addr); err != nil {
+		t.Fatal(err)
+	}
+	if n := strings.Count(buf.String(), "2 event(s) of nudge from"); n != 1 {
+		t.Errorf("two late events in one poll gave %d lines saying so:\n%s", n, buf.String())
+	}
 }

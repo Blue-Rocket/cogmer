@@ -495,6 +495,14 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 	defer d.mu.Unlock()
 	stored, rejected, unverified, notCounting, notGuest := 0, 0, 0, 0, 0
 	ownStored := 0 // events this machine's own user wrote on another of their machines
+	late, oldest := 0, time.Duration(0)
+	noteAge := func(ev *Event) {
+		at, err := time.Parse(time.RFC3339Nano, ev.Timestamp)
+		if age := time.Since(at); err == nil && age > d.lateAfterOr() {
+			late++
+			oldest = max(oldest, age)
+		}
+	}
 	// Changes to the guest list are taken first and the list computed again from
 	// them before any other event is judged, so that a turn arriving with the
 	// invitation that admits its author is stored in the same poll (D-235, a room's
@@ -583,6 +591,7 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 			case InsertStored:
 				stored++
 				guestStored = true
+				noteAge(&ev)
 				if ev.PeerID == d.ownUser() {
 					ownStored++
 				}
@@ -654,6 +663,7 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 		switch res {
 		case InsertStored:
 			stored++
+			noteAge(&ev)
 			if ev.PeerID == d.ownUser() {
 				ownStored++
 			}
@@ -690,6 +700,12 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 	if stored > 0 {
 		d.roomStored(room.RoomID, false)
 		d.notify()
+	}
+	if late > 0 {
+		// Said once a poll, so that a turn that waited on a machine, such as one whose
+		// nudges did not arrive, shows in the log (D-305).
+		log.Printf("sync: %d event(s) of %s from %s arrived late, the oldest written %s ago",
+			late, room.RoomName, shortEndpoint(addr), oldest.Round(time.Second))
 	}
 	if ownStored > 0 {
 		// A turn this machine's user wrote on another of their machines reaches the
