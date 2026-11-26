@@ -241,6 +241,11 @@ func (d *Daemon) syncPeer(addr string, every time.Duration, stop <-chan struct{}
 				}
 			}
 		}
+		// What is known may have changed during the wait, such as another machine of
+		// this address's user nudging, so the decision is asked again before polling.
+		if decidePoll(st, d.pollFactsFor(addr, st.started), d.pacing(every)).setAside {
+			continue
+		}
 		_, gen = d.paceWatch()
 		polled = time.Now()
 		n, err := pull(addr)

@@ -388,3 +388,27 @@ func TestAnEventStoredLongAfterItWasWrittenIsLoggedAsLate(t *testing.T) {
 		t.Errorf("two late events in one poll gave %d lines saying so:\n%s", n, buf.String())
 	}
 }
+
+// A machine set aside while its poll loop waits is not polled when the wait ends, nor when
+// a write here wakes its room (D-305).
+func TestAMachineSetAsideDuringAWaitIsNotPolledWhenTheWaitEnds(t *testing.T) {
+	polls := map[string]*pollTimes{"laptop": {}, "desktop": {}}
+	d := syncDaemon(t, "laptop,desktop", func(addr string) (int, error) {
+		if p := polls[addr]; p != nil {
+			p.note()
+		}
+		return 0, nil
+	})
+	d.pace.quietCap, d.pace.dormantCap, d.pace.dormantAfter = time.Second, time.Second, time.Hour
+	d.askRooms = func(string, []Room) []Room { return []Room{{RoomID: "room-pace"}} }
+	d.nudgedBy("ana", "laptop")
+	go d.RunSync(nil, 20*time.Millisecond)
+	time.Sleep(900 * time.Millisecond) // the laptop's loop is in a long wait
+	d.nudgedBy("ana", "desktop")       // which sets the laptop aside
+	before := polls["laptop"].count()
+	d.roomStored("room-pace", true) // a prompt written here
+	time.Sleep(1200 * time.Millisecond)
+	if n := polls["laptop"].count() - before; n != 0 {
+		t.Errorf("the laptop, set aside during its wait, was polled %d times after it", n)
+	}
+}
