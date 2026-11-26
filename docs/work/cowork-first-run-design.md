@@ -163,8 +163,11 @@ Revisit when cogmer gives up the domain.
   lasts, is to be chosen.
 - How an uploaded value and the passkey keep one cloud key (D-280, a user has one cloud key at a time). A
   user who keeps the uploaded value would otherwise hold a second cloud key beside the one the passkey
-  derives. The cloud page can derive the key and offer the value's plugin itself, as the machines page does
-  today (D-278), which the machines page cannot, since a page at `127.0.0.1` can use no passkey.
+  derives. Either page that can use the passkey can derive the key and offer the value's plugin, as the machines
+  page does today (D-278). The cloud page can, once it is served under `cogmer.ai` (Draft 3). The machines
+  page can if it is served at a name under `cogmer.ai` mapped to the loopback address in the hosts file,
+  such as `local.cogmer.ai`, with a certificate the browser trusts, which the open item on holding a hosted
+  user's master key describes with its costs. At `127.0.0.1` it can use no passkey.
 - Which earlier decisions Drafts 1 and 3 change in part. D-216 (a cloud session signs with a key of its own
   that the user's shared key vouches for) names the cloud key as the one secret given to the environment,
   and D-302 (a cloud session's room is read on a static page) serves the page from GitHub Pages, so each
