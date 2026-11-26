@@ -1,0 +1,34 @@
+Spike E of docs/work/cowork-first-run-spikes.md: whether a passkey returns a PRF secret, the same each time.
+Run on 2026-11-26 from 16:47Z to 16:49Z, so far on the user's iPhone only. Written from the page's text, which the
+user pasted into chat, and from the user's screenshot of the page before any button was used.
+
+Machines and versions
+  The user's iPhone, on 5G, in Safari. The page printed this user agent: Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like
+  Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0.1 Mobile/15E148 Safari/604.1. Safari freezes the
+  OS number in that string, so the phone's system version is not known from it, and the user, asked to read it from
+  Settings, has not said. The user reached the page from the Claude app (the screenshot shows a "Claude" return
+  link at the top), so the app opened Safari. The page is https://probe.cogmer.ai/prf/, served from the droplet.
+  Where the passkey was saved (iCloud Keychain or another manager) was not asked, so it is not known.
+
+What was done
+  1. The user opened the page. It printed the user agent above and "PublicKeyCredential present, site
+     probe.cogmer.ai".
+  2. The user tapped "Create a passkey" and answered the phone's prompt, then tapped "Sign in with it" twice, answering
+     the prompt each time, and pasted the page's text.
+
+What was seen
+    created 2026-11-26T16:47:55.988Z: PRF enabled true
+      at create: PRF secret, length 32, hash d0dc036198793178
+    signed in 2026-11-26T16:48:19.617Z: PRF secret, length 32, hash d0dc036198793178
+    signed in 2026-11-26T16:48:28.685Z: PRF secret, length 32, hash d0dc036198793178
+
+  So in Safari on this iPhone the passkey reported PRF enabled, returned a secret of 32 bytes at creation, and the
+  same hash at both sign-ins 24 and 9 seconds later, equal to the hash at creation.
+
+What the run does not show
+  Chrome and Safari on the Mac, and Chrome on the iPhone, were not run. Whether the same passkey on the Mac gives
+  the same secret (step 3 of the runbook) was not run. The phone's system version, the app that stored the passkey
+  and whether it syncs are not known. Only the first eight bytes of each hash were shown, so equality of the secrets
+  is shown to that length. The phone's prompt was answered by the user and what it asked (Face ID, a code) was not
+  recorded. Whether a page inside the Claude app's own browser behaves the same was not run. The passkey
+  "PRF probe" for probe.cogmer.ai is still on the phone until the user deletes it.
