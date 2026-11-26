@@ -10,7 +10,7 @@ server-sent events over loopback.
 - An event reaches the other machines in about half a second, while it reaches a
   colleague's Claude only at their next prompt, minutes later during a long turn, so
   push would speed up the half that nobody is waiting on. §16 (propagation).
-- Each address is polled in a loop of its own, so a machine that does not answer delays no other, and it is polled less often, up to every fifteen seconds, until it answers. `cmd/cogmer/sync.go`, `RunSync`, `cmd/cogmer/syncworkers_test.go`, `TestAPeerThatDoesNotAnswerDoesNotDelayOneThatDoes`.
+- Each address is polled in a loop of its own, so a machine that does not answer delays no other, and it is polled less often, up to every fifteen seconds, or every sixty once its rooms are dormant (D-304, an address is polled less often while its rooms are quiet), until it answers. `cmd/cogmer/sync.go`, `RunSync`, `cmd/cogmer/syncworkers_test.go`, `TestAPeerThatDoesNotAnswerDoesNotDelayOneThatDoes`.
 - A machine that was absent recovers by asking, so reconnecting needs no queue of retries
   and no tracking of what each machine was owed. §16.
 - The local view updates live, and a user watching it notices a delay a machine does

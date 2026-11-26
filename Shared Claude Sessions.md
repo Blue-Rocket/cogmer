@@ -1854,8 +1854,8 @@ achieves.
 A machine asks less often about rooms where nothing has happened, so the first event
 after a quiet spell can take up to twenty seconds to reach the other machines, and up
 to a minute after half an hour of quiet, and the events after it arrive in under a
-second again. A prompt submitted in a room, or the room's view being opened, counts as something
-happening there. Asking
+second again. A prompt submitted in a room, or the room's view being opened, makes the
+machine ask at once. Asking
 every second about a room where nothing happens would make most of what a machine
 spends on a room into questions that return nothing, which a hosted user pays for.
 

@@ -933,7 +933,7 @@ func (d *Daemon) appendLocal(store *Store, room Room, sessionID, kind, content s
 	}
 	ev, err := store.AppendAs(seq, id, removals, room.RoomID, sessionID, kind, content, meta)
 	if err == nil {
-		d.roomActive(room.RoomID)
+		d.roomStored(room.RoomID, true)
 	}
 	return ev, err
 }

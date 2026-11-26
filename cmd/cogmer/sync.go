@@ -155,7 +155,8 @@ func peerList() []string {
 	return out
 }
 
-// syncBackoffCap is the longest a peer that does not answer is left between two polls.
+// syncBackoffCap is the longest a peer that does not answer is left between two polls
+// while its rooms are not dormant (D-304).
 const syncBackoffCap = 15 * time.Second
 
 // RunSync polls each address worth asking, every one in a loop of its own. A failed poll
@@ -192,8 +193,8 @@ func (d *Daemon) RunSync(_ []string, every time.Duration) {
 
 // syncPeer polls one address until it is told to stop. An address that answers with
 // nothing is polled less often, and at the usual interval again when it sends an event or
-// a room it is asked about stores one (D-304, an address is polled less often while its
-// rooms are quiet).
+// a room it is asked about is written in or opened on this machine (D-304, an address is
+// polled less often while its rooms are quiet).
 func (d *Daemon) syncPeer(addr string, every time.Duration, stop <-chan struct{}) {
 	pull := d.pull
 	if pull == nil {
@@ -215,12 +216,7 @@ func (d *Daemon) syncPeer(addr string, every time.Duration, stop <-chan struct{}
 			d.markPeerUnreachable(addr, err)
 			failures++
 			empty = 0
-			for i := 1; i < failures && delay < syncBackoffCap; i++ {
-				delay *= 2
-			}
-			if delay > syncBackoffCap {
-				delay = syncBackoffCap
-			}
+			delay = d.failDelay(addr, every, failures, started)
 		} else {
 			failures = 0
 			if n > 0 {
@@ -231,30 +227,35 @@ func (d *Daemon) syncPeer(addr string, every time.Duration, stop <-chan struct{}
 				delay = d.quietDelay(addr, every, empty, started)
 			}
 		}
-		if !d.waitToPoll(addr, delay, gen, polled, err == nil && n == 0, stop) {
+		poll, woken := d.waitToPoll(addr, delay, gen, polled, err == nil && n == 0, stop)
+		if !poll {
 			return
+		}
+		if woken {
+			empty = 0 // the waits after a wake start again from the usual interval
 		}
 	}
 }
 
 // waitToPoll waits delay, or less when wake is set and a room that addr is asked about
-// stores an event after polled. It says false when the loop is told to stop.
-func (d *Daemon) waitToPoll(addr string, delay time.Duration, gen uint64, polled time.Time, wake bool, stop <-chan struct{}) bool {
+// wakes its addresses after polled, which it says as woken. It says false for poll when
+// the loop is told to stop.
+func (d *Daemon) waitToPoll(addr string, delay time.Duration, gen uint64, polled time.Time, wake bool, stop <-chan struct{}) (poll, woken bool) {
 	timer := time.NewTimer(delay)
 	defer timer.Stop()
 	for {
 		changed, now := d.paceWatch()
 		if wake && now != gen {
 			gen = now
-			if d.addrActiveSince(addr, polled) {
-				return true
+			if d.addrWokenSince(addr, polled) {
+				return true, true
 			}
 		}
 		select {
 		case <-stop:
-			return false
+			return false, false
 		case <-timer.C:
-			return true
+			return true, false
 		case <-changed:
 		}
 	}
@@ -656,7 +657,7 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 	}
 	readList()
 	if stored > 0 {
-		d.roomActive(room.RoomID)
+		d.roomStored(room.RoomID, false)
 		d.notify()
 	}
 	return stored, nil

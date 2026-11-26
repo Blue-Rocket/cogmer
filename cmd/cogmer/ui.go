@@ -460,9 +460,8 @@ func (d *Daemon) handleStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Somebody opening the room is about to read it, so its addresses are polled at
-	// once and every second again, as when the room stores an event (D-304, an address
-	// is polled less often while its rooms are quiet).
-	d.roomActive(room.RoomID)
+	// once (D-304, an address is polled less often while its rooms are quiet).
+	d.roomOpened(room.RoomID)
 
 	ch := d.subscribe()
 	defer d.unsubscribe(ch)

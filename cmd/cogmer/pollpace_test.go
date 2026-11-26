@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -83,10 +84,14 @@ func TestAnAddressPolledSlowlyIsPolledAtOnceWhenItsRoomStoresAnEvent(t *testing.
 	go d.RunSync(nil, 20*time.Millisecond)
 	time.Sleep(900 * time.Millisecond) // waits of 40, 80, 160 and 320ms, then one of 640ms
 	before := polls.count()
-	d.roomActive("room-pace")
+	d.roomStored("room-pace", true)
 	time.Sleep(50 * time.Millisecond)
 	if after := polls.count(); after <= before {
 		t.Fatalf("the room stored an event and its address was not polled within 50ms (%d polls before, %d after)", before, after)
+	}
+	time.Sleep(60 * time.Millisecond) // the wake's poll, and waits of 20 and 40ms after it
+	if gap := polls.lastGap(); gap > 100*time.Millisecond {
+		t.Errorf("after the wake the address waited %v between polls; want the waits to start again from 20ms", gap)
 	}
 }
 
@@ -96,7 +101,7 @@ func TestAnEventInAnotherRoomLeavesAnAddressPolledSlowly(t *testing.T) {
 	go d.RunSync(nil, 20*time.Millisecond)
 	time.Sleep(900 * time.Millisecond)
 	before := polls.count()
-	d.roomActive("room-other")
+	d.roomStored("room-other", true)
 	time.Sleep(50 * time.Millisecond)
 	if after := polls.count(); after != before {
 		t.Errorf("an event in a room the address is not asked about polled it %d more times", after-before)
@@ -121,38 +126,82 @@ func TestAnAddressWhoseRoomsAreDormantIsPolledAtTheLongerCap(t *testing.T) {
 		t.Errorf("with nothing stored for longer than the quiet time, the last wait was %v; want the longer cap of 300ms", gap)
 	}
 	events.Store(3)
-	d.roomActive("room-pace")
+	d.roomStored("room-pace", true)
 	time.Sleep(30 * time.Millisecond)
 	if gap := polls.lastGap(); gap > 20*time.Millisecond {
 		t.Errorf("after the room stored an event and the address sent more, the last wait was %v; want the usual interval", gap)
 	}
 }
 
-// A room becomes active when a session on this machine writes an event into it and when
-// a poll stores an event from another machine, which are the two ways a room stores one.
-func TestARoomBecomesActiveWhenItStoresAnEventWrittenHereOrReceived(t *testing.T) {
+// An event a session on this machine writes into a room wakes the room's addresses, and
+// one a poll brings from another machine is recorded without waking them.
+func TestAnEventWrittenHereWakesARoomsAddressesAndOneReceivedDoesNot(t *testing.T) {
 	a := newOfflinePeer(t, "room-pace", "pace")
 	b := newOfflinePeer(t, "room-pace", "pace")
 	introduce(t, a, b, "room-pace")
 	srv := serveCounted(t, b.d, "127.0.0.1:0")
-	active := func(p *offlinePeer) bool { return p.d.addrActiveSince(srv.addr, time.Now().Add(-time.Minute)) }
-	if active(a) {
-		t.Fatal("a room that has stored nothing is active")
-	}
+	minuteAgo := time.Now().Add(-time.Minute)
 	b.say(t, "room-pace", "s", EventUserPrompt, "written on b")
-	if !b.d.pace.active["room-pace"].After(time.Now().Add(-time.Minute)) {
-		t.Error("a prompt written on this machine left its room inactive")
+	if !b.d.addrWokenSince(a.addr, minuteAgo) {
+		t.Error("a prompt written on this machine did not wake its room's addresses")
 	}
 	if _, err := a.d.pullFrom(srv.addr); err != nil {
 		t.Fatal(err)
 	}
-	if !active(a) {
-		t.Error("a poll that stored an event left its room inactive")
+	a.d.pace.mu.Lock()
+	stored := a.d.pace.stored["room-pace"]
+	a.d.pace.mu.Unlock()
+	if !stored.After(minuteAgo) {
+		t.Error("a poll that stored an event did not record that its room stored one")
+	}
+	if a.d.addrWokenSince(srv.addr, minuteAgo) {
+		t.Error("an event received from one machine woke the room's addresses")
 	}
 }
 
-// Opening a room's view makes the room active, so its addresses are polled at once.
-func TestOpeningARoomsViewMakesTheRoomActive(t *testing.T) {
+// An event received from one address leaves another address of the same room polled
+// slowly, since that address has nothing new because of it.
+func TestAnEventReceivedFromOneAddressLeavesAnotherPolledSlowly(t *testing.T) {
+	polls := map[string]*pollTimes{"peer": {}, "other": {}}
+	d := syncDaemon(t, "peer,other", func(addr string) (int, error) {
+		if p := polls[addr]; p != nil { // a loop outliving this test may poll another test's addresses
+			p.note()
+		}
+		return 0, nil
+	})
+	d.pace.quietCap, d.pace.dormantCap, d.pace.dormantAfter = time.Second, time.Second, time.Hour
+	d.askRooms = func(string, []Room) []Room { return []Room{{RoomID: "room-pace"}} }
+	go d.RunSync(nil, 20*time.Millisecond)
+	time.Sleep(900 * time.Millisecond)
+	before := polls["other"].count()
+	d.roomStored("room-pace", false)
+	time.Sleep(50 * time.Millisecond)
+	if after := polls["other"].count(); after != before {
+		t.Errorf("an event received from another address polled this one %d more times", after-before)
+	}
+}
+
+// A machine that does not answer is polled up to every syncBackoffCap while its rooms are
+// active, and up to the dormant cap once they are dormant.
+func TestAMachineThatDoesNotAnswerIsPolledAtTheDormantCapOnceItsRoomsAreDormant(t *testing.T) {
+	polls := &pollTimes{}
+	d := syncDaemon(t, "peer", func(string) (int, error) { polls.note(); return 0, errors.New("refused") })
+	d.pace.failCap, d.pace.dormantCap, d.pace.dormantAfter = 40*time.Millisecond, 300*time.Millisecond, 400*time.Millisecond
+	d.askRooms = func(string, []Room) []Room { return []Room{{RoomID: "room-pace"}} }
+	go d.RunSync(nil, 5*time.Millisecond)
+	time.Sleep(350 * time.Millisecond)
+	if gap := polls.lastGap(); gap > 80*time.Millisecond {
+		t.Errorf("before its rooms were dormant, a machine that does not answer waited %v; want the cap of 40ms", gap)
+	}
+	time.Sleep(1200 * time.Millisecond)
+	if gap := polls.lastGap(); gap < 250*time.Millisecond {
+		t.Errorf("once its rooms were dormant, a machine that does not answer waited %v; want the dormant cap of 300ms", gap)
+	}
+}
+
+// Opening a room's view wakes its addresses, and records no event, so a room that is only
+// looked at still becomes dormant.
+func TestOpeningARoomsViewWakesItsAddresses(t *testing.T) {
 	a := newOfflinePeer(t, "room-pace", "pace")
 	srv := httptest.NewServer(a.d.LocalRoutes())
 	defer srv.Close()
@@ -174,9 +223,12 @@ func TestOpeningARoomsViewMakesTheRoomActive(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.d.pace.mu.Lock()
-	at := a.d.pace.active["room-pace"]
+	woken, stored := a.d.pace.woken["room-pace"], a.d.pace.stored["room-pace"]
 	a.d.pace.mu.Unlock()
-	if !at.After(time.Now().Add(-time.Minute)) {
-		t.Error("opening the room's view left the room inactive")
+	if !woken.After(time.Now().Add(-time.Minute)) {
+		t.Error("opening the room's view did not wake its addresses")
+	}
+	if !stored.IsZero() {
+		t.Error("opening the room's view recorded that the room stored an event")
 	}
 }
