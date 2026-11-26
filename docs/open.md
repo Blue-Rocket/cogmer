@@ -261,7 +261,9 @@ nothing has been measured about whether a reader distinguishes them.
 
 **Whether arrival wants announcing.** D-039 (the browser view is the settled
 avenue) left this open. Do not build a notification on speculation — it has a
-different answer for close pairing than for long solo stretches.
+different answer for close pairing than for long solo stretches. D-148 (arrival would
+be announced by an operating-system notification) is the decision that would build one
+on a computer, and a cloud session's daemon has no desktop to show it on.
 
 ## Reaching a peer on another network
 
