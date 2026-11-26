@@ -7,9 +7,10 @@ remains unreachable it is logged again every ten minutes, and when it answers ag
 once more with how long it was gone. A failed poll in between says nothing.
 
 **Support.**
-- A machine that does not answer is polled every few seconds, up to every fifteen, so a line for
-  each failed poll repeats the same thing and buries the transition, which is the line that
-  matters.
+- A machine that does not answer is polled every few seconds, up to every fifteen, or every sixty
+  once its rooms are dormant (D-305, a machine nudges the machines it shares a room with when it
+  writes an event), so a line for each failed poll repeats the same thing and buries the
+  transition, which is the line that matters.
   `cmd/cogmer/ui.go`, `markPeerUnreachable`.
 - The ten-minute repeat lets somebody reading a log an hour later learn that the machine is
   still gone and not only that it once went. `cmd/cogmer/ui.go`, `downRepeat`.
