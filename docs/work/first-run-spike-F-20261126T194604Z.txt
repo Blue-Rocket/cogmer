@@ -1,0 +1,136 @@
+Spike F: whether a page on the user's computer can use a passkey through a page under cogmer.ai
+
+What it found: yes, in Chrome and in Safari on the Mac. A page at http://127.0.0.1:4799 sent the user
+to /sign/ under cogmer.ai and got back, by navigation alone, a passkey signature over a challenge it
+chose, which it verified against the public key it kept at registration. A passkey made for the site
+cogmer.ai on probe.cogmer.ai signed on a.probe.cogmer.ai as well. No hosts-file entry, local
+certificate or request from one page to the other was used. Both passkeys were saved to iCloud
+Keychain and both signed on the user's iPhone, where the chooser showed them with nothing to tell
+them apart.
+
+Runbook: docs/work/cowork-first-run-spikes.md, section F, at 98f3521 on host-probes.
+Started 2026-11-26T19:46:04Z, on the user's Mac.
+
+How it was run
+- The Claude Code session that recorded this had no Claude in Chrome tools and no way to drive Safari,
+  so the user drove both browsers by hand and reported each page's output, pasted or described. The
+  session started the stand-in and wrote down what the user reported.
+- Stand-in: python3 -m http.server 4799 --bind 127.0.0.1 --directory docs/work/probe-site/local,
+  from the repository root. curl http://127.0.0.1:4799/ answered 200.
+
+Chrome
+- Version, from chrome://version: 152.0.7977.83 (Official Build) (arm64).
+- Stand-in on opening, as pasted:
+    Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36
+    stand-in at http://127.0.0.1:4799
+    no passkey is registered yet
+- Register (step 2): pressed "Register a passkey on probe.cogmer.ai", then "Register a passkey" on
+  probe.cogmer.ai/sign/. Chrome offered several places to save the passkey. The user picked iCloud
+  Keychain, and noted that Chrome's password manager was among the others but did not notice the rest.
+  Back on the stand-in, as pasted:
+    registered on https://probe.cogmer.ai: credential x_PMopUTHf1r..., algorithm -7, public key kept
+- Sign on probe.cogmer.ai (step 3): pressed "Sign on probe.cogmer.ai", then "Sign with my passkey",
+  and the user answered the prompt. The stand-in printed, as pasted:
+    signed on https://probe.cogmer.ai, by credential x_PMopUTHf1r...
+      same credential as registered: true
+      type webauthn.get: true
+      challenge is the one this page sent, used once: true
+      origin https://probe.cogmer.ai: true
+      passkey site is cogmer.ai: true
+      user present: true, user confirmed with Face ID, Touch ID or a PIN: true
+      signature verifies with the registered key: true
+      the same signature over a changed challenge verifies: false (it must be false)
+- Sign on a.probe.cogmer.ai (step 3): pressed "Sign on a.probe.cogmer.ai", then "Sign with my
+  passkey", and the user answered the prompt. The stand-in printed, as pasted:
+    signed on https://a.probe.cogmer.ai, by credential x_PMopUTHf1r...
+      same credential as registered: true
+      type webauthn.get: true
+      challenge is the one this page sent, used once: true
+      origin https://a.probe.cogmer.ai: true
+      passkey site is cogmer.ai: true
+      user present: true, user confirmed with Face ID, Touch ID or a PIN: true
+      signature verifies with the registered key: true
+      the same signature over a changed challenge verifies: false (it must be false)
+
+Safari
+- Stand-in on opening, as pasted (the third line, whether a passkey was registered, was not pasted):
+    Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.2 Safari/605.1.15
+    stand-in at http://127.0.0.1:4799
+- Register (step 4): pressed "Register a passkey on probe.cogmer.ai", then "Register a passkey" on
+  probe.cogmer.ai/sign/. Safari offered one place to save the passkey, Passwords, the user reported,
+  and the user saved it there. Back on the stand-in, as pasted:
+    registered on https://probe.cogmer.ai: credential LzGJDoGdf8LD..., algorithm -7, public key kept
+- Sign on probe.cogmer.ai (step 4): pressed "Sign on probe.cogmer.ai", then "Sign with my passkey",
+  and the user answered the prompt. The stand-in printed, as pasted:
+    signed on https://probe.cogmer.ai, by credential LzGJDoGdf8LD...
+      same credential as registered: true
+      type webauthn.get: true
+      challenge is the one this page sent, used once: true
+      origin https://probe.cogmer.ai: true
+      passkey site is cogmer.ai: true
+      user present: true, user confirmed with Face ID, Touch ID or a PIN: true
+      signature verifies with the registered key: true
+      the same signature over a changed challenge verifies: false (it must be false)
+  Safari offered no choice between the two passkeys for cogmer.ai and went straight to confirming the
+  user, which asked for the Mac's login password rather than Touch ID, the user reported. The stand-in
+  counted that as confirmed with Face ID, Touch ID or a PIN, the line above.
+- Sign on a.probe.cogmer.ai (step 4): pressed "Sign on a.probe.cogmer.ai", then "Sign with my
+  passkey", and the user answered the prompt. The stand-in printed, as pasted:
+    signed on https://a.probe.cogmer.ai, by credential LzGJDoGdf8LD...
+      same credential as registered: true
+      type webauthn.get: true
+      challenge is the one this page sent, used once: true
+      origin https://a.probe.cogmer.ai: true
+      passkey site is cogmer.ai: true
+      user present: true, user confirmed with Face ID, Touch ID or a PIN: true
+      signature verifies with the registered key: true
+      the same signature over a changed challenge verifies: false (it must be false)
+
+iPhone
+- iOS 27.0.1, from Settings, the user reported. The user agent below says iPhone OS 18_7, which
+  is not the system's version.
+- Opened https://a.probe.cogmer.ai/sign/#mode=self in Safari on the user's iPhone (step 5). The page
+  printed on opening, as pasted:
+    Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0.1 Mobile/15E148 Safari/604.1
+    page https://a.probe.cogmer.ai, passkey site cogmer.ai
+- Pressed the button. The iPhone offered a choice of two passkeys for cogmer.ai, with nothing on
+  screen to tell one from the other, the user reported, and the user picked the first. The page then
+  held, as pasted after the two opening lines:
+    sign failed: NotAllowedError: The request is not allowed by the user agent or the platform in the current context, possibly because the user denied permission.
+    sign failed: NotAllowedError: The request is not allowed by the user agent or the platform in the current context, possibly because the user denied permission.
+    signed with credential LzGJDoGdf8LD...
+    a passkey for cogmer.ai answered on this page
+  The credential that answered is the one Safari on the Mac made.
+  The two failures came first because the user tried to take a screenshot of the passkey dialog, and
+  the dialog closed with NotAllowedError each time, the user reported. They are not failures of the
+  passkey.
+- Pressed the button again on the same page, and the user picked the second of the two passkeys. The
+  page then added, as pasted:
+    signed with credential x_PMopUTHf1r...
+    a passkey for cogmer.ai answered on this page
+  The credential that answered is the one Chrome on the Mac saved to iCloud Keychain.
+
+Cleanup (step 6)
+- The stand-in server was stopped at the end of the run, and http://127.0.0.1:4799/ no longer
+  answered.
+- The user was asked to delete the two passkeys named "cogmer signing probe" for cogmer.ai from
+  Passwords. Whether they were deleted is not recorded here.
+
+What the run does not show
+- Nothing about prompts outside the page. The user mentioned no prompt or warning about the local
+  network, or about leaving the stand-in or returning to it, in either browser, but was not asked
+  about each one at each step, so their absence is not shown.
+- Every step was driven and reported by the user. The session saw no page itself, so the record
+  holds what was pasted, and the user's descriptions of the dialogs, and no screenshot.
+- Chrome's save dialog was not recorded in full: only iCloud Keychain, which was chosen, and Chrome's
+  password manager are named. A passkey saved to Chrome's own password manager or to a phone was not
+  tried, and neither was one on a security key.
+- How Chrome confirmed the user, Touch ID or the login password, was not recorded. Safari asked for
+  the login password.
+- Only a challenge at the end of the address after # was carried. Whether a challenge or a signature
+  survives where a browser or an extension rewrites or logs addresses was not tested.
+- No browser other than Chrome 152 and Safari 26.6.2 on macOS, and Safari on iOS 27.0.1, was tried:
+  not Firefox, not Edge, and not an Android phone or Windows.
+- A daemon's page at localhost rather than 127.0.0.1 was not tried, although /sign/ accepts both.
+- The iPhone signed in /sign/'s self mode, which checks only that a passkey for cogmer.ai answered,
+  not the signature, since there is no stand-in on the phone.
