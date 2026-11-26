@@ -283,7 +283,9 @@ silence, invalidated by a wrong key, aged at a rate set by what it names, and
 restored by evidence. `known_peers` holds one endpoint per peer with the time it was
 recorded, replaced when the peer advertises another (read on 2026-09-28). D-103 (an
 address belongs to a machine, and is stored in one place) gave each address the owner
-the lifecycle needs, and nothing past that is built.
+the lifecycle needs, and nothing past that is built. D-183 (a receiver orders candidate
+addresses by class and never by a configured sort) and D-091 (identity is advertised
+and location is discovered) are the decisions that would build it.
 
 **Whether to rebuild the post-quantum hedge.** D-104 removed the pre-shared key,
 which was the only quantum-resistant element in the stack. It could be rebuilt at
