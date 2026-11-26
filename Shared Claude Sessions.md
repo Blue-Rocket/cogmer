@@ -1851,6 +1851,7 @@ message carries nothing of the room, and a machine it does not reach learns of t
 event when it next asks, so a lost message delays an event and loses nothing.
 
 On a healthy network, an event typically reaches the other machines in under a second.
+A machine asks every second about a room where something has happened recently.
 
 A machine asks less often about rooms where nothing has happened, up to every twenty
 seconds, and every minute after half an hour of quiet. A prompt submitted in a room,
