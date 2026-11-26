@@ -7,7 +7,7 @@ import (
 
 // The search below models polling in rounds, and asks, of every arrangement it can form,
 // whether a turn written on a machine that answers reaches every machine that answers
-// within a bounded number of rounds (D-305, a machine nudges the machines it shares a room
+// within a bounded number of rounds (D-306, a machine nudges the machines it shares a room
 // with when it writes an event). Which machines are polled is decided by the daemon's own
 // nudgedBy, setAside and setFailing, one daemon for each modelled machine, so the model
 // cannot disagree with the code about which machine is set aside.

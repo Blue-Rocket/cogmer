@@ -115,7 +115,7 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	d.markPeerHeardFrom(req.PeerID)
-	// A machine that polls this one has every nudge this machine owed it (D-305).
+	// A machine that polls this one has every nudge this machine owed it (D-306).
 	d.nudges.notePolled(req.Endpoint)
 	// A machine that asked for the room and was admitted has joined it, so it is a
 	// sync target from now on, and a machine of a guest that never asked is not
@@ -158,7 +158,7 @@ func peerList() []string {
 }
 
 // syncBackoffCap is the longest a peer that does not answer is left between two polls
-// while its rooms are not dormant (D-304).
+// while its rooms are not dormant (D-305).
 const syncBackoffCap = 15 * time.Second
 
 // RunSync polls each address worth asking, every one in a loop of its own. A failed poll
@@ -195,7 +195,7 @@ func (d *Daemon) RunSync(_ []string, every time.Duration) {
 
 // syncPeer polls one address until it is told to stop. An address that answers with
 // nothing is polled less often, and at the usual interval again when it sends an event or
-// a room it is asked about is written in or opened on this machine (D-304, an address is
+// a room it is asked about is written in or opened on this machine (D-305, an address is
 // polled less often while its rooms are quiet).
 func (d *Daemon) syncPeer(addr string, every time.Duration, stop <-chan struct{}) {
 	pull := d.pull
@@ -704,14 +704,14 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 	}
 	if late > 0 {
 		// Said once a poll, so that a turn that waited on a machine, such as one whose
-		// nudges did not arrive, shows in the log (D-305).
+		// nudges did not arrive, shows in the log (D-306).
 		log.Printf("sync: %d event(s) of %s from %s arrived late, the oldest written %s ago",
 			late, room.RoomName, shortEndpoint(addr), oldest.Round(time.Second))
 	}
 	if ownStored > 0 {
 		// A turn this machine's user wrote on another of their machines reaches the
 		// room's colleagues through this one, so it nudges them as its writer did
-		// (D-305).
+		// (D-306).
 		go d.nudgeRoomExcept(room.RoomID, addr)
 	}
 	return stored, nil

@@ -15,7 +15,7 @@ import (
 )
 
 // A nudge from a guest makes the address recorded for its machine the one address of its
-// user that is polled, and wakes that address (D-305, a machine nudges the machines it
+// user that is polled, and wakes that address (D-306, a machine nudges the machines it
 // shares a room with when it writes an event).
 func TestANudgeMakesItsMachinesAddressTheOnePolledForItsUser(t *testing.T) {
 	a := newOfflinePeer(t, "room-nudge", "nudge")
@@ -176,7 +176,7 @@ func TestAnAddressIsPolledAtMostEveryIntervalHoweverOftenItNudges(t *testing.T) 
 // A turn written on a colleague's machine that is set aside, whose nudge is lost, is not
 // stranded while the colleague's machine that nudged last does not answer: the reader
 // polls the colleague's other machines again, and takes the turn within a few waits
-// (D-305).
+// (D-306).
 func TestATurnOnAMachineSetAsideIsNotStrandedWhenTheLastNudgerIsDown(t *testing.T) {
 	var laptopHolds atomic.Bool
 	laptopHolds.Store(true) // the turn written on the laptop, whose nudge was lost
@@ -312,7 +312,7 @@ func TestANudgeIsNotSentAgainToAnAddressNoLongerPolledForTheRoom(t *testing.T) {
 
 // A machine that takes a turn its own user wrote on another of their machines nudges the
 // room's other machines, since the turn reaches colleagues through it, and one that takes
-// a colleague's turn nudges nobody (D-305).
+// a colleague's turn nudges nobody (D-306).
 func TestTakingATurnTheUserWroteOnAnotherMachineNudgesTheRoom(t *testing.T) {
 	ana, ben := newTestUser(t), newTestUser(t)
 	laptop := newUserPeer(t, trustRoom, trustRoomName, ana.machine(t, "laptop"), ana)
@@ -390,7 +390,7 @@ func TestAnEventStoredLongAfterItWasWrittenIsLoggedAsLate(t *testing.T) {
 }
 
 // A machine set aside while its poll loop waits is not polled when the wait ends, nor when
-// a write here wakes its room (D-305).
+// a write here wakes its room (D-306).
 func TestAMachineSetAsideDuringAWaitIsNotPolledWhenTheWaitEnds(t *testing.T) {
 	polls := map[string]*pollTimes{"laptop": {}, "desktop": {}}
 	d := syncDaemon(t, "laptop,desktop", func(addr string) (int, error) {
@@ -414,7 +414,7 @@ func TestAMachineSetAsideDuringAWaitIsNotPolledWhenTheWaitEnds(t *testing.T) {
 }
 
 // A nudge from a machine whose polls have been failing polls it at once, since the nudge
-// shows it is running, while a wake of its room does not end its wait (D-305).
+// shows it is running, while a wake of its room does not end its wait (D-306).
 func TestANudgeFromAMachineThatWasNotAnsweringPollsItAtOnce(t *testing.T) {
 	polls := &pollTimes{}
 	var answering atomic.Bool

@@ -52,7 +52,7 @@ func paceDaemon(t *testing.T, quietCap, dormantCap, dormant time.Duration, pull 
 }
 
 // An address that answers with nothing is polled at twice the last interval, up to the
-// cap, and not every interval (D-304, an address is polled less often while its rooms are
+// cap, and not every interval (D-305, an address is polled less often while its rooms are
 // quiet).
 func TestAnAddressThatAnswersWithNothingIsPolledLessOften(t *testing.T) {
 	d, polls := paceDaemon(t, 80*time.Millisecond, 80*time.Millisecond, time.Hour, func() int { return 0 })
@@ -235,7 +235,7 @@ func TestOpeningARoomsViewWakesItsAddresses(t *testing.T) {
 
 // A colleague whose machine answered its last poll is online while it is polled slowly
 // in a quiet room, and one whose polls fail after it answered, or that has not answered
-// for longer than the longest wait between polls, is not (D-304; D-194, a colleague this
+// for longer than the longest wait between polls, is not (D-305; D-194, a colleague this
 // machine cannot reach is named in the room status and the view).
 func TestAColleaguePolledSlowlyInAQuietRoomIsOnline(t *testing.T) {
 	d := syncDaemon(t, "", func(string) (int, error) { return 0, nil })
@@ -261,7 +261,7 @@ func TestAColleaguePolledSlowlyInAQuietRoomIsOnline(t *testing.T) {
 }
 
 // decidePoll, at the real interval and caps, gives each rule of when an address is polled
-// next (D-304, D-305).
+// next (D-305, D-306).
 func TestDecidePollGivesEachRuleOfWhenAnAddressIsPolledNext(t *testing.T) {
 	p := pollPacing{every: time.Second, quietCap: quietPollCap, failCap: syncBackoffCap, dormantCap: dormantPollCap}
 	asleep := func() bool { return true }

@@ -21,7 +21,7 @@ them in `/cogmer:self-status`.
   belongs to a machine and is stored in one place), `cmd/cogmer/membership.go`, `EndpointOwners`.
 - A machine that answered in the last 15 seconds is online, so one failed poll does not read as an outage,
   and so is one that answered its last poll within the longest wait between polls of a quiet room, so a
-  quiet room does not read as one either (D-304, an address is polled less often while its rooms are
+  quiet room does not read as one either (D-305, an address is polled less often while its rooms are
   quiet). `cmd/cogmer/reach_test.go`, `TestAColleagueIsNamedAndTimedWhileUnreachable`;
   `cmd/cogmer/pollpace_test.go`, `TestAColleaguePolledSlowlyInAQuietRoomIsOnline`.
 - A command is a separate process and the daemon is the one that tries, so the command asks the daemon,

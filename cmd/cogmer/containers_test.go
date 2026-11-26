@@ -990,7 +990,7 @@ func TestContainerUpgradeKeepsAPairedRoom(t *testing.T) {
 // machine is cut off while bob writes on the laptop, so the laptop's nudge does not reach
 // her. Once alice is back, the turn reaches her with nothing more written, by the nudge
 // sent again or by her machine polling the laptop while the desktop does not answer
-// (D-305, a machine nudges the machines it shares a room with when it writes an event).
+// (D-306, a machine nudges the machines it shares a room with when it writes an event).
 //
 // It is skipped while a user's second machine reaches colleagues only through the first:
 // in this arrangement alice's machine never polls the laptop, so the laptop's turn waits
@@ -1030,7 +1030,7 @@ func TestContainerWorkATurnOnAColleaguesQuietMachineIsNotStranded(t *testing.T) 
 // TestContainerWorkANudgeBringsATurnBeforeTheNextSlowPoll runs this tree's binary on two
 // machines: alice's machine sends nothing for 45 seconds, so bob's polls of it slow to
 // every 20, and a turn alice then writes reaches bob within 3 seconds, by the nudge her
-// machine sends when it writes (D-305, a machine nudges the machines it shares a room
+// machine sends when it writes (D-306, a machine nudges the machines it shares a room
 // with when it writes an event).
 func TestContainerWorkANudgeBringsATurnBeforeTheNextSlowPoll(t *testing.T) {
 	c := newCluster(t)

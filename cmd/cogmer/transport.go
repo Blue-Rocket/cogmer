@@ -137,7 +137,7 @@ func clientFor(endpoint string, timeout time.Duration, tlsConf *tls.Config) (*ht
 			// Longer than the longest wait between two polls of a quiet address
 			// (dormantPollCap), so a kept connection is still open for the next poll,
 			// and shorter than the two minutes a peer's server keeps it, so the server
-			// never closes a connection this side is about to use (D-303, D-304).
+			// never closes a connection this side is about to use (D-303, D-305).
 			IdleConnTimeout: 90 * time.Second,
 		},
 	}, nil

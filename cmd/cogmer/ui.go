@@ -460,7 +460,7 @@ func (d *Daemon) handleStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Somebody opening the room is about to read it, so its addresses are polled at
-	// once (D-304, an address is polled less often while its rooms are quiet).
+	// once (D-305, an address is polled less often while its rooms are quiet).
 	d.roomOpened(room.RoomID)
 
 	ch := d.subscribe()
@@ -701,7 +701,7 @@ func (d *Daemon) statusOf(targets []string) []uiPeer {
 			if !st.lastSeen.IsZero() {
 				// A peer that answered its last poll and was polled within the longest
 				// wait between polls of a quiet room is online however long ago that
-				// was, since a quiet room is polled less often (D-304, an address is
+				// was, since a quiet room is polled less often (D-305, an address is
 				// polled less often while its rooms are quiet).
 				age := time.Since(st.lastSeen)
 				answering := st.downSince.IsZero() && age < dormantPollCap+15*time.Second

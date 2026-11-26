@@ -8,7 +8,7 @@ once more with how long it was gone. A failed poll in between says nothing.
 
 **Support.**
 - A machine that does not answer is polled every few seconds, up to every fifteen, or every sixty
-  once its rooms are dormant (D-304, an address is polled less often while its rooms are quiet),
+  once its rooms are dormant (D-305, an address is polled less often while its rooms are quiet),
   so a line for each failed poll repeats the same thing and buries the transition, which is the
   line that matters.
   `cmd/cogmer/ui.go`, `markPeerUnreachable`.

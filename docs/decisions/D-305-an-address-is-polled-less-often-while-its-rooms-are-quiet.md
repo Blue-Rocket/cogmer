@@ -1,4 +1,4 @@
-# D-304 — An address is polled less often while its rooms are quiet
+# D-305 — An address is polled less often while its rooms are quiet
 
 **Date:** 2026-11-26 · **Status:** active · **Areas:** sync, transport
 
@@ -6,9 +6,9 @@
 
 **Rejected.**
 - *Polling every address every second.* A machine with no turns in a group of four took 99.7 CPU seconds and sent 15.28MB an hour, almost all of it in polls that returned nothing (`d1d5db9`).
-- *A long poll, in which the answering machine holds each request until it has an event or a time limit passes.* Propagation would be under a second at the cost of a request held open on the answering machine for each colleague, while a nudge (D-305, a machine nudges the machines it shares a room with when it writes an event) brings the same propagation with nothing held.
+- *A long poll, in which the answering machine holds each request until it has an event or a time limit passes.* Propagation would be under a second at the cost of a request held open on the answering machine for each colleague, while a nudge (D-306, a machine nudges the machines it shares a room with when it writes an event) brings the same propagation with nothing held.
 - *Pushing events between machines, to save the polls of quiet rooms.* Each sender would need to know what each receiver holds, the state D-031 (peer synchronization polls) rejects push for, and polling a quiet room less often saves most of what its polls cost without it.
 
-**Limits.** An event from a machine that does not nudge this machine (D-305, a machine nudges the machines it shares a room with when it writes an event) reaches this machine up to 20 seconds late after a quiet spell, or up to 60 seconds after half an hour of quiet. In the group of four with a turn a minute in each room and no nudges, a turn reached its colleague 10.09 seconds after it was written at the median (`d1d5db9`). A colleague's event reaches a session's model only when that session's next prompt is submitted (§16, propagation), so the delay shows in the view, and in what the model is given only when a prompt is submitted before the event arrives.
+**Limits.** An event from a machine that does not nudge this machine (D-306, a machine nudges the machines it shares a room with when it writes an event) reaches this machine up to 20 seconds late after a quiet spell, or up to 60 seconds after half an hour of quiet. In the group of four with a turn a minute in each room and no nudges, a turn reached its colleague 10.09 seconds after it was written at the median (`d1d5db9`). A colleague's event reaches a session's model only when that session's next prompt is submitted (§16, propagation), so the delay shows in the view, and in what the model is given only when a prompt is submitted before the event arrives.
 
 **Revisit when** users say an event after a quiet spell arrives too late in the view, or when the waits are measured to leave most of a hosted machine's cost in polls that return nothing.

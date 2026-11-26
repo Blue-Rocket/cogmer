@@ -180,9 +180,9 @@ type Daemon struct {
 	// The client kept for each address this machine polls (D-303).
 	peerConns peerConns
 	// When each room last stored an event, which sets how often its addresses are polled
-	// (D-304).
+	// (D-305).
 	pace pollPace
-	// The nudges on their way to each address (D-305).
+	// The nudges on their way to each address (D-306).
 	nudges nudger
 
 	// When each peer last made an authenticated request of this daemon, by peer.
@@ -937,7 +937,7 @@ func (d *Daemon) appendLocal(store *Store, room Room, sessionID, kind, content s
 	ev, err := store.AppendAs(seq, id, removals, room.RoomID, sessionID, kind, content, meta)
 	if err == nil {
 		d.roomStored(room.RoomID, true)
-		go d.nudgeRoom(room.RoomID) // the room's other machines poll this one now (D-305)
+		go d.nudgeRoom(room.RoomID) // the room's other machines poll this one now (D-306)
 	}
 	return ev, err
 }

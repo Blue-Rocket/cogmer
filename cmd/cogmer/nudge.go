@@ -15,7 +15,7 @@ import (
 
 // A machine that writes an event into a room tells the room's other machines to poll it
 // now, and each of them polls, of a colleague's machines in the room, only the one that
-// told it last (D-305, a machine nudges the machines it shares a room with when it writes
+// told it last (D-306, a machine nudges the machines it shares a room with when it writes
 // an event). The nudge carries nothing of the room. It is signed as a sync request is,
 // over the room's identifier with nudgeScope before it, so that a nudge cannot be
 // presented as a sync request or a sync request as a nudge.
@@ -31,7 +31,7 @@ const nudgeTimeout = 5 * time.Second
 // A nudge counts as delivered only when the receiver answers it or polls this machine
 // after it was asked for. Until then it is sent again, at nudgeRetryMin and twice as long
 // each time up to nudgeRetryMax, for up to nudgeGiveUp, so that a nudge lost on its way
-// does not leave a turn on this machine unasked for (D-305).
+// does not leave a turn on this machine unasked for (D-306).
 type nudger struct {
 	mu      sync.Mutex
 	sending map[string]bool      // address → a nudge is on its way

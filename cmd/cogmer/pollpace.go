@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// How often an address is polled once it has sent nothing for a while (D-304, an address
+// How often an address is polled once it has sent nothing for a while (D-305, an address
 // is polled less often while its rooms are quiet). An address that answers with nothing
 // is polled at twice the last interval, from the usual one up to quietPollCap, and up to
 // dormantPollCap once none of the rooms it is asked about has stored an event for
@@ -15,7 +15,7 @@ import (
 // (D-303, a machine keeps one connection to each address it polls).
 // lateArrival is how long after it was written an event that is stored is logged as late:
 // longer than the longest wait between polls and a nudge sent again after it, so an event
-// on any path that works arrives in less (D-305).
+// on any path that works arrives in less (D-306).
 const lateArrival = 2 * time.Minute
 
 // lateAfterOr is lateArrival unless a test says otherwise.
@@ -40,7 +40,7 @@ type pollPace struct {
 	stored map[string]time.Time // room id → when it last stored an event
 	woken  map[string]time.Time // room id → when it last woke its addresses
 	// An address a nudge woke, and the user of each address that has nudged this
-	// machine with the address of each user's last nudge (D-305, a machine nudges the
+	// machine with the address of each user's last nudge (D-306, a machine nudges the
 	// machines it shares a room with when it writes an event).
 	wokenAddr map[string]time.Time
 	nudgerOf  map[string]string // address → its machine's user
@@ -94,7 +94,7 @@ func (p *pollPace) wakeLocked(roomID string, now time.Time) {
 }
 
 // nudgedBy records that a machine of user at addr nudged this machine, which makes addr
-// the one address of a colleague that is polled, and polls it at once (D-305). A nudge
+// the one address of a colleague that is polled, and polls it at once (D-306). A nudge
 // from another machine of this machine's own user polls it and sets none aside, so that
 // a user's own machines keep polling one another and pass on what each holds.
 func (d *Daemon) nudgedBy(user, addr string) {
@@ -126,7 +126,7 @@ func (d *Daemon) ownUser() string {
 
 // setAside says whether addr is a colleague's machine that has nudged this machine and
 // whose user has nudged since from another address that still answers, so that addr is
-// not polled until it nudges again (D-305). When the address that nudged last stops
+// not polled until it nudges again (D-306). When the address that nudged last stops
 // answering, the user's other machines are polled again, so that a turn written on one
 // of them whose nudge was lost is not left there.
 func (d *Daemon) setAside(addr string) bool {
@@ -298,8 +298,8 @@ type pollDecision struct {
 }
 
 // decidePoll is the one place that decides when an address is polled next, from what its
-// loop's polls did and what is known of its rooms and its user's machines (D-304, an
-// address is polled less often while its rooms are quiet; D-305, a machine nudges the
+// loop's polls did and what is known of its rooms and its user's machines (D-305, an
+// address is polled less often while its rooms are quiet; D-306, a machine nudges the
 // machines it shares a room with when it writes an event).
 //
 //   - A colleague's machine that another of the colleague's machines has displaced as the
