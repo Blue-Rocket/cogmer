@@ -1,0 +1,436 @@
+<!-- Served from the binary; no external requests. Room content arrives from other
+     peers and is therefore untrusted. The daemon renders each turn's Markdown and
+     writes only the markup it generates itself (D-211), and the page puts the result
+     in the feed as it is; it never turns a turn's text into markup. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cogmer</title>
+<style>
+  :root {
+    --bg:#faf9f7; --fg:#1c1b19; --dim:#6b6660; --line:#e3e0db;
+    --card:#fff; --code:#f2f0ec; --me:#2f6f4f; --them:#3a5a8c; --warn:#a3521f;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --bg:#16150f; --fg:#e8e4dc; --dim:#8f8a82; --line:#2b2924;
+           --card:#1d1c16; --code:#23211b; --me:#7fc0a0; --them:#8fb3e0; --warn:#d99a5e; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+  header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);
+         padding:14px 20px;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+  h1{margin:0;font-size:15px;font-weight:600;letter-spacing:.14em;text-transform:uppercase}
+  .status{margin-left:auto;font-size:12px;color:var(--dim);display:flex;gap:14px;align-items:center}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;
+       background:var(--dim);vertical-align:middle}
+  .dot.live{background:var(--me)} .dot.down{background:var(--warn)}
+  main{max-width:820px;margin:0 auto;padding:22px 20px 80px}
+  .turn{margin:0 0 26px}
+  .who{display:flex;gap:10px;align-items:baseline;margin-bottom:5px}
+  .name{font-weight:600;font-size:13px}
+  .name.me{color:var(--me)} .name.them{color:var(--them)}
+  .peer{font-size:11px;color:var(--dim)}
+  .unverified{font-size:10px;color:var(--warn);border:1px solid var(--warn);
+              border-radius:3px;padding:0 4px;text-transform:uppercase;letter-spacing:.05em}
+  .time{margin-left:auto;font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+  .body{background:var(--card);border:1px solid var(--line);border-radius:7px;padding:12px 15px;
+        overflow-wrap:anywhere}
+  .body p{margin:0 0 .7em} .body p:last-child{margin:0}
+  .body pre{background:var(--code);padding:10px 12px;border-radius:5px;overflow-x:auto;margin:.7em 0}
+  .body code{background:var(--code);padding:1px 5px;border-radius:3px;
+             font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+  .body pre code{background:none;padding:0}
+  .body ul,.body ol{margin:.5em 0;padding-left:1.5em}
+  .body li>p{margin:0}
+  .body h1,.body h2,.body h3,.body h4,.body h5,.body h6{margin:.9em 0 .4em;line-height:1.3}
+  .body h1{font-size:1.25em} .body h2{font-size:1.15em} .body h3,.body h4,.body h5,.body h6{font-size:1em}
+  .md > :first-child{margin-top:0}
+  .body img.pasted{max-width:100%;height:auto;display:block;border-radius:5px;margin:.5em 0}
+  .images{margin-top:.5em}
+  .imagenote{color:var(--dim);font-size:13px;margin:.4em 0}
+  .body blockquote{margin:.7em 0;padding:0 0 0 12px;border-left:3px solid var(--line);color:var(--dim)}
+  .body table{border-collapse:collapse;margin:.7em 0;display:block;overflow-x:auto}
+  .body th,.body td{border:1px solid var(--line);padding:4px 9px;text-align:left}
+  .body th{background:var(--code)}
+  .body hr{border:0;border-top:1px solid var(--line);margin:1em 0}
+  .body a{color:var(--them)}
+  .tools{font-size:12px;color:var(--dim);margin-top:8px}
+  .tools summary{cursor:pointer;list-style:revert}
+  .tools summary:hover{color:var(--fg)}
+  .tools[open]{padding-bottom:2px}
+  .notyet{font-size:10px;color:var(--dim);border:1px dashed var(--dim);border-radius:3px;
+          padding:0 4px;letter-spacing:.03em}
+  .export{font-size:12px;color:var(--dim);text-decoration:none;border:1px solid var(--line);
+          border-radius:4px;padding:1px 8px}
+  .export:hover{color:var(--fg)}
+  #jump{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);font:inherit;font-size:13px;
+        background:var(--fg);color:var(--bg);border:0;border-radius:18px;padding:6px 16px;
+        cursor:pointer;box-shadow:0 2px 10px #0004}
+  #jump[hidden]{display:none}
+  #notice{max-width:820px;margin:16px auto 0;padding:0 20px;font-size:13px;color:var(--dim)}
+  #notice p{margin:0;padding:8px 12px;border-left:3px solid var(--warn);background:var(--card)}
+  #notice[hidden]{display:none}
+  #notice code{background:var(--code);padding:1px 5px;border-radius:3px;white-space:nowrap}
+  .machine{font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:3px;padding:0 4px}
+  .marked{font-size:10px;color:var(--warn);border:1px dashed var(--warn);border-radius:3px;padding:0 4px}
+  .turn.marked-turn .body{opacity:.55}
+  #removed{max-width:820px;margin:16px auto 0;padding:0 20px;font-size:14px}
+  #removed p{margin:0;padding:10px 12px;border-left:3px solid var(--warn);background:var(--card)}
+  #removed[hidden]{display:none}
+  #guests{max-width:820px;margin:12px auto 0;padding:0 20px;font-size:13px;color:var(--dim)}
+  #guests[hidden]{display:none}
+  #guests summary{cursor:pointer}
+  #guests ul{margin:6px 0 0;padding-left:1.2em}
+  .empty{color:var(--dim);text-align:center;padding:60px 20px}
+  .empty code{background:var(--code);padding:2px 6px;border-radius:3px;font-size:13px}
+  /* The rooms pane: every room on this machine, beside whichever room is shown (D-289). */
+  #rooms{position:fixed;top:0;left:0;bottom:0;width:260px;border-right:1px solid var(--line);
+         background:var(--bg);overflow-y:auto;z-index:2}
+  #rooms .head{padding:14px 16px;border-bottom:1px solid var(--line);font-size:12px;font-weight:600;
+               letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+  #rooms a{display:block;padding:9px 16px;border-bottom:1px solid var(--line);color:inherit;text-decoration:none}
+  #rooms a:hover{background:var(--code)}
+  #rooms a.here{background:var(--code);box-shadow:inset 3px 0 0 var(--them)}
+  #rooms .top{display:flex;align-items:baseline;gap:8px}
+  #rooms .rname{font-weight:600;font-size:13px}
+  #rooms .new{margin-left:auto;font-size:11px;font-weight:600;color:var(--card);background:var(--them);
+              border-radius:9px;padding:0 7px}
+  #rooms .line{font-size:12px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #rooms .line .in{color:var(--me)} #rooms .line .warn{color:var(--warn)}
+  #rooms .none{padding:16px;color:var(--dim);font-size:13px}
+  #rooms .head button{float:right;display:none;font:inherit;font-size:12px;letter-spacing:0;text-transform:none;background:none;color:var(--dim);border:1px solid var(--line);border-radius:4px;padding:1px 8px;cursor:pointer}
+  #roomsShade{display:none;position:fixed;top:0;right:0;bottom:0;left:260px;z-index:1;cursor:pointer}
+  #roomsToggle{display:none;font:inherit;font-size:12px;background:none;color:var(--dim);
+               border:1px solid var(--line);border-radius:4px;padding:1px 8px;cursor:pointer}
+  @media (min-width:1000px){ body{margin-left:260px} }
+  @media (max-width:999px){
+    #rooms{display:none;box-shadow:2px 0 12px #0003} body.roomsOpen #rooms{display:block}
+    body.roomsOpen #roomsShade{display:block} #rooms .head button{display:inline-block}
+    #roomsToggle{display:inline-block}
+  }
+</style>
+<div id="roomsShade"></div>
+<nav id="rooms" aria-label="Rooms"><div class="head">Rooms<button id="roomsClose" type="button">Close</button></div><div id="roomList"></div></nav>
+<header>
+  <button id="roomsToggle" type="button">Rooms</button>
+  <h1 id="room">—</h1>
+  <div class="status">
+    <span id="conn"><span class="dot" id="connDot"></span><span id="connText">connecting</span></span>
+    <span id="peers"></span>
+    <span id="lists" hidden></span>
+    <a class="export" id="export" download>Export</a>
+  </div>
+</header>
+<div id="removed" hidden></div>
+<details id="guests" hidden><summary>Guests</summary><ul id="guestList"></ul></details>
+<div id="notice" hidden></div>
+<main id="feed"><div class="empty">Waiting for the room…</div></main>
+<button id="jump" hidden></button>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; connect-src 'self' https://tailcat.dev wss:; img-src blob:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<script src="wasm_exec.js"></script>
+<script src="viewer.js"></script>
+<script>
+// The page the daemon serves has no cogmerView. The static page that reads a cloud session's room
+// defines one before this script runs (D-302): the room, the stream of a path, and the link to a room.
+const VIEW = window.cogmerView || null;
+const ROOM = VIEW ? VIEW.room : (location.pathname.startsWith('/room/') ? decodeURIComponent(location.pathname.slice(6)) : '');
+(function(){
+  const feed=document.getElementById('feed');
+
+  // A turn's text is escaped wherever the page handles it. The turn's body arrives as
+  // HTML the daemon wrote from it, and the text is only the fallback.
+  const esc=s=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  // A turn is built once and never rebuilt, so a tool list the reader opened, or
+  // text they selected, survives the next arrival. Only the line naming who wrote
+  // it is rewritten, since a label or a delivery can change after the turn is drawn.
+  const turns=new Map();
+  let seen=null, unread=0;
+  const jump=document.getElementById('jump');
+  let roomTitle='cogmer';
+
+  const atBottom=()=>window.scrollY+window.innerHeight>=document.body.scrollHeight-80;
+  function showUnread(){
+    jump.hidden=unread===0;
+    jump.textContent=unread+' new turn'+(unread>1?'s':'')+' \u2193';
+    document.title=(unread?'('+unread+') ':'')+roomTitle;
+  }
+  function toBottom(){window.scrollTo(0,document.body.scrollHeight);}
+  jump.onclick=()=>{toBottom();};
+  function caughtUp(){ if(unread&&atBottom()&&!document.hidden){unread=0;showUnread();} }
+  window.addEventListener('scroll',caughtUp);
+  document.addEventListener('visibilitychange',caughtUp);
+
+  function whoHtml(e,state){
+    const mine=e.peerId===state.selfPeerId;
+    const assistant=e.eventType==='ASSISTANT_MESSAGE';
+    // The label this person chose leads, because it is the only name that is
+    // both memorable and bound to one key. The display name is the peer's own
+    // claim and is used only until you have named them (D-094).
+    const who=e.label||e.userDisplayName;
+    const name=assistant?('Assistant \u2014 '+who):who;
+    // The derived name and the unverified marker earn their place only on a
+    // peer that is not you; on your own turns they are noise.
+    const ident = mine ? ''
+      : '<span class="peer">'+esc(e.peerName)+'</span>'
+        +(e.verified?'':'<span class="unverified">unverified</span>');
+    // A turn shown here that no session has been given is the one difference between
+    // reading the room and the model having it.
+    // The tag says one thing about this turn. Why it matters, how many are waiting and what to do
+    // about it are not about any one turn, so the notice above the feed says them once.
+    const notyet=e.notInSession
+      ? '<span class="notyet" title="Your assistant has not received this turn.">not yet given to your assistant</span>':'';
+    // The machine's name is its user's claim, so it is an element of its own and never
+    // part of a name (D-233).
+    const machine=e.machine
+      ? '<span class="machine" title="The name its user gave the machine this turn came from">machine: '+esc(e.machine)+'</span>':'';
+    // A turn past a removal's or a revocation's cutoff is shown, marked, and never given
+    // to an assistant (D-220, D-236).
+    const marked=e.marked
+      ? '<span class="marked" title="This turn does not count, and no assistant is given it.">'+esc(e.marked)+'</span>':'';
+    return '<span class="name '+(mine?'me':'them')+'">'+esc(name)+'</span>'
+      +ident+machine+marked+notyet+'<span class="time">'+esc(e.clock)+'</span>';
+  }
+  function toolsHtml(e){
+    // A real disclosure rather than a triangle that does nothing: the tool
+    // names are stored, so the summary expands to them.
+    if(!((e.toolCalls||0)>0)) return '';
+    const names=(e.tools&&e.tools.length)?e.tools:[];
+    const counted={}; names.forEach(n=>counted[n]=(counted[n]||0)+1);
+    const list=Object.keys(counted).map(n=>esc(n)+(counted[n]>1?' \u00d7'+counted[n]:'')).join(', ');
+    return '<details class="tools"><summary>'+e.toolCalls+' tool operation'
+         +(e.toolCalls>1?'s':'')+'</summary>'+(list||'(names not recorded)')+'</details>';
+  }
+  // The daemon wrote the HTML of a turn, its pasted images included, and the text is only
+  // the fallback.
+  const mdHtml=e=>e.html||'<p>'+esc(e.content)+'</p>';
+
+  // This user's removal from the room, by whom and from which turns on, and that the
+  // room is coming back when a guest has offered it again (D-241). Built from text
+  // nodes, since a label is text this user typed.
+  const removed=document.getElementById('removed');
+  function showRemoved(state){
+    const s=state.removed;
+    removed.hidden=!s;
+    if(!s) return;
+    const p=document.createElement('p');
+    const b=document.createElement('b'); b.textContent='You were removed from this room';
+    p.append(b,' by '+(s.by||[]).join(' and ')+'. What counts of yours stops at: '+(s.from||[]).join('; ')+'. '
+      +'The room up to then stays readable here, and your sessions in it keep recording your turns, which reach the room if a guest invites you back.'
+      +(s.resuming?' A guest has offered the room to you again, so it is coming back once their invitation arrives.':''));
+    removed.replaceChildren(p);
+  }
+
+  // The room's guest list, with who invited and who revoked each guest (D-235). A guest
+  // this user does not know, such as one they forgot, is shown by the derived name and
+  // marked unverified (D-073), and a user an invitation counted for whom the list does not
+  // admit is never shown as a guest.
+  const guests=document.getElementById('guests');
+  function showGuests(state){
+    const list=state.guests||[];
+    guests.hidden=list.length===0;
+    document.getElementById('guestList').innerHTML=list.map(g=>{
+      let line='<b>'+esc(g.name)+'</b>';
+      if(!g.self&&!g.verified) line+=' <span class="peer">'+esc(g.peerName)+'</span> <span class="unverified">unverified</span>';
+      const how=[];
+      if(g.founder) how.push('founded the room');
+      if(g.invitedBy&&g.invitedBy.length) how.push('invited by '+g.invitedBy.map(esc).join(', '));
+      if(g.revokedBy&&g.revokedBy.length) how.push('revoked by '+g.revokedBy.map(esc).join(', '));
+      if(g.state==='removed') how.push('not a guest now');
+      if(g.state==='unsettled') how.push('an invitation of them counted, but the room\u2019s changes do not settle, so they are not on the list');
+      return '<li>'+line+(how.length?' \u2014 '+how.join('; '):'')+'</li>';
+    }).join('');
+  }
+
+  // What the person can do about turns their assistant has not been given is said once, above the
+  // turns. Injection waits for their own next prompt, which most people do not know, so the notice
+  // says that, and says how to join the room when no session of theirs is in it. It is built from
+  // text nodes, since the room's name came from whoever invited them.
+  const notice=document.getElementById('notice');
+  function showNotice(state){
+    const n=state.events.filter(e=>e.notInSession).length;
+    notice.hidden=n===0;
+    if(!n) return;
+    const p=document.createElement('p');
+    const turns=n+' turn'+(n>1?'s':'')+' from colleagues or your other sessions '+(n>1?'have':'has')+' not been given to your assistant';
+    if(state.sessionsInRoom>0){
+      p.append(turns+' yet. '+(n>1?'They are':'It is')+' included the next time you send a prompt in a session in this room.');
+    }else{
+      const code=t=>{const c=document.createElement('code'); c.textContent=t; return c;};
+      p.append(turns+', and no session of yours is in this room, so '+(n>1?'none will be':'it will not be')+'. To include '+(n>1?'them':'it')+', join this room from a session: ',
+        code('/cogmer:room-join '+roomTitle),' in Claude Code or ',code('$cogmer room-join '+roomTitle),' in Codex.');
+    }
+    notice.replaceChildren(p);
+  }
+
+  // In a cloud session, which of the user's machines its colleagues, rooms and machines
+  // came from, and how old they are, or how long it has waited for one to answer.
+  const listsEl=document.getElementById('lists');
+  function showLists(state){
+    const l=state.lists;
+    listsEl.hidden=!l;
+    if(!l) return;
+    let t=l.from?'your lists from '+l.from+(l.age?', '+l.age+' old':''):'your lists: none of your machines has answered yet';
+    if(l.refused) t+=' · every machine of yours refused this session, so its turns are not being shared';
+    else if(l.waiting) t+=' · waiting '+l.waiting+' for one of your machines';
+    listsEl.textContent=t;
+  }
+
+  function draw(state){
+    roomTitle=state.roomName||state.room;
+    showLists(state);
+    showNotice(state);
+    showRemoved(state);
+    showGuests(state);
+    document.getElementById('room').textContent=roomTitle;
+    document.getElementById('export').href='/export?room='+encodeURIComponent(ROOM);
+
+    if(!state.events.length){
+      turns.clear();
+      feed.innerHTML='<div class="empty">No conversation yet. Start a Claude Code or Codex session with the hooks enabled.</div>';
+      return;
+    }
+    const empty=feed.querySelector('.empty'); if(empty) empty.remove();
+    const pinned=atBottom();
+
+    // Turns that arrived since the last drawing and are somebody else's. The first
+    // drawing is the history, not news.
+    const ids=new Set(state.events.map(e=>e.eventId));
+    let arrived=0;
+    if(seen) state.events.forEach(e=>{ if(!seen.has(e.eventId)&&e.peerId!==state.selfPeerId) arrived++; });
+    seen=ids;
+
+    for(const [id,t] of turns) if(!ids.has(id)){t.el.remove();turns.delete(id);}
+    state.events.forEach((e,i)=>{
+      let t=turns.get(e.eventId);
+      if(!t){
+        const el=document.createElement('div'); el.className='turn';
+        el.innerHTML='<div class="who"></div><div class="body"><div class="md"></div>'+toolsHtml(e)+'</div>';
+        t={el,who:el.firstChild,md:el.querySelector('.md'),html:'',body:''}; turns.set(e.eventId,t);
+      }
+      // A turn is drawn once, but its body can change after: a pasted image arrives from a
+      // peer later than the turn does. Only the body is rewritten, and a tool list the
+      // reader opened is not part of it.
+      const m=mdHtml(e);
+      if(m!==t.body){t.md.innerHTML=m;t.body=m;}
+      // Events are ordered by time and a late arrival can sort before one already
+      // shown, so each turn is put where it belongs.
+      const at=feed.children[i];
+      if(at!==t.el) feed.insertBefore(t.el,at||null);
+      const h=whoHtml(e,state);
+      if(h!==t.html){t.who.innerHTML=h;t.html=h;}
+      t.el.classList.toggle('marked-turn',!!e.marked);
+    });
+
+    if(pinned&&!document.hidden) toBottom();
+    else if(arrived){unread+=arrived;}
+    showUnread();
+  }
+
+  function peers(list){
+    const el=document.getElementById('peers');
+    if(!list||!list.length){el.textContent='';return;}
+    // A colleague is one line, unreachable only when none of their machines in the room can
+    // be reached; the user's own machines are each a line, by name (D-194).
+    el.innerHTML=list.map(p=>p.own
+      ? '<span><span class="dot '+(p.online?'live':'down')+'"></span>your '+esc(p.name)
+        +(p.online?'':' · '+(p.noAddress?'no address':(p.trying?'unreachable for '+esc(p.trying):esc(p.since))))+'</span>'
+      : '<span><span class="dot '+(p.online?'live':'down')+'"></span>'
+      +esc(p.name)+(p.online?'':' · '+(p.trying?'unreachable for '+esc(p.trying):esc(p.since)))
+      +(p.peerId?' · '+(p.lastTurn?'last turn '+esc(p.lastTurn):'no turns yet'):'')+'</span>').join(' ');
+  }
+
+  let es;
+  function connect(){
+    es=VIEW ? VIEW.stream('/stream?room=' + encodeURIComponent(ROOM)) : new EventSource('/stream?room=' + encodeURIComponent(ROOM));
+    es.onopen=()=>{document.getElementById('connDot').className='dot live';
+                   document.getElementById('connText').textContent='live';};
+    es.onmessage=ev=>{const s=JSON.parse(ev.data); draw(s); peers(s.peers);};
+    es.onerror=()=>{document.getElementById('connDot').className='dot down';
+                    document.getElementById('connText').textContent='reconnecting';
+                    es.close(); setTimeout(connect,1500);};
+  }
+  if(ROOM){ connect(); }
+  else {
+    // The front page is this page with no room picked: the rooms pane and nothing else.
+    document.getElementById('room').textContent='Rooms';
+    document.getElementById('export').hidden=true;
+    document.getElementById('conn').hidden=true;
+    feed.innerHTML='<div class="empty">Pick a room from the list.</div>';
+  }
+})();
+
+// The rooms pane lists every room on this machine from the daemon's /rooms/stream, the
+// most recently active first. Every value is written as text, since a colleague's chosen
+// name is among them. What the reader has seen is kept in this browser only, as the count
+// of a room's colleague turns at the last look, and without storage every room reads as
+// seen (D-289).
+(function(){
+  const list=document.getElementById('roomList');
+  const toggle=document.getElementById('roomsToggle');
+  toggle.onclick=()=>document.body.classList.toggle('roomsOpen');
+  // The pane covers the button that opened it on a narrow screen, so it also closes from its own
+  // button, from a tap on the page beside it, and from Escape.
+  const closeRooms=()=>document.body.classList.remove('roomsOpen');
+  document.getElementById('roomsClose').onclick=closeRooms;
+  document.getElementById('roomsShade').onclick=closeRooms;
+  document.addEventListener('keydown',ev=>{ if(ev.key==='Escape') closeRooms(); });
+  let rooms=[];
+  let loaded=false;
+  const seenOf=n=>{ try{ const v=localStorage.getItem('cogmer.seen.'+n); return v===null?null:+v; }catch(e){ return null; } };
+  const see=(n,c)=>{ try{ localStorage.setItem('cogmer.seen.'+n,String(c)); }catch(e){} };
+  const node=(tag,cls,text)=>{ const e=document.createElement(tag); if(cls) e.className=cls; if(text!==undefined) e.textContent=text; return e; };
+  function ago(iso){
+    const s=Math.max(0,(Date.now()-Date.parse(iso))/1000);
+    if(s<60) return 'just now';
+    if(s<3600) return Math.floor(s/60)+' min ago';
+    if(s<86400) return Math.floor(s/3600)+' h ago';
+    return Math.floor(s/86400)+' d ago';
+  }
+  function fresh(r){
+    if(r.name===ROOM){ if(!document.hidden) see(r.name,r.theirs); return 0; }
+    const s=seenOf(r.name);
+    if(s===null){ see(r.name,r.theirs); return 0; }
+    return Math.max(0,r.theirs-s);
+  }
+  function render(){
+    list.textContent='';
+    // Until the first list arrives the pane does not know there are no rooms, and saying so tells a
+    // user whose page is still connecting to go and create one.
+    if(!loaded){ list.appendChild(node('div','none','Loading rooms\u2026')); return; }
+    if(!rooms.length){ list.appendChild(node('div','none','No rooms yet. Create one in a session with /cogmer:room-create, or $cogmer room-create in Codex.')); }
+    for(const r of rooms){
+      const a=node('a',r.name===ROOM?'here':'');
+      a.href=VIEW ? VIEW.roomHref(r.name) : '/room/'+encodeURIComponent(r.name);
+      const top=node('div','top');
+      top.appendChild(node('span','rname',r.name));
+      const n=fresh(r);
+      if(n) top.appendChild(node('span','new',String(n)));
+      a.appendChild(top);
+      a.appendChild(node('div','line',r.lastAt?(r.lastBy+', '+ago(r.lastAt)):'no turns yet'));
+      const bits=[];
+      if(r.removed) bits.push(['warn','you were removed']);
+      if(r.sessions) bits.push(['in',r.sessions===1?'a session here is in it':r.sessions+' sessions here are in it']);
+      if(r.colleagues) bits.push(['',r.reachable+' of '+r.colleagues+(r.colleagues===1?' colleague':' colleagues')+' reachable']);
+      if(r.waiting) bits.push(['warn',r.waiting+' not yet given to your assistant']);
+      if(r.showOnly) bits.push(['','show only']);
+      if(bits.length){
+        const st=node('div','line');
+        bits.forEach((b,i)=>{ if(i) st.appendChild(document.createTextNode(' \u00b7 ')); st.appendChild(node('span',b[0],b[1])); });
+        a.appendChild(st);
+      }
+      list.appendChild(a);
+    }
+  }
+  function connect(){
+    const es=VIEW ? VIEW.stream('/rooms/stream') : new EventSource('/rooms/stream');
+    es.onmessage=m=>{ rooms=JSON.parse(m.data)||[]; loaded=true; render(); };
+    es.onerror=()=>{ es.close(); setTimeout(connect,1500); };
+  }
+  document.addEventListener('visibilitychange',render);
+  setInterval(render,60000);
+  render();
+  connect();
+})();
+</script>
