@@ -295,7 +295,8 @@ A host can admit somebody who asks to join, without a pairing string being sent 
 **Whether a host approves an unsolicited join request.** A person who is not on a
 room's guest list cannot ask to be let in; §12a (room membership) and D-051 (stranger
 pairing is not a supported case) leave open whether they should be able to, and
-nothing is built for it.
+nothing is built for it. D-144 (a refused peer's request goes to a host who is
+present) is the decision that would build it.
 
 As section 12 describes it, any peer that can reach the host's address and name the
 room could make something appear on the host's screen, and room names are guessable
