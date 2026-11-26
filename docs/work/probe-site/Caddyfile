@@ -1,0 +1,39 @@
+# The probe site at probe.cogmer.ai, for docs/work/cowork-first-run-spikes.md, spikes C and E.
+# /echo answers with what this server saw of the request, and /prf/ serves the passkey PRF page.
+# It keeps no access log. Run as the account that owns ~/probe-site, from that folder:
+#   PROBE_SITE=$PWD/site ./caddy run --config Caddyfile --adapter caddyfile
+# Port 80 is nginx's on the droplet, so certificates come by the TLS challenge on port 443 alone.
+{
+	http_port 8079
+	admin localhost:2099
+	auto_https disable_redirects
+	storage file_system {
+		root {$HOME}/probe-site/data
+	}
+	cert_issuer acme {
+		disable_http_challenge
+	}
+}
+
+probe.cogmer.ai, a.probe.cogmer.ai, b.probe.cogmer.ai {
+	header Cache-Control no-store
+	handle /echo {
+		respond <<TEXT
+			host {http.request.host}
+			sni {http.request.tls.server_name}
+			tls {http.request.tls.version} {http.request.tls.proto}
+			from {http.request.remote.host}
+			user-agent {http.request.header.User-Agent}
+			via {http.request.header.Via}
+			x-forwarded-for {http.request.header.X-Forwarded-For}
+			forwarded {http.request.header.Forwarded}
+			TEXT 200
+	}
+	handle /prf/* {
+		root * {$PROBE_SITE}
+		file_server
+	}
+	handle {
+		respond "cogmer probe: /echo says what this server saw, /prf/ tests a passkey's PRF secret" 200
+	}
+}

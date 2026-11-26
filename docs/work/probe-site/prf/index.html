@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Passkey PRF probe</title>
+<style>
+  :root { --fg: #1b1b1b; --bg: #ffffff; --muted: #555; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #eee; --bg: #161616; --muted: #aaa; } }
+  body { font: 16px/1.5 system-ui, sans-serif; color: var(--fg); background: var(--bg); max-width: 40em; margin: 1em auto; padding: 0 16px; }
+  p { color: var(--muted); }
+  button { font: inherit; padding: .5em 1em; margin: .25em .25em .25em 0; }
+  pre { white-space: pre-wrap; word-break: break-all; }
+</style>
+</head>
+<body>
+<h1>Passkey PRF probe</h1>
+<p>For cogmer's spike E. "Create" makes a passkey for this site and asks it for a PRF secret, and "Sign in"
+asks the passkey for it again. The page shows whether a secret came back, its length, and the first
+eight bytes of its SHA-256 hash, so that two sign-ins can be compared. It sends nothing anywhere.</p>
+<button id="create">Create a passkey</button>
+<button id="get">Sign in with it</button>
+<pre id="out"></pre>
+<script>
+const salt = new TextEncoder().encode("cogmer-prf-probe-salt-v1");
+const out = document.getElementById("out");
+const log = (s) => { out.textContent += s + "\n"; };
+const rnd = (n) => crypto.getRandomValues(new Uint8Array(n));
+async function short(buf) {
+  const h = new Uint8Array(await crypto.subtle.digest("SHA-256", buf));
+  return Array.from(h.slice(0, 8), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+async function report(when, ext) {
+  const r = ext.prf && ext.prf.results && ext.prf.results.first;
+  if (r) log(`${when}: PRF secret, length ${r.byteLength}, hash ${await short(r)}`);
+  else log(`${when}: no PRF secret`);
+}
+log(navigator.userAgent);
+log(`PublicKeyCredential ${typeof PublicKeyCredential === "undefined" ? "absent" : "present"}, site ${location.hostname}`);
+document.getElementById("create").onclick = async () => {
+  try {
+    const cred = await navigator.credentials.create({ publicKey: {
+      challenge: rnd(32),
+      rp: { name: "cogmer PRF probe" },
+      user: { id: rnd(16), name: "prf-probe", displayName: "PRF probe" },
+      pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+      authenticatorSelection: { residentKey: "required", userVerification: "required" },
+      extensions: { prf: { eval: { first: salt } } },
+    } });
+    const ext = cred.getClientExtensionResults();
+    log(`created ${new Date().toISOString()}: PRF enabled ${ext.prf ? ext.prf.enabled : "not reported"}`);
+    await report("  at create", ext);
+  } catch (e) { log(`create failed: ${e.name}: ${e.message}`); }
+};
+document.getElementById("get").onclick = async () => {
+  try {
+    const a = await navigator.credentials.get({ publicKey: {
+      challenge: rnd(32), userVerification: "required",
+      extensions: { prf: { eval: { first: salt } } },
+    } });
+    await report(`signed in ${new Date().toISOString()}`, a.getClientExtensionResults());
+  } catch (e) { log(`sign-in failed: ${e.name}: ${e.message}`); }
+};
+</script>
+</body>
+</html>

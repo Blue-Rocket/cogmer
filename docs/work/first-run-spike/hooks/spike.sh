@@ -10,7 +10,8 @@
 #   - the names, never the values, of the environment variables that bear on cogmer;
 #   - for each place a file might persist, the marker an earlier task left there, then a new one;
 #   - for each host, curl's exit code, the HTTP status, and the certificate's subject, issuer and
-#     SHA-256 fingerprint as the task sees them, to compare with what the Mac sees.
+#     SHA-256 fingerprint as the task sees them, to compare with what the Mac sees, and for the
+#     probe site's three names the site's own account of the request.
 # It sends nothing of the user's anywhere, and downloads nothing to keep.
 EVENT="${1:-unknown}"
 OUT=/tmp/first-run-spike.txt
@@ -66,6 +67,9 @@ if [ "$EVENT" = "--run" ]; then
     https://github.com/ \
     https://raw.githubusercontent.com/ \
     https://cogmer.ai/ \
+    https://probe.cogmer.ai/echo \
+    https://a.probe.cogmer.ai/echo \
+    https://b.probe.cogmer.ai/echo \
     https://api.anthropic.com/ \
     https://example.com/ \
     https://example.org/
@@ -73,7 +77,7 @@ if [ "$EVENT" = "--run" ]; then
     command -v curl > /dev/null 2>&1 || break
     label="$(printf '%s' "$url" | sed -E 's#https://##; s#/.*##')"
     f="$tmp/$label"
-    code="$(curl -sS -v -m 8 -o /dev/null -w '%{http_code}' "$url" 2> "$f.err")"
+    code="$(curl -sS -v -m 8 -o "$f.body" -w '%{http_code}' "$url" 2> "$f.err")"
     rc=$?
     subj="$(sed -n 's/^\* *subject: //p' "$f.err" | head -1)"
     iss="$(sed -n 's/^\* *issuer: //p' "$f.err" | head -1)"
@@ -94,6 +98,8 @@ if [ "$EVENT" = "--run" ]; then
       echo "  issuer: ${iss:-none}"
       echo "  sha256: ${fp:-not read}"
       [ "$rc" = 0 ] || echo "  error: $(grep -v '^[*<>{}]' "$f.err" | head -c 160 | LC_ALL=C tr '\n' ' ')"
+      # The probe site's /echo says what it saw of this request (docs/work/probe-site/Caddyfile).
+      case "$url" in */echo) [ "$rc" = 0 ] && { sed 's/^/  echo: /' "$f.body" | head -12; echo; } ;; esac
     } >> "$OUT"
   done
   echo "done $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$OUT"

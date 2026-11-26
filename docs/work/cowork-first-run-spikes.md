@@ -53,8 +53,9 @@ values.
 - At `SessionStart` it also writes `/tmp/first-run-spike.txt` in the background: whether each `userConfig`
   option arrived, with its length and first four characters; the variable names; the marker an earlier
   task left in each place a file might persist, before writing a new one; the synced plugin folders by
-  name; the mount points; and, for ten hosts, curl's exit code and HTTP status with the certificate's
-  subject, issuer and SHA-256 fingerprint.
+  name; the mount points; and, for thirteen hosts, curl's exit code and HTTP status with the certificate's
+  subject, issuer and SHA-256 fingerprint, and for the probe site's three names what the site saw of the
+  request.
 - `/first-run-spike:report` has the model print that file whole.
 
 Make its zip on the Mac from the repository root:
@@ -70,6 +71,29 @@ only its network part usefully there and writes the same file:
 ```sh
 HOME=$(mktemp -d) sh docs/work/first-run-spike/hooks/spike.sh --run; cat /tmp/first-run-spike.txt
 ```
+
+## The probe site
+
+`https://probe.cogmer.ai`, `https://a.probe.cogmer.ai` and `https://b.probe.cogmer.ai` are served by
+Caddy 2.8.4 on the droplet at 164.92.115.202, with certificates from Let's Encrypt, from
+`docs/work/probe-site/Caddyfile`. The names are A records at Porkbun added on 2026-11-26, and the rest of
+cogmer.ai is the registrar's parking page.
+
+- `/echo` answers with what the site saw of the request: the name asked for, the name in the TLS
+  handshake, the TLS version and protocol, the address it came from, the user agent, and the `Via`,
+  `X-Forwarded-For` and `Forwarded` headers. A request from the droplet itself shows its own address and
+  no proxy header.
+- `/prf/` is the passkey page of spike E. It creates a passkey for its own name and shows whether a PRF
+  secret came back, its length and the first eight bytes of its SHA-256 hash, and sends nothing anywhere.
+- The site keeps no access log. Caddy runs as the account `claude` from `~/probe-site`, detached, and
+  stops if the droplet restarts. To start it again there:
+
+```sh
+cd ~/probe-site && PROBE_SITE=$PWD/site setsid nohup ./caddy run --config Caddyfile --adapter caddyfile >> caddy.log 2>&1 < /dev/null &
+```
+
+To take it down when the item is done: stop Caddy, delete the two A records at Porkbun, and run
+`sudo setcap -r /home/claude/probe-site/caddy`.
 
 ## A. Which routes put a plugin on an account
 
@@ -119,32 +143,37 @@ It says nothing about claude.ai, Cowork or a cloud task.
 ## C. What a cloud task's hooks reach and keep
 
 The questions: which hosts a task reaches with no allowlist change, on each plan the user has; whether a
-wildcard entry such as `*.ipn.dev` is honored; whether the proxy passes TLS through or presents its own
-certificate; and what, if anything, persists from one task to the next where a hook can read it.
+wildcard entry such as `*.probe.cogmer.ai` is honored; whether the proxy passes TLS through or presents
+its own certificate, and what a server of cogmer's sees of a task's request; and what, if anything,
+persists from one task to the next where a hook can read it.
 
-Earlier runs on the Team plan found that the organization's "Allow network egress" setting with
-"Package managers only" refused the relay and `example.com` with "CONNECT tunnel failed, response 403",
-and that adding the five relay hosts let them through, while `example.com` was still refused. In all three runs `github.com` answered 400 with a body that links to Anthropic's documentation, which reads as the proxy answering the request itself, and a network setting applies when a task is created (`docs/work/cowork-network-probe-20261031T053000Z.txt`).
-A task began with an empty synced-plugins folder before the account install
-(`docs/work/cowork-account-install-20261120T1305Z.txt`). Whether a Pro or Max plan has such a setting is
-not known.
+Earlier runs on the Team plan found that the organization's "Allow network egress" setting with "Package
+managers only" refused the relay and `example.com` with "CONNECT tunnel failed, response 403", and that
+adding the five relay hosts let them through, while `example.com` was still refused. In all three runs
+`github.com` answered 400 with a body that links to Anthropic's documentation, which reads as the proxy
+answering the request itself, and a network setting applies when a task is created (`docs/work/cowork-
+network-probe-20261031T053000Z.txt`). A task began with an empty synced-plugins folder before the account
+install (`docs/work/cowork-account-install-20261120T1305Z.txt`). Whether a Pro or Max plan has such a
+setting is not known.
 
 1. With the probe plugin installed, start a Cowork task, send `hello`, run `/first-run-spike:report`, and
-   record sections C1 to C3 and the plan. A network setting applies when a task is created, so start a new task after each change.
-2. Compare each certificate's issuer and fingerprint with the Mac's baseline. An issuer that is the
-   proxy's, or a fingerprint that differs, means the proxy terminates TLS, so a hosted machine reached
-   directly would see the proxy and not the task.
+   record sections C1 to C3 and the plan. A network setting applies when a task is created, so start a
+   new task after each change.
+2. Compare each certificate's issuer and fingerprint with the Mac's baseline, taken the same day, since
+   a certificate is renewed every few weeks. An issuer that is the proxy's, or a fingerprint that
+   differs, means the proxy terminates TLS. For the probe site's names the report also holds the site's
+   `/echo`: the address it came from is where the task's traffic leaves Anthropic's network, a `Via` or
+   forwarding header names a proxy, and a site that answered at all was reached as a server a hosted
+   machine could be.
 3. Persistence: start a second, new task and run the report again. A place whose marker the second task
    found persists between tasks. Then return to the first task after at least ten minutes, send a prompt,
    and record what a resumed task found.
-4. Wildcards, on the Team plan, with an owner present and agreeing: replace the five relay hosts in the
-   allowlist with one entry `*.ipn.dev`, start a new task, and record whether `tc301a.ipn.dev` and
-   `tc302a.ipn.dev` are reached. Restore the five entries afterwards and record that they were restored.
+4. Wildcards, on the Team plan, with an owner present and agreeing: add one allowlist entry
+   `*.probe.cogmer.ai`, start a new task, and record whether `a.probe.cogmer.ai` and `b.probe.cogmer.ai`
+   are reached and whether `probe.cogmer.ai` is. Then replace the entry with `probe.cogmer.ai` alone and
+   record the same. Remove the entry afterwards and record that it was removed.
 5. If the user has a Pro or Max account as well, repeat steps 1 to 3 there, and record what its settings
    show about network access.
-
-`cogmer.ai` failed its TLS handshake from the droplet on 2026-11-26, so in the task it shows only whether
-the name is refused or let through.
 
 ## D. What a person sees of a hook's message in a cloud task
 
@@ -167,17 +196,14 @@ The question: do the browsers a Cowork-only user has return a passkey's PRF secr
 from which a page could derive the master key? The open item on holding a hosted user's master key lists
 this option and its costs.
 
-1. Find a public page that tests the WebAuthn PRF extension and shows whether a secret came back. Record
-   its URL and what it says it does. Prefer one that runs entirely in the browser.
-2. On the Mac, in Chrome and in Safari: create a passkey on that page with PRF asked for, then sign in
-   with it twice. Record whether the create step reported PRF enabled, whether each sign-in returned a
-   secret, and whether the two were the same. Record the secret's length only.
+1. Open `https://probe.cogmer.ai/prf/`, the probe site's page, which runs entirely in the browser.
+2. On the Mac, in Chrome and in Safari: create a passkey on that page, then sign in with it twice. Record whether the create step reported PRF enabled, whether each sign-in returned a
+   secret, and whether the two hashes were the same. Record the length and the hash, never more.
 3. If the passkey syncs, through iCloud Keychain or Google Password Manager, sign in with it on the
    user's phone, and record whether the secret there matches.
-4. Record each browser's name and version, and the phone's system version.
-
-A page on the user's Mac can test Chrome and Safari at `localhost`, but a phone needs a page served over
-HTTPS. Publishing a test page of cogmer's needs the user's approval first.
+4. Record each browser's name and version, which the page prints first, and the phone's system version.
+5. Ask the user to delete the passkeys named "PRF probe" for `probe.cogmer.ai` from the Mac and the phone
+   afterwards.
 
 ## What to bring back
 
