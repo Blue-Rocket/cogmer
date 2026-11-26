@@ -51,9 +51,11 @@ Whether the hosted machine is the default is not decided.
 
 1. The user installs the cogmer plugin on their account (D-290, cogmer reaches a Cowork cloud session as
    the marketplace plugin installed on the user's Claude account).
-2. In a task, the user runs `/cogmer:start`. The task's daemon starts with no secret of the user's, makes
-   its session key, and the command prints the link to the cloud page (D-302, a cloud session's room is
-   read on a static page) with a token made for this task.
+2. A task that never creates or joins a room needs nothing, and starts nothing (D-286, a Cowork cloud
+   session with no cloud value fetches and starts nothing). When the user creates or joins a room in a
+   task, the command starts the task's daemon with no secret of the user's, which makes its session key,
+   and prints the link to the cloud page (D-302, a cloud session's room is read on a static page) with a
+   token made for this task. `/cogmer:start` does the same with no room, for a user who would set up first.
 3. The first time, the page asks where the user's identity will live, suggesting a hosted machine:
    - A hosted machine: the page registers the user's passkey, and the hosted machine is made with the
      user's identity and certifies the passkey, in one step.
@@ -64,8 +66,9 @@ Whether the hosted machine is the default is not decided.
    the passkey (Draft 1) and sends the task the certificate and what the task needs to reach the user's
    machines. A user at their own computer can instead approve the task on its machines page, which
    certifies it with no passkey. The user's machines renew the certificate from then on.
-5. The task speaks for the user in their rooms, as a task with an uploaded value does today. A new task
-   needs steps 2 and 4 again, since nothing persists between tasks.
+5. The task speaks for the user in their rooms, as a task with an uploaded value does today. A resumed task
+   keeps its key and certificate (spike C). A new task that creates or joins a room taps again, at the
+   moment the user asks it to share, and a task that never does is never asked.
 
 On a Team plan an owner still allows the hosts the task's daemon reaches. A user who would rather have
 tasks start with no tap keeps the uploaded value (D-278, the machines page offers the cloud value as a
@@ -121,23 +124,28 @@ registers a new one from a machine that holds the shared key.
 Revisit when a passkey's prompt can show the user what it signs, or users find tasks paused often enough
 that three days is too short.
 
-## Draft 2: a cloud task with nothing set up shares nothing until the user runs `/cogmer:start`
+## Draft 2: a cloud task asks for the user's passkey only when a command needs the user's identity
 
 Decision. A Cowork cloud task with no cloud value starts nothing at its start (D-286, a Cowork cloud
-session with no cloud value fetches and starts nothing), and `/cogmer:start` starts its daemon, which
-serves the page's port with a token made at random for the task, and prints the cloud page's link. A hook's
-messages reach the model and never the person (spike D), so a line that tells the user where to start can
-reach them only through the model, and a command the user types is a turn the user asked for. D-286's
-Limits already let a command start a daemon in such a task.
+session with no cloud value fetches and starts nothing). A command that needs the user's identity, which in
+such a task is creating or joining a room, or `/cogmer:start`, starts the task's daemon, which serves the
+page's port with a token made for the task, and prints the cloud page's link, so the user taps their
+passkey at the moment they ask the task to share and never in a task that does not. A hook's messages reach
+the model and never the person (spike D), so a line that tells the user where to start can reach them only
+through the model, and a command the user types is a turn the user asked for. D-286's Limits already let a
+command start a daemon in such a task.
 
 Rejected.
 - *A hook that asks the model to tell the user how to start.* The model said the link when asked (spike
   D), but the line would be in the model's context in every task of every user who had not set up, and
   would make the model raise cogmer in a conversation the user started for something else, which §3.1
   (first, do no harm) rules out.
+- *Certifying every task at its start.* Most tasks never join a room, and each would need a tap or a secret
+  stored for it.
 
-Limits. A user who does not know the command shares nothing, so the plugin's description and the
-README carry it.
+Limits. A user who does not know the commands shares nothing, so the plugin's description and the README
+carry them. A task that creates or joins a room with nobody there to tap shares nothing until someone does,
+unless the user has uploaded the token in the question on unattended tasks.
 
 Revisit when a host shows a hook's message to the person in a cloud task.
 
@@ -256,21 +264,23 @@ task could take its user's addresses from the passkey.
   files (spike C). Draft 2 then has to say it departs from D-301 in serving a daemon that holds no cloud
   key.
 - Whether Draft 2 is an exception to D-281 (a command in a cloud session with no value says the user must
-  first set cogmer up on one of their own computers). In a Cowork cloud task, `/cogmer:start` would start
-  the daemon and print the page's link instead, and D-286's Limits, which Draft 2 relies on, say the
+  first set cogmer up on one of their own computers). In a Cowork cloud task, creating or joining a room, or
+  `/cogmer:start`, would start the daemon and print the page's link instead, and D-286's Limits, which Draft 2 relies on, say the
   command says what D-281 has it say. A Claude Code cloud session could keep D-281's answer.
 - Whether a passkey that certifies tasks counts under D-280 (a user has one cloud key at a time). The
   passkey is not a cloud key but a key of another kind that certifies a task's session key, and a user who
   keeps the uploaded value keeps a cloud key beside it. Either page can run the passkey step: the machines
   page stays at `127.0.0.1` and sends the user to a page under `cogmer.ai` with its challenge, taking back
   the signature by navigation alone, with no hosts-file entry or local certificate (spike F).
-- Whether a new task needs a tap. A new task starts with nothing, so it needs the user's passkey or a
-  secret stored where tasks read it, which only an upload puts there (spikes A to C). The upload could hold
-  a token that only the user's own machines honor, in place of today's cloud key, which every colleague
-  honors: a new task presents it to one of the user's machines and gets a three-day certificate, and the
-  machine can show that a task started, limit how often the token is used, and revoke it at once, where a
-  cloud key that is copied speaks for the user until a removal reaches each colleague (D-225, a machine
-  sends each removal and new shared key to every colleague it knows until each acknowledges).
+- How a task that joins a room with nobody there to tap is certified, such as a scheduled task whose prompt
+  holds a cogmer command. An upload is the only way to store a secret where a new task reads it (spikes A
+  to C), so such a user opts in by uploading a token that only their own machines honor, in place of
+  today's cloud key, which every colleague honors: the task presents it to one of the user's machines and
+  gets a three-day certificate, and the machine can show that a task started, limit how often the token is
+  used, and revoke it at once, where a cloud key that is copied speaks for the user until a removal
+  reaches each colleague (D-225, a machine sends each removal and new shared key to every colleague it
+  knows until each acknowledges). Onboarding does not offer it; the machines page does, for a user who
+  needs it.
 - How Draft 4's directory refuses a write from anyone but the user's machines without reading the record.
   A colleague holds the user's identifier, so a directory that took any write under its hash would let a
   colleague fill the user's place with records that readers then discard. Checking a write against the
