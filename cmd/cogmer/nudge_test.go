@@ -412,3 +412,37 @@ func TestAMachineSetAsideDuringAWaitIsNotPolledWhenTheWaitEnds(t *testing.T) {
 		t.Errorf("the laptop, set aside during its wait, was polled %d times after it", n)
 	}
 }
+
+// A nudge from a machine whose polls have been failing polls it at once, since the nudge
+// shows it is running, while a wake of its room does not end its wait (D-305).
+func TestANudgeFromAMachineThatWasNotAnsweringPollsItAtOnce(t *testing.T) {
+	polls := &pollTimes{}
+	var answering atomic.Bool
+	d := syncDaemon(t, "laptop", func(addr string) (int, error) {
+		if addr != "laptop" {
+			return 0, nil
+		}
+		polls.note()
+		if answering.Load() {
+			return 0, nil
+		}
+		return 0, errors.New("the laptop is closed")
+	})
+	d.pace.failCap, d.pace.dormantCap, d.pace.dormantAfter = time.Second, time.Second, time.Hour
+	d.askRooms = func(string, []Room) []Room { return []Room{{RoomID: "room-pace"}} }
+	go d.RunSync(nil, 20*time.Millisecond)
+	time.Sleep(900 * time.Millisecond) // the failures have grown the wait past 300ms
+	before := polls.count()
+	d.roomStored("room-pace", true)
+	time.Sleep(60 * time.Millisecond)
+	if n := polls.count() - before; n != 0 {
+		t.Errorf("a wake of the room polled the machine that does not answer %d times", n)
+	}
+	answering.Store(true)
+	before = polls.count()
+	d.nudgedBy("ana", "laptop") // the laptop is opened, and writes
+	time.Sleep(60 * time.Millisecond)
+	if polls.count() == before {
+		t.Error("a nudge from a machine whose polls had failed did not poll it at once")
+	}
+}

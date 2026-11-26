@@ -290,7 +290,7 @@ func TestDecidePollGivesEachRuleOfWhenAnAddressIsPolledNext(t *testing.T) {
 		{"failures in dormant rooms wait up to a minute", s(pollFailedNow, 9, 0), pollFacts{dormant: asleep}, dormantPollCap, false, false},
 	} {
 		d := decidePoll(c.s, c.f, p)
-		if d.setAside != c.aside || d.wait != c.wait || d.wakeable != c.wakeable {
+		if d.setAside != c.aside || d.wait != c.wait || d.wakeable != c.wakeable || d.nudgeable != (c.wakeable || c.s.last == pollFailedNow && !c.aside) {
 			t.Errorf("%s: got set aside %v, wait %v, wakeable %v; want %v, %v, %v",
 				c.name, d.setAside, d.wait, d.wakeable, c.aside, c.wait, c.wakeable)
 		}

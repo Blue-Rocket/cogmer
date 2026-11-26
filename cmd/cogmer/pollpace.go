@@ -204,10 +204,14 @@ func (d *Daemon) askedRooms(addr string) ([]Room, error) {
 // addrWokenSince says whether addr was nudged after t, or a room that addr is asked about
 // woke its addresses after t.
 func (d *Daemon) addrWokenSince(addr string, t time.Time) bool {
+	return d.addrNudgedSince(addr, t) || d.addrSince(addr, t, func(p *pollPace) map[string]time.Time { return p.woken })
+}
+
+// addrNudgedSince says whether addr nudged this machine after t.
+func (d *Daemon) addrNudgedSince(addr string, t time.Time) bool {
 	d.pace.mu.Lock()
-	nudged := d.pace.wokenAddr[addr].After(t)
-	d.pace.mu.Unlock()
-	return nudged || d.addrSince(addr, t, func(p *pollPace) map[string]time.Time { return p.woken })
+	defer d.pace.mu.Unlock()
+	return d.pace.wokenAddr[addr].After(t)
 }
 
 // addrDormant says whether no room that addr is asked about has stored an event for the
@@ -286,10 +290,11 @@ type pollPacing struct {
 
 // pollDecision is when an address is polled next.
 type pollDecision struct {
-	setAside bool          // not polled until a nudge or a failure changes the facts
-	wait     time.Duration // how long to wait before the next poll
-	wakeable bool          // whether a wake of the address ends the wait early
-	least    time.Duration // the least time between two polls, however soon a wake comes
+	setAside  bool          // not polled until a nudge or a failure changes the facts
+	wait      time.Duration // how long to wait before the next poll
+	wakeable  bool          // whether a wake of the address or its rooms ends the wait early
+	nudgeable bool          // whether a nudge from the address ends the wait early
+	least     time.Duration // the least time between two polls, however soon a wake comes
 }
 
 // decidePoll is the one place that decides when an address is polled next, from what its
@@ -301,7 +306,9 @@ type pollDecision struct {
 //     last to nudge is set aside, and not polled at all.
 //   - The first poll is at once.
 //   - After a failure, the wait doubles from the interval up to failCap, or up to
-//     dormantCap once the address's rooms are dormant. A wake does not end it.
+//     dormantCap once the address's rooms are dormant. A nudge from the address ends it,
+//     since the nudge shows the machine there is running, and a wake of its rooms does
+//     not.
 //   - After a poll that brought events, the wait is the interval.
 //   - After a poll that brought nothing, the wait doubles from the interval up to
 //     quietCap, or up to dormantCap once the rooms are dormant, and a wake ends it.
@@ -318,11 +325,12 @@ func decidePoll(s pollState, f pollFacts, p pollPacing) pollDecision {
 	case notPolled:
 	case pollFailedNow:
 		d.wait = backoff(p.every, s.failures-1, p.failCap, p.dormantCap, f.dormant)
+		d.nudgeable = true
 	case pollBroughtEvents:
 		d.wait = p.every
 	case pollBroughtNothing:
 		d.wait = backoff(p.every, s.empty, p.quietCap, p.dormantCap, f.dormant)
-		d.wakeable = true
+		d.wakeable, d.nudgeable = true, true
 	}
 	return d
 }

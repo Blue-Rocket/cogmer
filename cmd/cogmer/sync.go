@@ -226,7 +226,7 @@ func (d *Daemon) syncPeer(addr string, every time.Duration, stop <-chan struct{}
 			continue
 		}
 		if dec.wait > 0 {
-			poll, woken := d.waitToPoll(addr, dec.wait, gen, polled, dec.wakeable, stop)
+			poll, woken := d.waitToPoll(addr, dec, gen, polled, stop)
 			if !poll {
 				return
 			}
@@ -262,17 +262,17 @@ func (d *Daemon) syncPeer(addr string, every time.Duration, stop <-chan struct{}
 	}
 }
 
-// waitToPoll waits delay, or less when wake is set and a room that addr is asked about
-// wakes its addresses after polled, which it says as woken. It says false for poll when
-// the loop is told to stop.
-func (d *Daemon) waitToPoll(addr string, delay time.Duration, gen uint64, polled time.Time, wake bool, stop <-chan struct{}) (poll, woken bool) {
-	timer := time.NewTimer(delay)
+// waitToPoll waits the decision's wait, or less when the decision lets a wake of addr or
+// its rooms, or a nudge from addr, after polled end it, which it says as woken. It says
+// false for poll when the loop is told to stop.
+func (d *Daemon) waitToPoll(addr string, dec pollDecision, gen uint64, polled time.Time, stop <-chan struct{}) (poll, woken bool) {
+	timer := time.NewTimer(dec.wait)
 	defer timer.Stop()
 	for {
 		changed, now := d.paceWatch()
-		if wake && now != gen {
+		if (dec.wakeable || dec.nudgeable) && now != gen {
 			gen = now
-			if d.addrWokenSince(addr, polled) {
+			if dec.wakeable && d.addrWokenSince(addr, polled) || dec.nudgeable && d.addrNudgedSince(addr, polled) {
 				return true, true
 			}
 		}
