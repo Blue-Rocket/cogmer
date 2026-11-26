@@ -1,0 +1,88 @@
+Spike C of docs/work/cowork-first-run-spikes.md: what a cloud task's hooks reach and keep.
+Run on 2026-11-26 from 15:33Z to 16:15Z. The steps not run are listed at the end.
+
+Machines and versions
+  The Team organization Blue Rocket, 6 seats, read on claude.ai/admin-settings/billing at about 15:41Z. Its
+  organization setting "Allow network egress" was on, with the mode "Package managers only", read on
+  claude.ai/admin-settings/capabilities at about 15:47Z without changing anything. The tasks were started from
+  Chrome 152 on the user's Mac with the Claude in Chrome extension, except one the user ran themselves.
+  The probe plugin is docs/work/first-run-spike 0.1.0, uploaded from the user's phone (spike B). Its hook runs at
+  SessionStart in the sandbox (Linux x86_64, host "vm", CLAUDE_CODE_REMOTE true, CLAUDE_CODE_ENTRYPOINT
+  remote_cowork) and `/first-run-spike:report` prints its file. The probe site is on the droplet at
+  164.92.115.202 (probe.cogmer.ai, a.probe.cogmer.ai, b.probe.cogmer.ai).
+  The Mac's baseline was taken at 15:25Z with `sh docs/work/first-run-spike/hooks/spike.sh --run`, run from /tmp so
+  that the marker it writes in the current directory did not land in the repository, and is kept outside it.
+  Everything below compares a task's fingerprints with that baseline, taken the same day.
+
+The five reports
+  A  15:33:44Z  a new task, after the Mac baseline, before any allowlist change.
+  B  15:36:43Z  a second new task, before any allowlist change.
+  -  Between 15:36:43Z and 15:46Z the user added the entry "*.probe.cogmer.ai" to the organization's allowed domains
+     on the Capabilities page, and said so in chat. The session did not change the setting. The exact minute is not
+     known.
+  R  15:46:09Z  the first task, resumed 10 minutes and about 15 seconds after its last answer, by "hello again"
+     and then the report.
+  U  15:48:44Z  a report the user ran in a task of their own and pasted into chat. The surface it was started from is
+     not known. Its list of variable names has two names the others lack: CLAUDE_CHROME_PERMISSION_MODE and
+     CLAUDE_CODE_ENABLE_CFC.
+  N  15:49:39Z  a third new task started by the session, after the change.
+  -  Between 15:50Z and 16:14Z the user replaced the entry "*.probe.cogmer.ai" with "probe.cogmer.ai" and said so in
+     chat ("replaced the wildcard allows with probe.cogmer.ai"). The session did not change the setting and did not
+     read the Capabilities page again, so the entry's text is the user's statement.
+  P  16:14:35Z  a fourth new task started by the session, after that replacement.
+
+What was seen: reach
+  tailcat.dev, tc301a.ipn.dev, tc302a.ipn.dev and raw.githubusercontent.com answered in all five reports. The other
+  hosts of the list:
+    blue-rocket.github.io, cogmer.ai, example.com, example.org: curl exit 56, "CONNECT tunnel failed, response 403",
+      in all five.
+    github.com: curl exit 0, HTTP 400, in all five.
+    api.anthropic.com: curl exit 0, HTTP 404, in all five.
+    probe.cogmer.ai: refused with the 403 in all five.
+    a.probe.cogmer.ai and b.probe.cogmer.ai: refused with the 403 in A and B, and answered with HTTP 200 in R, U and
+      N, after the entry "*.probe.cogmer.ai" was added. The entry did not reach the name without a subdomain.
+    With only "probe.cogmer.ai" in the list (P): probe.cogmer.ai curl exit 0, HTTP 200, and a.probe.cogmer.ai and
+      b.probe.cogmer.ai refused with the 403 again. So the apex entry reached the apex and no subdomain.
+  The task that was resumed, R, took the change although its sandbox was not new (below).
+
+What was seen: certificates
+  Compared with the Mac's baseline, these fingerprints were identical in every report: tailcat.dev
+  DC:43:EC:42:FA:57:D9:FD..., tc301a.ipn.dev 48:45:46:E6:AA:E8:7B:59..., tc302a.ipn.dev 91:77:C8:1C:11:F1:04:C4...,
+  raw.githubusercontent.com F2:F9:A1:59:CE:50:A0:A1..., a.probe.cogmer.ai 53:A6:9C:B6:21:8C:06:3E... and
+  b.probe.cogmer.ai A0:3D:AE:67:F4:0D:36:61.... The issuers were the real ones: Amazon RSA 2048 M04, Let's Encrypt
+  YE1, YE2 and YR1. So the proxy passed TLS through for every host it reached.
+  Two hosts were not passed through. github.com showed the subject CN=github.com and the issuer "CCR agent-proxy
+  interception CA (production) 2026-08; O=Anthropic", where the Mac saw Sectigo, and its fingerprint was different
+  in each of the five reports. api.anthropic.com showed the subject CN=*.anthropic.com and the issuer
+  "O=Anthropic; CN=Egress Gateway SDS Issuing CA (production)", where the Mac saw Google Trust Services WE1, and
+  its fingerprint differed in each report too. The first of those hosts answers 400 and the second 404 to a request
+  for its root, which reads as Anthropic's side answering.
+
+What was seen: what the probe site saw
+  The site's /echo for the same request from the Mac read from 85.244.246.70, the user's own address, with
+  "tls tls1.3 h2", the matching SNI, user agent curl/8.7.1, and empty via, x-forwarded-for and forwarded lines.
+  In P, probe.cogmer.ai was seen from 160.79.106.255, with "tls tls1.3 h2", SNI probe.cogmer.ai, user agent
+  curl/8.5.0 and empty via, x-forwarded-for and forwarded lines; its certificate was subject CN=probe.cogmer.ai,
+  issuer Let's Encrypt YE2, SHA-256 9F:13:A6:F0:7B:38:40:2F....
+  From a task, in R: a.probe.cogmer.ai from 160.79.106.31 and b.probe.cogmer.ai from 160.79.106.143. In U: a from
+  160.79.106.18 and b from 160.79.106.128. In N: a and b both from 160.79.106.18. Each had "tls tls1.3 h2", the
+  matching SNI, user agent curl/8.5.0, and empty via, x-forwarded-for and forwarded lines. So a server of cogmer's
+  sees a request from an address of Anthropic's, which changed between requests, and a header that names no user, no
+  task and no proxy.
+
+What was seen: persistence
+  The markers the report writes in six places were found, or not, as follows. A, B, U and N found none in any of the
+  places except /home/claude, which is both the project directory and the working directory and holds the marker
+  that the same run had written a moment before. R found the marker of A, dated 15:33:44Z, in /root, /tmp,
+  /root/.claude/plugins/data/first-run-spike-synced, /home/claude and /root/.claude, and R's SessionStart hook ran
+  again, since its file is dated 15:46:09Z. So a file kept in any of those places lasted across a resume of the same
+  task and did not reach the next new task. The synced plugin folders were the same in every report: three, cogmer,
+  cogmer-cloud-8a4b1b80 and first-run-spike, under one account folder.
+
+What the run does not show
+  The entry has not been removed, so the list holds "probe.cogmer.ai" until the user removes it, and no run shows the
+  list without it. The entry was added and replaced by the user and not by the session. Whether a deeper name such as
+  x.y.probe.cogmer.ai is honored is not tried. A Pro or Max account was not used, so what such a plan's settings show
+  about network access is not known. The reports hold curl's view only: no other client, such as a language
+  runtime's, was run. The Mac baseline is from one network. The P report's own fingerprint for probe.cogmer.ai was
+  not compared with the Mac's, which was taken before that name was reached.

@@ -1,0 +1,92 @@
+Spike A of docs/work/cowork-first-run-spikes.md: which routes put a plugin on an account.
+Run on 2026-11-26 from about 15:50Z to 15:58Z. Nothing on the account or the organization was changed.
+
+Machines and versions
+  The Team organization Blue Rocket, with the user as an owner (the user could open Organization settings). Chrome 152
+  on the user's Mac, driven by the Claude in Chrome extension. The pages of step 1 were read by two subagents of the
+  session with a web-fetch tool, which returned text and not the pages: the session did not read the pages itself.
+
+Step 1: what the documents say, read on 2026-11-26
+  Pages read, with the date shown on each, where one was:
+    https://code.claude.com/docs/en/plugins/install.md  "Install and manage plugins"; no date shown.
+    https://claude.com/docs/plugins/org-sync  "Sync your organization's plugins from a repository"; no date shown.
+    https://claude.com/docs/plugins/org-rollout  "Roll out a plugin to your whole organization"; no date shown.
+    https://platform.claude.com/docs/en/manage-claude/plugins-api  "Plugins API"; no date shown. The reader had the
+      first 39,926 and last 28,227 characters verbatim and a model's summary of the middle 100,000.
+    https://support.claude.com/en/articles/13837440-use-plugins-in-claude  "Use plugins in Claude"; "Updated over 3
+      weeks ago".
+    https://support.claude.com/en/articles/13837433-manage-plugins-for-your-organization  "Manage plugins for your
+      organization"; "October 16, 2026".
+    https://claude.com/docs/cowork/guide/plugins  "Install plugins"; no date shown.
+    https://claude.com/docs/plugins/overview  "Plugins"; no date shown.
+  The reader of the last four pages was given only part of each page's wording, so its quotations are short.
+  The search that found these pages returned no page about a link, a button or an API that adds a marketplace or
+  installs a plugin for one person, and no page other than these.
+
+  Routes the pages describe, with who can use each, whether it can carry a file that differs between users, and
+  whether the page says it reaches a Cowork cloud task:
+    Upload a plugin (a folder, a .zip or a .plugin file) in claude.ai, Customize, Plugins, Add: any member, per
+      account. It carries the user's own file, so it can differ between users. The pages say an upload is installed
+      only for that member and is not distributed to the organization. Whether it reaches a cloud task: not stated
+      on these pages.
+    Add a marketplace by a GitHub owner/repo or a Git repository URL, in the same place: a member, unless an owner
+      restricts it. It carries whatever the repository holds, so it differs between users only when the repository
+      does. Reaching a cloud task: not stated on these pages.
+    Add from Anthropic's catalog or directory (Discover, then Add): a member, with an owner choosing the sources on
+      Team and Enterprise. The same catalog for everyone.
+    Share (the three-dot menu, then Share), on Team and Enterprise after an owner turns sharing on: a member. "Sharing
+      creates a link that opens the item for anyone it's shared with." The link opens the plugin for people it was
+      shared with, who get the sharer's version, and each recipient turns it on. The same files for every recipient.
+    Publish to org: a member submits and an owner reviews where review is required. The same approved files for
+      everyone. No link is described.
+    Organization routes: an owner or primary owner uploads ZIP files to an organization marketplace, or syncs one from
+      GitHub, or from GitLab (beta); the page says "Claude Code cloud sessions don't support GitLab repositories yet".
+      The same files for everyone. The Plugins API, with an admin key, sets availability by organization or by group
+      ("required", "auto_install", "available", "not_available"), so which plugins a member has can differ by group
+      while each plugin's files are the same.
+    Claude Code: `claude plugin marketplace add --claudeai <name>` adds a marketplace that claude.ai holds, and the
+      page for Claude Code says plugins "in your claude.ai account" are available in cloud sessions, which plugins
+      installed on a computer at user or local scope are not. The Cowork page says plugins "download when the
+      session starts".
+  What the pages say none of: a link or a deep link that adds a marketplace or installs a plugin; a plugin declaring
+  options (userConfig, "configure" or "settings") that a person is asked for at install; any route other than the
+  account's own that reaches a cloud task.
+
+Step 2: claude.ai in Chrome
+  https://claude.ai/customize stayed on "Loading" for 15 seconds in three tries at about 15:27Z, and so did its
+  Plugins page for more than 30 seconds at about 15:50Z, which then showed its list. Addresses and what each showed:
+    https://claude.ai/customize/plugins  Customize with the tabs Skills, Connectors and Plugins, a switch between
+      "Yours" and "Discover", a search box and a button "+ Add" with a menu of five entries: "Add marketplace",
+      "Manage marketplaces", "Upload plugin", "Create a plugin", "Create with Claude". The menu has no address of its
+      own: the address stayed the same.
+    "Add marketplace", a dialog: a notice, "Only add marketplaces you trust, because Anthropic doesn't control their
+      plugins and their owners can change them later.", a field "URL" reading "Select a repository" with the hint "A
+      GitHub owner/repo or a Git repository URL.", and the buttons Cancel and Sync. It has no address of its own.
+      It was cancelled with nothing entered.
+    https://claude.ai/customize/plugins/yours  "Created by you" with two plugins, First run spike and one named
+      "Cogmer cloud 8a4b1b80" that the user made two days earlier, which was not opened; "From marketplaces you
+      added" with one plugin, Cogmer, from cogmer-staging; and a box "Build for the Claude Directory" with a link to
+      developer docs and a button "Submit to the directory".
+    https://claude.ai/customize/plugins/yours/id/plugin_01H5xrhRpMwGeyYC8NzkSAxf  the probe's page: its name, "by
+      cogmer probes . 0.1.0", the buttons "Publish to org", "Share" and "Try in chat", a menu, a switch on, and the
+      tabs Overview, Contents, "Commands . 1" and "Hooks . 2". The Overview says "Connectors & tools: Can run code
+      without asking" and "runs by you . 90 days". The menu holds "Edit with Claude", "Rename", "Duplicate" and
+      "Remove". There is no tab, entry or field for options.
+  Not opened or used: "Upload plugin", which opens the browser's file chooser, "Manage marketplaces", "Create a
+  plugin", "Create with Claude", "Publish to org", "Share", "Try in chat", the Cogmer cloud plugin, and Discover's items.
+  No address was opened in a new tab: the dialogs have none, and the page addresses open pages and not dialogs.
+
+Step 3: the organization's settings, with the user present as an owner
+  https://claude.ai/admin-settings/skills?tab=marketplaces  "Plugins & skills" with the tabs Inventory,
+    Marketplaces, "Requests . 0" and Policy, and a button Add. Marketplaces: "Knowledge Work" and "Anthropic
+    Directory", each "Catalog", "Managed by Anthropic", "100+ items". "GitHub connection: Claude GitHub App . installed
+    on the Blue-Rocket org".
+  https://claude.ai/admin-settings/skills?tab=policy  "Skill sharing" on, "Publishing" set to "Open", "User-created
+    skills" on, "Skills" on.
+  The sidebar of Organization settings also lists Cloud environments, Cowork, Claude in Chrome and Directory, not opened.
+
+What the run does not show
+  Whether anything but an upload puts a per-user file on an account and reaches a cloud task: the pages describe no
+  such route, and the account's own routes were not tried beyond the upload of spike B. What Share's link does when
+  opened was not tried. Whether the pages' wording is complete is not known, since two readers returned summaries.
+  The Pro and Max plans and the Claude app on a phone were not looked at.
