@@ -591,6 +591,10 @@ experience we want) would name ChatGPT Work as a way in. The steps are probe 3 i
 A user in a Claude Code cloud session, such as one started from the iPhone app, shares a
 conversation with colleagues without a daemon on their own computer being reachable.
 
+**`TestACloudSessionAllOfWhoseMachinesRefuseItSaysSoOncePerSession` fails about once in thirty runs, so a gated commit or a push can fail on a change that did not touch it.** On 2026-11-26, thirty runs of the tests matching `TestACloudSession` on `a12ae84` failed once, at "a new run of refusals did not tell the session again", and thirty runs on a merge of later polling work failed once, at "every machine refused the session, and the view says" with the view not refused. Each failure follows a `cloudRound` (`cmd/cogmer/cloud.go`) that the test expects to find every one of the user's machines refusing the session, and in each failing run the session was then not reported as refused.
+
+Why is not known. Running the test two hundred times with each machine's answer to the round logged would say whether an answer was missing, late or not a refusal, or whether the report of the refusal was lost after it.
+
 **The decisions that make the user the peer leave details undecided.** Each is needed by a
 slice of the second run, and none has a choice taken yet:
 
