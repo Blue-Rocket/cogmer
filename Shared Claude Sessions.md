@@ -1856,11 +1856,11 @@ A machine asks every second about a room where something has happened recently.
 
 A machine asks less often about rooms where nothing has happened, up to every twenty
 seconds, and every minute after half an hour of quiet. A prompt submitted in a room,
-or the room being opened in the daemon's view on the machine, makes the machine ask at
-once. An event from a machine that cannot tell it to ask can take that long to arrive.
-Asking every second about a room where nothing happens would make most of what a
-machine spends on a room into questions that return nothing, which a hosted user pays
-for.
+or the room being opened in the view the machine's daemon serves, makes the machine
+ask at once. An event from a machine that cannot tell it to ask can take that long to
+arrive. Asking every second about a room where nothing happens would make most of what
+a machine spends on a room into questions that return nothing, which a hosted user
+pays for.
 
 Of a colleague's machines in a room that tell it to ask, a machine asks only the one
 that last told it to ask, and asks the others again when that one stops answering. A
