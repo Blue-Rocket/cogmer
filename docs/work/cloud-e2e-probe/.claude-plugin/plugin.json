@@ -1,0 +1,5 @@
+{
+  "name": "cogmer-e2e-starter",
+  "version": "0.1.0",
+  "description": "Throwaway probe: starts a cogmer daemon built from the user-identity branch in a cloud session, so that the daemon can read a cloud value from another plugin's file."
+}

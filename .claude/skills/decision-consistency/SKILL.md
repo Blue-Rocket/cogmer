@@ -32,7 +32,9 @@ For each changed decision, read it whole, then gather:
 - the active decisions in each of its areas, found as the `decisions` skill says,
   with `rg -l 'Status:\*\* (active|not built).*Areas:.*\b<area>\b' docs/decisions`;
 - every decision it cites;
-- every decision that cites it, with `rg -l 'D-NNN\b' docs/decisions`.
+- every decision that cites it, with `rg -l 'D-NNN\b' docs/decisions`;
+- where the decision is built: `rg -l 'D-NNN\b' cmd plugin scripts`, which finds the code and
+  tests that cite it, and the open items that name it, with `rg -n 'D-NNN\b' docs/open.md`.
 
 Read the **Decision.**, **Rejected.** and **Limits.** of each. An area with many
 decisions is read by title first, and in full only where a title bears on the
@@ -61,6 +63,22 @@ changed decision.
    attributed to it, are not what that decision says (W-18).
 6. **A limit crossed.** The changed decision relies on something another decision's
    **Limits.** says does not hold.
+7. **A status the code does not bear out.** A changed or cited decision says "not built"
+   and code or tests cite it, or says "active" and nothing in the code, the tests or
+   `docs/open.md` bears on it. The second is a question and not a finding, since a
+   decision can govern a choice that no code names. A decision whose status just changed to
+   "active" is read against any open item that says when it becomes active, and reported
+   when that condition is not met. Whether a decision is built in full is the person's
+   to judge: say what the code covers and what the decision says, and stop there.
+8. **A "not built" decision nothing tracks.** A changed decision that is "not built", or a
+   "not built" decision a changed one cites or relies on, is named by no open item. An
+   open item that mentions it only in passing does not track it: the item must say what
+   would build it or why it waits. Report it as a question, with the lines of any item
+   that mentions it. A changed decision that relies on a "not built" one, and does not say
+   so, is a question too.
+
+Look at only the changed decisions and the "not built" ones they cite or rely on. Do not
+sweep the status of every decision on each run.
 
 Report a finding only when you can quote both texts. Report a reading that is
 arguable as a question. Do not report wording or style; the writing-review skill

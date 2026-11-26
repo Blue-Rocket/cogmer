@@ -19,8 +19,11 @@ them in `/cogmer:self-status`.
 - The daemon keeps its state per address, and a person is not an address, so the name comes from the user
   an address was recorded for. The view named a peer by 189 characters of address. D-103 (an address
   belongs to a machine and is stored in one place), `cmd/cogmer/membership.go`, `EndpointOwners`.
-- A machine that answered in the last 15 seconds is online, so one failed poll does not read as an outage.
-  `cmd/cogmer/reach_test.go`, `TestAColleagueIsNamedAndTimedWhileUnreachable`.
+- A machine that answered in the last 15 seconds is online, so one failed poll does not read as an outage,
+  and so is one that answered its last poll within the longest wait between polls of a quiet room, so a
+  quiet room does not read as one either (D-305, an address is polled less often while its rooms are
+  quiet). `cmd/cogmer/reach_test.go`, `TestAColleagueIsNamedAndTimedWhileUnreachable`;
+  `cmd/cogmer/pollpace_test.go`, `TestAColleaguePolledSlowlyInAQuietRoomIsOnline`.
 - A command is a separate process and the daemon is the one that tries, so the command asks the daemon,
   over a read route that needs no header, as the view's reads do. D-087 (the local API requires a header
   that a web page cannot send), `cmd/cogmer/main.go`, `fetchPeers`.

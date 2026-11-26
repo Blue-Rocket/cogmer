@@ -134,7 +134,11 @@ func clientFor(endpoint string, timeout time.Duration, tlsConf *tls.Config) (*ht
 			// A peer is one host, so a pool of one keeps a dead peer from holding
 			// connections open against every room that polls it.
 			MaxIdleConnsPerHost: 1,
-			IdleConnTimeout:     30 * time.Second,
+			// Longer than the longest wait between two polls of a quiet address
+			// (dormantPollCap), so a kept connection is still open for the next poll,
+			// and shorter than the two minutes a peer's server keeps it, so the server
+			// never closes a connection this side is about to use (D-303, D-305).
+			IdleConnTimeout: 90 * time.Second,
 		},
 	}, nil
 }

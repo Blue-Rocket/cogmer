@@ -138,6 +138,8 @@ it can say so when a command does not work.
 - An image you paste into a prompt goes to the colleagues in the room, with whatever it shows. An image
   over 5 MB is not sent, and a colleague's view says so. Each colleague's machine keeps a copy as a file in
   `~/.cogmer`, and cogmer gives their model the turn's text and not the image.
+  A picture attached in a Cowork cloud task is sent with its turn, and a Cowork session on your
+  computer sends the text of a turn and no picture.
 - Everything your machine sends carries the certificates that tie it to you: your identifier, the
   version of your machines' shared key, and this machine's name and number. Your own machines
   also send each other the shared key, your list of colleagues with their labels and whether you
@@ -147,6 +149,13 @@ it can say so when a command does not work.
   your list of colleagues with their labels, addresses and whether you verified them, your list of
   rooms, and your machines' names and addresses, but never the shared key. Anything that runs in
   that session, including the model's shell, can read the value and these lists.
+- The link that a cloud session prints for reading its room opens a page that GitHub serves, at
+  `blue-rocket.github.io`. GitHub sees your network address and that you opened the page, and serves it
+  the page's script and a module of 27 MB, which GitHub sends as 6.5 MB compressed. It does not receive the address of your
+  session or the token, which are the part of the link after the `#`. The page then asks `tailcat.dev`
+  for the list of relays, connects to a relay, which sees your browser's network address as it sees a
+  daemon's, and reads the room from your session while its daemon is awake. Anyone who has the link
+  can read the room.
 - A relay introduces two machines on different networks. cogmer uses the free relays that
   Tailscale runs for its tailcat library. The conversation is encrypted between the two machines
   and the relay cannot read it. The daemon holds a connection to the relay for as long as it

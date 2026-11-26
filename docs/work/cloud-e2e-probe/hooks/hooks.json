@@ -1,0 +1,14 @@
+{
+  "description": "Throwaway probe: starts the bundled daemon in a cloud session and reports what it did.",
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/start.sh\" SessionStart" } ] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [
+        { "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/start.sh\" UserPromptSubmit" },
+        { "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/report.sh\"" }
+      ] }
+    ]
+  }
+}

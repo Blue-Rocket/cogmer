@@ -28,10 +28,6 @@ downloaded. Shipping binaries inside the plugin removes the download entirely bu
 commits about 150MB per release into the history everybody clones, and is ruled
 out.
 
-**A command that is new in a release prints the program's usage when it is typed before the session-start fetch has replaced the older program.** On 2026-11-25 on a Mac, `claude plugin update` moved the plugin from 0.11.0 to 0.11.4, and `/cogmer:self-doctor` typed in the next session ran `health` on the installed 0.11.1 program, which has no such subcommand, and the model reported "cogmer printed its general help text" and that the versions probably disagree. By about 30 seconds after that session started the session-start hook had fetched 0.11.4 and the same command worked. `plugin/cli.sh` runs whatever program is installed and does not compare its version with the plugin's (D-191, a command answers at once and says what to do when the install is not finished, covers a program that is absent and not one that is older).
-
-`cli.sh` could compare the two versions as `self-status` does and, when the program is older than the plugin, say that a new program is being fetched and to run the command again in a minute, which costs a version read on every command.
-
 **The suite fails in a pre-push hook run from a git worktree, because a test's git commands inherit the hook's `GIT_DIR`.** On 2026-11-24 on the droplet, `scripts/stage.sh` pushed from a worktree made with `git worktree add`, and `.githooks/pre-push` ran the suite and refused the push on `TestGitSkipsTheStateDirectoryInABulkAddAndRefusesAnExplicitOne` (`cmd/cogmer/stategitignore_test.go`, "a bulk add staged" the repository's own files). The test passes with `GIT_DIR` unset and fails with it set to the worktree's absolute git directory, which is what git gives a hook run in a worktree, in runs on the droplet (`docs/work/staged-0.11.0-run-20261124T222000Z.txt`). In a normal clone the hook's `GIT_DIR` is `.git`, relative, so the test's own `git init` in a temporary directory takes it for its own. Any test that runs `git` has the same exposure. A helper that runs git for tests could clear every `GIT_*` variable, which costs a change to the helpers and a test that sets `GIT_DIR` and expects the same result. `scripts/stage.sh` can be run from a normal clone meanwhile.
 
 ## Before a wider audience
@@ -265,7 +261,9 @@ nothing has been measured about whether a reader distinguishes them.
 
 **Whether arrival wants announcing.** D-039 (the browser view is the settled
 avenue) left this open. Do not build a notification on speculation — it has a
-different answer for close pairing than for long solo stretches.
+different answer for close pairing than for long solo stretches. D-148 (arrival would
+be announced by an operating-system notification) is the decision that would build one
+on a computer, and a cloud session's daemon has no desktop to show it on.
 
 ## Reaching a peer on another network
 
@@ -285,7 +283,9 @@ silence, invalidated by a wrong key, aged at a rate set by what it names, and
 restored by evidence. `known_peers` holds one endpoint per peer with the time it was
 recorded, replaced when the peer advertises another (read on 2026-09-28). D-103 (an
 address belongs to a machine, and is stored in one place) gave each address the owner
-the lifecycle needs, and nothing past that is built.
+the lifecycle needs, and nothing past that is built. D-183 (a receiver orders candidate
+addresses by class and never by a configured sort) and D-091 (identity is advertised
+and location is discovered) are the decisions that would build it.
 
 **Whether to rebuild the post-quantum hedge.** D-104 removed the pre-shared key,
 which was the only quantum-resistant element in the stack. It could be rebuilt at
@@ -299,7 +299,8 @@ A host can admit somebody who asks to join, without a pairing string being sent 
 **Whether a host approves an unsolicited join request.** A person who is not on a
 room's guest list cannot ask to be let in; §12a (room membership) and D-051 (stranger
 pairing is not a supported case) leave open whether they should be able to, and
-nothing is built for it.
+nothing is built for it. D-144 (a refused peer's request goes to a host who is
+present) is the decision that would build it.
 
 As section 12 describes it, any peer that can reach the host's address and name the
 room could make something appear on the host's screen, and room names are guessable
@@ -563,8 +564,6 @@ The options, each with its cost:
 
 Not known: how far a real turn's text compresses; whether `pending_injection` grows with a room where a host never confirms delivery, as it did in the harness, where each of its 20 rows for a session listed every turn offered and took 52KB.
 
-**A user in Chat mode captures and shares nothing, and the README does not say so.** The README's Cowork section describes Cowork alone. Anthropic's plugins article says hooks are grayed out in Chat, and one message in Chat mode reached no program on a Mac (`d306243`). A README sentence would name Chat mode, and say that a merged conversation shares nothing before its first turn that needs Claude Code, as the item on merged conversations below says.
-
 **No behavior check records that a `Stop` hook with an empty reply ends the turn, and a stop reply that carried context restarted a turn eight times.** In a Cowork-mode conversation on a Mac, a probe's `Stop` hook returned the JSON form of `additionalContext`, and nine `Stop` calls followed in 25 seconds (`d306243`). The hooks reference caps consecutive continuations by stop hooks at eight and does not say that a reply's `additionalContext` continues a turn. A behavior check for an empty reply would need a probe turn, and no check should call `Stop` with context.
 
 **A Cowork session in no room sends every prompt and response to the daemon.** Its hooks
@@ -602,20 +601,9 @@ Not known: the code of 2.1.329-ccs, which decides which hooks run and is not in 
 
 The chat turns before a session are not a gap. Joining a room takes a command, which is itself the turn that makes the session, so those turns always come before the room, and §12a (room membership) begins a room's history at its creation and shares nothing a session did before. The session's transcript holds them all the same (`a6cffcc`), and capture leaves them there. The empty prompt loses nothing when the first turn is the room command. Not known: whether a session that starts again in a conversation stays in the room its earlier session joined, and what the 0-character prompt stands for.
 
-**A user on a phone has no way to see the room's conversation.** A user on a computer reads the room on the daemon's page at 127.0.0.1. A session started on a phone, in Cowork or in Claude Code, has a daemon only in its sandbox (D-217, a cloud session's daemon carries its relay connection as a WebSocket), whose page no browser outside the sandbox reaches, so colleagues' turns reach the model as context and never the person. A user who works from a phone can therefore only ask the model what colleagues said, which paraphrases them and costs a turn. Anthropic's page on mods says what a mod draws appears in the terminal, the desktop app and VS Code, that over Remote Control from the mobile app it appears only in the terminal on the user's machine, and that a cloud session draws nothing (https://code.claude.com/docs/en/plugins/mods/overview.md, read on 2026-11-18). Claude Code 2.1.326's mod types name a `mobile` surface with a sheet of mods (read on 2026-11-18), and the page needs Claude Code 2.1.287 in a terminal and 2.1.286 in the desktop app, where the Cowork cloud sessions of `9c88af4:docs/work/host-probe-cloud-sessions-20261118T180600Z.txt` ran 2.1.42.
+**The page that reads a cloud session's room takes about 20 seconds to its first data the first time a phone opens it, almost all of it the browser compiling the module, and a blank page on an iPad is not explained.** On 2026-11-25 the page, published to `pages`, opened from the link in a cloud task's `/cogmer:room-join` on 0.11.7 and read the room through port 4784 of the task's daemon. It drew a prompt within a second, said the session was asleep after the daemon went unreachable, and recovered without a reload when a prompt woke the task (`docs/work/browser-spike-20261125.txt`). That run was in Chrome on a computer. On an iPad in Safari the page read the room of a session that was awake and drew a prompt within a second, and a copy of the page from before two fixes stayed on its asleep banner after the session was sent a message, which was not reproduced. After a long switch away the iPad showed a blank page that a reload did not clear, and it has not come back since. On 2026-11-26 on an iPhone over 5G, in what looks like Safari, a page opened while the task was asleep drew the room, including a picture attached to a prompt on 0.11.8, and showed a message that woke the task without a reload, and the rooms pane's Close button worked. On 2026-11-26 an iPhone on iOS 18.7, in a private tab on Wi-Fi, read "1.0s module fetched · 17.3s module ready · 17.3s dialing · 18.9s connected · 19.6s first data", so the 27 MB module took 16 seconds to compile and the connection 1.6 more. An earlier private tab on 5G fetched it in 0.3s, and this Mac's Chrome took 1.0s to fetch it and 6.9s to have it ready the first time and 0.2s afterwards. The same phone's second open read "0.0s module fetched · 0.1s module ready · 0.1s dialing · 1.0s connected · 1.6s first data", so the compiled module is kept and the cost is paid once. The banner says so on the first open.
 
-The options, each with its cost:
-- A mod that draws the room from the sandbox daemon. It is not available to this user: a cloud session draws nothing, and the mobile app shows a mod only in the terminal on the user's own machine, as the page above says. It would need Anthropic to draw mods for a cloud session in the mobile app, which the page does not announce, and a Cowork session on a version that has mods.
-- A static page that dials the sandbox daemon through the relay from the user's own browser, with the browser build of tailcat, the library cogmer's daemons already use. It needs no server of ours and no address on the internet. On 2026-11-25 a test page served from a Mac reached a Cowork cloud task's daemon on port 4783 in 3 seconds once the module was ready, and the daemon answered, with a refusal of plain HTTP, since that port speaks TLS (`docs/work/browser-spike-20261125.txt`). The page that serves the room would need four things:
-  - A second port on the overlay that serves plain HTTP, since the overlay already encrypts end to end and a browser has no TLS client to run over the connection. It serves the routes a page needs, `/events` and `/rooms`, which return the room's events and the list of rooms as JSON, and `/image/` and `/export`, which today sit on the loopback listener behind the Host check of D-087 (the local API requires a header that a web page cannot send). The overlay listener admits any dialer (D-157, the overlay listener admits any dialer), so each request carries a bearer token that the daemon minted for the session.
-  - A link that carries the daemon's address and the token in its fragment, which a browser does not send to the host of the page, shown in a command's output.
-  - A small HTTP client over the connection that `tailcatDial` returns. It polls `/events` and `/rooms` in place of the two `EventSource` streams, `/stream` and `/rooms/stream`, that the view reads its data from today.
-  - A static host for the page and the module, which is 27 MB, 6.6 MB gzipped.
-
-  The costs are a decision and a listener with token checks and tests, and a page of its own to keep in step with the view. Anyone who holds the link can read the room, and the script of the page that holds the token comes from the static host, so that host must be trusted. The module's download over a phone's connection and from a host other than the Mac was not tried. The daemon of a sleeping cloud task is unreachable from about 3 minutes after its last prompt, and a dial to it failed after 63 seconds on 2026-11-25, since the module's own limit is 60 seconds, so the page would race its own shorter timer and say that the session is asleep, and only a prompt in the task wakes it. Traffic from a browser goes through the relay and never directly. The tailcat README calls its in-browser web demo experimental (https://pkg.go.dev/github.com/tailscale/tailcat, read on 2026-11-25), and the relay is the public one (D-192, the public relay is an accepted dependency). Whether the page can fetch the view's routes this way, and what a phone's browser does, is not shown.
-- A gateway or a hosted machine (D-285, a user with no computer of their own has a machine hosted for them) that serves the page at an address on the internet. It exposes the room or puts a component somebody else operates between the user and the page, and its host has to be allowed in the cloud environment, where the relay's hosts are already.
-
-A hook's `systemMessage` and a file in the session's outputs folder reach nobody. On 2026-11-19 a plugin's hook returned a `systemMessage` and added a line to a file in `/mnt/attach/outputs` at every prompt of a Cowork cloud conversation, and the transcript recorded each message, but neither Desktop nor the mobile app showed the message or the file, including at a prompt sent from the phone (`a6cffcc:docs/work/host-probe-phone-and-mid-conversation-20261119T051000Z.txt`).
+A run would leave a page open through a long idle, since the page keeps one dial in flight and each failed dial lasts the module's full minute. On 2026-11-26 in Docker on this Mac, a cloud session's daemon with a 300-turn room spent 3.0% of a core on average with a client polling it as the page does for 50 minutes against 1.9% idle, with its two idle neighbours unchanged at 1.9%, and its memory rose from 49 MiB to 128 MiB in the first 40 minutes and held there. The 976 polls of each route took 36 ms on average, none failed, and the snapshots were 308 KB each, 353 MB for the 50 minutes. D-307 and D-308 cut that transfer. Nothing publishes the page as part of a release, so the protocol of a daemon's port and the page that reads it can fall out of step. The first publish took about 6.5 minutes on this Mac's connection and later ones 13 seconds, since GitHub holds the module.
 
 ## ChatGPT Work as a host
 
@@ -712,6 +700,12 @@ same plugin at 0.10.3, in a cloud session earlier that day, had the plugin synce
 in a cloud session, since neither leaves a trace outside a room, and whether such a daemon pairs with a
 colleague, which no run has tried.
 
+**Whether a daemon is a cloud session's is asked in ten files in several forms that disagree.** Read from the code on 2026-11-26: `inCloudContainer()` is true when `CLAUDE_CODE_REMOTE` is `true` or the cloud key's variable is set, `d.cloud != nil` is true once the daemon holds a cloud session, `isCloudSession()` is true when it holds one or saw the variable, and `selfcommands.go`, `tailcat.go` and `main.go` read the environment themselves. The daemon drops the key from its own environment once it has read it, so `inCloudContainer()` was false in a daemon whose host sets only the key, and that daemon served no page until `1c42e2e`. The hosts are `claudeHost`, `codexHost` and `coworkHost`, and `coworkHost` is Cowork on the user's computer through the bridge. A Cowork cloud task runs `claudeHost` in the sandbox, and its entry point was `remote_cowork` on 2026-11-26, which no code reads, so a Cowork cloud task and a Claude Code cloud session are not told apart. What a Claude Code cloud session on the web looks like in its sandbox is not known.
+
+What differs about a cloud session falls in two groups. The daemon's placement decides whether it sleeps and spools prompts (D-294, a prompt that finds no daemon listening just after one was started is held for it), carries its relay connection as a WebSocket (D-217, a cloud session's daemon carries its relay connection as a WebSocket), runs no behavior check (D-297, the behavior checks are not run in a cloud container), and speaks with a cloud key and serves the page (D-216, a cloud session signs with a key of its own that the user's shared key vouches for; D-301, a cloud session's daemon serves its room on a second overlay port). An application in a placement decides where its attachments land (D-304, a cloud session's attached images are the fresh files in its uploads folder that it has not sent) and that its hooks send no transcript path (D-295, a turn with no transcript path is recorded from the Stop hook's last message). D-203 (a host is declared by its entry point and resolved per request, and the daemon holds none) puts the host with the request, and a placement belongs to the daemon, not the request.
+
+One placement for the daemon, worked out once at start from the environment and the key and asked as questions (whether a behavior check may run, whether prompts are spooled, whether the page is served, where attachments land), would leave the three forms no way to drift apart. What an application does in a placement stays a method of its host that takes the placement. A host type for each pair, such as a Cowork cloud host beside a Cowork host, would multiply the types and mix the two groups. The hosts' names stay as they are, since stored records and session identifiers carry them, such as the `cowork:` prefix. The change touches the ten files and is covered by the container and cloud tests, and it changes nothing a user sees.
+
 ## Tidying the commands
 
 The plugin's commands sit in the layout Claude Code prefers, and each has a reason to exist.
@@ -763,7 +757,7 @@ remote session and a container, and its only mount that is not system code, `/mn
 cloud file store. A marker written there reached neither `~/projects/probe`, the folder the user connected to
 the session, nor the app's own folders, and the sandbox mounts no folder of the user's machine. So the image
 is not on the user's machine, and a Cowork image has no route to the daemon that runs there. A turn from
-Cowork reaches a colleague with its text and no picture, and a route would have to be built.
+Cowork reached a colleague with its text and no picture. On 2026-11-26 a picture pasted into a Cowork cloud task, whose room held a colleague's machine, was saved in the task's sandbox at `/mnt/user-data/uploads/<8 hex digits>-image.png`, a different folder from the one of 2026-10-15. The model described the picture, and the room recorded the turn's text with no `[Image #N]` placeholder and no image, so the page drew none. The file kept the time it was saved through a sleep and a wake, and the task's entry point was `remote_cowork`. D-304 (a cloud session's attached images are the fresh files in its uploads folder that it has not sent) is built for it and tested against a folder laid out as that task's was. On 0.11.8, staged to `Blue-Rocket/cogmer-staging`, a real task sent a picture attached to a prompt and the page of the same account drew it; a colleague on another machine has not seen one. In containers, a cloud session's daemon whose hooks send no transcript path sent a picture saved where Claude Code saves one to a colleague, and took one from the colleague, and the receiver's view named it by its hash and served its bytes (`b5c417a`).
 The Claude Code editor extensions are not observed and are
 read as the terminal.
 
@@ -827,7 +821,7 @@ person in the room, the user included. The user's own turns are their prompts, t
 assistant, and the turns from their other sessions in the room. The page does the filtering, because the
 daemon builds the export, and D-218 (the export is the whole room as text-only Markdown) rejects controls
 that choose what the export holds, so a filter in the daemon's stream would put the export at risk of
-following it. The page has to keep the unread count and the jump button right for the turns it hides. A
+following it. The page has to keep the unread count and the jump button right for the turns it hides. On the static page the filter sees only the turns the page holds, since D-308 (the static page is sent a page of a room's turns and asks for the earlier ones) sends the newest page and the rest on request, so a person's turns hidden there could leave a page of nothing and a button asking for more. A
 choice need not survive a reload that the user makes. The user's own turns start hidden, and the other
 people's start shown.
 

@@ -104,6 +104,10 @@ Cowork's own limits apply: its hooks are Anthropic's to change, a Cowork turn co
 its reply is complete, and `cogmer doctor --host cowork` checks what that rests on. A Cowork session
 cannot tell the daemon about the tool operations in a turn, so its turns show none.
 
+A conversation in Chat mode captures and shares nothing, since Chat mode does not run plugin hooks.
+Where Chat and Cowork are merged, a conversation becomes a Cowork task at the first turn that runs a
+cogmer command or asks for a shell, and nothing before that turn is shared.
+
 ## Pair, once, on a call
 
 Send your colleague your pairing string, which this command prints:

@@ -33,6 +33,9 @@ func syncDaemon(t *testing.T, targets string, pull func(string) (int, error)) *D
 	m := testMembership(t)
 	t.Setenv("COGMER_PEERS", targets)
 	d := &Daemon{id: testIdentity(t), members: m, pull: pull}
+	// These tests are about addresses that fail or go, so an address that answers with
+	// nothing keeps the usual interval here, as it would with a cap below it (D-305, an address is polled less often while its rooms are quiet).
+	d.pace.quietCap, d.pace.dormantCap = time.Nanosecond, time.Nanosecond
 	t.Cleanup(d.closeStores)
 	return d
 }

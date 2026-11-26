@@ -42,3 +42,8 @@ so the room will look empty and silent rather than broken.
 Do not invent the command for that. `/cogmer:peer-pair` prints it with the correct path
 filled in; point them there rather than writing `cogmer verify`, which will not
 resolve for anybody who installed this as a plugin.
+
+If the output has a line that begins "Read this room in your browser", give the link whole, on a line
+of its own, and say in a sentence that anyone who has it can read the room while this session's
+daemon is awake and that the page says when it is asleep. It is how a user of a cloud session reads
+what their colleagues said, since the page of the room cannot be opened from here.

@@ -163,9 +163,12 @@ type Daemon struct {
 	// that knows what the overlay is (D-068).
 	selfCheck func(context.Context) SelfCheck
 	relayNow  func() string
-	selfMu    sync.Mutex
-	selfLast  SelfCheck
-	selfAt    time.Time
+	// viewAddr is the overlay address a page in a browser dials to read the room, set when this
+	// daemon serves the page's port (D-301).
+	viewAddr string
+	selfMu   sync.Mutex
+	selfLast SelfCheck
+	selfAt   time.Time
 
 	// What the watcher has confirmed about reachability through the relay, in memory
 	// like the peer states. failSince is zero while the daemon is reachable.
@@ -174,6 +177,13 @@ type Daemon struct {
 	// The certificate this daemon presents to peers, derived from the identity
 	// key and cached because that key never changes (D-101, peer connections are TLS pinned).
 	tls peerTLS
+	// The client kept for each address this machine polls (D-303).
+	peerConns peerConns
+	// When each room last stored an event, which sets how often its addresses are polled
+	// (D-305, an address is polled less often while its rooms are quiet).
+	pace pollPace
+	// The nudges on their way to each address (D-306, a machine nudges the machines it shares a room with when it writes an event).
+	nudges nudger
 
 	// When each peer last made an authenticated request of this daemon, by peer.
 	// Held with the peer states below, and in memory like them.
@@ -233,6 +243,7 @@ func (d *Daemon) LocalRoutes() *http.ServeMux {
 	mux.HandleFunc("/hook/prompt", guardLocal(d.handlePrompt))
 	mux.HandleFunc("/hook/stop", guardLocal(d.handleStop))
 	mux.HandleFunc("/cloud/take", guardLocal(d.handleCloudTake))
+	mux.HandleFunc("/view/link", guardLocal(d.handleViewLink))
 	mux.HandleFunc("/events", d.handleEvents)
 	mux.HandleFunc("/peers", d.handlePeers)
 	mux.HandleFunc("/self", d.handleSelf)
@@ -272,6 +283,7 @@ func (d *Daemon) PeerRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", d.health)
 	mux.HandleFunc("/sync", d.handleSync)
+	mux.HandleFunc("/nudge", d.handleNudge)
 	mux.HandleFunc("/blob", d.handleBlob)
 	mux.HandleFunc("/verify", d.handleVerify)
 	mux.HandleFunc("/offer", d.handleOffer)
@@ -922,7 +934,12 @@ func (d *Daemon) appendLocal(store *Store, room Room, sessionID, kind, content s
 	if id.HasUser() {
 		removals = d.members.RemovalsSeen(id.User)
 	}
-	return store.AppendAs(seq, id, removals, room.RoomID, sessionID, kind, content, meta)
+	ev, err := store.AppendAs(seq, id, removals, room.RoomID, sessionID, kind, content, meta)
+	if err == nil {
+		d.roomStored(room.RoomID, true)
+		go d.nudgeRoom(room.RoomID) // the room's other machines poll this one now (D-306, a machine nudges the machines it shares a room with when it writes an event)
+	}
+	return ev, err
 }
 
 // reportLostState compares what a room holds against what this peer recorded

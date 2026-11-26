@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -990,5 +991,58 @@ func TestOnlyAMachinesPromptsAndAnswersAreListedAsTurns(t *testing.T) {
 	}
 	if len(p.Rooms[0].Turns) != 1 {
 		t.Errorf("turns: %+v", p.Rooms[0].Turns)
+	}
+}
+
+// The static page holds turns the newest page does not carry, so the newest page names the turns that
+// appear nowhere and says why a turn does not count, and a turn the page holds follows (D-308).
+func TestTheStaticPageIsToldWhichTurnsAppearNowhere(t *testing.T) {
+	a, b := twoMachines(t)
+	room := sharedWith(t, a, b, "FROM THE LAPTOP")
+	say1(t, b, room, "FROM THE DESK")
+	pullOn(t, a, b.addr)
+	st, _ := pageAndExport(t, a, room)
+	desk := shownTurn(st, "FROM THE DESK")
+	if desk == nil {
+		t.Fatal("the desk's turn is not shown before the suspension")
+	}
+	var nk newKeyResult
+	a.local(t, "/machines/newkey", newKeyRequest{Phrase: strings.Join(fixedPhrase().Words(), " ")}, &nk)
+	if nk.Suspended != 1 {
+		t.Fatalf("certifying: %+v", nk)
+	}
+	a.d.cloud = &cloudSession{setup: &cloudSetup{key: ed25519.NewKeyFromSeed(bytesOf(1, ed25519.SeedSize))}}
+	got := viewExchange(t, a.d, a.d.viewToken(), "/snapshot?room="+room.RoomName)
+	var page struct {
+		Hidden []string `json:"hidden"`
+	}
+	if len(got) != 1 || json.Unmarshal([]byte(got[0].body), &page) != nil || len(page.Hidden) != 1 || page.Hidden[0] != desk.EventID {
+		t.Errorf("the page was told %+v of a suspended machine's turn %s: %.200s", page.Hidden, desk.EventID, got[0].body)
+	}
+	if strings.Contains(got[0].body, "FROM THE DESK") {
+		t.Error("the suspended machine's turn is in the page")
+	}
+}
+
+func TestTheStaticPageIsToldWhyATurnDoesNotCount(t *testing.T) {
+	a, b := twoMachines(t)
+	room := sharedWith(t, a, b, "FROM THE LAPTOP")
+	say1(t, b, room, "DESK WITHIN")
+	say1(t, b, room, "DESK PAST")
+	pullOn(t, a, b.addr)
+	a.d.cloud = &cloudSession{setup: &cloudSetup{key: ed25519.NewKeyFromSeed(bytesOf(1, ed25519.SeedSize))}}
+	var res identityResult
+	a.local(t, "/machines/remove", removeRequest{Machine: b.d.id.PeerID, Cutoffs: map[string]int64{room.RoomID: 1}}, &res)
+	if res.Status != "removed" {
+		t.Fatalf("removing: %+v", res)
+	}
+	st, _ := pageAndExport(t, a, room)
+	past := shownTurn(st, "DESK PAST")
+	got := viewExchange(t, a.d, a.d.viewToken(), "/snapshot?room="+room.RoomName)
+	var page struct {
+		Marks map[string]string `json:"marks"`
+	}
+	if past == nil || len(got) != 1 || json.Unmarshal([]byte(got[0].body), &page) != nil || page.Marks[past.EventID] != "from a removed machine" {
+		t.Errorf("the page was told %+v of the turn past the cutoff", page.Marks)
 	}
 }

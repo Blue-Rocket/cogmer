@@ -98,15 +98,19 @@
   #rooms .line{font-size:12px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #rooms .line .in{color:var(--me)} #rooms .line .warn{color:var(--warn)}
   #rooms .none{padding:16px;color:var(--dim);font-size:13px}
+  #rooms .head button{float:right;display:none;font:inherit;font-size:12px;letter-spacing:0;text-transform:none;background:none;color:var(--dim);border:1px solid var(--line);border-radius:4px;padding:1px 8px;cursor:pointer}
+  #roomsShade{display:none;position:fixed;top:0;right:0;bottom:0;left:260px;z-index:1;cursor:pointer}
   #roomsToggle{display:none;font:inherit;font-size:12px;background:none;color:var(--dim);
                border:1px solid var(--line);border-radius:4px;padding:1px 8px;cursor:pointer}
   @media (min-width:1000px){ body{margin-left:260px} }
   @media (max-width:999px){
     #rooms{display:none;box-shadow:2px 0 12px #0003} body.roomsOpen #rooms{display:block}
+    body.roomsOpen #roomsShade{display:block} #rooms .head button{display:inline-block}
     #roomsToggle{display:inline-block}
   }
 </style>
-<nav id="rooms" aria-label="Rooms"><div class="head">Rooms</div><div id="roomList"></div></nav>
+<div id="roomsShade"></div>
+<nav id="rooms" aria-label="Rooms"><div class="head">Rooms<button id="roomsClose" type="button">Close</button></div><div id="roomList"></div></nav>
 <header>
   <button id="roomsToggle" type="button">Rooms</button>
   <h1 id="room">—</h1>
@@ -122,8 +126,12 @@
 <div id="notice" hidden></div>
 <main id="feed"><div class="empty">Waiting for the room…</div></main>
 <button id="jump" hidden></button>
+<!-- cogmer:view-hooks -->
 <script>
-const ROOM = location.pathname.startsWith('/room/') ? decodeURIComponent(location.pathname.slice(6)) : '';
+// The page the daemon serves has no cogmerView. The static page that reads a cloud session's room
+// defines one before this script runs (D-302): the room, the stream of a path, and the link to a room.
+const VIEW = window.cogmerView || null;
+const ROOM = VIEW ? VIEW.room : (location.pathname.startsWith('/room/') ? decodeURIComponent(location.pathname.slice(6)) : '');
 (function(){
   const feed=document.getElementById('feed');
 
@@ -238,7 +246,8 @@ const ROOM = location.pathname.startsWith('/room/') ? decodeURIComponent(locatio
   // text nodes, since the room's name came from whoever invited them.
   const notice=document.getElementById('notice');
   function showNotice(state){
-    const n=state.events.filter(e=>e.notInSession).length;
+    // A page sent only some of a room's turns is told how many none holds (D-308).
+    const n=state.paged?(state.notGiven||0):state.events.filter(e=>e.notInSession).length;
     notice.hidden=n===0;
     if(!n) return;
     const p=document.createElement('p');
@@ -287,7 +296,8 @@ const ROOM = location.pathname.startsWith('/room/') ? decodeURIComponent(locatio
     // drawing is the history, not news.
     const ids=new Set(state.events.map(e=>e.eventId));
     let arrived=0;
-    if(seen) state.events.forEach(e=>{ if(!seen.has(e.eventId)&&e.peerId!==state.selfPeerId) arrived++; });
+    // Earlier turns the reader asked for are no news (D-308).
+    if(seen&&!state.noArrival) state.events.forEach(e=>{ if(!seen.has(e.eventId)&&e.peerId!==state.selfPeerId) arrived++; });
     seen=ids;
 
     for(const [id,t] of turns) if(!ids.has(id)){t.el.remove();turns.delete(id);}
@@ -332,7 +342,7 @@ const ROOM = location.pathname.startsWith('/room/') ? decodeURIComponent(locatio
 
   let es;
   function connect(){
-    es=new EventSource('/stream?room=' + encodeURIComponent(ROOM));
+    es=VIEW ? VIEW.stream('/stream?room=' + encodeURIComponent(ROOM)) : new EventSource('/stream?room=' + encodeURIComponent(ROOM));
     es.onopen=()=>{document.getElementById('connDot').className='dot live';
                    document.getElementById('connText').textContent='live';};
     es.onmessage=ev=>{const s=JSON.parse(ev.data); draw(s); peers(s.peers);};
@@ -359,7 +369,14 @@ const ROOM = location.pathname.startsWith('/room/') ? decodeURIComponent(locatio
   const list=document.getElementById('roomList');
   const toggle=document.getElementById('roomsToggle');
   toggle.onclick=()=>document.body.classList.toggle('roomsOpen');
+  // The pane covers the button that opened it on a narrow screen, so it also closes from its own
+  // button, from a tap on the page beside it, and from Escape.
+  const closeRooms=()=>document.body.classList.remove('roomsOpen');
+  document.getElementById('roomsClose').onclick=closeRooms;
+  document.getElementById('roomsShade').onclick=closeRooms;
+  document.addEventListener('keydown',ev=>{ if(ev.key==='Escape') closeRooms(); });
   let rooms=[];
+  let loaded=false;
   const seenOf=n=>{ try{ const v=localStorage.getItem('cogmer.seen.'+n); return v===null?null:+v; }catch(e){ return null; } };
   const see=(n,c)=>{ try{ localStorage.setItem('cogmer.seen.'+n,String(c)); }catch(e){} };
   const node=(tag,cls,text)=>{ const e=document.createElement(tag); if(cls) e.className=cls; if(text!==undefined) e.textContent=text; return e; };
@@ -378,10 +395,13 @@ const ROOM = location.pathname.startsWith('/room/') ? decodeURIComponent(locatio
   }
   function render(){
     list.textContent='';
+    // Until the first list arrives the pane does not know there are no rooms, and saying so tells a
+    // user whose page is still connecting to go and create one.
+    if(!loaded){ list.appendChild(node('div','none','Loading rooms\u2026')); return; }
     if(!rooms.length){ list.appendChild(node('div','none','No rooms yet. Create one in a session with /cogmer:room-create, or $cogmer room-create in Codex.')); }
     for(const r of rooms){
       const a=node('a',r.name===ROOM?'here':'');
-      a.href='/room/'+encodeURIComponent(r.name);
+      a.href=VIEW ? VIEW.roomHref(r.name) : '/room/'+encodeURIComponent(r.name);
       const top=node('div','top');
       top.appendChild(node('span','rname',r.name));
       const n=fresh(r);
@@ -403,12 +423,13 @@ const ROOM = location.pathname.startsWith('/room/') ? decodeURIComponent(locatio
     }
   }
   function connect(){
-    const es=new EventSource('/rooms/stream');
-    es.onmessage=m=>{ rooms=JSON.parse(m.data)||[]; render(); };
+    const es=VIEW ? VIEW.stream('/rooms/stream') : new EventSource('/rooms/stream');
+    es.onmessage=m=>{ rooms=JSON.parse(m.data)||[]; loaded=true; render(); };
     es.onerror=()=>{ es.close(); setTimeout(connect,1500); };
   }
   document.addEventListener('visibilitychange',render);
   setInterval(render,60000);
+  render();
   connect();
 })();
 </script>

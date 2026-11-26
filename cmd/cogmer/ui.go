@@ -68,6 +68,10 @@ type uiEvent struct {
 	// cutoff (D-220) or "from a removed guest" past a revocation's (D-236). Such a turn
 	// is shown and never given to an assistant.
 	Marked string `json:"marked,omitempty"`
+	// Order is where the turn sorts in its room, which the static page uses to put the pages it asks for
+	// together (D-308). It is set only for that page.
+	Order string `json:"o,omitempty"`
+	key   string
 }
 
 type uiPeer struct {
@@ -121,6 +125,24 @@ type uiState struct {
 	// Lists is, in a cloud session, which of the user's machines its lists came from
 	// and how old they are (D-245, a cloud session shows the header's age in the view).
 	Lists *listsView `json:"lists,omitempty"`
+	// Etag is a hash of the rest of the state without Lists, which only a poll of the static page asks for
+	// (D-307), so that a page can say what it already holds.
+	Etag string `json:"etag,omitempty"`
+	// The rest are for the static page, which is sent a page of a room's turns and not all of them
+	// (D-308): Paged says so, Total counts every turn of the room, NotGiven counts every turn no session
+	// holds, HasEarlier says turns come before the first sent, and Earlier marks the answer to a request
+	// for the turns before one the page holds.
+	Paged      bool `json:"paged,omitempty"`
+	Total      int  `json:"total,omitempty"`
+	NotGiven   int  `json:"notGiven,omitempty"`
+	HasEarlier bool `json:"hasEarlier,omitempty"`
+	Earlier    bool `json:"earlier,omitempty"`
+	// Hidden is the turns of the room that appear nowhere (D-234) and Marks is the turns that do not
+	// count, each with why (D-220, D-236), which a page that holds turns the newest page does not
+	// carry is told, so that those turns follow a suspension, a revocation or a removal (D-308).
+	Hidden []string          `json:"hidden,omitempty"`
+	Marks  map[string]string `json:"marks,omitempty"`
+	hidden []string
 }
 
 // subscribe registers a channel woken whenever the room changes.
@@ -199,6 +221,7 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 		// the machine again brings them back (D-234).
 		standing := judge.of(e)
 		if standing == standingHidden {
+			st.hidden = append(st.hidden, e.EventID)
 			continue
 		}
 		// Images that a host showed after their prompt belong to that prompt's turn, and are no
@@ -238,6 +261,7 @@ func (d *Daemon) snapshot(cur Room) (uiState, error) {
 			ue.Content = guestChangeText(e, labels)
 			ue.NotInSession = false
 		}
+		ue.key = orderKey(e)
 		ue.Images = imageRefs(e.Metadata)
 		if len(e.Metadata) > 0 {
 			var m struct {
@@ -288,17 +312,29 @@ func (d *Daemon) viewSnapshot(cur Room) (uiState, error) {
 	if err != nil {
 		return st, err
 	}
+	d.renderTurns(cur, st.Events)
+	return st, nil
+}
+
+// renderTurns writes into each turn its Markdown and the pictures this machine holds.
+func (d *Daemon) renderTurns(cur Room, evs []uiEvent) {
 	var held map[string]imageRow
 	if cur.RoomID != "" {
 		if store, serr := d.storeFor(cur.RoomID); serr == nil {
 			held, _ = store.ImageRows()
 		}
 	}
-	for i := range st.Events {
-		e := &st.Events[i]
+	for i := range evs {
+		e := &evs[i]
 		e.HTML = d.rendered.get(e.EventID, e.Content) + imagesHTML(cur.RoomName, e.Images, held)
 	}
-	return st, nil
+}
+
+// orderKey is where an event sorts in its room, in the order the store lists a room by: the time,
+// the peer, the signer and the sequence. Each part has a fixed form, so the keys compare as strings
+// in that order, and the static page puts the pages it asks for together by them (D-308).
+func orderKey(e Event) string {
+	return fmt.Sprintf("%s|%s|%s|%020d", e.Timestamp, e.PeerID, e.signerKey(), e.PeerSequence)
 }
 
 // imagesHTML is the part of a turn that shows its pasted images. The daemon writes each
@@ -459,6 +495,9 @@ func (d *Daemon) handleStream(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no such room", http.StatusNotFound)
 		return
 	}
+	// Somebody opening the room is about to read it, so its addresses are polled at
+	// once (D-305, an address is polled less often while its rooms are quiet).
+	d.roomOpened(room.RoomID)
 
 	ch := d.subscribe()
 	defer d.unsubscribe(ch)
@@ -619,9 +658,8 @@ func exportMarkdown(st uiState, at time.Time) string {
 // Peer health.
 //
 // A peer that cannot be reached is reported when it STOPS being reachable and when
-// it starts again, not once per poll. Polling is every second, so the old behavior
-// wrote two lines a second saying the same thing, which fills a log during a
-// partition. A message repeated that often is not a signal; it buries
+// it starts again, not once per poll. A line for each failed poll repeats the same
+// line every few seconds, which fills a log during a partition. A message repeated that often is not a signal; it buries
 // the one line that matters, which is the transition.
 
 // peerState is what is known about one address.
@@ -697,7 +735,13 @@ func (d *Daemon) statusOf(targets []string) []uiPeer {
 		}
 		if st, ok := d.peerSeen[addr]; ok {
 			if !st.lastSeen.IsZero() {
-				if age := time.Since(st.lastSeen); age < 15*time.Second {
+				// A peer that answered its last poll and was polled within the longest
+				// wait between polls of a quiet room is online however long ago that
+				// was, since a quiet room is polled less often (D-305, an address is
+				// polled less often while its rooms are quiet).
+				age := time.Since(st.lastSeen)
+				answering := st.downSince.IsZero() && age < dormantPollCap+15*time.Second
+				if age < 15*time.Second || answering {
 					p.Online = true
 				} else if age < time.Minute {
 					p.Since = "just now"
@@ -864,6 +908,9 @@ func (d *Daemon) markPeerUnreachable(addr string, err error) {
 // discardConnection throws away the connection held to a peer that has not answered for a
 // while, so that the next poll builds a new one.
 func (d *Daemon) discardConnection(addr string, failing time.Duration) {
+	// The client kept for the address goes too, so that the next poll makes a new
+	// connection over whatever the transport builds (D-303).
+	d.dropSyncClient(addr)
 	e, err := ParseEndpoint(addr)
 	if err != nil {
 		return

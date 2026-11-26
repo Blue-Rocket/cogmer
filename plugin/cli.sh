@@ -65,15 +65,6 @@ restart_daemon() {
   echo "~/.cogmer/daemon.log says what happened."
 }
 
-if bin="$(cogmer_binary)"; then
-  if [ "${1:-}" = restart ]; then
-    restart_daemon "$bin"
-    exit 0
-  fi
-  "$bin" "$@" 2>&1
-  exit 0
-fi
-
 home_dir="${COGMER_HOME:-$HOME/.cogmer}"
 
 # start_install begins the download the way the session-start hook does, detached,
@@ -90,6 +81,38 @@ start_install() {
   fi
   disown 2>/dev/null
 }
+
+# A command the installed program does not know is answered with its usage and status 2. When the
+# installed program is older than this plugin, the session-start hook has not yet replaced it, and
+# the usage would be read as a fault, so say that the program is being updated and start the update
+# if nothing has (D-191).
+older_than_plugin() {
+  local have="$1" want
+  want="$(tr -d "[:space:]" < "$CLAUDE_PLUGIN_ROOT/VERSION" 2>/dev/null)"
+  [ -n "$have" ] && [ -n "$want" ] && [ "$have" != "$want" ] &&
+    [ "$(printf "%s\n%s\n" "$have" "$want" | sort -V | head -1)" = "$have" ]
+}
+
+if bin="$(cogmer_binary)"; then
+  if [ "${1:-}" = restart ]; then
+    restart_daemon "$bin"
+    exit 0
+  fi
+  out="$(mktemp)"
+  "$bin" "$@" > "$out" 2>&1
+  status=$?
+  if [ "$status" -eq 2 ] && have="$("$bin" version 2>/dev/null)" && older_than_plugin "$have"; then
+    start_install
+    echo "cogmer is updating. This command needs a newer cogmer than the $have installed here."
+    echo
+    echo "The update takes about 30 seconds. Wait that long, then run the same command again."
+    echo "Nothing is wrong."
+  else
+    cat "$out"
+  fi
+  rm -f "$out"
+  exit 0
+fi
 
 read -r state age detail <<< "$(install_state)"
 case "$state" in

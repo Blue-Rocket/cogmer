@@ -205,7 +205,10 @@ func (d *Daemon) pastedImages(host Host, req promptReq) []preparedImage {
 		return nil
 	}
 	attached, _ := store.AttachedImageNumbers(req.SessionID)
-	return prepareImages(host, req.Prompt, imageContext{
-		ScratchpadDir: req.ScratchpadDir, Entrypoint: req.Entrypoint, Attached: attached, Now: time.Now(),
-	})
+	ctx := imageContext{ScratchpadDir: req.ScratchpadDir, Entrypoint: req.Entrypoint, Attached: attached, Now: time.Now()}
+	if d.inCloud() {
+		ctx.UploadsDir = cloudUploadsDir()
+		ctx.SentHashes, _ = store.AttachedImageHashes(req.SessionID)
+	}
+	return prepareImages(host, req.Prompt, ctx)
 }

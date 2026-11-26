@@ -107,7 +107,7 @@ func TestAPollReadThroughTheIndexMatchesAScanOfTheWholeRoom(t *testing.T) {
 // An idle poll's cost must not grow with the room's history. On 2026-11-25 a pair of
 // daemons with one day of turns in a room spent about ten times the CPU of an empty
 // room on idle polls and wrote about 8MB a second of SQLite's temporary files, because
-// each poll read and sorted every event the room held (a6ac576). The plans of the poll's
+// each poll read and sorted every event the room held (e365a05). The plans of the poll's
 // queries say whether they read the table or sort it.
 func TestAnIdlePollReadsNeitherTheRoomsContentNorSortsItsHistory(t *testing.T) {
 	s := testStore(t)

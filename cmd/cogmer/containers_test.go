@@ -983,3 +983,62 @@ func TestContainerUpgradeKeepsAPairedRoom(t *testing.T) {
 		t.Fatalf("alice was given bob's turn labeled %q, verified %v", tr.Label, tr.Verified)
 	}
 }
+
+// TestContainerWorkATurnOnAColleaguesQuietMachineIsNotStranded runs this tree's binary:
+// bob writes on his laptop and then on his desktop, so alice's machine polls only the
+// desktop and sets the laptop aside. The desktop goes off the network, and alice's
+// machine is cut off while bob writes on the laptop, so the laptop's nudge does not reach
+// her. Once alice is back, the turn reaches her with nothing more written, by the nudge
+// sent again or by her machine polling the laptop while the desktop does not answer
+// (D-306, a machine nudges the machines it shares a room with when it writes an event).
+//
+// It is skipped while a user's second machine reaches colleagues only through the first:
+// in this arrangement alice's machine never polls the laptop, so the laptop's turn waits
+// on the desktop with or without nudges (the item in docs/open.md on a user's second
+// machine in a room).
+func TestContainerWorkATurnOnAColleaguesQuietMachineIsNotStranded(t *testing.T) {
+	t.Skip("a user's second machine reaches colleagues only through the first; see docs/open.md")
+	c := newCluster(t)
+	img := harnessImage(t, imageWork)
+	r := pairedRoom(t, c, img, true)
+	laptop := c.start("bob-laptop", img)
+	addBoxMachine(t, r.bob, laptop, "bob-laptop")
+	laptopS := "session-bob-2"
+	if out := laptop.mustCLI(laptopS, "join", r.name); !strings.Contains(out, "joined "+r.name) {
+		t.Fatalf("bob's laptop did not join %s:\n%s", r.name, out)
+	}
+
+	laptop.turn(laptopS, "bob on the laptop first", "noted")
+	eventually(t, 60*time.Second, "the laptop's first turn reaching alice", func() (bool, string) {
+		return r.alice.viewHas(r.name, "bob on the laptop first"), "not in alice's view"
+	})
+	handOver(t, r.name, r.bob, r.bobS, r.alice, r.aliceS, "bob on the desktop last")
+
+	r.bob.disconnect()
+	r.alice.disconnect()
+	laptop.turn(laptopS, "bob on the laptop while alice is cut off", "noted")
+	time.Sleep(3 * time.Second)
+	if r.alice.viewHas(r.name, "bob on the laptop while alice is cut off") {
+		t.Fatal("the turn reached alice while her machine was off the network")
+	}
+	r.alice.connect()
+	eventually(t, 90*time.Second, "the laptop's turn reaching alice with bob's desktop off the network", func() (bool, string) {
+		return r.alice.viewHas(r.name, "bob on the laptop while alice is cut off"), "not in alice's view"
+	})
+}
+
+// TestContainerWorkANudgeBringsATurnBeforeTheNextSlowPoll runs this tree's binary on two
+// machines: alice's machine sends nothing for 45 seconds, so bob's polls of it slow to
+// every 20, and a turn alice then writes reaches bob within 3 seconds, by the nudge her
+// machine sends when it writes (D-306, a machine nudges the machines it shares a room
+// with when it writes an event).
+func TestContainerWorkANudgeBringsATurnBeforeTheNextSlowPoll(t *testing.T) {
+	c := newCluster(t)
+	r := pairedRoom(t, c, harnessImage(t, imageWork), true)
+	handOver(t, r.name, r.alice, r.aliceS, r.bob, r.bobS, "alice says this before the quiet")
+	time.Sleep(45 * time.Second)
+	r.alice.turn(r.aliceS, "alice says this after the quiet", "noted")
+	eventually(t, 3*time.Second, "alice's turn reaching bob after the quiet", func() (bool, string) {
+		return r.bob.viewHas(r.name, "alice says this after the quiet"), "not in bob's view"
+	})
+}
