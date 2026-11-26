@@ -85,12 +85,18 @@ func (n *nudger) waits() (lo, hi, giveUp time.Duration) {
 }
 
 // nudgeRoom tells every machine this machine polls for a room to poll it now.
-func (d *Daemon) nudgeRoom(roomID string) {
+func (d *Daemon) nudgeRoom(roomID string) { d.nudgeRoomExcept(roomID, "") }
+
+// nudgeRoomExcept nudges every machine this machine polls for a room but the one at
+// except, which is where the events came from.
+func (d *Daemon) nudgeRoomExcept(roomID, except string) {
 	if d.expelledFrom(roomID) {
 		return
 	}
 	for _, addr := range d.members.RoomPeers(roomID, d.id.PeerID) {
-		d.nudgeAddr(addr, roomID)
+		if addr != except {
+			d.nudgeAddr(addr, roomID)
+		}
 	}
 }
 

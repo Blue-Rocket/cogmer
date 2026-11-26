@@ -306,3 +306,54 @@ func TestANudgeIsNotSentAgainToAnAddressNoLongerPolledForTheRoom(t *testing.T) {
 		t.Error("a nudge was sent again to an address no longer polled for the room")
 	}
 }
+
+// A machine that takes a turn its own user wrote on another of their machines nudges the
+// room's other machines, since the turn reaches colleagues through it, and one that takes
+// a colleague's turn nudges nobody (D-305).
+func TestTakingATurnTheUserWroteOnAnotherMachineNudgesTheRoom(t *testing.T) {
+	ana, ben := newTestUser(t), newTestUser(t)
+	laptop := newUserPeer(t, trustRoom, trustRoomName, ana.machine(t, "laptop"), ana)
+	desktop := newUserPeer(t, trustRoom, trustRoomName, ana.machine(t, "desktop"), ana)
+	colleague := newUserPeer(t, trustRoom, trustRoomName, ben.machine(t, "desktop"), ben)
+	introduceUsers(t, desktop, colleague, trustRoom)
+	record := func(on, of *offlinePeer, addr string) {
+		t.Helper()
+		if err := on.d.members.RecordMachineAddress(of.d.id.PeerID, of.d.id.Peer(), addr); err != nil {
+			t.Fatal(err)
+		}
+	}
+	record(desktop, colleague, colleague.addr)
+	record(desktop, laptop, laptop.addr)
+	record(colleague, desktop, "ana-desktop")
+	record(laptop, desktop, "ana-desktop") // so a nudge from the desktop shows on the laptop
+	nudged := func(p *offlinePeer, addr string) bool {
+		p.d.pace.mu.Lock()
+		defer p.d.pace.mu.Unlock()
+		return !p.d.pace.wokenAddr[addr].IsZero()
+	}
+
+	colleague.say(t, trustRoom, "s", EventUserPrompt, "said by ben")
+	if n, err := desktop.d.pullFrom(colleague.addr); err != nil || n == 0 {
+		t.Fatalf("the desktop took %d events from ben: %v", n, err)
+	}
+	time.Sleep(200 * time.Millisecond)
+	if nudged(laptop, "ana-desktop") {
+		t.Error("taking a colleague's turn nudged the user's other machine")
+	}
+
+	laptop.say(t, trustRoom, "s", EventUserPrompt, "said on the laptop")
+	if n, err := desktop.d.pullFrom(laptop.addr); err != nil || n == 0 {
+		t.Fatalf("the desktop took %d events from the laptop: %v", n, err)
+	}
+	// The desktop's poll of ben recorded the address it signed, so ben's record of whose
+	// nudge came is by user.
+	for deadline := time.Now().Add(3 * time.Second); time.Now().Before(deadline); time.Sleep(10 * time.Millisecond) {
+		colleague.d.pace.mu.Lock()
+		from := colleague.d.pace.lastNudge[desktop.d.id.Peer()]
+		colleague.d.pace.mu.Unlock()
+		if from != "" {
+			return
+		}
+	}
+	t.Error("taking a turn its user wrote on the laptop did not make the desktop nudge ben")
+}

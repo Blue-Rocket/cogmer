@@ -494,6 +494,7 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	stored, rejected, unverified, notCounting, notGuest := 0, 0, 0, 0, 0
+	ownStored := 0 // events this machine's own user wrote on another of their machines
 	// Changes to the guest list are taken first and the list computed again from
 	// them before any other event is judged, so that a turn arriving with the
 	// invitation that admits its author is stored in the same poll (D-235, a room's
@@ -582,6 +583,9 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 			case InsertStored:
 				stored++
 				guestStored = true
+				if ev.PeerID == d.ownUser() {
+					ownStored++
+				}
 			case InsertConflict:
 				log.Printf("sync: CONFLICT from %s — %s sequence %d is already held by a different event; run `cogmer conflicts`",
 					addr, PeerName(ev.signerKey()), ev.PeerSequence)
@@ -650,6 +654,9 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 		switch res {
 		case InsertStored:
 			stored++
+			if ev.PeerID == d.ownUser() {
+				ownStored++
+			}
 			registerImages(store, &ev)
 			// Stored and shown, and withheld from every assistant until the records it
 			// names are fetched, which is off this path (D-221, an event whose identity
@@ -683,6 +690,12 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 	if stored > 0 {
 		d.roomStored(room.RoomID, false)
 		d.notify()
+	}
+	if ownStored > 0 {
+		// A turn this machine's user wrote on another of their machines reaches the
+		// room's colleagues through this one, so it nudges them as its writer did
+		// (D-305).
+		go d.nudgeRoomExcept(room.RoomID, addr)
 	}
 	return stored, nil
 }
