@@ -1,6 +1,6 @@
 # D-214 — An image a host shows after the prompt is sent in a second event
 
-**Date:** 2026-10-15 · **Status:** active · **Areas:** capture, sync
+**Date:** 2026-10-15 · **Status:** not built · **Areas:** capture, sync
 
 **Decision.** When a host shows a pasted image only after its prompt has been published, as Codex does, the
 daemon watches the session's transcript, and when the image appears it publishes a second signed event that
