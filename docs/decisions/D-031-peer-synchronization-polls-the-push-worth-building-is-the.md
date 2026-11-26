@@ -3,7 +3,7 @@
 **Date:** 2026-09-16 · **Status:** active · **Areas:** sync, view
 
 **Decision.** Machines synchronize by polling, and push between machines is not built without a
-reason beyond latency. Of a room's events, the one thing pushed between machines is a nudge,
+reason beyond latency. Of a room's turns, the one thing pushed between machines is a nudge,
 which carries no events and tells a machine to poll the sender now, so that quiet rooms can be polled slowly
 for their cost without slowing delivery (D-305, a machine nudges the machines it shares a room
 with when it writes an event). The other push that is built is the daemon's to the local view,

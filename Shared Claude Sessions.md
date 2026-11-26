@@ -1847,8 +1847,9 @@ recovers by asking again, while pushing events would need each sender to know wh
 connected and what each holds, state that can be wrong.
 
 A machine that writes an event tells the room's other machines to ask it now. The
-message carries nothing of the room, and a machine it does not reach learns of the
-event when it next asks, so a lost message delays an event and loses nothing.
+message names the room and carries none of its conversation, and a machine it does not
+reach learns of the event when it next asks, so a lost message delays an event and
+loses nothing.
 
 On a healthy network, an event typically reaches the other machines in under a second.
 A machine asks every second about a room where something has happened recently.
@@ -1860,11 +1861,12 @@ machine that cannot tell it to ask can take that long to arrive. Asking every se
 about a room where nothing happens would make most of what a machine spends on a room
 into questions that return nothing, which a hosted user pays for.
 
-Of a colleague's machines in a room, a machine asks only the one that last told it to
-ask, and asks the others again when that one stops answering. A colleague works on one
-machine at a time, so asking the others costs a request and returns nothing new. A
-machine that tells another to ask keeps telling it until it answers or asks, so no
-turn waits on a quiet machine for a message that was lost.
+Of a colleague's machines in a room that tell it to ask, a machine asks only the one
+that last told it to ask, and asks the others again when that one stops answering. A
+colleague works on one machine at a time, so asking the others costs a request and
+returns nothing new. A machine that tells another to ask keeps telling it, for up to an
+hour, until it answers or asks, so a message lost on the way does not leave a turn on a
+quiet machine.
 
 A machine that receives an event checks it, tells redelivery from conflict, stores it,
 tells the local view, and passes it on to any machine that asks.
