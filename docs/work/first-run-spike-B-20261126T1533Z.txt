@@ -1,0 +1,50 @@
+Spike B of docs/work/cowork-first-run-spikes.md: whether a plugin's userConfig options reach a Cowork cloud task.
+Run on 2026-11-26 from 15:32Z to 15:37Z. Written from the page text the extension read and the user's phone screenshot.
+
+Machines and versions
+  The Team organization Blue Rocket, 6 seats, read on claude.ai/admin-settings/billing at about 15:41Z, with
+  "Chat and Cowork unified" on as in the runs of 2026-11-20. The user uploaded the plugin from their iPhone, on
+  LTE, in a browser at claude.ai. Every task was started from Chrome 152 (user agent Chrome/152.0.0.0, platform
+  MacIntel) on the user's Mac, through the Claude in Chrome extension, by the session on branch host-probes.
+  The probe plugin is docs/work/first-run-spike, version 0.1.0, built into docs/work/first-run-spike.zip (4,329
+  bytes) on the Mac at 15:24Z. `claude plugin validate docs/work/first-run-spike` passed. Its plugin.json declares
+  two userConfig options, one sensitive and one plain, which the hook reads as CLAUDE_PLUGIN_OPTION_PROBE_SECRET and
+  CLAUDE_PLUGIN_OPTION_PROBE_PLAIN.
+
+What was done
+  1. The user sent the zip to their phone and uploaded it on claude.ai under Customize, Plugins, as a personal
+     plugin. At about 15:32Z the user sent a screenshot of the plugin's page: "First run spike", a "New" mark,
+     "by cogmer probes . 0.1.0 . updated just now", buttons "Publish to org", "Share", "Try in chat", a menu, a switch
+     in the on position, and the tabs Overview, Contents and "Commands . 1". The screenshot shows no dialog and no
+     field for an option. Asked afterwards whether a dialog asked for options, the user wrote: "no options, no step to
+     turn on, just find the file and press the upload button". None of the three buttons was used.
+  2. In Chrome, https://claude.ai/new, "hello". At 15:33Z a new task, which the page titled "Greeting", was a plain
+     chat: it answered "Hi David! What can I help you with today?".
+  3. In the same conversation, `/first-run-spike:report`, chosen from the command list ("report", "Show what the
+     first-run spike's hooks recorded in this sandbox", plugin "First run spike") and sent. The model ran the
+     command and printed the file whole. It ran in a session with CLAUDE_CODE_REMOTE true, CLAUDE_CODE_ENTRYPOINT
+     remote_cowork, host "vm", Linux x86_64. The file's own time was 2026-11-26T15:33:44Z, and its C3 section
+     finished at 15:33:51Z.
+  4. A second new task from https://claude.ai/new, "hello", then `/first-run-spike:report` again. Its file time was
+     15:36:43Z.
+
+What was seen
+  The section "B. userConfig options" of both reports:
+
+    CLAUDE_PLUGIN_OPTION_PROBE_SECRET: not set
+    CLAUDE_PLUGIN_OPTION_PROBE_PLAIN: not set
+
+  The section "C1" of both lists the names of the variables whose names hold CLAUDE, COGMER, PROXY, SSL, CERT,
+  ANTHROPIC, PLUGIN, HOME or NODE_EXTRA. Of the CLAUDE_PLUGIN names it holds CLAUDE_PLUGIN_DATA and
+  CLAUDE_PLUGIN_ROOT and no name that begins CLAUDE_PLUGIN_OPTION. CLAUDE_PLUGIN_DATA was
+  /root/.claude/plugins/data/first-run-spike-synced and CLAUDE_PROJECT_DIR was /home/claude.
+  The synced plugin folders in the task were three, under one account folder: cogmer, cogmer-cloud-8a4b1b80 and
+  first-run-spike, each with a .meta.json beside it, and a manifest.json. Names only were read, never a file.
+
+What the run does not show
+  The upload from the user's phone asked for no options and had no step to turn the plugin on, by the user's account,
+  so no marker was typed into an option and the two options reached the task unset. The extension could not load the
+  Customize page, which stayed on "Loading" in three tries, so a place on claude.ai to set the options was not
+  looked for there: the phone screenshot shows three tabs, Overview, Contents and Commands, and the user was asked
+  whether more lie to the right and has not said. Whether a marketplace plugin behaves differently was not tried, since that needs a repository the
+  user has not agreed to make. Only one account and one plan were used.

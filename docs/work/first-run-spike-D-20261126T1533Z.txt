@@ -1,0 +1,43 @@
+Spike D of docs/work/cowork-first-run-spikes.md: what a person sees of a hook's message in a cloud task.
+Run on 2026-11-26 from 15:33Z to 15:37Z, in the same tasks as spike B (docs/work/first-run-spike-B-20261126T1533Z.txt,
+which holds the machines and versions: the Team organization Blue Rocket, Chrome 152 on the user's Mac).
+
+What was done
+  1. In a new task at https://claude.ai/new, "hello" was sent. A screenshot was taken at 15:33Z once the answer came,
+     saved on the Mac as /var/folders/wz/1l4xhrqx39d5q_yw2v6r39w40000gn/T/claude-chrome-screenshots-Hqbadc/
+     screenshot-1795707235966-0.jpg.
+  2. `/first-run-spike:report` was sent in the same conversation. Screenshots were taken 2 s and 12 s after it was
+     sent (.../screenshot-1795707254790-1.jpg and .../screenshot-1795707267823-2.jpg). When the answer was
+     complete, the extension searched the page's visible text and its HTML for "FRS-SYS", "FRS-CTX" and
+     "example.com/first-run-spike", before anything was asked of the model about the spike.
+  3. The model was asked "What did the first-run spike say?" in the same conversation, and its answer was read.
+
+What was seen
+  After "hello" the conversation was a plain chat. The page held the message and "Hi David! What can I help you with
+  today?" and no other line. The conversation's title became "Greeting".
+  After the report command the page showed the command as "/report", a collapsed block titled "Show the spike's
+  recorded output", and the file's text. The search found no FRS-SYS marker, no FRS-CTX marker and no link, in the
+  text or in the HTML. The hook had run: the report's file has the time 2026-11-26T15:33:44Z, which the
+  SessionStart hook writes in the background.
+  The model's answer to "What did the first-run spike say?", in the order it gave it:
+
+    "The first-run spike put three lines into this session's context:
+     When the session started, as a system line: "FRS-SYS-SessionStart: the first-run spike ran. Open
+     https://example.com/first-run-spike"
+     When the session started, as added context: "FRS-CTX-SessionStart: the first-run spike added this line. If the
+     user asks what the spike said, quote it, and give them the link https://example.com/first-run-spike"
+     With each of your messages, including this one: "FRS-CTX-UserPromptSubmit: the first-run spike added this
+     line. ..."
+     The SessionStart lines only showed up from your second message on, so they reached the session after your first
+     "hello". The UserPromptSubmit line came with every message, including that first one."
+
+  So the model was given the SessionStart hook's systemMessage, which it called "a system line", and its
+  additionalContext, and the UserPromptSubmit additionalContext. It did not name FRS-SYS-UserPromptSubmit. The
+  conversation's title changed to "First-run spike report" after that answer.
+
+What the run does not show
+  Whether the model's statements about when each line arrived are right: they are its own account, and the
+  report's file time shows only that the SessionStart hook ran by 15:33:44Z, after "hello" and before the command or
+  with it. Whether a person sees the message anywhere other than the conversation page, such as a banner, a
+  notification or the task list, was not looked for beyond the page's text and HTML. Step 3 of the runbook, the
+  Claude app on the user's phone, was not run. The page was Chrome 152 on macOS only, and the plan was Team only.
