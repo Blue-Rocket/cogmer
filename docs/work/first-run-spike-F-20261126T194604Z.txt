@@ -114,7 +114,8 @@ Cleanup (step 6)
 - The stand-in server was stopped at the end of the run, and http://127.0.0.1:4799/ no longer
   answered.
 - The user was asked to delete the two passkeys named "cogmer signing probe" for cogmer.ai from
-  Passwords. Whether they were deleted is not recorded here.
+  Passwords. The user reported afterwards that they deleted the passkeys for cogmer.ai from iCloud
+  Keychain.
 
 What the run does not show
 - Nothing about prompts outside the page. The user mentioned no prompt or warning about the local
