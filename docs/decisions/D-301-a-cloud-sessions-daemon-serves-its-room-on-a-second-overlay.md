@@ -9,7 +9,7 @@
 - *HTTP on the port.* The page would carry an HTTP/1.1 client that decodes chunked replies and keeps a connection open, which only a JavaScript engine could test, and a machine that builds cogmer is not required to have one. Lines leave the page a line and a length to read, and the daemon's side is tested in Go.
 - *A token made fresh at each start.* A sleeping task wakes often, and each wake would break the link a user holds.
 - *A token stored for each task.* It needs a file and a rule for when it changes, and the derived token needs neither.
-- *Serving the port in every daemon.* A computer's daemon has its page on loopback, and the port would be open for every user.
+- *Serving the port in every daemon.* A computer's daemon that holds no cloud key has its page on loopback, and the port would be open for every user.
 
 **Limits.** Anyone who holds the link can read the room while the daemon is awake, the link is in the conversation of the session, and the token is the same in every link of one cloud key until that key changes. A sleeping task's daemon is unreachable and only a prompt in the task wakes it. Traffic goes through the relay and never directly. A daemon on a user's own computer that has read a cloud key serves the port too, since it speaks as a cloud session and the user gave it the key; the rejection of serving the port in every daemon rests on the users who hold no cloud key.
 
