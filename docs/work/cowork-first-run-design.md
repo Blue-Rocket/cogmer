@@ -293,10 +293,6 @@ task could take its user's addresses from the passkey.
   reaches each colleague (D-225, a machine sends each removal and new shared key to every colleague it
   knows until each acknowledges). Onboarding does not offer it; the machines page does, for a user who
   needs it.
-- What the blank page on an iPad was. The cloud page carries the passkey step and the user's machines'
-  addresses in these drafts, and once, after a long switch away, an iPad showed a blank page that a reload
-  did not clear, which has not come back and is not explained (`docs/open.md`, the item on the page that
-  reads a cloud session's room). It is to be found before the page carries them.
 - Which earlier decisions Drafts 1 and 3 change in part. D-216 (a cloud session signs with a key of its own
   that the user's shared key vouches for) names the cloud key as the one secret given to the environment,
   and D-302 (a cloud session's room is read on a static page) serves the page from GitHub Pages, so each
