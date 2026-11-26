@@ -29,9 +29,16 @@ user's Mac and from the user's iPhone.
 - Safari on the user's iPhone, with the passkey in iCloud Keychain and answered with Face ID, returned the
   same 32-byte PRF secret at the passkey's creation and at two sign-ins after it
   (`docs/work/first-run-spike-E-20261126T1650Z.txt`).
+- A page at `127.0.0.1` sent the user to a page under `cogmer.ai` and got back, by navigation alone, a
+  passkey's signature over a challenge it chose, which it verified against the key it kept at
+  registration, in Chrome 152 and Safari 26.6.2 on the Mac, with no hosts-file entry or local certificate.
+  A passkey for the site `cogmer.ai` made on one name under it signed on another, and both passkeys made
+  synced through iCloud Keychain and signed on the user's iPhone, whose chooser showed two passkeys for
+  `cogmer.ai` with nothing to tell them apart (`docs/work/first-run-spike-F-20261126T194604Z.txt`).
 
 So a cloud task can be given a secret of its user's only by the user uploading it, a hook cannot show the
-person a line, and a passkey's secret is available to a page in the user's browser.
+person a line, a passkey's secret is available to a page in the user's browser, and a page on the user's
+computer can have a passkey sign for it through a page under `cogmer.ai`.
 
 ## The route
 
@@ -106,7 +113,9 @@ schemes are kept, never replaced). D-058 leaves the scheme's version outside the
 scheme is Ed25519 and none is weaker to be downgraded to, so a P-256 scheme beside them needs that reason
 restated. The prompt names the site and the account and never what is signed,
 and the page chooses the challenge, so the user cannot see which key they certify, as the open item on
-holding a hosted user's master key says of a passkey that signs a record's hash. A hostile script that the
+holding a hosted user's master key says of a passkey that signs a record's hash. The page passes the
+identifier of the user's registered passkey, so the user is not asked to choose among passkeys for
+`cogmer.ai`, which a chooser showed with nothing to tell apart (spike F). A hostile script that the
 user answers can therefore certify a key of its own for one expiry at a time. A passkey that is lost takes
 the certified key with it, and the user registers a new one from a machine that holds the shared key.
 
@@ -210,11 +219,13 @@ Revisit when cogmer gives up the domain.
   lasts, is to be chosen.
 - How an uploaded value and the passkey keep one cloud key (D-280, a user has one cloud key at a time). A
   user who keeps the uploaded value would otherwise hold a second cloud key beside the one the passkey
-  derives. Either page that can use the passkey can derive the key and offer the value's plugin, as the machines
-  page does today (D-278, the machines page offers the cloud value as a plugin for the user to upload once). The cloud page can, once it is served under `cogmer.ai` (Draft 3). The machines
-  page can if it is served at a name under `cogmer.ai` mapped to the loopback address in the hosts file,
-  such as `local.cogmer.ai`, with a certificate the browser trusts, which the open item on holding a hosted
-  user's master key describes with its costs. At `127.0.0.1` it can use no passkey.
+  derives. In Draft 1 as written, the page that derives the key can offer the value's plugin, as the machines page
+  does today (D-278, the machines page offers the cloud value as a plugin for the user to upload once). In
+  the signing variant the passkey is not a cloud key but a second kind of key that certifies a task's
+  session key, and whether D-280 extends to it is to be decided. Either page can run the passkey step. The
+  machines page stays at `127.0.0.1` and sends the user to a page under `cogmer.ai` with its challenge,
+  taking back the signature by navigation alone, with no hosts-file entry or local certificate (spike F).
+  A step that returned a PRF secret would carry it in an address, which the signing variant avoids.
 - Which earlier decisions Drafts 1 and 3 change in part. D-216 (a cloud session signs with a key of its own
   that the user's shared key vouches for) names the cloud key as the one secret given to the environment,
   and D-302 (a cloud session's room is read on a static page) serves the page from GitHub Pages, so each
