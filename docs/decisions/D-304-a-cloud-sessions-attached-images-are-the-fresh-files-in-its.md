@@ -7,8 +7,8 @@
 **Rejected.**
 - *Sending every image in the folder.* The folder holds everything the user attached to the task, and a colleague would be given pictures the user never sent to the room.
 - *Waiting for a placeholder in the prompt.* The task's prompt carries none, so no image would ever be sent.
-- *Reading the session's transcript for the image blocks.* A cloud task's hooks send no transcript path.
+- *Reading the session's transcript for the image blocks.* A Cowork cloud task's hooks send no transcript path (D-295, a turn with no transcript path is recorded from the Stop hook's last message).
 
-**Limits.** An image attached more than 30 seconds before its prompt reaches the daemon is not sent. A task keeps the time a file was saved through a sleep, so an image saved before the session joined its room is not offered afterwards. No real Cowork task has run this: it is tested against a folder laid out as a Cowork cloud task's was on 2026-11-26.
+**Limits.** An image attached more than 30 seconds before its prompt reaches the daemon is not sent. A task keeps the time a file was saved through a sleep, so an image saved before the session joined its room is not offered afterwards. The folder is taken to be the task's alone, since a task runs in a container of its own, and a container that held two sessions would send each the other's attachments. No behavior check covers the folder, the missing placeholder or the file time, since no probe runs in a cloud task (D-297, the behavior checks are not run in a cloud container). No real Cowork task has run this: it is tested against a folder laid out as a Cowork cloud task's was on 2026-11-26.
 
 **Revisit when** a cloud host names the images a prompt carries, in the prompt or in a field of the hook.
