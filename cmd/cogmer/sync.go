@@ -115,6 +115,8 @@ func (d *Daemon) handleSync(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	d.markPeerHeardFrom(req.PeerID)
+	// A machine that polls this one has every nudge this machine owed it (D-305).
+	d.nudges.notePolled(req.Endpoint)
 	// A machine that asked for the room and was admitted has joined it, so it is a
 	// sync target from now on, and a machine of a guest that never asked is not
 	// (D-103, a room's sync targets are the machines from which a session has joined
@@ -208,12 +210,16 @@ func (d *Daemon) syncPeer(addr string, every time.Duration, stop <-chan struct{}
 			return
 		default:
 		}
-		_, gen := d.paceWatch()
+		changed, gen := d.paceWatch()
 		if d.setAside(addr) {
-			// Another machine of this address's user nudged last, so this one waits
-			// for a nudge of its own and is not polled (D-305).
-			if poll, _ := d.waitToPoll(addr, time.Hour, gen, time.Now(), true, stop); !poll {
+			// Another machine of this address's user nudged last and answers, so this one
+			// is not polled, and is looked at again when a nudge or a failure changes that
+			// (D-305).
+			select {
+			case <-stop:
 				return
+			case <-changed:
+			case <-time.After(time.Hour):
 			}
 			continue
 		}
@@ -222,11 +228,13 @@ func (d *Daemon) syncPeer(addr string, every time.Duration, stop <-chan struct{}
 		delay := every
 		if err != nil {
 			d.markPeerUnreachable(addr, err)
+			d.pollFailed(addr)
 			failures++
 			empty = 0
 			delay = d.failDelay(addr, every, failures, started)
 		} else {
 			failures = 0
+			d.pollAnswered(addr)
 			if n > 0 {
 				empty = 0
 				log.Printf("sync: received %d event(s) from %s", n, shortEndpoint(addr))

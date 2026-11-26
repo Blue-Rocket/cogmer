@@ -32,6 +32,7 @@ type pollPace struct {
 	wokenAddr map[string]time.Time
 	nudgerOf  map[string]string // address → its machine's user
 	lastNudge map[string]string // user → the address of their last nudge
+	failing   map[string]bool   // address → its last poll failed
 	gen       uint64            // counts the wakes so far
 	changed   chan struct{}     // closed, and replaced, at each wake
 
@@ -79,7 +80,9 @@ func (p *pollPace) wakeLocked(roomID string, now time.Time) {
 }
 
 // nudgedBy records that a machine of user at addr nudged this machine, which makes addr
-// the one address of user that is polled, and polls it at once (D-305).
+// the one address of a colleague that is polled, and polls it at once (D-305). A nudge
+// from another machine of this machine's own user polls it and sets none aside, so that
+// a user's own machines keep polling one another and pass on what each holds.
 func (d *Daemon) nudgedBy(user, addr string) {
 	p := &d.pace
 	p.mu.Lock()
@@ -87,21 +90,69 @@ func (d *Daemon) nudgedBy(user, addr string) {
 	if p.wokenAddr == nil {
 		p.wokenAddr, p.nudgerOf, p.lastNudge = map[string]time.Time{}, map[string]string{}, map[string]string{}
 	}
-	p.nudgerOf[addr] = user
-	p.lastNudge[user] = addr
+	if user != d.ownUser() {
+		p.nudgerOf[addr] = user
+		p.lastNudge[user] = addr
+	}
 	p.wokenAddr[addr] = time.Now()
 	p.bumpLocked()
 }
 
-// setAside says whether addr is a machine that has nudged this machine and whose user
-// has nudged since from another address, so that addr is not polled until it nudges
-// again (D-305).
+// ownUser is the user this machine speaks for, which is the machine itself when it has no
+// user identity.
+func (d *Daemon) ownUser() string {
+	if d.id == nil {
+		return ""
+	}
+	if d.id.HasUser() {
+		return d.id.User
+	}
+	return d.id.PeerID
+}
+
+// setAside says whether addr is a colleague's machine that has nudged this machine and
+// whose user has nudged since from another address that still answers, so that addr is
+// not polled until it nudges again (D-305). When the address that nudged last stops
+// answering, the user's other machines are polled again, so that a turn written on one
+// of them whose nudge was lost is not left there.
 func (d *Daemon) setAside(addr string) bool {
 	p := &d.pace
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	user, ok := p.nudgerOf[addr]
-	return ok && p.lastNudge[user] != addr
+	if !ok {
+		return false
+	}
+	last := p.lastNudge[user]
+	return last != addr && !p.failing[last]
+}
+
+// pollFailed and pollAnswered record whether addr's last poll failed, and wake the poll
+// loops when that changes, since a machine set aside is polled while its user's last
+// nudger fails.
+func (d *Daemon) pollFailed(addr string)   { d.setFailing(addr, true) }
+func (d *Daemon) pollAnswered(addr string) { d.setFailing(addr, false) }
+
+func (d *Daemon) setFailing(addr string, failing bool) {
+	p := &d.pace
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.failing[addr] == failing {
+		return
+	}
+	if p.failing == nil {
+		p.failing = map[string]bool{}
+	}
+	if failing {
+		p.failing[addr] = true
+	} else {
+		delete(p.failing, addr)
+	}
+	p.gen++
+	if p.changed != nil {
+		close(p.changed)
+		p.changed = nil
+	}
 }
 
 func (p *pollPace) bumpLocked() {

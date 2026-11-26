@@ -1859,9 +1859,11 @@ machine that cannot tell it to ask can take that long to arrive. Asking every se
 about a room where nothing happens would make most of what a machine spends on a room
 into questions that return nothing, which a hosted user pays for.
 
-Of each user's machines in a room, a machine asks only the one that last told it to
-ask. A user works on one machine at a time, so asking the others costs a request and
-returns nothing new.
+Of a colleague's machines in a room, a machine asks only the one that last told it to
+ask, and asks the others again when that one stops answering. A colleague works on one
+machine at a time, so asking the others costs a request and returns nothing new. A
+machine that tells another to ask keeps telling it until it answers or asks, so no
+turn waits on a quiet machine for a message that was lost.
 
 A machine that receives an event checks it, tells redelivery from conflict, stores it,
 tells the local view, and passes it on to any machine that asks.
