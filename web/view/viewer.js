@@ -179,7 +179,7 @@
   function connect() {
     if (http) return Promise.resolve(http);
     if (!addr || !token) return Promise.reject(new Error('this page needs the link from your Claude session'));
-    if (!asleep) say('Loading the viewer…');
+    if (!asleep) say('Loading the viewer… the first time this opens on a phone it can take 20 seconds.');
     return loadModule().then(() => {
       if (!asleep) say('Connecting to your session…');
       const limit = new Promise((_, reject) => setTimeout(() => reject(new Error('asleep')), DIAL_WITHIN));

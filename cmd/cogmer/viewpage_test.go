@@ -91,6 +91,7 @@ func TestTheStaticPageKeepsItsTimingsOnceTheRoomHasDrawn(t *testing.T) {
 		"the first data marks the trail":    "detail('first data'); showTiming();",
 		"the steps shown":                   "timing.textContent = trail.join(",
 		"a tap hides it":                    "timing.addEventListener('click'",
+		"the wait it says to expect":        "the first time this opens on a phone it can take 20 seconds",
 	} {
 		if n := strings.Count(src, want); n != 1 {
 			t.Errorf("%s: viewer.js holds %q %d times, want once", what, want, n)
