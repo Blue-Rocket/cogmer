@@ -8,7 +8,8 @@ Machines and versions
   OS number in that string, so the phone's system version is not known from it. The user, asked to read it from
   Settings, wrote "ios 27.0.1", the same number as the string's Version/27.0.1. The user reached the page from the Claude app (the screenshot shows a "Claude" return
   link at the top), so the app opened Safari. The page is https://probe.cogmer.ai/prf/, served from the droplet.
-  Where the passkey was saved (iCloud Keychain or another manager) was not asked, so it is not known.
+  Asked afterwards what answered the phone's prompts and where the passkey was saved, the user wrote "face id" and
+  "icloud keychain".
 
 What was done
   1. The user opened the page. It printed the user agent above and "PublicKeyCredential present, site
@@ -27,7 +28,6 @@ What was seen
 
 What the run does not show
   Chrome and Safari on the Mac, and Chrome on the iPhone, were not run. Whether the same passkey on the Mac gives
-  the same secret (step 3 of the runbook) was not run. The app that stored the passkey and whether it syncs are not known. Only the first eight bytes of each hash were shown, so equality of the secrets
-  is shown to that length. The phone's prompt was answered by the user and what it asked (Face ID, a code) was not
-  recorded. Whether a page inside the Claude app's own browser behaves the same was not run. The passkey
+  the same secret (step 3 of the runbook) was not run. Whether the passkey reached any other device through iCloud Keychain was not looked at. Only the first eight bytes of each hash were shown, so equality of the secrets
+  is shown to that length. The prompts' wording was not recorded, and the answers above are the user's, given afterwards. Whether a page inside the Claude app's own browser behaves the same was not run. The passkey
   "PRF probe" for probe.cogmer.ai is still on the phone until the user deletes it.
