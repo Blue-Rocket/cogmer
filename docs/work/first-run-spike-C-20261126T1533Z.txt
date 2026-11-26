@@ -22,8 +22,8 @@ The five reports
      known.
   R  15:46:09Z  the first task, resumed 10 minutes and about 15 seconds after its last answer, by "hello again"
      and then the report.
-  U  15:48:44Z  a report the user ran in a task of their own and pasted into chat. The surface it was started from is
-     not known. Its list of variable names has two names the others lack: CLAUDE_CHROME_PERMISSION_MODE and
+  U  15:48:44Z  a report the user ran in a task of their own and pasted into chat. The user later said it was
+     the result of their phone test; which app or browser on the phone is not known. Its list of variable names has two names the others lack: CLAUDE_CHROME_PERMISSION_MODE and
      CLAUDE_CODE_ENABLE_CFC.
   N  15:49:39Z  a third new task started by the session, after the change.
   -  Between 15:50Z and 16:14Z the user replaced the entry "*.probe.cogmer.ai" with "probe.cogmer.ai" and said so in
