@@ -6,7 +6,7 @@
 
 **Rejected.**
 - *A long poll or a push.* The port speaks one request and one answer in lines (D-301, a cloud session's daemon serves its room on a second overlay port, in lines, with a token made from the cloud key), and a held request needs a way to tell a slept daemon from a quiet room.
-- *A sequence number in place of a hash.* A number is true only of what it counts, and the state holds more than the room's events, such as who is online and the guest list. A hash covers whatever the page shows.
+- *A sequence number in place of a hash.* A number is true only of what it counts, and the state holds more than the room's events, such as who is online and the guest list. A hash covers whatever the newest page shows.
 - *Leaving the lists' age in the hash.* The hash would differ at every poll and no answer would be short.
 
 **Limits.** The daemon still builds the whole snapshot to hash it, which cost 36 ms for 300 turns in a run on 2026-11-26, so the saving is bytes sent and not the daemon's work. A change that moves only a field outside the hash, other than the lists' age, is not seen by a page until the room changes, so a field that moves on its own belongs in the answer beside the age. The hash covers the newest page and what the page is told of the turns outside it (D-308), so a change to a turn on an earlier page that is not one of those is not seen by it.
