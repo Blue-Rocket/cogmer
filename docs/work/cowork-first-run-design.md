@@ -162,11 +162,24 @@ Revisit when cogmer gives up the domain.
 
 - Where the task learns how to reach its user's machines. A task takes its user's lists only from one of
   the user's machines (D-245, a cloud session takes its user's lists only from one of the user's machines),
-  and today the cloud value carries their relay addresses. A machine that approves or renews a task can
-  give it the addresses then. For the first certificate, which the page makes, the page needs them too: a
-  hosted machine at a fixed name under `cogmer.ai` could give them, or the page could carry them from the
-  browser's storage of an earlier setup, which Safari clears after seven days of browser use without a visit
-  to the site (https://webkit.org/blog/10218/full-third-party-cookie-blocking-and-more/, read on 2026-11-26).
+  and today the cloud value carries their relay addresses. A machine that approves or renews a task gives
+  it the addresses then, so the question is the first certificate, which the page makes:
+  - At the user's own computer, the cloud page sends the user to the machines page at `127.0.0.1` with the
+    task's address and token after `#`, and the machine dials the task and gives it a certificate, the
+    lists and the addresses, so the page carries nothing back.
+  - With a hosted machine, the passkey's user handle, up to 64 bytes set at registration and returned at
+    every sign-in on every device, names the hosted machine, whose name under `cogmer.ai` the page reaches
+    from any device.
+  - A user whose only machine is a computer, away from it, gets the first certificate from the passkey and
+    the lists and a renewal when the computer answers. A machine's overlay address is about 186
+    characters (`docs/work/cloud-run-20261025T171545Z.txt`), more than a user handle holds.
+  The passkey's `largeBlob` extension, which stores up to a few kilobytes with a passkey, could carry the
+  computer's addresses, and is not designed around. On 2026-11-26 the sources read said that iCloud
+  Keychain and Google Password Manager on desktop Chrome store a blob, that Windows Hello, Samsung Pass and
+  eight third-party password managers declined it at registration, that Microsoft Password Manager failed
+  the write, and that Chrome on Android does not pass it on
+  (https://www.corbado.com/blog/webauthn-l3-credential-manager-support, tested in August 2026). None says
+  whether a blob syncs with the passkey to the user's other devices, which is the case it would serve.
 - What the identity of a user with no computer rests on. It rests on a hosted machine, which onboarding
   suggests (D-285, a user with no computer of their own has a machine hosted for them): the machine holds
   the shared key, certifies the passkey and renews the user's tasks. Deriving the master and shared keys
