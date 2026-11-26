@@ -239,43 +239,98 @@ func (d *Daemon) addrSince(addr string, t time.Time, times func(*pollPace) map[s
 	return false
 }
 
-// quietDelay is how long to wait before polling addr again after empty answers in a row,
-// for a loop that started at started.
-func (d *Daemon) quietDelay(addr string, every time.Duration, empty int, started time.Time) time.Duration {
-	quietCap, dormantCap := d.paceCaps()
-	return d.backoff(addr, every, empty, quietCap, dormantCap, started)
+// pollState is what the loop polling one address knows of its own polls.
+type pollState struct {
+	started  time.Time   // when the loop started
+	last     pollOutcome // what the last poll did
+	failures int         // polls in a row that failed
+	empty    int         // polls in a row that answered with nothing
 }
 
-// failDelay is how long to wait before polling addr again after failures in a row. A
-// machine that does not answer is polled up to every syncBackoffCap, and up to every
-// dormantPollCap once its rooms are dormant, so a machine that is off for days is asked
-// once a minute (D-304).
-func (d *Daemon) failDelay(addr string, every time.Duration, failures int, started time.Time) time.Duration {
-	failCap := d.pace.failCap
-	if failCap == 0 {
-		failCap = syncBackoffCap
+type pollOutcome int
+
+const (
+	notPolled pollOutcome = iota
+	pollFailedNow
+	pollBroughtEvents
+	pollBroughtNothing
+)
+
+// polled records what a poll did.
+func (s *pollState) polled(events int, err error) {
+	switch {
+	case err != nil:
+		s.last, s.failures, s.empty = pollFailedNow, s.failures+1, 0
+	case events > 0:
+		s.last, s.failures, s.empty = pollBroughtEvents, 0, 0
+	default:
+		s.last, s.failures = pollBroughtNothing, 0
+		s.empty++
 	}
-	_, dormantCap := d.paceCaps()
-	return d.backoff(addr, every, failures-1, failCap, dormantCap, started)
 }
 
-func (d *Daemon) paceCaps() (quietCap, dormantCap time.Duration) {
-	quietCap, dormantCap = d.pace.quietCap, d.pace.dormantCap
-	if quietCap == 0 {
-		quietCap = quietPollCap
-	}
-	if dormantCap == 0 {
-		dormantCap = dormantPollCap
-	}
-	return quietCap, dormantCap
+// woken records that a wake ended the wait, after which the waits start again from the
+// usual interval.
+func (s *pollState) woken() { s.empty = 0 }
+
+// pollFacts is what decidePoll needs to know beyond the loop's own polls.
+type pollFacts struct {
+	setAside bool        // another machine of the address's user nudged last and answers
+	dormant  func() bool // no room the address is asked about has stored an event lately
 }
 
-// backoff doubles every n times, up to activeCap, or up to dormantCap once addr is dormant.
-func (d *Daemon) backoff(addr string, every time.Duration, n int, activeCap, dormantCap time.Duration, started time.Time) time.Duration {
-	top := activeCap
-	if dormantCap > top {
-		top = dormantCap
+// pollPacing is the interval and the caps a decision uses.
+type pollPacing struct {
+	every, quietCap, failCap, dormantCap time.Duration
+}
+
+// pollDecision is when an address is polled next.
+type pollDecision struct {
+	setAside bool          // not polled until a nudge or a failure changes the facts
+	wait     time.Duration // how long to wait before the next poll
+	wakeable bool          // whether a wake of the address ends the wait early
+	least    time.Duration // the least time between two polls, however soon a wake comes
+}
+
+// decidePoll is the one place that decides when an address is polled next, from what its
+// loop's polls did and what is known of its rooms and its user's machines (D-304, an
+// address is polled less often while its rooms are quiet; D-305, a machine nudges the
+// machines it shares a room with when it writes an event).
+//
+//   - A colleague's machine that another of the colleague's machines has displaced as the
+//     last to nudge is set aside, and not polled at all.
+//   - The first poll is at once.
+//   - After a failure, the wait doubles from the interval up to failCap, or up to
+//     dormantCap once the address's rooms are dormant. A wake does not end it.
+//   - After a poll that brought events, the wait is the interval.
+//   - After a poll that brought nothing, the wait doubles from the interval up to
+//     quietCap, or up to dormantCap once the rooms are dormant, and a wake ends it.
+//   - However soon a wake comes, two polls are at least the interval apart.
+//
+// dormant is asked only once a wait reaches the cap for rooms that are not dormant, since
+// answering it reads the room records.
+func decidePoll(s pollState, f pollFacts, p pollPacing) pollDecision {
+	if f.setAside {
+		return pollDecision{setAside: true}
 	}
+	d := pollDecision{least: p.every}
+	switch s.last {
+	case notPolled:
+	case pollFailedNow:
+		d.wait = backoff(p.every, s.failures-1, p.failCap, p.dormantCap, f.dormant)
+	case pollBroughtEvents:
+		d.wait = p.every
+	case pollBroughtNothing:
+		d.wait = backoff(p.every, s.empty, p.quietCap, p.dormantCap, f.dormant)
+		d.wakeable = true
+	}
+	return d
+}
+
+// backoff doubles every n times, up to activeCap, or up to dormantCap once dormant says
+// so.
+func backoff(every time.Duration, n int, activeCap, dormantCap time.Duration, dormant func() bool) time.Duration {
+	top := max(activeCap, dormantCap)
 	delay := every
 	for i := 0; i < n && delay < top; i++ {
 		delay *= 2
@@ -284,8 +339,32 @@ func (d *Daemon) backoff(addr string, every time.Duration, n int, activeCap, dor
 		return max(delay, every)
 	}
 	limit := activeCap
-	if d.addrDormant(addr, started) {
+	if dormant() {
 		limit = dormantCap
 	}
 	return max(min(delay, limit), every)
+}
+
+// pacing is the interval and caps this daemon decides with, which are the constants
+// unless a test says otherwise.
+func (d *Daemon) pacing(every time.Duration) pollPacing {
+	p := pollPacing{every: every, quietCap: d.pace.quietCap, failCap: d.pace.failCap, dormantCap: d.pace.dormantCap}
+	if p.quietCap == 0 {
+		p.quietCap = quietPollCap
+	}
+	if p.failCap == 0 {
+		p.failCap = syncBackoffCap
+	}
+	if p.dormantCap == 0 {
+		p.dormantCap = dormantPollCap
+	}
+	return p
+}
+
+// pollFactsFor is what is known now of addr for a loop that started at started.
+func (d *Daemon) pollFactsFor(addr string, started time.Time) pollFacts {
+	return pollFacts{
+		setAside: d.setAside(addr),
+		dormant:  func() bool { return d.addrDormant(addr, started) },
+	}
 }

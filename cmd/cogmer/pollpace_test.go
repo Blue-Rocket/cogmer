@@ -259,3 +259,90 @@ func TestAColleaguePolledSlowlyInAQuietRoomIsOnline(t *testing.T) {
 		t.Error("a machine that has not answered for longer than the longest wait between polls is shown as online")
 	}
 }
+
+// decidePoll, at the real interval and caps, gives each rule of when an address is polled
+// next (D-304, D-305).
+func TestDecidePollGivesEachRuleOfWhenAnAddressIsPolledNext(t *testing.T) {
+	p := pollPacing{every: time.Second, quietCap: quietPollCap, failCap: syncBackoffCap, dormantCap: dormantPollCap}
+	asleep := func() bool { return true }
+	awake := func() bool { return false }
+	unasked := func() bool { t.Helper(); t.Error("dormancy was asked before a wait reached its cap"); return false }
+	s := func(last pollOutcome, failures, empty int) pollState {
+		return pollState{last: last, failures: failures, empty: empty}
+	}
+	for _, c := range []struct {
+		name     string
+		s        pollState
+		f        pollFacts
+		wait     time.Duration
+		wakeable bool
+		aside    bool
+	}{
+		{"a machine set aside is not polled", s(pollBroughtNothing, 0, 3), pollFacts{setAside: true, dormant: unasked}, 0, false, true},
+		{"the first poll is at once", s(notPolled, 0, 0), pollFacts{dormant: unasked}, 0, false, false},
+		{"a poll that brought events is followed after the interval", s(pollBroughtEvents, 0, 0), pollFacts{dormant: unasked}, time.Second, false, false},
+		{"one empty answer doubles the wait, and a wake ends it", s(pollBroughtNothing, 0, 1), pollFacts{dormant: unasked}, 2 * time.Second, true, false},
+		{"four empty answers wait 16s, below the quiet cap", s(pollBroughtNothing, 0, 4), pollFacts{dormant: unasked}, 16 * time.Second, true, false},
+		{"five empty answers stop at the quiet cap", s(pollBroughtNothing, 0, 5), pollFacts{dormant: awake}, quietPollCap, true, false},
+		{"dormant rooms raise the cap to a minute", s(pollBroughtNothing, 0, 9), pollFacts{dormant: asleep}, dormantPollCap, true, false},
+		{"the first failure waits the interval, and a wake does not end it", s(pollFailedNow, 1, 0), pollFacts{dormant: unasked}, time.Second, false, false},
+		{"failures stop at the failure cap", s(pollFailedNow, 9, 0), pollFacts{dormant: awake}, syncBackoffCap, false, false},
+		{"failures in dormant rooms wait up to a minute", s(pollFailedNow, 9, 0), pollFacts{dormant: asleep}, dormantPollCap, false, false},
+	} {
+		d := decidePoll(c.s, c.f, p)
+		if d.setAside != c.aside || d.wait != c.wait || d.wakeable != c.wakeable {
+			t.Errorf("%s: got set aside %v, wait %v, wakeable %v; want %v, %v, %v",
+				c.name, d.setAside, d.wait, d.wakeable, c.aside, c.wait, c.wakeable)
+		}
+		if !c.aside && d.least != time.Second {
+			t.Errorf("%s: two polls may be %v apart; want the interval", c.name, d.least)
+		}
+	}
+}
+
+// A poll's outcome and a wake change the loop's state as decidePoll expects.
+func TestAPollsOutcomeAndAWakeChangeTheLoopsState(t *testing.T) {
+	var s pollState
+	s.polled(0, nil)
+	s.polled(0, nil)
+	if s.last != pollBroughtNothing || s.empty != 2 {
+		t.Fatalf("two empty answers left %+v", s)
+	}
+	s.woken()
+	if s.empty != 0 {
+		t.Errorf("a wake left %d empty answers counted", s.empty)
+	}
+	s.polled(0, errors.New("refused"))
+	s.polled(0, errors.New("refused"))
+	if s.last != pollFailedNow || s.failures != 2 || s.empty != 0 {
+		t.Errorf("two failures left %+v", s)
+	}
+	s.polled(3, nil)
+	if s.last != pollBroughtEvents || s.failures != 0 || s.empty != 0 {
+		t.Errorf("a poll that brought events left %+v", s)
+	}
+}
+
+// A wake that comes while a poll is under way ends the wait after that poll, as one that
+// comes during the wait does.
+func TestAWakeDuringAPollEndsTheWaitAfterIt(t *testing.T) {
+	var d *Daemon
+	var polls *pollTimes
+	var wakeDuring atomic.Bool
+	d, polls = paceDaemon(t, time.Second, time.Second, time.Hour, func() int {
+		if wakeDuring.Swap(false) {
+			d.roomStored("room-pace", true) // a prompt written here while the poll is under way
+		}
+		return 0
+	})
+	go d.RunSync(nil, 20*time.Millisecond)
+	time.Sleep(900 * time.Millisecond) // the waits have grown past 300ms
+	wakeDuring.Store(true)
+	for deadline := time.Now().Add(2 * time.Second); wakeDuring.Load() && time.Now().Before(deadline); time.Sleep(time.Millisecond) {
+	}
+	woke := polls.count()
+	time.Sleep(150 * time.Millisecond)
+	if polls.count() == woke {
+		t.Error("a wake during a poll did not end the wait after it")
+	}
+}

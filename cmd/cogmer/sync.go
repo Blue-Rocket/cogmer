@@ -202,19 +202,21 @@ func (d *Daemon) syncPeer(addr string, every time.Duration, stop <-chan struct{}
 	if pull == nil {
 		pull = d.pullFrom
 	}
-	started := time.Now()
-	failures, empty := 0, 0
+	st := pollState{started: time.Now()}
+	var polled time.Time
+	var gen uint64 // the pacing changes seen before the last poll began, so one during it wakes the wait after it
 	for {
 		select {
 		case <-stop:
 			return
 		default:
 		}
-		changed, gen := d.paceWatch()
-		if d.setAside(addr) {
-			// Another machine of this address's user nudged last and answers, so this one
-			// is not polled, and is looked at again when a nudge or a failure changes that
-			// (D-305).
+		changed, now := d.paceWatch()
+		if st.last == notPolled {
+			gen = now
+		}
+		dec := decidePoll(st, d.pollFactsFor(addr, st.started), d.pacing(every))
+		if dec.setAside {
 			select {
 			case <-stop:
 				return
@@ -223,39 +225,33 @@ func (d *Daemon) syncPeer(addr string, every time.Duration, stop <-chan struct{}
 			}
 			continue
 		}
-		polled := time.Now()
+		if dec.wait > 0 {
+			poll, woken := d.waitToPoll(addr, dec.wait, gen, polled, dec.wakeable, stop)
+			if !poll {
+				return
+			}
+			if woken {
+				st.woken()
+				if rest := dec.least - time.Since(polled); rest > 0 {
+					select {
+					case <-stop:
+						return
+					case <-time.After(rest):
+					}
+				}
+			}
+		}
+		_, gen = d.paceWatch()
+		polled = time.Now()
 		n, err := pull(addr)
-		delay := every
+		st.polled(n, err)
 		if err != nil {
 			d.markPeerUnreachable(addr, err)
 			d.pollFailed(addr)
-			failures++
-			empty = 0
-			delay = d.failDelay(addr, every, failures, started)
 		} else {
-			failures = 0
 			d.pollAnswered(addr)
 			if n > 0 {
-				empty = 0
 				log.Printf("sync: received %d event(s) from %s", n, shortEndpoint(addr))
-			} else {
-				empty++
-				delay = d.quietDelay(addr, every, empty, started)
-			}
-		}
-		poll, woken := d.waitToPoll(addr, delay, gen, polled, err == nil && n == 0, stop)
-		if !poll {
-			return
-		}
-		if woken {
-			empty = 0 // the waits after a wake start again from the usual interval
-			// However often it is woken, an address is polled at most every interval.
-			if rest := every - time.Since(polled); rest > 0 {
-				select {
-				case <-stop:
-					return
-				case <-time.After(rest):
-				}
 			}
 		}
 	}
