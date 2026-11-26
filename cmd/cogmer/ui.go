@@ -864,6 +864,9 @@ func (d *Daemon) markPeerUnreachable(addr string, err error) {
 // discardConnection throws away the connection held to a peer that has not answered for a
 // while, so that the next poll builds a new one.
 func (d *Daemon) discardConnection(addr string, failing time.Duration) {
+	// The client kept for the address goes too, so that the next poll makes a new
+	// connection over whatever the transport builds (D-303).
+	d.dropSyncClient(addr)
 	e, err := ParseEndpoint(addr)
 	if err != nil {
 		return

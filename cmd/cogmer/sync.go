@@ -229,18 +229,14 @@ func (d *Daemon) syncPeer(addr string, every time.Duration, stop <-chan struct{}
 }
 
 func (d *Daemon) pullFrom(addr string) (int, error) {
-	// Generous, because first contact with a peer on another network includes
-	// building a tunnel: probing the network, choosing a relay and handshaking.
-	// Later rounds ride the cached client and return in milliseconds, so this
-	// bounds the first attempt rather than the ordinary one.
+	// The client is kept from one poll to the next, with its connection, and its
+	// timeout is generous because first contact with a peer on another network
+	// includes building a tunnel: probing the network, choosing a relay and
+	// handshaking (D-303, a machine keeps one connection to each address it polls).
 	// A room records where its members listen, not which member listens where, so
 	// there is no single key to expect here. Any known peer is accepted, and the
 	// signed request inside binds identity exactly (D-044, sync requests are signed).
-	conf, cerr := d.clientConfig("")
-	if cerr != nil {
-		return 0, cerr
-	}
-	client, err := clientFor(addr, 30*time.Second, conf)
+	client, err := d.syncClient(addr)
 	if err != nil {
 		return 0, err
 	}
