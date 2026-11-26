@@ -7,7 +7,7 @@ remains unreachable it is logged again every ten minutes, and when it answers ag
 once more with how long it was gone. A failed poll in between says nothing.
 
 **Support.**
-- Polling runs every second, so a line for each failed poll writes two lines a second
+- Polling runs as often as every second, so a line for each failed poll writes two lines a second
   that say the same thing and bury the transition, which is the line that matters.
   `cmd/cogmer/ui.go`, `markPeerUnreachable`.
 - The ten-minute repeat lets somebody reading a log an hour later learn that the machine is

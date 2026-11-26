@@ -190,24 +190,31 @@ func (d *Daemon) RunSync(_ []string, every time.Duration) {
 	}
 }
 
-// syncPeer polls one address until it is told to stop.
+// syncPeer polls one address until it is told to stop. An address that answers with
+// nothing is polled less often, and at the usual interval again when it sends an event or
+// a room it is asked about stores one (D-304, an address is polled less often while its
+// rooms are quiet).
 func (d *Daemon) syncPeer(addr string, every time.Duration, stop <-chan struct{}) {
 	pull := d.pull
 	if pull == nil {
 		pull = d.pullFrom
 	}
-	failures := 0
+	started := time.Now()
+	failures, empty := 0, 0
 	for {
 		select {
 		case <-stop:
 			return
 		default:
 		}
+		_, gen := d.paceWatch()
+		polled := time.Now()
 		n, err := pull(addr)
 		delay := every
 		if err != nil {
 			d.markPeerUnreachable(addr, err)
 			failures++
+			empty = 0
 			for i := 1; i < failures && delay < syncBackoffCap; i++ {
 				delay *= 2
 			}
@@ -217,13 +224,38 @@ func (d *Daemon) syncPeer(addr string, every time.Duration, stop <-chan struct{}
 		} else {
 			failures = 0
 			if n > 0 {
+				empty = 0
 				log.Printf("sync: received %d event(s) from %s", n, shortEndpoint(addr))
+			} else {
+				empty++
+				delay = d.quietDelay(addr, every, empty, started)
+			}
+		}
+		if !d.waitToPoll(addr, delay, gen, polled, err == nil && n == 0, stop) {
+			return
+		}
+	}
+}
+
+// waitToPoll waits delay, or less when wake is set and a room that addr is asked about
+// stores an event after polled. It says false when the loop is told to stop.
+func (d *Daemon) waitToPoll(addr string, delay time.Duration, gen uint64, polled time.Time, wake bool, stop <-chan struct{}) bool {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	for {
+		changed, now := d.paceWatch()
+		if wake && now != gen {
+			gen = now
+			if d.addrActiveSince(addr, polled) {
+				return true
 			}
 		}
 		select {
 		case <-stop:
-			return
-		case <-time.After(delay):
+			return false
+		case <-timer.C:
+			return true
+		case <-changed:
 		}
 	}
 }
@@ -624,6 +656,7 @@ func (d *Daemon) pullRoom(client *http.Client, addr string, room Room) (int, err
 	}
 	readList()
 	if stored > 0 {
+		d.roomActive(room.RoomID)
 		d.notify()
 	}
 	return stored, nil

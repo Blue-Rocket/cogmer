@@ -1,0 +1,13 @@
+# D-304 — An address is polled less often while its rooms are quiet
+
+**Date:** 2026-11-26 · **Status:** active · **Areas:** sync, transport
+
+**Decision.** A machine polls an address every second while the address sends events, and each poll that returns nothing doubles the wait before the next, up to 20 seconds, or up to 60 seconds once no room the address is asked about has stored an event for 30 minutes. The address is polled at once, and every second again, when one of those rooms stores an event, whether a session on this machine wrote it, such as a prompt or a reply, or a poll of another address brought it, and when the room's view is opened on this machine, since its reader wants what has arrived. In a room with a turn a minute, 59 of an address's 60 polls a minute return nothing, and a poll that returns nothing costs its request and its signature checks all the same, so a machine that polls every address every second spends most of its CPU and bytes asking about rooms where nothing has happened. Both waits are shorter than the 90 seconds a kept connection may be idle, so a slow poll uses the connection that D-303 (a machine keeps one connection to each address it polls) keeps (`clientFor` in `cmd/cogmer/transport.go`). The 90 seconds are shorter than the two minutes the other side's server keeps an idle connection, so the server never closes a connection this side is about to use (`peerServer` in `cmd/cogmer/daemon.go`).
+
+**Rejected.**
+- *A long poll, in which the answering machine holds each request until it has an event or a time limit passes.* Propagation would be under a second at the cost of a held connection for each colleague, and a change to the sync protocol, which each daemon would have to read alongside the versions before it (D-065, the daemon reads a range of wire versions so upgrading is not a flag day).
+- *Push between machines.* D-031 (peer synchronization polls) rejects it, and quiet rooms are a cost to poll, not a need for faster propagation.
+
+**Limits.** The first event after a quiet spell reaches this machine up to 20 seconds late, or up to 60 seconds after half an hour of quiet. A colleague's event reaches a session's model only when that session's next prompt is submitted (§16, propagation), so the delay shows in the view, and in what the model is given only when a prompt is submitted before the event arrives.
+
+**Revisit when** users say an event after a quiet spell arrives too late in the view, or when the waits are measured to leave most of a hosted machine's cost in polls that return nothing.

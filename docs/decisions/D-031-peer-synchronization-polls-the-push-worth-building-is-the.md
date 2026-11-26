@@ -17,9 +17,9 @@ server-sent events over loopback.
   not. §16, and §17 (shared conversation UI).
 
 **Rejected.**
-- *Push between machines, for faster propagation.* Polling every second meets the
-  propagation target, and pushing would need each sender to know who is connected and
-  what each holds, state that can be wrong.
+- *Push between machines, for faster propagation.* Polling every second while a room
+  is active meets the propagation target, and pushing would need each sender to know
+  who is connected and what each holds, state that can be wrong.
 
 **Revisit when** something needs propagation between machines faster than a second for a
 reason other than conversation, such as showing presence, or when rooms are large enough

@@ -179,6 +179,9 @@ type Daemon struct {
 	tls peerTLS
 	// The client kept for each address this machine polls (D-303).
 	peerConns peerConns
+	// When each room last stored an event, which sets how often its addresses are polled
+	// (D-304).
+	pace pollPace
 
 	// When each peer last made an authenticated request of this daemon, by peer.
 	// Held with the peer states below, and in memory like them.
@@ -928,7 +931,11 @@ func (d *Daemon) appendLocal(store *Store, room Room, sessionID, kind, content s
 	if id.HasUser() {
 		removals = d.members.RemovalsSeen(id.User)
 	}
-	return store.AppendAs(seq, id, removals, room.RoomID, sessionID, kind, content, meta)
+	ev, err := store.AppendAs(seq, id, removals, room.RoomID, sessionID, kind, content, meta)
+	if err == nil {
+		d.roomActive(room.RoomID)
+	}
+	return ev, err
 }
 
 // reportLostState compares what a room holds against what this peer recorded
