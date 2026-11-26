@@ -89,8 +89,9 @@ the private key that never leaves the authenticator, and the task's certificate 
 
 Decision. A cloud task's session key is certified by an assertion of the user's passkey whose challenge is
 the session key and the certificate's expiry. The passkey's public key is certified once, when the passkey
-is registered, by a machine that holds the user's shared key, as a cloud key is certified today (D-246,
-D-216), and a receiver checks the assertion's signature with that key, that its site is `cogmer.ai`, that
+is registered, by a machine that holds the user's shared key, as a cloud key is certified today (D-246, a
+cloud environment is added from the machines page; D-216, a cloud session signs with a key of its own that
+the user's shared key vouches for), and a receiver checks the assertion's signature with that key, that its site is `cogmer.ai`, that
   the authenticator confirmed the user with Face ID, a fingerprint or a PIN, and that the page it came from is the cloud page, before it accepts the session key.
 A script that turns hostile gets, at each prompt the user answers, one assertion over a key it chose, which
 speaks for the user until it expires, and never a key it can use again or the user's master key.
@@ -101,7 +102,9 @@ Rejected.
 
 Limits. A passkey signs with P-256 and the user's records are Ed25519, so a certificate in this form is a
 new version of the records that every receiver has to read before any task uses it (D-058, signature
-schemes are kept, never replaced). The prompt names the site and the account and never what is signed,
+schemes are kept, never replaced). D-058 leaves the scheme's version outside the signature because every
+scheme is Ed25519 and none is weaker to be downgraded to, so a P-256 scheme beside them needs that reason
+restated. The prompt names the site and the account and never what is signed,
 and the page chooses the challenge, so the user cannot see which key they certify, as the open item on
 holding a hosted user's master key says of a passkey that signs a record's hash. A hostile script that the
 user answers can therefore certify a key of its own for one expiry at a time. A passkey that is lost takes
@@ -149,7 +152,7 @@ Revisit when cogmer gives up the domain.
 ## Questions the route leaves
 
 - Where the task learns how to reach its user's machines. A task takes its user's lists only from one of
-  the user's machines (D-245), and today the cloud value carries their relay addresses. The page could
+  the user's machines (D-245, a cloud session takes its user's lists only from one of the user's machines), and today the cloud value carries their relay addresses. The page could
   carry them if it can get them: from a hosted machine at a fixed name under `cogmer.ai`, from the
   browser's storage of an earlier setup, which Safari clears after seven days of browser use without a visit to the site (https://webkit.org/blog/10218/full-third-party-cookie-blocking-and-more/, read on 2026-11-26), or as
   public records kept beside the passkey.
@@ -170,7 +173,7 @@ Revisit when cogmer gives up the domain.
   comparison) rejects because "a fallback is the path people reach for when the other is inconvenient", and
   its revisit condition, two users who must verify and cannot have their daemons reach each other, is the
   case to show first. Three ways remain, each with what it trusts:
-  - The two words, with a hosted machine (D-285) answering for a user who has no computer, so the live
+  - The two words, with a hosted machine (D-285, a user with no computer of their own has a machine hosted for them) answering for a user who has no computer, so the live
     exchange runs whenever the two people are on a call. Against anyone else it is as strong as today's,
     and against the hosted machine's operator it is no stronger than trusting the operator, who runs the
     machine that shows the user the words.
@@ -178,7 +181,8 @@ Revisit when cogmer gives up the domain.
     reads a short code to the other or sends it once, and the exchange shows that both hold the same code,
     allowing one guess for each attempt. It trusts whatever carried the code, and both sides take part at
     once, so a user with no computer still needs a hosted machine. Replacing the two words with it keeps one
-    way to verify, as D-055 has it, and D-048 would be rewritten.
+    way to verify, as D-055 has it, and changes which way that is, so D-055 and D-048 (verification is a
+    live commit-then-reveal exchange that derives two words) would both be rewritten.
   - The invitation link above, which trusts the channel that carried it and everyone it was passed to.
 - Which hosts a Team owner allows. Two entries, `cogmer.ai` and `*.cogmer.ai`, would cover everything
   under the domain (spike C), if the task reached cogmer's own relay or hosted machines rather than
@@ -198,14 +202,16 @@ Revisit when cogmer gives up the domain.
   command says what D-281 has it say. A Claude Code cloud session could keep D-281's answer.
 - How Draft 1 answers D-247 (a cloud session's key is certified for twenty-four hours, and the session's
   daemon certifies a new one before it expires). With no cloud key the daemon cannot renew, and D-247
-  rejects a short certificate because a daemon that misses a renewal has its turns refused. A task whose
+  rejects a short certificate because a daemon that misses a renewal has its turns refused, and because it
+  gains nothing while the cloud key in the same container can certify a new session key at any time, which
+  Draft 1 takes out of the container. A task whose
   certificate has expired could stop sharing and say so in the view and at its next command, or hold its
   turns unsigned until the page is opened again and sign them then. Which, and how long the certificate
   lasts, is to be chosen.
 - How an uploaded value and the passkey keep one cloud key (D-280, a user has one cloud key at a time). A
   user who keeps the uploaded value would otherwise hold a second cloud key beside the one the passkey
   derives. Either page that can use the passkey can derive the key and offer the value's plugin, as the machines
-  page does today (D-278). The cloud page can, once it is served under `cogmer.ai` (Draft 3). The machines
+  page does today (D-278, the machines page offers the cloud value as a plugin for the user to upload once). The cloud page can, once it is served under `cogmer.ai` (Draft 3). The machines
   page can if it is served at a name under `cogmer.ai` mapped to the loopback address in the hosts file,
   such as `local.cogmer.ai`, with a certificate the browser trusts, which the open item on holding a hosted
   user's master key describes with its costs. At `127.0.0.1` it can use no passkey.
