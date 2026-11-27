@@ -289,8 +289,9 @@ the page offers "Open in Claude", which opens a new session with the line alread
 only presses send, and shows the same line to copy beside it. On the user's iPhone,
 `https://claude.ai/code/new?q=` opened a new Claude Code session in Safari with the prompt filled in and
 unsent, under Claude's caution about running a prompt from a link, and a cogmer command sent from it ran
-(`docs/work/first-run-spike-G-20261127T1407Z.txt`), so the page says before the button that Claude will
-show that caution. Where the Claude desktop app is installed, the button can open a Cowork session the same
+(`docs/work/first-run-spike-G-20261127T1407Z.txt`), and tapped in Notes, Mail or Messages, where an invitation
+arrives, it opened a new Claude Code session in the Claude app with the prompt filled in and no caution
+shown, so the page says before the button that Claude may show a caution. Where the Claude desktop app is installed, the button can open a Cowork session the same
 way through `claude://cowork/new?q=`, which Anthropic documents and which was not tried. The page tells
 someone without cogmer to install the plugin first. The link carries no secret, so putting it in the
 address claude.ai receives costs nothing. A link never acts without its opener's tap or button, since anyone can make one and any page in
@@ -373,8 +374,8 @@ Rejected.
 
 Limits. The first command of a new session can arrive before the session has downloaded cogmer, and it
 then says to wait and run the command again, which a person opening their first invitation meets at once
-(spike G). On a phone the link opened the Claude app when tapped in Notes and Safari when tapped in the
-Claude app, and no documented link opens a Cowork task on a phone. A verification by links trusts that the channel delivers what each person sent and shows who sent
+(spike G). On a phone the link opened Safari when tapped in the Claude app, and no documented link opens a
+Cowork task on a phone. A verification by links trusts that the channel delivers what each person sent and shows who sent
 it, so a channel that substitutes both links is not found out, as with anything else said on that channel.
 The colleague waits for the inviting user to open the reply before reading the room, though neither has to
 be present when the other acts. Opening a link on a device first loads the overlay module, which took 19.6
