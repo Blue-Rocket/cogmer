@@ -220,11 +220,12 @@ of them already trust, such as a chat they share or an email, and the invitation
 colleague sends a reply link back over that channel. The invitation is `https://cogmer.ai/i#` followed by
 the inviting user's pairing string (D-097, a pairing string carries a chosen name and never a guessed one),
 the room's identifier and name, and a random value naming this invitation, all after `#`, so cogmer's
-server never receives them, and none of them is a secret. The colleague gives the link to `/cogmer:join`
-in a task or a session, and their machine records the inviting user as a verified colleague and the room
+server never receives them, and none of them is a secret. The colleague types `/cogmer:room-join` followed by the link in a task or a session. A colleague who opens the link
+instead is shown that line to paste by a page under `cogmer.ai`, which tells a colleague without cogmer to
+install the plugin first. The colleague's machine then records the inviting user as a verified colleague and the room
 as offered, and gives the colleague a reply, `https://cogmer.ai/r#` followed by the colleague's pairing
-string and the value naming the invitation, to send back. The inviting user opens the reply, and their
-machine, finding an invitation of its own with that value, records the colleague as verified and puts them
+string and the value naming the invitation, to send back. The inviting user types `/cogmer:peer-pair` followed by the reply, which takes a pairing string
+today, or opens it and pastes the line its page shows, and their machine, finding an invitation of its own with that value, records the colleague as verified and puts them
 on the room's guest list (D-235, a room's one guest list decides whose events count), and the offer then
 reaches the colleague's machines (D-105, an invitation is delivered to a paired guest as an offer over the
 paired channel). Each machine finds the other's machines in the directory of Draft 4 by the identifier
