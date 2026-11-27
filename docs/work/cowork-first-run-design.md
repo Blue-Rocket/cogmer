@@ -150,6 +150,13 @@ the model and never the person (spike D), so a line that tells the user where to
 through the model, and a command the user types is a turn the user asked for. D-286's Limits already let a
 command start a daemon in such a task.
 
+The command does the same in every cloud session with no identity and no cloud value, Claude Code's as
+well as Cowork's, in place of the words of D-281 (a command in a cloud session with no value says the user
+must first set cogmer up on one of their own computers), which this replaces. The page's first question
+offers a computer of the user's own, with the line to paste into Claude Code or Codex there, so a user who
+has a computer is told no less than D-281 told them, and D-286's Limits (a Cowork cloud session with no
+cloud value fetches and starts nothing) are rewritten to say the command prints the link.
+
 The page's token is the HMAC-SHA256 of D-301's fixed label under the task's session key, as today's is
 under the cloud key (D-301, a cloud session's daemon serves its room on a second overlay port), so it is
 the same after every wake, since a resumed task keeps its files (spike C), needs no file of its own, and
@@ -164,6 +171,9 @@ Rejected.
   D), but the line would be in the model's context in every task of every user who had not set up, and
   would make the model raise cogmer in a conversation the user started for something else, which §3.1
   (first, do no harm) rules out.
+- *Printing the link in Cowork tasks only, and keeping D-281's words in a Claude Code cloud session.* The
+  command would tell the hosts apart for no gain, since the page's own-computer choice says what D-281
+  says, and a Claude Code user who has no computer at hand would be left without the passkey route.
 - *A random token for each task, made at each start or stored in a file.* D-301 rejects both: the first
   breaks the user's link at each wake, and the second needs a file and a rule for when it changes.
 - *No token until the task is certified.* Anyone who reached the address could then hand the task a
@@ -347,10 +357,6 @@ stand.
   tailcat's relays. A Pro or Max plan was not tried.
 - Whether the Mac's browsers, and the same passkey reached through iCloud Keychain, return the same secret.
   Only Safari on an iPhone was tried.
-- Whether Draft 2 is an exception to D-281 (a command in a cloud session with no value says the user must
-  first set cogmer up on one of their own computers). In a Cowork cloud task, creating or joining a room, or
-  `/cogmer:start`, would start the daemon and print the page's link instead, and D-286's Limits, which Draft 2 relies on, say the
-  command says what D-281 has it say. A Claude Code cloud session could keep D-281's answer.
 - How a task that joins a room with nobody there to tap is certified, such as a scheduled task whose prompt
   holds a cogmer command. An upload is the only way to store a secret where a new task reads it (spikes A
   to C), so such a user opts in by uploading a token that only their own machines honor, in place of
