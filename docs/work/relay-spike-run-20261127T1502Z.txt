@@ -17,8 +17,14 @@ Seen
   handshake's one round trip, 1.2 seconds; and one request and its 24,582-byte answer, 1.3 seconds. Loading
   the page and its 4.4 KB script took 4.5 seconds.
 
+A reload in the same private tab
+  "3.0s script · 5.4s connected · 6.6s secure · 7.9s first data", the same 24,582 bytes and 40 turns, and
+  the same user agent. The probe site sends Cache-Control: no-store, so the page and script were fetched
+  again. The handshake and the request again took 1.2 and 1.3 seconds, one round trip each, and the
+  WebSocket 2.4 seconds against 3.4, so a round trip on this link was about 1.2 seconds and the steps that
+  are not round trips cost too little to see.
+
 What this run does not show
   How the client compares with tailcat's module on the same network: the 19.6 seconds of the earlier
   measurement were on Wi-Fi on the ground, of which 16 were compiling, and a round trip here took about a
-  second, which looks like a link in flight. A second open, which would show the cost without DNS and TLS
-  to new names. A relay and a daemon on different machines.
+  second, which looks like a link in flight. A relay and a daemon on different machines.
