@@ -354,15 +354,17 @@ not delivered within ten intervals, or a daemon's log has a line "is unreachable
     and 4.1 CPU seconds an hour, and on `8671eac` a daemon of the reference user in a group of four held
     17.3MB and took 23.4 CPU seconds an hour (`d1d5db9`), so one process for many users would save at most
     about two thirds of a user's memory and a sixth of its CPU, which this measurement checks.
-13. A machine started when it is needed. One group of four whose stores hold a day of the reference user's
-    turns, made by `harness.py fill`. One daemon is stopped, a colleague writes a turn in their shared room,
-    and the stopped daemon is started; this is done 10 times. The answer is the time from the start until
-    the daemon answers at `/healthz`, until it answers a colleague's poll, and until the turn written while
-    it was stopped is in its store, with its PSS a minute after the start and the disk it holds while
-    stopped. A machine stopped while its user is idle costs only that disk, so these say what starting on
-    demand saves and what a colleague waits for. Nothing yet starts a daemon when traffic arrives, so the
-    harness starts it at a known moment, which measures the daemon's part and not a waking relay's. The
-    harness's `restart` starts every daemon at once, so it needs a way to stop and start one.
+13. A machine started when it is needed. `harness.py wake --as-left` on the group of four that
+    measurement 10 leaves, whose stores hold two days of the reference user's turns. One daemon is
+    stopped, a colleague writes a turn in a room they share, the daemon stays stopped for 30 seconds and
+    is started; this is done 10 times. The answer is the time from the start until the daemon answers at
+    `/healthz`, until its peer port listens for a colleague's poll, until the turn written while it was
+    stopped is in its store, and until a turn it writes reaches the colleague, with its PSS a minute after
+    the start and the disk it holds while stopped. A machine stopped while its user is idle costs only that
+    disk, so these say what starting on demand saves and what a colleague waits for. Nothing yet starts a
+    daemon when traffic arrives, so the harness starts it at a known moment, which measures the daemon's
+    part and not a waking proxy's. On 2026-11-27 on the droplet, two daemons in one room with empty stores,
+    woken three times, answered within 0.035s and had the missed turn within 0.093s.
 
 The results become one table of the terms with their units, the reference user's cost an hour from them, and,
 for each server in the table above, the users it holds by memory and by CPU and the cost of one user a month.
@@ -403,7 +405,7 @@ Each result goes in a commit that says when, on what machine and build, and what
 
 1. Measurement 12, about an hour, and measurement 10, at a quarter, a half, one and two days of turns,
    which takes about an hour and makes the stores measurement 13 starts from.
-2. Measurement 13, once the harness can stop and start one daemon.
+2. Measurement 13, on the stores measurement 10 leaves.
 3. Measurement 11, which needs the harness to run a daemon as an OS user of its own and in a container of its
    own, which it cannot yet do.
 4. An ARM server, once the question below is answered.

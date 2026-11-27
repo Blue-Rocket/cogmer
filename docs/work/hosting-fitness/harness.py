@@ -24,6 +24,13 @@ names 4782 or 4783, runs only a development build, which refuses the account's r
                                            of days of the reference user's turns (1440 a day in each
                                            room); at each checkpoint wait for delivery, read each
                                            daemon's store sizes and PSS, and sample S idle seconds
+  harness.py wake <dir> <name> [--times K] [--down S] [--as-left]
+                                           start the seed's daemons, or with --as-left the stores the
+                                           last fill left, then K times: stop the first daemon, have a
+                                           colleague write a turn in a room they share, wait S seconds
+                                           (30 by default), start it, and time its answer, its peer
+                                           port, the turn's arrival and a turn of its own reaching
+                                           the colleague, with its PSS a minute after the start
   harness.py check <dir>                   the harness's own check: two daemons, one room, one turn,
                                            with the overlay off and then on
   harness.py summary <dir>/<name>          print a run's summary again
@@ -880,6 +887,71 @@ def cmd_restart(run, name, overlay, times):
               indent=1)
 
 
+def cmd_wake(run, name, times, down, as_left):
+    outdir = os.path.join(run, name)
+    if os.path.exists(outdir):
+        die("%s exists already" % outdir)
+    if as_left:
+        meta = json.load(open(os.path.join(run, "fleet.json")))
+        if meta["overlay_at_setup"]:
+            die("the seed was made with the overlay on, and wake runs with it off")
+        if not os.path.isdir(os.path.join(run, "homes")):
+            die("no stores left in %s/homes" % run)
+        fleet = Fleet(run, meta["n"], False)
+        rooms = [dict(r, next=0) for r in meta["rooms"]]
+    else:
+        fleet, rooms, meta = load_seed(run, False, None)
+    shared = [r for r in rooms if 0 in (r["host"], r["guest"])]
+    if not shared:
+        die("the first daemon shares no room")
+    os.makedirs(outdir)
+    target = fleet.daemons[0]
+    peer_port = PORT0 + 2 * target.i + 1
+    results = []
+    fleet.start_all()
+    try:
+        time.sleep(60)
+        for k in range(times):
+            r = shared[k % len(shared)]
+            other = fleet.daemons[r["guest"] if r["host"] == 0 else r["host"]]
+            target.stop()
+            stopped_disk = store_sizes(target.home)["total"]
+            token = "wake%08x" % random.getrandbits(32)
+            write_turn(other, target, r["k"], token)
+            time.sleep(down)
+            t0 = time.time()
+            target.start(wait=False)
+            answered = port_s = None
+            while time.time() - t0 < 120 and (answered is None or port_s is None):
+                if target.proc.poll() is not None:
+                    die("daemon %s exited on start %d; see %s/daemon.log" % (target.name, k + 1, target.home))
+                now = time.time() - t0
+                if port_s is None and listeners().get(peer_port) == target.proc.pid:
+                    port_s = now
+                if answered is None and target.up():
+                    answered = now
+                time.sleep(0.02)
+            target.wait_up()
+            got = wait_delivered(target, r["id"], token, within=120)
+            back = "back%08x" % random.getrandbits(32)
+            t1 = write_turn(target, other, r["k"], back)
+            reached = wait_delivered(other, r["id"], back, within=120)
+            time.sleep(max(0, 60 - (time.time() - t0)))
+            pss = read_pss(target.pid)
+            results.append({"answers_s": None if answered is None else round(answered, 3),
+                            "peer_port_s": None if port_s is None else round(port_s, 3),
+                            "missed_turn_s": None if got is None else round(got - t0, 3),
+                            "own_turn_to_colleague_s": None if reached is None else round(reached - t1, 3),
+                            "pss_mb_at_60s": None if pss is None else round(pss / 1024, 1),
+                            "stopped_disk_mb": round(stopped_disk / 2 ** 20, 2)})
+            say("wake %d: %s" % (k + 1, results[-1]))
+            json.dump({"n": meta["n"], "down_s": down, "as_left": as_left,
+                       "build": json.load(open(os.path.join(run, "build.json"))), "wakes": results},
+                      open(os.path.join(outdir, "summary.json"), "w"), indent=1)
+    finally:
+        fleet.stop_all()
+
+
 def box_fast(path, stop):
     out = open(path, "w")
     prev = read_box()
@@ -934,7 +1006,7 @@ def main():
 
     pos = [x for i, x in enumerate(a) if not x.startswith("--") and (i == 0 or a[i - 1] not in
                                                                       ("--sync-ms", "--warm", "--sample", "--du", "--times",
-                                                                       "--days", "--idle"))]
+                                                                       "--days", "--idle", "--down"))]
     if not pos:
         sys.exit(__doc__)
     cmd, rest = pos[0], [os.path.abspath(os.path.expanduser(pos[1]))] + pos[2:] if len(pos) > 1 else []
@@ -951,6 +1023,8 @@ def main():
         cmd_restart(rest[0], rest[1], "--overlay" in flags, opt("--times", 3))
     elif cmd == "fill" and len(rest) == 2:
         cmd_fill(rest[0], rest[1], [float(x) for x in optstr("--days", "0.25,0.5,1,2").split(",")], opt("--idle", 300))
+    elif cmd == "wake" and len(rest) == 2:
+        cmd_wake(rest[0], rest[1], opt("--times", 10), opt("--down", 30), "--as-left" in flags)
     elif cmd == "check" and len(rest) == 1:
         cmd_check(rest[0])
     elif cmd == "summary" and len(rest) == 1:
