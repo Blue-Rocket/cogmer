@@ -1,0 +1,24 @@
+The relay spike of docs/work/relay-spike, first run on the user's iPhone on 2026-11-27, written from the
+line the page printed, which the user pasted.
+
+What was run
+  https://probe.cogmer.ai/relay/#key=5JCVFPz8afs6GKilEjifPHCOuf9uBbYDmBT8pOvXF3A, opened in a private tab
+  on the user's iPhone, as asked. The relay and the stand-in daemon ran on the droplet at 164.92.115.202,
+  built from commit 1d353a4. The phone's network was not stated; the status bar of a screenshot the user
+  sent from the same phone at 14:25 showed airplane mode with Wi-Fi.
+
+Seen
+  "4.5s script · 7.9s connected · 9.1s secure · 10.4s first data · 24582 bytes, 40 turns ·
+  Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko)
+  Version/27.0.1 Mobile/15E148 Safari/604.1", followed by the last five sample turns.
+  Each time counts from the start of the navigation. X25519 in WebCrypto was there, since the handshake
+  completed. After the script started, each step is network round trips and nothing to compile: the
+  WebSocket to a name the phone had not resolved, 3.4 seconds, which is DNS, TCP, TLS and the upgrade; the
+  handshake's one round trip, 1.2 seconds; and one request and its 24,582-byte answer, 1.3 seconds. Loading
+  the page and its 4.4 KB script took 4.5 seconds.
+
+What this run does not show
+  How the client compares with tailcat's module on the same network: the 19.6 seconds of the earlier
+  measurement were on Wi-Fi on the ground, of which 16 were compiling, and a round trip here took about a
+  second, which looks like a link in flight. A second open, which would show the cost without DNS and TLS
+  to new names. A relay and a daemon on different machines.
