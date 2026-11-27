@@ -363,20 +363,19 @@ not delivered within ten intervals, or a daemon's log has a line "is unreachable
     demand saves and what a colleague waits for. Nothing yet starts a daemon when traffic arrives, so the
     harness starts it at a known moment, which measures the daemon's part and not a waking relay's. The
     harness's `restart` starts every daemon at once, so it needs a way to stop and start one.
-14. A page left open on a hosted machine. The page a hosted user reads will reach the machine through
-    cogmer's own relay, which is not built, so this measures the two parts such a page would use that exist.
-    The first is the daemon's work for each change it shows. The loopback page holds a stream open, and on
-    every change in any of the daemon's rooms the daemon builds and sends the whole snapshot of each open
-    stream's room (`handleStream` in `cmd/cogmer/ui.go`, woken by `notify`), which is the work a page told
-    of a change would cause. It is measured as a Go benchmark of `viewSnapshot` on stores that
+14. A page left open on a hosted machine: the daemon's work for each change the page shows. A hosted user's
+    page will reach the machine through cogmer's own relay, which is not built, and whether it is sent the
+    whole room or only what changed is not decided. The loopback page holds a stream open, and on every
+    change in any of the daemon's rooms the daemon builds and sends the whole snapshot of each open stream's
+    room (`handleStream` in `cmd/cogmer/ui.go`, woken by `notify`), which is the work a page told of every
+    change in the whole room would cause. It is measured as a Go benchmark of `viewSnapshot` on stores that
     `harness.py fill` makes, at 300, 3,000 and 30,000 turns in a room, and the number of changes an hour is
     counted on a daemon of the reference user in measurement 12's group of four, with one stream open. The
-    second is the relay's cost for each held page connection, measured with the relay spike in
-    `docs/work/relay-spike/` holding 1, 100 and 1,000 idle connections to its responder, as the relay
-    process's PSS and CPU an hour. The answer is the CPU an hour of an open page against the room's size, and
-    the relay's memory and CPU for each open page, which a hosted user's cost takes for each hour a page is
-    open. It says whether a page should be sent only what changed rather than the whole room, since in a long
-    room a stream that sends the whole room on every change could cost more than the rest of the daemon.
+    answer is the CPU an hour of an open page against the room's size. It says whether the hosted page can
+    be sent the whole room on each change, or must be sent only what changed, which D-308 (the static page is
+    sent a page of a room's turns and asks for the earlier ones) rejected for the static page because a
+    turn's state changes without a new event. The relay's cost for each open page is measured once the relay
+    is built, under the open item on the relay.
 
 The results become one table of the terms with their units, the reference user's cost an hour from them, and,
 for each server in the table above, the users it holds by memory and by CPU and the cost of one user a month.
@@ -418,7 +417,7 @@ Each result goes in a commit that says when, on what machine and build, and what
 1. Measurement 12, about an hour, and measurement 10, at a quarter, a half, one and two days of turns,
    which takes about an hour and makes the stores measurement 13 starts from.
 2. Measurement 13, once the harness can stop and start one daemon, and measurement 14 on the stores of
-   measurement 10, with a store of 30,000 turns filled for it, and on the relay spike.
+   measurement 10, with a store of 30,000 turns filled for it.
 3. Measurement 11, which needs the harness to run a daemon as an OS user of its own and in a container of its
    own, which it cannot yet do.
 4. An ARM server, once the question below is answered.
