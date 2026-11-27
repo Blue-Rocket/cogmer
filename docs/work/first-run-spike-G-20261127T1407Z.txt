@@ -1,0 +1,29 @@
+Spike G of docs/work/cowork-first-run-spikes.md, the first part, run on the user's iPhone on 2026-11-27,
+written at 2026-11-27T14:07Z (UTC) from the user's two screenshots and words.
+
+What was asked
+  Whether https://claude.ai/code/new with q, which Anthropic documents as filling the prompt of a new
+  Claude Code session (https://support.claude.com/en/articles/14898120-open-the-claude-mobile-app-with-a-link,
+  dated May 6, 2026), fills it in on the user's iPhone, and where it opens.
+
+Machine and account
+  The user's iPhone, in Safari, signed in to claude.ai on the Team plan of the organization Blue Rocket.
+  The system and Safari versions were not read. Whether the Claude app is installed was not asked.
+
+What was done
+  1. The user opened https://claude.ai/code/new in Safari, with no q.
+  2. The user opened https://claude.ai/code/new?q=hello%20from%20spike%20G in Safari. Neither was tapped
+     from another app, and nothing was sent.
+
+Seen
+  1. Safari showed claude.ai's Code page, "New session", with an empty prompt box reading "Describe a
+     task or ask a question", and "Cloud" and "Repo" under it. The Claude app did not open.
+  2. Safari showed the same page with the prompt box holding "hello from spike G", unsent, and above it a
+     box reading "Use caution before running this prompt. Malicious content could trick Claude into
+     attempting harmful actions or sharing your data." The Claude app did not open.
+
+What this does not show
+  Whether the Claude app opens the link when it is tapped outside Safari, or fills the prompt there.
+  Whether a filled-in slash command, such as /first-run-spike:echo with a link, runs as a plugin's command
+  when sent. Anything of claude://cowork/new or the other desktop links, or of Cowork on a phone, which
+  steps 1, 2, 5 and the rest of step 6 cover from the Mac.
