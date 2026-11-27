@@ -284,9 +284,16 @@ checked against the passkey the machine certified (Draft 1). It works from any d
 the opener's phone among them, while one of the opener's machines answers. An opener who has no passkey,
 at the computer that runs cogmer, is sent by the page to the machines page at `127.0.0.1` with the link
 after `#`, as the passkey challenge was in spike F, and confirms there with a button. Where neither works,
-the page shows the line to paste into a task or a session, `/cogmer:room-join` followed by the invitation
-or `/cogmer:peer-pair` followed by the reply, and tells someone without cogmer to install the plugin
-first. A link never acts without its opener's tap or button, since anyone can make one and any page in
+the page offers "Open in Claude", which opens a new session with the line already in its prompt,
+`/cogmer:room-join` followed by the invitation or `/cogmer:peer-pair` followed by the reply, so the opener
+only presses send, and shows the same line to copy beside it. On the user's iPhone,
+`https://claude.ai/code/new?q=` opened a new Claude Code session in Safari with the prompt filled in and
+unsent, under Claude's caution about running a prompt from a link, and a cogmer command sent from it ran
+(`docs/work/first-run-spike-G-20261127T1407Z.txt`), so the page says before the button that Claude will
+show that caution. Where the Claude desktop app is installed, the button can open a Cowork session the same
+way through `claude://cowork/new?q=`, which Anthropic documents and which was not tried. The page tells
+someone without cogmer to install the plugin first. The link carries no secret, so putting it in the
+address claude.ai receives costs nothing. A link never acts without its opener's tap or button, since anyone can make one and any page in
 the opener's browser can send it to `127.0.0.1`.
 
 The colleague's confirmation records the inviting user as a verified colleague and the room as offered, and
@@ -364,7 +371,10 @@ Rejected.
 - *A password-authenticated key exchange, such as SPAKE2 or CPace, with a code sent once.* It trusts the
   channel that carried the code, as the links do, and needs both machines to take part at the same moment.
 
-Limits. A verification by links trusts that the channel delivers what each person sent and shows who sent
+Limits. The first command of a new session can arrive before the session has downloaded cogmer, and it
+then says to wait and run the command again, which a person opening their first invitation meets at once
+(spike G). A link opened on a phone goes to Safari even when tapped in the Claude app, and no documented
+link opens a Cowork task on a phone. A verification by links trusts that the channel delivers what each person sent and shows who sent
 it, so a channel that substitutes both links is not found out, as with anything else said on that channel.
 The colleague waits for the inviting user to open the reply before reading the room, though neither has to
 be present when the other acts. Opening a link on a device first loads the overlay module, which took 19.6
