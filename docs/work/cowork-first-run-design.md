@@ -150,11 +150,24 @@ the model and never the person (spike D), so a line that tells the user where to
 through the model, and a command the user types is a turn the user asked for. D-286's Limits already let a
 command start a daemon in such a task.
 
+The page's token is the HMAC-SHA256 of D-301's fixed label under the task's session key, as today's is
+under the cloud key (D-301, a cloud session's daemon serves its room on a second overlay port), so it is
+the same after every wake, since a resumed task keeps its files (spike C), needs no file of its own, and
+opens only this task. Before the task holds a certificate, the token admits one write as well as the
+reads: the first certificate for the task's own session key. The task takes a first certificate once, and
+afterwards only renewals that chain to the same user, so someone who reads the link in the conversation
+before the user taps can claim the task, and the page then shows the user that the task is claimed under
+another name. D-301 is rewritten to serve a daemon that holds no cloud key and to take that one write.
+
 Rejected.
 - *A hook that asks the model to tell the user how to start.* The model said the link when asked (spike
   D), but the line would be in the model's context in every task of every user who had not set up, and
   would make the model raise cogmer in a conversation the user started for something else, which §3.1
   (first, do no harm) rules out.
+- *A random token for each task, made at each start or stored in a file.* D-301 rejects both: the first
+  breaks the user's link at each wake, and the second needs a file and a rule for when it changes.
+- *No token until the task is certified.* Anyone who reached the address could then hand the task a
+  certificate, where the token limits that to whoever can read the conversation.
 - *Certifying every task at its start.* Most tasks never join a room, and each would need a tap or a secret
   stored for it.
 
@@ -329,22 +342,11 @@ stand.
   suggests (D-285, a user with no computer of their own has a machine hosted for them): the machine holds
   the shared key, certifies the passkey and renews the user's tasks. Deriving the master and shared keys
   from the passkey is set aside, since the passkey signs and carries no secret.
-- How the page reaches a task whose daemon holds no key yet. Today the daemon serves the page on a second
-  port of the overlay, which admits by a token made from the cloud key (D-301, a cloud session's daemon
-  serves its room on a second overlay port), and Draft 2 makes the token random for the task. The page's
-  link carries it, and the link is in the conversation, as D-301's Limits say of today's.
 - Which hosts a Team owner allows. Two entries, `cogmer.ai` and `*.cogmer.ai`, would cover everything
   under the domain (spike C), if the task reached cogmer's own relay or hosted machines rather than
   tailcat's relays. A Pro or Max plan was not tried.
 - Whether the Mac's browsers, and the same passkey reached through iCloud Keychain, return the same secret.
   Only Safari on an iPhone was tried.
-- How Draft 2's token answers D-301 (a cloud session's daemon serves its room on a second overlay port).
-  D-301 has a daemon with no cloud key serve nothing, and rejects a token made fresh at each start, since
-  a sleeping task wakes often and each wake would break the link, and a token stored for each task, since
-  it needs a file and a rule for when it changes. A token derived from the task's session key, as today's
-  is from the cloud key, would last across wakes with no file of its own, since a resumed task kept its
-  files (spike C). Draft 2 then has to say it departs from D-301 in serving a daemon that holds no cloud
-  key.
 - Whether Draft 2 is an exception to D-281 (a command in a cloud session with no value says the user must
   first set cogmer up on one of their own computers). In a Cowork cloud task, creating or joining a room, or
   `/cogmer:start`, would start the daemon and print the page's link instead, and D-286's Limits, which Draft 2 relies on, say the
