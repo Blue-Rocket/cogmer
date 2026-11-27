@@ -103,6 +103,17 @@ session key copied out of a sandbox speaks for the user, unless a removal of it 
 session's key is certified for twenty-four hours, and the session's daemon certifies a new one before it
 expires), whose renewal is done by a cloud key in the task, since the task holds no cloud key here.
 
+D-216 (a cloud session signs with a key of its own that the user's shared key vouches for) rejects a cloud
+key that expires, because renewing it needs a machine that holds the shared key, which a user away from
+their machines cannot reach. This draft makes no cloud key expire: it certifies the task's session key with
+no cloud key between, and a user away from their machines certifies a task again with a passkey prompt
+from any device the passkey reaches, a hosted machine is always reachable, three days covers a weekend
+away, and a task whose certificate ends pauses and holds its turns until either happens. Nor does the task
+relay its exchanges through the user's machines, which D-216 also rejects, since it asks them only to renew.
+D-216 is rewritten in place, as W-38 in `docs/writing.md` has it, to name two ways a session key is
+certified, by the cloud key or by the passkey with the user's machines renewing, and to say why its
+rejection of an expiring cloud key does not reach the second.
+
 A passkey is not a cloud key, and D-280 (a user has one cloud key at a time) does not count it. A user may
 register several, such as one in iCloud Keychain and one in Windows Hello, each certified on its own, and
 may keep one uploaded cloud key beside them. D-280 refuses a second cloud key because the plugin that
@@ -199,6 +210,11 @@ site, so one passkey under `cogmer.ai` serves every page under it, and one made 
 Rejected.
 - *Keeping the page on GitHub Pages.* Its passkeys would belong to `blue-rocket.github.io`, which
   `Blue-Rocket` controls on GitHub, and could never be used by a page under `cogmer.ai`.
+
+D-302 (a cloud session's room is read on a static page) is rewritten in place, as W-38 in `docs/writing.md`
+has it: the page's host becomes cogmer's, its case under D-115 (a centralized component must trace to a
+disclosed tradeoff that benefits the person) is made again for a host cogmer runs and disclosed in
+`plugin/README.md`, and its security policy names cogmer's relay map in place of `tailcat.dev`.
 
 Limits. cogmer runs the host, and its trust is the trust D-302's Limits give the page's host.
 
@@ -363,7 +379,3 @@ stand.
   reaches each colleague (D-225, a machine sends each removal and new shared key to every colleague it
   knows until each acknowledges). Onboarding does not offer it; the machines page does, for a user who
   needs it.
-- Which earlier decisions Drafts 1 and 3 change in part. D-216 (a cloud session signs with a key of its own
-  that the user's shared key vouches for) names the cloud key as the one secret given to the environment,
-  and D-302 (a cloud session's room is read on a static page) serves the page from GitHub Pages, so each
-  is rewritten to what still holds when the drafts are adopted, as W-38 in `docs/writing.md` has it.
