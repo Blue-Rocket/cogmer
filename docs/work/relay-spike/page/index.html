@@ -1,0 +1,54 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relay spike</title>
+<style>
+:root { --bg: #f6f7f9; --fg: #1b1f27; --muted: #5a6273; --line: #dde1e8; --ok: #1d7a46; --bad: #b3261e; }
+@media (prefers-color-scheme: dark) { :root { --bg: #12151b; --fg: #e6e9ef; --muted: #9aa3b4; --line: #2b313d; --ok: #6fd39b; --bad: #f2a39d; color-scheme: dark } }
+body { background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; margin: 0; padding: 16px; }
+main { max-width: 40rem; margin: 0 auto; display: grid; gap: 14px; }
+h1 { font-size: 1.4rem; margin: 0; }
+#timing { font: 14px/1.5 ui-monospace, Menlo, monospace; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; word-break: break-word; }
+#turns { display: grid; gap: 8px; }
+.turn { border-top: 1px solid var(--line); padding-top: 8px; }
+.who { font-weight: 600; }
+.muted { color: var(--muted); font-size: .9rem; }
+.bad { color: var(--bad); }
+</style>
+<main>
+  <h1>Relay spike</h1>
+  <p class="muted">Reads a sample room from a stand-in daemon through a relay, encrypted end to end with Noise, with no overlay module. Times are from the page starting to load.</p>
+  <div id="timing">starting</div>
+  <div id="turns"></div>
+</main>
+<script type="module">
+import { connect, supported, b64url } from './client.js';
+const out = document.getElementById('timing');
+const marks = [];
+const mark = what => { marks.push((performance.now() / 1000).toFixed(1) + 's ' + what); out.textContent = marks.join(' · '); };
+mark('script');
+const params = new URLSearchParams(location.hash.slice(1));
+const key = params.get('key');
+const relay = params.get('relay') || 'wss://relay.probe.cogmer.ai';
+try {
+  if (!key) throw new Error('the link carries no key after #key=');
+  if (!(await supported())) throw new Error('this browser has no X25519 in WebCrypto');
+  const conn = await connect(relay + '/dial?key=' + key, b64url(key), 'spike', mark);
+  const { status, body } = await conn.request('/room');
+  mark('first data');
+  if (!status.startsWith('200')) throw new Error('the daemon answered ' + status);
+  const room = JSON.parse(new TextDecoder().decode(body));
+  out.textContent += ' · ' + body.length + ' bytes, ' + room.turns.length + ' turns · ' + navigator.userAgent;
+  const list = document.getElementById('turns');
+  for (const t of room.turns.slice(-5)) {
+    const d = document.createElement('div'); d.className = 'turn';
+    const w = document.createElement('div'); w.className = 'who'; w.textContent = t.Who + ': ' + t.Prompt;
+    const r = document.createElement('div'); r.className = 'muted'; r.textContent = t.Response.slice(0, 160) + '…';
+    d.append(w, r); list.append(d);
+  }
+  conn.close();
+} catch (e) {
+  mark('failed');
+  const p = document.createElement('div'); p.className = 'bad'; p.textContent = e.message; out.after(p);
+}
+</script>
