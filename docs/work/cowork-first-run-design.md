@@ -224,7 +224,7 @@ Rejected.
 D-302 (a cloud session's room is read on a static page) is rewritten in place, as W-38 in `docs/writing.md`
 has it: the page's host becomes cogmer's, its case under D-115 (a centralized component must trace to a
 disclosed tradeoff that benefits the person) is made again for a host cogmer runs and disclosed in
-`plugin/README.md`, and its security policy names cogmer's relay map in place of `tailcat.dev`.
+`plugin/README.md`, and its security policy names `cogmer.ai` and the names under it in place of `tailcat.dev`.
 
 Limits. cogmer runs the host, and its trust is the trust D-302's Limits give the page's host.
 
