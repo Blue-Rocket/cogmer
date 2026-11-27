@@ -220,16 +220,31 @@ of them already trust, such as a chat they share or an email, and the invitation
 colleague sends a reply link back over that channel. The invitation is `https://cogmer.ai/i#` followed by
 the inviting user's pairing string (D-097, a pairing string carries a chosen name and never a guessed one),
 the room's identifier and name, and a random value naming this invitation, all after `#`, so cogmer's
-server never receives them, and none of them is a secret. The colleague types `/cogmer:room-join` followed by the link in a task or a session. A colleague who opens the link
-instead is shown that line to paste by a page under `cogmer.ai`, which tells a colleague without cogmer to
-install the plugin first. The colleague's machine then records the inviting user as a verified colleague and the room
-as offered, and gives the colleague a reply, `https://cogmer.ai/r#` followed by the colleague's pairing
-string and the value naming the invitation, to send back. The inviting user types `/cogmer:peer-pair` followed by the reply, which takes a pairing string
-today, or opens it and pastes the line its page shows, and their machine, finding an invitation of its own with that value, records the colleague as verified and puts them
-on the room's guest list (D-235, a room's one guest list decides whose events count), and the offer then
-reaches the colleague's machines (D-105, an invitation is delivered to a paired guest as an offer over the
-paired channel). Each machine finds the other's machines in the directory of Draft 4 by the identifier
-when the string carries no address it can reach.
+server never receives them, and none of them is a secret. The reply is `https://cogmer.ai/r#` followed by
+the colleague's pairing string and the value naming the invitation.
+
+Opening either link acts on it. The page the link opens loads the overlay module the cloud page loads
+(D-302, a cloud session's room is read on a static page), finds the opener's machines in its memory or in
+the directory of Draft 4 under the identifier the opener's passkey names, and asks the opener to confirm,
+as "Join *room* from Alice?" for an invitation or "Add Ben to *room*?" for a reply. The confirmation is a
+passkey assertion whose challenge is a fresh value from the opener's machine with a hash of the link, and the
+page sends it through a relay to a port of the overlay on which the machine accepts only a link signed so,
+checked against the passkey the machine certified (Draft 1). It works from any device the passkey reaches,
+the opener's phone among them, while one of the opener's machines answers. An opener who has no passkey,
+at the computer that runs cogmer, is sent by the page to the machines page at `127.0.0.1` with the link
+after `#`, as the passkey challenge was in spike F, and confirms there with a button. Where neither works,
+the page shows the line to paste into a task or a session, `/cogmer:room-join` followed by the invitation
+or `/cogmer:peer-pair` followed by the reply, and tells someone without cogmer to install the plugin
+first. A link never acts without its opener's tap or button, since anyone can make one and any page in
+the opener's browser can send it to `127.0.0.1`.
+
+The colleague's confirmation records the inviting user as a verified colleague and the room as offered, and
+gives the colleague the reply to send back. The inviting user's confirmation of the reply, on a machine
+that finds an invitation of its own with that value, records the colleague as verified and puts them on the
+room's guest list (D-235, a room's one guest list decides whose events count), and the offer then reaches
+the colleague's machines (D-105, an invitation is delivered to a paired guest as an offer over the paired
+channel). Each machine finds the other's machines in the directory of Draft 4 by the identifier when the
+string carries no address it can reach.
 
 The invitation grants nothing to whoever holds it. Anyone who uses it learns the inviting user's identifier,
 which is safe to know (D-023, a peer identifier must be safe to know), and gets a reply that the inviting
@@ -254,7 +269,11 @@ Rejected.
 Limits. A verification by links trusts that the channel delivers what each person sent and shows who sent
 it, so a channel that substitutes both links is not found out, as with anything else said on that channel.
 The colleague waits for the inviting user to open the reply before reading the room, though neither has to
-be present when the other acts.
+be present when the other acts. Opening a link on a device first loads the overlay module, which took 19.6
+seconds to first data on an iPhone's first open and 1.6 on its second (`docs/open.md`, the item on the page
+that reads a cloud session's room), and the opener's machine has to be awake. Every machine whose user has
+a passkey listens on the overlay for a signed link, a listener that admits any dialer (D-157, the overlay
+listener admits any dialer) and acts on nothing but a link its user's passkey signed.
 
 Revisit when a reply is found to have come from someone other than the colleague invited, or when people
 come to send the links over channels that do not show who sent them.
@@ -263,7 +282,11 @@ What it changes. D-055 (a peer is verified in one way, the two-word comparison) 
 its rejected fallback, "the path people reach for when the other is inconvenient", is what the links will
 be: most colleagues will be verified by links. D-163 (only a person's confirmation records a verification,
 and a mismatch records nothing) takes the colleague's use of the invitation and the inviting user's opening
-of the reply as the two confirmations. D-026 (there is no join token at all), D-048 (verification is a live
+of the reply as the two confirmations. D-301 (a cloud session's daemon serves its room on a second overlay
+port, in lines, with a token made from the cloud key) serves only reads and only in a daemon that speaks as
+a cloud session, and rejects serving a port in every daemon because it would be open for every user; a
+port that does nothing without the user's passkey signature answers that rejection differently, and D-301
+is rewritten to hold both. D-026 (there is no join token at all), D-048 (verification is a live
 commit-then-reveal exchange that derives two words) and D-051 (stranger pairing is not a supported case)
 stand.
 
