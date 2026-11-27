@@ -14,6 +14,9 @@ What was done
   1. The user opened https://claude.ai/code/new in Safari, with no q.
   2. The user opened https://claude.ai/code/new?q=hello%20from%20spike%20G in Safari. Neither was tapped
      from another app, and nothing was sent.
+  3. The user opened https://claude.ai/code/new?q=%2Fcogmer%3Aself-status and pressed send. The account
+     has the cogmer plugin installed (D-290). The phone's status bar showed "Claude" as the app it came
+     from.
 
 Seen
   1. Safari showed claude.ai's Code page, "New session", with an empty prompt box reading "Describe a
@@ -21,9 +24,17 @@ Seen
   2. Safari showed the same page with the prompt box holding "hello from spike G", unsent, and above it a
      box reading "Use caution before running this prompt. Malicious content could trick Claude into
      attempting harmful actions or sharing your data." The Claude app did not open.
+  3. The session showed the sent message as "/ cogmer:self-status", then "Initialized session", then the
+     model's answer: "/cogmer:self-status didn't run, and I can't run it yet. The cogmer plugin is
+     installed, but this session doesn't have its program yet. The program downloads in the background
+     when a session starts, and until that finishes, cogmer's commands aren't available. Give it a moment
+     and run /cogmer:self-status again." That retells what plugin/cli.sh prints while the program is
+     still downloading, "cogmer is still downloading. Nothing is wrong.", so the command reached the
+     plugin and its script ran. The output itself was not shown, so this rests on the model's words.
 
 What this does not show
   Whether the Claude app opens the link when it is tapped outside Safari, or fills the prompt there.
-  Whether a filled-in slash command, such as /first-run-spike:echo with a link, runs as a plugin's command
-  when sent. Anything of claude://cowork/new or the other desktop links, or of Cowork on a phone, which
+  Whether a link given as a command's argument reaches the script intact, with its #, and what the
+  command does once the program has downloaded, since the first command of a new session met the download
+  still running. Anything of claude://cowork/new or the other desktop links, or of Cowork on a phone, which
   steps 1, 2, 5 and the rest of step 6 cover from the Mac.
