@@ -70,7 +70,7 @@ Whether the hosted machine is the default is not decided.
    keeps its key and certificate (spike C). A new task that creates or joins a room taps again, at the
    moment the user asks it to share, and a task that never does is never asked.
 
-On a Team plan an owner still allows the hosts the task's daemon reaches. A user who would rather have
+On a Team plan an owner still allows the hosts the task's daemon reaches, which are `cogmer.ai` and `*.cogmer.ai` once cogmer runs its own relay there, as the open item on a relay change records; a Pro or Max plan was not tried. A user who would rather have
 tasks start with no tap keeps the uploaded value (D-278, the machines page offers the cloud value as a
 plugin for the user to upload once).
 
@@ -352,9 +352,6 @@ stand.
   suggests (D-285, a user with no computer of their own has a machine hosted for them): the machine holds
   the shared key, certifies the passkey and renews the user's tasks. Deriving the master and shared keys
   from the passkey is set aside, since the passkey signs and carries no secret.
-- Which hosts a Team owner allows. Two entries, `cogmer.ai` and `*.cogmer.ai`, would cover everything
-  under the domain (spike C), if the task reached cogmer's own relay or hosted machines rather than
-  tailcat's relays. A Pro or Max plan was not tried.
 - Whether the Mac's browsers, and the same passkey reached through iCloud Keychain, return the same secret.
   Only Safari on an iPhone was tried.
 - How a task that joins a room with nobody there to tap is certified, such as a scheduled task whose prompt
