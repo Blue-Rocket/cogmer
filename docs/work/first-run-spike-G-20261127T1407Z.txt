@@ -17,6 +17,7 @@ What was done
   3. The user opened https://claude.ai/code/new?q=%2Fcogmer%3Aself-status and pressed send. The account
      has the cogmer plugin installed (D-290). The user tapped the link in the Claude app, so the Claude
      app is installed, and Safari opened it, its status bar showing "Claude" as the app it came from.
+  4. The user tapped https://claude.ai/code/new?q=hello%20from%20spike%20G in the Notes app.
 
 Seen
   1. Safari showed claude.ai's Code page, "New session", with an empty prompt box reading "Describe a
@@ -31,10 +32,12 @@ Seen
      and run /cogmer:self-status again." That retells what plugin/cli.sh prints while the program is
      still downloading, "cogmer is still downloading. Nothing is wrong.", so the command reached the
      plugin and its script ran. The output itself was not shown, so this rests on the model's words.
+  4. The Claude app opened, in the user's words "following the link from the Notes app took me to the
+     Claude app". What the app showed was not reported.
 
 What this does not show
-  Whether the Claude app opens the link itself when it is tapped in another app, such as Notes or
-  Messages; tapped in the Claude app, it went to Safari.
+  Whether the prompt is filled in when the Claude app opens the link (step 4), and whether Messages or
+  Mail, where an invitation is likelier to arrive, sends the link to the app as Notes did.
   Whether a link given as a command's argument reaches the script intact, with its #, and what the
   command does once the program has downloaded, since the first command of a new session met the download
   still running. Anything of claude://cowork/new or the other desktop links, or of Cowork on a phone, which

@@ -373,8 +373,8 @@ Rejected.
 
 Limits. The first command of a new session can arrive before the session has downloaded cogmer, and it
 then says to wait and run the command again, which a person opening their first invitation meets at once
-(spike G). A link opened on a phone goes to Safari even when tapped in the Claude app, and no documented
-link opens a Cowork task on a phone. A verification by links trusts that the channel delivers what each person sent and shows who sent
+(spike G). On a phone the link opened the Claude app when tapped in Notes and Safari when tapped in the
+Claude app, and no documented link opens a Cowork task on a phone. A verification by links trusts that the channel delivers what each person sent and shows who sent
 it, so a channel that substitutes both links is not found out, as with anything else said on that channel.
 The colleague waits for the inviting user to open the reply before reading the room, though neither has to
 be present when the other acts. Opening a link on a device first loads the overlay module, which took 19.6
