@@ -302,8 +302,12 @@ which is safe to know (D-023, a peer identifier must be safe to know), and gets 
 user acts on only when it arrives from the colleague they invited. A reply to an invitation the machine did
 not make is refused, and a second reply to one invitation is shown to the inviting user beside the first
 rather than recorded. Two colleagues who have paired already need neither link. The two words remain for a
-user who would rather not trust the channel, and a user who verified a colleague by links can compare the
-two words with them later.
+user who would rather not trust the channel. The verified field of a colleague's entry (D-228, a user's
+colleagues, verifications, labels and rooms belong to the user and are copied between the user's machines)
+records whether the words or links verified them, the colleague list shows "verified by link" for the
+second, and comparing the words later records the words. Nothing gates on which: synchronization, names
+and the view's markers treat both alike (D-054, verification gates synchronization and injection). Every
+colleague verified before this is recorded as verified by the words, the only way there was.
 
 Rejected.
 - *A link carrying a one-time secret, whose first use verifies and admits.* It is useful to anyone who
@@ -312,6 +316,11 @@ Rejected.
 - *The reply as two words read back over the channel.* Words are short enough that someone who reads the
   reply can make a key whose words match before the inviting user opens it, where a reply carrying the
   whole identifier cannot be matched.
+- *Recording only that a colleague is verified, not how.* Which colleagues a channel verified is known
+  only at the moment it does, so a user who learns that a chat account was taken over could not find the
+  colleagues to verify again with the words.
+- *A room that admits only guests verified by the words.* It adds a setting to every room and a refusal to
+  explain to a colleague, for a need nobody has shown.
 - *The two words alone, with a hosted machine answering for a user who has no computer.* The exchange
   needs both people on a call at once.
 - *A password-authenticated key exchange, such as SPAKE2 or CPace, with a code sent once.* It trusts the
