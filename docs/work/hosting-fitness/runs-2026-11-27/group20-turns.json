@@ -1,0 +1,478 @@
+{
+ "seconds": 890,
+ "samples": 90,
+ "daemons": {
+  "u00": {
+   "cpu_s_per_h": 25.77,
+   "cpu_s_per_h_windows": [
+    24.12,
+    24.96,
+    28.3
+   ],
+   "pss_mb": 13.16,
+   "rss_mb_last": 37.79,
+   "threads_last": 11,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 21339284,
+   "loop_sent_per_h": 2825435,
+   "loop_recv_per_h": 2975484,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 28,
+   "relay_sockets_seen": 0
+  },
+  "u01": {
+   "cpu_s_per_h": 25.32,
+   "cpu_s_per_h_windows": [
+    24.6,
+    24.36,
+    27.06
+   ],
+   "pss_mb": 13.06,
+   "rss_mb_last": 39.32,
+   "threads_last": 10,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 21736910,
+   "loop_sent_per_h": 2874091,
+   "loop_recv_per_h": 2914544,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 16,
+   "relay_sockets_seen": 0
+  },
+  "u02": {
+   "cpu_s_per_h": 25.81,
+   "cpu_s_per_h_windows": [
+    24.84,
+    25.08,
+    27.56
+   ],
+   "pss_mb": 13.0,
+   "rss_mb_last": 38.46,
+   "threads_last": 12,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 21869453,
+   "loop_sent_per_h": 2938979,
+   "loop_recv_per_h": 2894331,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 20,
+   "relay_sockets_seen": 0
+  },
+  "u03": {
+   "cpu_s_per_h": 26.05,
+   "cpu_s_per_h_windows": [
+    25.68,
+    24.6,
+    27.93
+   ],
+   "pss_mb": 12.99,
+   "rss_mb_last": 38.03,
+   "threads_last": 11,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 21770046,
+   "loop_sent_per_h": 2971439,
+   "loop_recv_per_h": 2825585,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 8,
+   "relay_sockets_seen": 0
+  },
+  "u04": {
+   "cpu_s_per_h": 25.36,
+   "cpu_s_per_h_windows": [
+    23.76,
+    24.72,
+    27.68
+   ],
+   "pss_mb": 13.38,
+   "rss_mb_last": 38.58,
+   "threads_last": 11,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 21339284,
+   "loop_sent_per_h": 2893700,
+   "loop_recv_per_h": 2962722,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 12,
+   "relay_sockets_seen": 0
+  },
+  "u05": {
+   "cpu_s_per_h": 25.48,
+   "cpu_s_per_h_windows": [
+    24.24,
+    24.48,
+    27.81
+   ],
+   "pss_mb": 12.81,
+   "rss_mb_last": 37.89,
+   "threads_last": 11,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 21736910,
+   "loop_sent_per_h": 2897988,
+   "loop_recv_per_h": 2942720,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 28,
+   "relay_sockets_seen": 0
+  },
+  "u06": {
+   "cpu_s_per_h": 25.97,
+   "cpu_s_per_h_windows": [
+    24.72,
+    24.72,
+    28.55
+   ],
+   "pss_mb": 13.39,
+   "rss_mb_last": 38.89,
+   "threads_last": 10,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 21869453,
+   "loop_sent_per_h": 2936216,
+   "loop_recv_per_h": 2935783,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 32,
+   "relay_sockets_seen": 0
+  },
+  "u07": {
+   "cpu_s_per_h": 25.77,
+   "cpu_s_per_h_windows": [
+    24.24,
+    24.48,
+    28.68
+   ],
+   "pss_mb": 13.27,
+   "rss_mb_last": 38.01,
+   "threads_last": 11,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 21770046,
+   "loop_sent_per_h": 2975107,
+   "loop_recv_per_h": 2865589,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 24,
+   "relay_sockets_seen": 0
+  },
+  "u08": {
+   "cpu_s_per_h": 27.14,
+   "cpu_s_per_h_windows": [
+    24.6,
+    26.04,
+    30.91
+   ],
+   "pss_mb": 13.36,
+   "rss_mb_last": 38.01,
+   "threads_last": 10,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 21339284,
+   "loop_sent_per_h": 2837926,
+   "loop_recv_per_h": 2972583,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 24,
+   "relay_sockets_seen": 0
+  },
+  "u09": {
+   "cpu_s_per_h": 27.55,
+   "cpu_s_per_h_windows": [
+    25.32,
+    26.64,
+    30.79
+   ],
+   "pss_mb": 13.0,
+   "rss_mb_last": 38.26,
+   "threads_last": 11,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 21736910,
+   "loop_sent_per_h": 2864420,
+   "loop_recv_per_h": 2941147,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 24,
+   "relay_sockets_seen": 0
+  },
+  "u10": {
+   "cpu_s_per_h": 25.97,
+   "cpu_s_per_h_windows": [
+    23.64,
+    24.72,
+    29.67
+   ],
+   "pss_mb": 13.38,
+   "rss_mb_last": 38.42,
+   "threads_last": 11,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 21869453,
+   "loop_sent_per_h": 2974294,
+   "loop_recv_per_h": 2867591,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 20,
+   "relay_sockets_seen": 0
+  },
+  "u11": {
+   "cpu_s_per_h": 27.1,
+   "cpu_s_per_h_windows": [
+    25.08,
+    25.2,
+    31.16
+   ],
+   "pss_mb": 13.36,
+   "rss_mb_last": 39.1,
+   "threads_last": 11,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 21770046,
+   "loop_sent_per_h": 2973158,
+   "loop_recv_per_h": 2868477,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 16,
+   "relay_sockets_seen": 0
+  },
+  "u12": {
+   "cpu_s_per_h": 24.92,
+   "cpu_s_per_h_windows": [
+    23.04,
+    25.2,
+    26.56
+   ],
+   "pss_mb": 13.21,
+   "rss_mb_last": 38.27,
+   "threads_last": 11,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 21339284,
+   "loop_sent_per_h": 2854174,
+   "loop_recv_per_h": 2951388,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 20,
+   "relay_sockets_seen": 0
+  },
+  "u13": {
+   "cpu_s_per_h": 25.48,
+   "cpu_s_per_h_windows": [
+    24.12,
+    24.84,
+    27.56
+   ],
+   "pss_mb": 13.78,
+   "rss_mb_last": 39.18,
+   "threads_last": 11,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 21736910,
+   "loop_sent_per_h": 2898275,
+   "loop_recv_per_h": 2907279,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 12,
+   "relay_sockets_seen": 0
+  },
+  "u14": {
+   "cpu_s_per_h": 24.92,
+   "cpu_s_per_h_windows": [
+    24.12,
+    23.88,
+    26.81
+   ],
+   "pss_mb": 13.27,
+   "rss_mb_last": 39.85,
+   "threads_last": 10,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 21869453,
+   "loop_sent_per_h": 2888483,
+   "loop_recv_per_h": 2900330,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 28,
+   "relay_sockets_seen": 0
+  },
+  "u15": {
+   "cpu_s_per_h": 25.24,
+   "cpu_s_per_h_windows": [
+    24.36,
+    23.4,
+    28.05
+   ],
+   "pss_mb": 13.58,
+   "rss_mb_last": 38.95,
+   "threads_last": 11,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 21770046,
+   "loop_sent_per_h": 2953439,
+   "loop_recv_per_h": 2835374,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 16,
+   "relay_sockets_seen": 0
+  },
+  "u16": {
+   "cpu_s_per_h": 24.71,
+   "cpu_s_per_h_windows": [
+    24.12,
+    24.72,
+    25.32
+   ],
+   "pss_mb": 13.95,
+   "rss_mb_last": 39.07,
+   "threads_last": 11,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 20610302,
+   "loop_sent_per_h": 2812350,
+   "loop_recv_per_h": 2837825,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 20,
+   "relay_sockets_seen": 0
+  },
+  "u17": {
+   "cpu_s_per_h": 25.16,
+   "cpu_s_per_h_windows": [
+    24.84,
+    24.84,
+    25.82
+   ],
+   "pss_mb": 13.63,
+   "rss_mb_last": 37.36,
+   "threads_last": 10,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 21007929,
+   "loop_sent_per_h": 2863295,
+   "loop_recv_per_h": 2818571,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 32,
+   "relay_sockets_seen": 0
+  },
+  "u18": {
+   "cpu_s_per_h": 25.08,
+   "cpu_s_per_h_windows": [
+    25.32,
+    24.72,
+    25.2
+   ],
+   "pss_mb": 13.57,
+   "rss_mb_last": 38.63,
+   "threads_last": 10,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 20527463,
+   "loop_sent_per_h": 2790261,
+   "loop_recv_per_h": 2794015,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 20,
+   "relay_sockets_seen": 0
+  },
+  "u19": {
+   "cpu_s_per_h": 24.8,
+   "cpu_s_per_h_windows": [
+    24.84,
+    24.48,
+    25.08
+   ],
+   "pss_mb": 13.92,
+   "rss_mb_last": 38.79,
+   "threads_last": 11,
+   "sockets_mean": 6.0,
+   "disk_write_per_h": 20262379,
+   "loop_sent_per_h": 2793991,
+   "loop_recv_per_h": 2809486,
+   "other_sent_per_h": 0,
+   "other_recv_per_h": 0,
+   "polls_made_per_h": 24,
+   "relay_sockets_seen": 0
+  }
+ },
+ "box": {
+  "busy_share": 0.0467,
+  "steal_share": 0.0066,
+  "mem_available_mb_first_last": [
+   7240,
+   7225
+  ],
+  "net_bytes": {
+   "lo": {
+    "rx": 62309325,
+    "tx": 62309325
+   },
+   "eth0": {
+    "rx": 85396,
+    "tx": 83307
+   },
+   "eth1": {
+    "rx": 37787,
+    "tx": 39045
+   },
+   "hf0": {
+    "rx": 0,
+    "tx": 0
+   }
+  },
+  "timewait_last": 95
+ },
+ "sampler_cpu_s": 21.0,
+ "mean_daemon": {
+  "cpu_s_per_h": 25.68,
+  "pss_mb": 13.35,
+  "sockets_mean": 6.0,
+  "disk_write_per_h": 21463542.25,
+  "loop_sent_per_h": 2890851.05,
+  "loop_recv_per_h": 2891041.2,
+  "other_sent_per_h": 0.0,
+  "other_recv_per_h": 0.0,
+  "polls_made_per_h": 21.2
+ },
+ "windows_disagree": true,
+ "turns": {
+  "written": 450,
+  "delivered": 450,
+  "undelivered": 0,
+  "median_s": 0.007,
+  "p95_s": 0.014
+ },
+ "run": {
+  "name": "m6",
+  "shape": "group4",
+  "n": 20,
+  "overlay": false,
+  "turns": true,
+  "sync_ms": 1000,
+  "warm_s": 300,
+  "sample_s": 900,
+  "build": {
+   "commit": "36162d55b4dffe77617e4d1c3a9f9a187049407b",
+   "dirty": false,
+   "built": "2026-11-27T19:22:20Z"
+  },
+  "started": "2026-11-27T21:39:32Z"
+ },
+ "final_check": {
+  "rooms": 30,
+  "delivered": 30,
+  "max_s": 0.62
+ },
+ "unreachable_lines": {
+  "u00": 0,
+  "u01": 0,
+  "u02": 0,
+  "u03": 0,
+  "u04": 0,
+  "u05": 0,
+  "u06": 0,
+  "u07": 0,
+  "u08": 0,
+  "u09": 0,
+  "u10": 0,
+  "u11": 0,
+  "u12": 0,
+  "u13": 0,
+  "u14": 0,
+  "u15": 0,
+  "u16": 0,
+  "u17": 0,
+  "u18": 0,
+  "u19": 0
+ },
+ "exited": [],
+ "valid": true
+}
