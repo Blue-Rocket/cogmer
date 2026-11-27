@@ -322,8 +322,14 @@ unsent, under Claude's caution about running a prompt from a link, and a cogmer 
 (`docs/work/first-run-spike-G-20261127T1407Z.txt`), and tapped in Notes, Mail or Messages, where an invitation
 arrives, it opened a new Claude Code session in the Claude app with the prompt filled in and no caution
 shown, so the page says before the button that Claude may show a caution. Where the Claude desktop app is installed, the button can open a Cowork session the same
-way through `claude://cowork/new?q=`, which Anthropic documents and which was not tried. The page tells
-someone without cogmer to install the plugin first. The link carries no secret, so putting it in the
+way through `claude://cowork/new?q=`, which Anthropic documents and which was not tried. The session the
+button opens runs in whichever environment Claude chooses, which on the user's iPhone was one already
+chosen, and the link cannot name one, since Anthropic documents only `q`, `mode`, `repo` and `branch` for
+it. A Claude Code cloud environment below the Full network level reached no relay (`0139779`), so the
+page says before the button that the session needs an environment that reaches the network, and a join or
+pair command whose daemon cannot reach the relay says so and names the environment's network setting as
+the cause, rather than waiting on a colleague it will never reach. The page tells someone without cogmer to
+install the plugin first. The link carries no secret, so putting it in the
 address claude.ai receives costs nothing. A link never acts without its opener's tap or button, since anyone can make one and any page in
 the opener's browser can send it to `127.0.0.1`.
 
