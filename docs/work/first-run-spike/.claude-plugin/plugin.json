@@ -1,6 +1,6 @@
 {
   "name": "first-run-spike",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Records what a Cowork cloud task's hooks can reach and keep, and what a person sees of a hook's message. Holds no secret and sends nothing of the user's.",
   "author": { "name": "cogmer probes" },
   "userConfig": {

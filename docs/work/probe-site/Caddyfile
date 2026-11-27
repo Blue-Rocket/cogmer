@@ -1,6 +1,6 @@
-# The probe site at probe.cogmer.ai, for docs/work/cowork-first-run-spikes.md, spikes C and E.
+# The probe site at probe.cogmer.ai, for docs/work/cowork-first-run-spikes.md, spikes C, E, F and G.
 # /echo answers with what this server saw of the request, /prf/ serves the passkey PRF page, and
-# /sign/ serves the passkey signing page of spike F.
+# /sign/ serves the passkey signing page of spike F, and /open/ the links of spike G.
 # It keeps no access log. Run as the account that owns ~/probe-site, from that folder:
 #   PROBE_SITE=$PWD/site ./caddy run --config Caddyfile --adapter caddyfile
 # Port 80 is nginx's on the droplet, so certificates come by the TLS challenge on port 443 alone.
@@ -35,6 +35,10 @@ probe.cogmer.ai, a.probe.cogmer.ai, b.probe.cogmer.ai {
 		file_server
 	}
 	handle /sign/* {
+		root * {$PROBE_SITE}
+		file_server
+	}
+	handle /open/* {
 		root * {$PROBE_SITE}
 		file_server
 	}

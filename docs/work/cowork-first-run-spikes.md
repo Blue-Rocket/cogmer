@@ -1,6 +1,6 @@
 # Cowork first-run spikes
 
-Six spikes that answer what stands between a Cowork-only user and starting work by installing the
+Seven spikes that answer what stands between a Cowork-only user and starting work by installing the
 plugin alone. Material for the open item "A Cowork-only user cannot start by installing the plugin" in
 `docs/open.md`. Delete it with that item.
 
@@ -18,7 +18,7 @@ every Cowork task here is started in claude.ai in Chrome. Cowork tasks started t
 | a machine to hold the identity, which for a user with no computer is a hosted machine (D-285, not built) | E: whether a passkey can hold the master key in the browsers such a user has |
 | make the cloud value and upload it as a plugin zip (D-246, D-278) | A and B: whether anything but an upload puts a per-user value in a task |
 | verify each colleague with two words, both at once (D-054) | none here: a decision about verifying by an invitation link |
-| join rooms with commands | none here |
+| join rooms with commands, typed or pasted | G: whether a link opens a task or a session with the command filled in |
 | the first task says nothing when nothing is set up (D-286) | D: what a person sees of a hook's message in a cloud task |
 
 ## Rules for the session that runs them
@@ -57,6 +57,9 @@ values.
   subject, issuer and SHA-256 fingerprint, and for the probe site's three names what the site saw of the
   request.
 - `/first-run-spike:report` has the model print that file whole.
+- `/first-run-spike:echo <anything>`, from version 0.2.0, prints a line beginning `FRS-ECHO` with the
+  arguments it was given, the system's name, and the values of `CLAUDE_CODE_REMOTE` and
+  `CLAUDE_CODE_ENTRYPOINT`, which say whether the session runs in the cloud and which host started it.
 
 Make its zip on the Mac from the repository root:
 
@@ -85,6 +88,8 @@ cogmer.ai is the registrar's parking page.
   no proxy header.
 - `/prf/` is the passkey page of spike E. It creates a passkey for its own name and shows whether a PRF
   secret came back, its length and the first eight bytes of its SHA-256 hash, and sends nothing anywhere.
+- `/sign/` is the signing page of spike F, and `/open/` the page of spike G's links, which fill a prompt
+  in and send nothing.
 - The site keeps no access log. Caddy runs as the account `claude` from `~/probe-site`, detached, and
   stops if the droplet restarts. To start it again there:
 
@@ -238,6 +243,53 @@ one line for each check.
 5. If a passkey was saved to iCloud Keychain, open `https://a.probe.cogmer.ai/sign/#mode=self` on the user's
    iPhone, press the button, and record whether the passkey made on the Mac answered there.
 6. Stop the server, and ask the user to delete the passkeys named "cogmer signing probe" for `cogmer.ai`.
+
+## G. Whether a link opens a task or a session with a command filled in
+
+The question: can the page an invitation link opens offer one button that opens Claude with
+`/cogmer:room-join <link>` already in the prompt, so a new user only presses send? Draft 5 of
+`docs/work/cowork-first-run-design.md` falls back to a line to paste. Anthropic documents links that fill a
+prompt in and do not send it, read on 2026-11-27:
+
+- `claude://cowork/new?q=…`, `claude://code/new?q=…` and `claude://claude.ai/new?q=…` in the Claude
+  desktop app, with `q` URL-encoded and cut at about 14,000 characters
+  (https://support.claude.com/en/articles/14729294-open-claude-desktop-with-a-link, dated June 30, 2026);
+- `https://claude.ai/code/new?q=…`, which opens the Claude app on a phone where it is installed and the
+  browser otherwise, for an account with Claude Code
+  (https://support.claude.com/en/articles/14898120-open-the-claude-mobile-app-with-a-link, dated May 6,
+  2026).
+
+Neither says whether a filled-in slash command runs as a plugin's command, whether a Cowork session the
+desktop link opens runs in the cloud or on the computer, or how to open a Cowork task on a phone or the web.
+A GitHub issue reports that `claude.ai/new?q=` in a browser fills the prompt in without sending it
+(https://github.com/anthropics/claude-code/issues/8827).
+
+The probe plugin at version 0.2.0 has to be on the account, which is an upload the user agrees to first, as
+the rules say. Without it, `/cogmer:self-status` in place of the echo shows whether a filled-in command
+runs, and nothing of where the session runs. Claude Desktop cannot be driven from Chrome, so the user
+presses send in it, and the session records what the user reports and the screenshots they send.
+
+1. On the Mac, run
+
+   ```sh
+   open "claude://cowork/new?q=%2Ffirst-run-spike%3Aecho%20https%3A%2F%2Fcogmer.ai%2Fi%23spike-g"
+   ```
+
+   and record what opens and what the prompt holds. Have the user press send, and record the `FRS-ECHO`
+   line whole: whether the command ran, whether `args` holds the link unchanged with its `#`, and what `os`,
+   `remote` and `entrypoint` say of where the session runs.
+2. Do the same with `claude://code/new?q=` and the same text, and with `claude://claude.ai/new?q=`, which
+   opens a chat, where a plugin's command is not expected to run; record what each does.
+3. In Chrome, open `https://claude.ai/code/new?q=` with the same text, have the user press send, and
+   record the line.
+4. In Chrome, open `https://claude.ai/new?q=hello%20from%20spike%20G` and record whether the prompt is
+   filled in, and whether it is sent without a press.
+5. Open `https://probe.cogmer.ai/open/`, the probe site's page of these links
+   (`docs/work/probe-site/open/index.html`), click its first link in Chrome and in Safari, and record what
+   the browser asks before it opens the app.
+6. On the user's iPhone, open the link of step 3 from a message or a note, and record whether the Claude
+   app or Safari opens, and whether the prompt is filled in. Then look in the app for any way to start a
+   Cowork task from a link, such as the share sheet, and record what there is.
 
 ## What to bring back
 
