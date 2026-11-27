@@ -1,8 +1,7 @@
 # Cowork first-run design
 
-A route by which a Cowork-only user starts work by installing the plugin, with five draft decisions and
-the questions they leave. Material for the open item "A Cowork-only user cannot start by installing the
-plugin" in `docs/open.md`. The drafts become numbered decisions in `docs/decisions/` once they are agreed,
+A route by which a Cowork-only user starts work by installing the plugin, with five draft decisions.
+Material for the open item "A Cowork-only user cannot start by installing the plugin" in `docs/open.md`. The drafts become numbered decisions in `docs/decisions/` once they are agreed,
 and this page is deleted with the item.
 
 ## What the spikes found
@@ -47,7 +46,9 @@ their identity, serve their lists to each task (D-245, a cloud session takes its
 of the user's machines) and keep the turns their tasks write, since a task keeps nothing past its sandbox
 (spike C). cogmer provides hosted machines (D-285, a user with no computer of their own has a machine
 hosted for them), and onboarding suggests one to such a user beside the choice of a computer of their own.
-Whether the hosted machine is the default is not decided.
+Whether the hosted machine is the default is not decided. The hosted machine holds the shared key, certifies the passkey and renews the
+user's tasks, and deriving the master and shared keys from the passkey is set aside, since the passkey
+signs and carries no secret.
 
 1. The user installs the cogmer plugin on their account (D-290, cogmer reaches a Cowork cloud session as
    the marketplace plugin installed on the user's Claude account).
@@ -177,6 +178,15 @@ afterwards only renewals that chain to the same user, so someone who reads the l
 before the user taps can claim the task, and the page then shows the user that the task is claimed under
 another name. D-301 is rewritten to serve a daemon that holds no cloud key and to take that one write.
 
+A task that joins a room with nobody there to tap, such as a scheduled task whose prompt holds a cogmer
+command, is certified by a token the user opts in to uploading, since an upload is the only way to store a
+secret where a new task reads it (spikes A to C). Only the user's own machines honor the token, where every
+colleague honors today's cloud key: the task presents it to one of the user's machines and gets a three-day
+certificate, and the machine can show that a task started, limit how often the token is used, and revoke
+it at once, where a cloud key that is copied speaks for the user until a removal reaches each colleague
+(D-225, a machine sends each removal and new shared key to every colleague it knows until each
+acknowledges). Onboarding does not offer it; the machines page does, for a user who needs it.
+
 Rejected.
 - *A hook that asks the model to tell the user how to start.* The model said the link when asked (spike
   D), but the line would be in the model's context in every task of every user who had not set up, and
@@ -194,7 +204,7 @@ Rejected.
 
 Limits. A user who does not know the commands shares nothing, so the plugin's description and the README
 carry them. A task that creates or joins a room with nobody there to tap shares nothing until someone does,
-unless the user has uploaded the token in the question on unattended tasks.
+unless the user has uploaded the token for unattended tasks.
 
 Revisit when a host shows a hook's message to the person in a cloud task.
 
@@ -238,6 +248,21 @@ holds up to 64 bytes and comes back at every sign-in on every device, and the us
 from pairing, so a colleague also finds a machine the user added since they last spoke. A user with a
 hosted machine needs neither, since the user handle names the hosted machine.
 
+A task takes its user's lists only from one of the user's machines (D-245, a cloud session takes its
+user's lists only from one of the user's machines), and today the cloud value carries their relay
+addresses. A machine that approves or renews a task gives it the addresses then, and the first
+certificate, which the page makes, gives them in one of three ways:
+- At the user's own computer, the cloud page sends the user to the machines page at `127.0.0.1` with the
+  task's address and token after `#`, and the machine dials the task and gives it a certificate, the
+  lists and the addresses, so the page carries nothing back.
+- With a hosted machine, the passkey's user handle, up to 64 bytes set at registration and returned at
+  every sign-in on every device, names the hosted machine, whose name under `cogmer.ai` the page reaches
+  from any device.
+- A user whose only machine is a computer, away from it, gets the first certificate from the passkey, and
+  the page gives the task the computer's addresses from its memory, or from the directory, by the user's
+  identifier, which the passkey's user handle holds. A machine's overlay address is about 186 characters
+  (`docs/work/cloud-run-20261025T171545Z.txt`), more than a user handle holds itself.
+
 Rejected.
 - *A directory that cannot tell whose record it holds.* Storing records under a hash, sealing them, and
   refusing other writers without the identifier needs a write key derived from the shared key, a new
@@ -250,8 +275,13 @@ Rejected.
   the page that reads a cloud session's room).
 - *A directory that maps a name or an email address to a user's key.* Anyone could ask it whether someone
   uses cogmer, and it reverses D-142, which the open item on reaching a user by a handle weighs on its own.
-- *Carrying the computer's addresses in the passkey's `largeBlob`.* Most passkey providers decline it, and
-  none is documented to sync it (the question on where a task learns how to reach its user's machines).
+- *Carrying the computer's addresses in the passkey's `largeBlob`, which stores up to a few kilobytes with
+  a passkey.* On 2026-11-26 the sources read said that iCloud Keychain and Google Password Manager on
+  desktop Chrome store a blob, that Windows Hello, Samsung Pass and eight third-party password managers
+  declined it at registration, that Microsoft Password Manager failed the write, and that Chrome on
+  Android does not pass it on (https://www.corbado.com/blog/webauthn-l3-credential-manager-support, tested
+  in August 2026), and none says whether a blob syncs with the passkey to the user's other devices, which
+  is the case it would serve.
 
 Limits. The directory learns each user's identifier, machines and addresses, and who looks a user up and
 when, which for a cloud task is an address of Anthropic's (spike C) and for a colleague is their own. It is
@@ -399,42 +429,3 @@ is rewritten to hold both. D-026 (there is no join token at all), D-048 (verific
 commit-then-reveal exchange that derives two words), D-051 (stranger pairing is not a supported case) and
 D-074 (a name means one master key, and a collision is where a new master key surfaces) stand, and the
 links rely on D-074 to send a changed key to the words.
-
-## Questions the route leaves
-
-- Where the task learns how to reach its user's machines. A task takes its user's lists only from one of
-  the user's machines (D-245, a cloud session takes its user's lists only from one of the user's machines),
-  and today the cloud value carries their relay addresses. A machine that approves or renews a task gives
-  it the addresses then, so the question is the first certificate, which the page makes:
-  - At the user's own computer, the cloud page sends the user to the machines page at `127.0.0.1` with the
-    task's address and token after `#`, and the machine dials the task and gives it a certificate, the
-    lists and the addresses, so the page carries nothing back.
-  - With a hosted machine, the passkey's user handle, up to 64 bytes set at registration and returned at
-    every sign-in on every device, names the hosted machine, whose name under `cogmer.ai` the page reaches
-    from any device.
-  - A user whose only machine is a computer, away from it, gets the first certificate from the passkey, and
-    the page gives the task the computer's addresses from its memory, or from the directory, by the user's
-    identifier, which the passkey's user handle holds (Draft 4). A machine's overlay address is about 186 characters
-    (`docs/work/cloud-run-20261025T171545Z.txt`), more than a user handle holds itself.
-  The passkey's `largeBlob` extension, which stores up to a few kilobytes with a passkey, could carry the
-  computer's addresses, and is not designed around. On 2026-11-26 the sources read said that iCloud
-  Keychain and Google Password Manager on desktop Chrome store a blob, that Windows Hello, Samsung Pass and
-  eight third-party password managers declined it at registration, that Microsoft Password Manager failed
-  the write, and that Chrome on Android does not pass it on
-  (https://www.corbado.com/blog/webauthn-l3-credential-manager-support, tested in August 2026). None says
-  whether a blob syncs with the passkey to the user's other devices, which is the case it would serve.
-- What the identity of a user with no computer rests on. It rests on a hosted machine, which onboarding
-  suggests (D-285, a user with no computer of their own has a machine hosted for them): the machine holds
-  the shared key, certifies the passkey and renews the user's tasks. Deriving the master and shared keys
-  from the passkey is set aside, since the passkey signs and carries no secret.
-- Whether the Mac's browsers, and the same passkey reached through iCloud Keychain, return the same secret.
-  Only Safari on an iPhone was tried.
-- How a task that joins a room with nobody there to tap is certified, such as a scheduled task whose prompt
-  holds a cogmer command. An upload is the only way to store a secret where a new task reads it (spikes A
-  to C), so such a user opts in by uploading a token that only their own machines honor, in place of
-  today's cloud key, which every colleague honors: the task presents it to one of the user's machines and
-  gets a three-day certificate, and the machine can show that a task started, limit how often the token is
-  used, and revoke it at once, where a cloud key that is copied speaks for the user until a removal
-  reaches each colleague (D-225, a machine sends each removal and new shared key to every colleague it
-  knows until each acknowledges). Onboarding does not offer it; the machines page does, for a user who
-  needs it.
