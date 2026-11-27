@@ -344,6 +344,26 @@ not delivered within ten intervals, or a daemon's log has a line "is unreachable
     container of its own, built `FROM scratch` as the container tests' images are. The answer is what each adds
     for one daemon. OS users need root to make, and the user makes them. Docker runs here under `sg docker`.
 
+12. A user on the current build, for choosing between a process for each user and one process for many
+    (the open item "Nothing decides how hosted machines run or how each one's page gets its address").
+    Measurement 1 at N = 4 and measurement 6 at N = 20, with the overlay off, on the head of
+    `release-0.11.0`, which keeps a connection for each address, polls quiet rooms less often and nudges
+    (D-303, D-305 and D-306). The answer is the cost of a process for each user, as the box's CPU and PSS
+    for one user, and the fixed term on that build, which is the most one process for many users could save
+    for each user, since everything else a user costs it pays too. On `b91c152` the fixed term was 12.0MB
+    and 4.1 CPU seconds an hour, and on `8671eac` a daemon of the reference user in a group of four held
+    17.3MB and took 23.4 CPU seconds an hour (`d1d5db9`), so one process for many users would save at most
+    about two thirds of a user's memory and a sixth of its CPU, which this measurement checks.
+13. A machine started when it is needed. One group of four whose stores hold a day of the reference user's
+    turns, made by `harness.py fill`. One daemon is stopped, a colleague writes a turn in their shared room,
+    and the stopped daemon is started; this is done 10 times. The answer is the time from the start until
+    the daemon answers at `/healthz`, until it answers a colleague's poll, and until the turn written while
+    it was stopped is in its store, with its PSS a minute after the start and the disk it holds while
+    stopped. A machine stopped while its user is idle costs only that disk, so these say what starting on
+    demand saves and what a colleague waits for. Nothing yet starts a daemon when traffic arrives, so the
+    harness starts it at a known moment, which measures the daemon's part and not a waking relay's. The
+    harness's `restart` starts every daemon at once, so it needs a way to stop and start one.
+
 The results become one table of the terms with their units, the reference user's cost an hour from them, and,
 for each server in the table above, the users it holds by memory and by CPU and the cost of one user a month.
 The droplet's numbers stand for the x86 servers. The ARM servers are priced from the same numbers until one is
@@ -381,10 +401,12 @@ Each result goes in a commit that says when, on what machine and build, and what
 
 ### Order
 
-1. Measurement 10, at a quarter, a half, one and two days of turns, which takes about an hour.
-2. Measurement 11, which needs the harness to run a daemon as an OS user of its own and in a container of its
+1. Measurement 12, about an hour, and measurement 10, at a quarter, a half, one and two days of turns,
+   which takes about an hour and makes the stores measurement 13 starts from.
+2. Measurement 13, once the harness can stop and start one daemon.
+3. Measurement 11, which needs the harness to run a daemon as an OS user of its own and in a container of its
    own, which it cannot yet do.
-3. An ARM server, once the question below is answered.
+4. An ARM server, once the question below is answered.
 
 ### Questions
 
