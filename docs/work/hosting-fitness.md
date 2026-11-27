@@ -363,6 +363,24 @@ not delivered within ten intervals, or a daemon's log has a line "is unreachable
     demand saves and what a colleague waits for. Nothing yet starts a daemon when traffic arrives, so the
     harness starts it at a known moment, which measures the daemon's part and not a waking relay's. The
     harness's `restart` starts every daemon at once, so it needs a way to stop and start one.
+14. A page left open. The static page asks for the newest page of a room every 3 seconds, and on every
+    request the daemon builds the whole room's snapshot, renders the newest page's turns, and hashes the
+    newest page's state, including when it answers that nothing changed (`handleSnapshot` in
+    `cmd/cogmer/viewer.go`; D-307, a page that holds a room's state is answered that it is unchanged, and D-308,
+    the static page is sent a page of a room's turns and asks for the earlier ones). On 2026-11-26, in Docker
+    on a Mac, a request took 36 ms on average in a room of 300 turns, and the daemon took 3.0% of a core with
+    a page's requests against 1.9% idle, about 40 CPU seconds an hour for each open page, against 23.4 for a
+    whole daemon of the reference user on `8671eac`. Only a cloud session's daemon serves the page's port
+    today, and none of the harness's daemons does, so this is measured as a Go benchmark of `handleSnapshot`
+    on stores that `harness.py fill` makes, at 300, 3,000 and 30,000 turns in the room, each request
+    carrying the hash of the state before it, as the page's requests do in a quiet room, and then with one
+    turn written between requests. The answer is the CPU and the bytes allocated for each request, and from
+    them the CPU an hour of one open page, against the room's size. That says which of three changes would
+    save more than one process for many users: a count of every change to what the page shows, so that an
+    unchanged room is answered without building the snapshot; an index on the order a page is cut in, so that
+    a request reads one page of turns and not the room; and a page told of a change over a held channel
+    rather than asking. The result is also the term a hosted user's cost takes for each hour a page is open,
+    if a hosted machine serves its user's page.
 
 The results become one table of the terms with their units, the reference user's cost an hour from them, and,
 for each server in the table above, the users it holds by memory and by CPU and the cost of one user a month.
@@ -403,7 +421,8 @@ Each result goes in a commit that says when, on what machine and build, and what
 
 1. Measurement 12, about an hour, and measurement 10, at a quarter, a half, one and two days of turns,
    which takes about an hour and makes the stores measurement 13 starts from.
-2. Measurement 13, once the harness can stop and start one daemon.
+2. Measurement 13, once the harness can stop and start one daemon, and measurement 14 on the stores of
+   measurement 10, with a store of 30,000 turns filled for it.
 3. Measurement 11, which needs the harness to run a daemon as an OS user of its own and in a container of its
    own, which it cannot yet do.
 4. An ARM server, once the question below is answered.
