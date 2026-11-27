@@ -213,61 +213,58 @@ device and per browser, and a private tab keeps none.
 Revisit when the passkey providers most users hold carry data with a passkey to every device, so that a
 task could take its user's addresses from the passkey.
 
-## Draft 5: an invitation link pairs, verifies and invites a colleague with neither person waiting for the other
+## Draft 5: an invitation link and its reply verify two colleagues over a channel they trust, with no call
 
-Decision. A user invites a colleague they have not paired with by sending a link, over any channel the two
-of them already trust, such as a chat they share or an email. The link is `https://cogmer.ai/i#` followed
-by the inviting user's identifier, the room's identifier and name, and a one-time secret of 128 bits, all
-after `#`, so cogmer's server never receives them. The inviting machine keeps a hash of the secret with an
-expiry seven days later in the user's lists, so that any of the user's machines honors it (D-228, a user's
-colleagues, verifications, labels and rooms belong to the user and are copied between the user's machines).
-The colleague gives the link to `/cogmer:join` in a task or a session, and their machine finds the
-inviting user's machines in the directory of Draft 4 by the identifier, dials one, and proves it holds the
-secret by a MAC under it over both users' identifiers, inside the connection pinned to the inviting
-machine's key. The inviting machine spends the secret, records the colleague as a verified colleague, and
-puts them on the room's guest list as the inviting user's invitation (D-235, a room's one guest list decides
-whose events count). The colleague's machine records the inviting user as verified, since the identifier
-came in the link from the person who sent it, and joins the room. The inviting user is told the name the
-colleague chose and can remove them. A spent or expired link is refused, and a link presented after it was
-spent is reported to the inviting user as well as to whoever presented it, so a link that someone else used
-first comes to light when the colleague it was sent to uses it.
+Decision. A user invites a colleague they have not paired with by sending a link over a channel the two
+of them already trust, such as a chat they share or an email, and the invitation completes only when the
+colleague sends a reply link back over that channel. The invitation is `https://cogmer.ai/i#` followed by
+the inviting user's pairing string (D-097, a pairing string carries a chosen name and never a guessed one),
+the room's identifier and name, and a random value naming this invitation, all after `#`, so cogmer's
+server never receives them, and none of them is a secret. The colleague gives the link to `/cogmer:join`
+in a task or a session, and their machine records the inviting user as a verified colleague and the room
+as offered, and gives the colleague a reply, `https://cogmer.ai/r#` followed by the colleague's pairing
+string and the value naming the invitation, to send back. The inviting user opens the reply, and their
+machine, finding an invitation of its own with that value, records the colleague as verified and puts them
+on the room's guest list (D-235, a room's one guest list decides whose events count), and the offer then
+reaches the colleague's machines (D-105, an invitation is delivered to a paired guest as an offer over the
+paired channel). Each machine finds the other's machines in the directory of Draft 4 by the identifier
+when the string carries no address it can reach.
 
-Two colleagues who have paired already need no link, since an invitation reaches a paired colleague as an
-offer (D-105, an invitation is delivered to a paired guest as an offer over the paired channel). The two
-words remain for a user who would rather not trust the channel, and a user who has verified a colleague by
-a link can compare the two words with them later.
+The invitation grants nothing to whoever holds it. Anyone who uses it learns the inviting user's identifier,
+which is safe to know (D-023, a peer identifier must be safe to know), and gets a reply that the inviting
+user acts on only when it arrives from the colleague they invited. A reply to an invitation the machine did
+not make is refused, and a second reply to one invitation is shown to the inviting user beside the first
+rather than recorded. Two colleagues who have paired already need neither link. The two words remain for a
+user who would rather not trust the channel, and a user who verified a colleague by links can compare the
+two words with them later.
 
 Rejected.
+- *A link carrying a one-time secret, whose first use verifies and admits.* It is useful to anyone who
+  reads it before the colleague does, an administrator of the chat or a person it was forwarded to, which
+  D-026 (there is no join token at all) rejects, and a theft is found only when the colleague uses it after.
+- *The reply as two words read back over the channel.* Words are short enough that someone who reads the
+  reply can make a key whose words match before the inviting user opens it, where a reply carrying the
+  whole identifier cannot be matched.
 - *The two words alone, with a hosted machine answering for a user who has no computer.* The exchange
-  needs both people on a call at once, which a user who wants to start working by sending a message does
-  not have.
+  needs both people on a call at once.
 - *A password-authenticated key exchange, such as SPAKE2 or CPace, with a code sent once.* It trusts the
-  channel that carried the code, as the link does, and needs both machines to take part at the same moment.
-- *A link whose redemption waits for the inviting user to confirm.* The inviting user would be shown only
-  a name the redeemer chose, which tells them nothing the link did not, and the colleague would wait on
-  someone who may be away.
-- *A link with no secret, carrying only the inviting user's identifier.* The colleague could verify the
-  inviting user, and the inviting user would have no way to tell the colleague's key from anyone else's.
+  channel that carried the code, as the links do, and needs both machines to take part at the same moment.
 
-Limits. A verification by link trusts the channel that carried it and everyone who could read the link
-before it was used: an administrator of the chat, an attacker in the inviting user's email, or a person the
-link was forwarded to. A link taken and used first is found out when the colleague uses it, and a channel
-that substitutes a link of its own is not found out at all, as with anything else said on that channel.
-The inviting user's machine has to answer when the colleague uses the link, which a hosted machine always
-does and a sleeping computer does on waking, and the colleague's machine tries again until the inviting machine answers.
+Limits. A verification by links trusts that the channel delivers what each person sent and shows who sent
+it, so a channel that substitutes both links is not found out, as with anything else said on that channel.
+The colleague waits for the inviting user to open the reply before reading the room, though neither has to
+be present when the other acts.
 
-Revisit when a link is found to have been used by someone it was not sent to, or when people come to treat
-the link as safe to post where others read it.
+Revisit when a reply is found to have come from someone other than the colleague invited, or when people
+come to send the links over channels that do not show who sent them.
 
 What it changes. D-055 (a peer is verified in one way, the two-word comparison) gives way to two ways, and
-its rejected fallback, "the path people reach for when the other is inconvenient", is what the link will
-be: most colleagues will be verified by a link. D-026 (there is no join token at all) and the join secret
-D-024 (admission is a guest list) rejects are reversed for a secret that is spent on first use and expires,
-on the case both name for revisiting, a user who invites someone they have never paired with while away.
-D-163 (only a person's confirmation records a verification, and a mismatch records nothing) takes the
-inviting user's sending of the link and the colleague's use of it as the two confirmations. D-048
-(verification is a live commit-then-reveal exchange that derives two words) and D-051 (stranger pairing is
-not a supported case) stand.
+its rejected fallback, "the path people reach for when the other is inconvenient", is what the links will
+be: most colleagues will be verified by links. D-163 (only a person's confirmation records a verification,
+and a mismatch records nothing) takes the colleague's use of the invitation and the inviting user's opening
+of the reply as the two confirmations. D-026 (there is no join token at all), D-048 (verification is a live
+commit-then-reveal exchange that derives two words) and D-051 (stranger pairing is not a supported case)
+stand.
 
 ## Questions the route leaves
 
