@@ -1,0 +1,92 @@
+{
+ "n": 4,
+ "down_s": 30,
+ "as_left": true,
+ "build": {
+  "commit": "36162d55b4dffe77617e4d1c3a9f9a187049407b",
+  "dirty": false,
+  "built": "2026-11-27T19:22:20Z"
+ },
+ "wakes": [
+  {
+   "answers_s": 0.105,
+   "peer_port_s": 0.105,
+   "missed_turn_s": 0.988,
+   "own_turn_to_colleague_s": 0.799,
+   "pss_mb_at_60s": 76.8,
+   "stopped_disk_mb": 74.68
+  },
+  {
+   "answers_s": 0.089,
+   "peer_port_s": 0.089,
+   "missed_turn_s": 0.843,
+   "own_turn_to_colleague_s": 1.385,
+   "pss_mb_at_60s": 43.8,
+   "stopped_disk_mb": 74.71
+  },
+  {
+   "answers_s": 0.093,
+   "peer_port_s": 0.093,
+   "missed_turn_s": 0.867,
+   "own_turn_to_colleague_s": 0.651,
+   "pss_mb_at_60s": 47.1,
+   "stopped_disk_mb": 74.74
+  },
+  {
+   "answers_s": 0.089,
+   "peer_port_s": 0.089,
+   "missed_turn_s": 0.939,
+   "own_turn_to_colleague_s": 0.664,
+   "pss_mb_at_60s": 48.9,
+   "stopped_disk_mb": 74.75
+  },
+  {
+   "answers_s": 0.098,
+   "peer_port_s": 0.098,
+   "missed_turn_s": 1.755,
+   "own_turn_to_colleague_s": 0.78,
+   "pss_mb_at_60s": 79.8,
+   "stopped_disk_mb": 74.76
+  },
+  {
+   "answers_s": 0.067,
+   "peer_port_s": 0.067,
+   "missed_turn_s": 1.58,
+   "own_turn_to_colleague_s": 0.591,
+   "pss_mb_at_60s": 48.1,
+   "stopped_disk_mb": 74.78
+  },
+  {
+   "answers_s": 0.097,
+   "peer_port_s": 0.097,
+   "missed_turn_s": 1.807,
+   "own_turn_to_colleague_s": 0.659,
+   "pss_mb_at_60s": 80.5,
+   "stopped_disk_mb": 74.8
+  },
+  {
+   "answers_s": 0.058,
+   "peer_port_s": 0.091,
+   "missed_turn_s": 0.871,
+   "own_turn_to_colleague_s": 0.688,
+   "pss_mb_at_60s": 72.0,
+   "stopped_disk_mb": 74.81
+  },
+  {
+   "answers_s": 0.058,
+   "peer_port_s": 0.058,
+   "missed_turn_s": 1.475,
+   "own_turn_to_colleague_s": 0.668,
+   "pss_mb_at_60s": 86.6,
+   "stopped_disk_mb": 74.83
+  },
+  {
+   "answers_s": 0.064,
+   "peer_port_s": 0.099,
+   "missed_turn_s": 0.862,
+   "own_turn_to_colleague_s": 0.765,
+   "pss_mb_at_60s": 85.8,
+   "stopped_disk_mb": 74.84
+  }
+ ]
+}

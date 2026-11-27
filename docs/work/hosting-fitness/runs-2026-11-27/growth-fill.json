@@ -1,0 +1,278 @@
+{
+ "run": {
+  "name": "fill",
+  "shape": "group4",
+  "n": 4,
+  "days": [
+   0.25,
+   0.5,
+   1.0,
+   2.0
+  ],
+  "idle_s": 300,
+  "per_room_per_day": 1440,
+  "build": {
+   "commit": "36162d55b4dffe77617e4d1c3a9f9a187049407b",
+   "dirty": false,
+   "built": "2026-11-27T19:22:20Z"
+  },
+  "started": "2026-11-27T22:35:10Z"
+ },
+ "seed_sizes": {
+  "u00": {
+   "rooms_db": 245760,
+   "rooms_wal": 0,
+   "membership": 674560,
+   "other": 1971,
+   "total": 922291
+  },
+  "u01": {
+   "rooms_db": 163840,
+   "rooms_wal": 0,
+   "membership": 777560,
+   "other": 2082,
+   "total": 943482
+  },
+  "u02": {
+   "rooms_db": 81920,
+   "rooms_wal": 0,
+   "membership": 810520,
+   "other": 2187,
+   "total": 894627
+  },
+  "u03": {
+   "rooms_db": 163840,
+   "rooms_wal": 0,
+   "membership": 847600,
+   "other": 2418,
+   "total": 1013858
+  }
+ },
+ "errors": [],
+ "checkpoints": [
+  {
+   "days": 0.25,
+   "turns_per_room": 361,
+   "turns_per_daemon": {
+    "u00": 1083,
+    "u01": 1083,
+    "u02": 1083,
+    "u03": 1083
+   },
+   "write_s": 64.1,
+   "turn_write_s": {
+    "median": 0.162,
+    "p95": 0.31
+   },
+   "delivered": 6,
+   "rooms": 6,
+   "delivery_max_s": 0.88,
+   "sizes": {
+    "u00": {
+     "rooms_db": 8962048,
+     "rooms_wal": 12577880,
+     "membership": 4328928,
+     "other": 182220,
+     "total": 26051076
+    },
+    "u01": {
+     "rooms_db": 8888320,
+     "rooms_wal": 12577880,
+     "membership": 4333024,
+     "other": 182693,
+     "total": 25981917
+    },
+    "u02": {
+     "rooms_db": 8925184,
+     "rooms_wal": 12577880,
+     "membership": 4333024,
+     "other": 181806,
+     "total": 26017894
+    },
+    "u03": {
+     "rooms_db": 8900608,
+     "rooms_wal": 12606720,
+     "membership": 4337144,
+     "other": 180246,
+     "total": 26024718
+    }
+   },
+   "idle": {
+    "cpu_s_per_h": 12.29,
+    "pss_mb": 43.01,
+    "loop_sent_per_h": 793691.0,
+    "disk_write_per_h": 0.0
+   },
+   "idle_windows_disagree": false,
+   "exited": []
+  },
+  {
+   "days": 0.5,
+   "turns_per_room": 721,
+   "turns_per_daemon": {
+    "u00": 2163,
+    "u01": 2163,
+    "u02": 2163,
+    "u03": 2163
+   },
+   "write_s": 79.7,
+   "turn_write_s": {
+    "median": 0.208,
+    "p95": 0.354
+   },
+   "delivered": 6,
+   "rooms": 6,
+   "delivery_max_s": 0.997,
+   "sizes": {
+    "u00": {
+     "rooms_db": 17571840,
+     "rooms_wal": 12606720,
+     "membership": 4328928,
+     "other": 364916,
+     "total": 34872404
+    },
+    "u01": {
+     "rooms_db": 17891328,
+     "rooms_wal": 12594360,
+     "membership": 4333024,
+     "other": 365613,
+     "total": 35184325
+    },
+    "u02": {
+     "rooms_db": 17715200,
+     "rooms_wal": 12577880,
+     "membership": 4333024,
+     "other": 363858,
+     "total": 34989962
+    },
+    "u03": {
+     "rooms_db": 17928192,
+     "rooms_wal": 12664400,
+     "membership": 4337144,
+     "other": 362086,
+     "total": 35291822
+    }
+   },
+   "idle": {
+    "cpu_s_per_h": 14.83,
+    "pss_mb": 55.7,
+    "loop_sent_per_h": 789080.25,
+    "disk_write_per_h": 0.0
+   },
+   "idle_windows_disagree": true,
+   "exited": []
+  },
+  {
+   "days": 1.0,
+   "turns_per_room": 1441,
+   "turns_per_daemon": {
+    "u00": 4323,
+    "u01": 4323,
+    "u02": 4323,
+    "u03": 4323
+   },
+   "write_s": 272.1,
+   "turn_write_s": {
+    "median": 0.369,
+    "p95": 0.577
+   },
+   "delivered": 6,
+   "rooms": 6,
+   "delivery_max_s": 1.814,
+   "sizes": {
+    "u00": {
+     "rooms_db": 35840000,
+     "rooms_wal": 12623200,
+     "membership": 4328928,
+     "other": 747481,
+     "total": 53539609
+    },
+    "u01": {
+     "rooms_db": 36024320,
+     "rooms_wal": 12623200,
+     "membership": 4333024,
+     "other": 748690,
+     "total": 53729234
+    },
+    "u02": {
+     "rooms_db": 36200448,
+     "rooms_wal": 12664400,
+     "membership": 4333024,
+     "other": 745826,
+     "total": 53943698
+    },
+    "u03": {
+     "rooms_db": 35799040,
+     "rooms_wal": 12664400,
+     "membership": 4337144,
+     "other": 743493,
+     "total": 53544077
+    }
+   },
+   "idle": {
+    "cpu_s_per_h": 16.11,
+    "pss_mb": 67.89,
+    "loop_sent_per_h": 813244.5,
+    "disk_write_per_h": 0.0
+   },
+   "idle_windows_disagree": true,
+   "exited": []
+  },
+  {
+   "days": 2.0,
+   "turns_per_room": 2881,
+   "turns_per_daemon": {
+    "u00": 8643,
+    "u01": 8643,
+    "u02": 8643,
+    "u03": 8643
+   },
+   "write_s": 1045.2,
+   "turn_write_s": {
+    "median": 0.712,
+    "p95": 1.154
+   },
+   "delivered": 6,
+   "rooms": 6,
+   "delivery_max_s": 3.23,
+   "sizes": {
+    "u00": {
+     "rooms_db": 72171520,
+     "rooms_wal": 12730320,
+     "membership": 4328928,
+     "other": 1564461,
+     "total": 90795229
+    },
+    "u01": {
+     "rooms_db": 72097792,
+     "rooms_wal": 12783880,
+     "membership": 4333024,
+     "other": 1568707,
+     "total": 90783403
+    },
+    "u02": {
+     "rooms_db": 72048640,
+     "rooms_wal": 12767400,
+     "membership": 4333024,
+     "other": 1561994,
+     "total": 90711058
+    },
+    "u03": {
+     "rooms_db": 71917568,
+     "rooms_wal": 12759160,
+     "membership": 4337144,
+     "other": 1558805,
+     "total": 90572677
+    }
+   },
+   "idle": {
+    "cpu_s_per_h": 20.83,
+    "pss_mb": 89.7,
+    "loop_sent_per_h": 831677.25,
+    "disk_write_per_h": 0.0
+   },
+   "idle_windows_disagree": true,
+   "exited": []
+  }
+ ]
+}
