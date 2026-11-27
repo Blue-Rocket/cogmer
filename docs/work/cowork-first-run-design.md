@@ -301,7 +301,29 @@ The invitation grants nothing to whoever holds it. Anyone who uses it learns the
 which is safe to know (D-023, a peer identifier must be safe to know), and gets a reply that the inviting
 user acts on only when it arrives from the colleague they invited. A reply to an invitation the machine did
 not make is refused, and a second reply to one invitation is shown to the inviting user beside the first
-rather than recorded. Two colleagues who have paired already need neither link. The two words remain for a
+rather than recorded.
+
+The inviting user names the colleague the invitation is for when making it, and the name stays on their
+machines with the invitation and becomes the colleague's label when the reply is accepted, which is the
+label D-093 (the label is collected with the pairing string and written only when the words match) collects
+while pairing. Confirming a reply shows the name the inviting user gave, the name the replier chose (D-186,
+a user chooses the name colleagues see when the user identity is made in the daemon's page) and how long
+ago the invitation was made, and asks whether the reply reached them from that colleague in the chat or
+email the invitation went to. It says so in a sentence when the two names differ, when another reply to the
+invitation came first, when the invitation is old, and when the key is already a colleague's under another
+name. Refusing a reply records nothing of it, leaves the invitation open for the colleague it was meant for,
+and offers to cancel it.
+
+A link establishes a colleague who is new and never replaces the key of one the user has. A reply or an
+invitation whose key differs from the key of a colleague with the same name meets D-074 (a name means one
+master key, and a collision is where a new master key surfaces): nothing is recorded, and the page says
+that a new key cannot be told from somebody else's sent in that colleague's name, and that the key is
+replaced only by forgetting the old one and comparing the two words with the colleague on a call. A message
+saying "I set up again, here is my new link" is the one a channel carries unchanged for an attacker, and it
+reaches a user whose guard is down because they know the colleague, so the ceremony that does not trust the
+channel guards it.
+
+Two colleagues who have paired already need neither link. The two words remain for a
 user who would rather not trust the channel. The verified field of a colleague's entry (D-228, a user's
 colleagues, verifications, labels and rooms belong to the user and are copied between the user's machines)
 records whether the words or links verified them, the colleague list shows "verified by link" for the
@@ -321,6 +343,11 @@ Rejected.
   colleagues to verify again with the words.
 - *A room that admits only guests verified by the words.* It adds a setting to every room and a refusal to
   explain to a colleague, for a need nobody has shown.
+- *A link that replaces a colleague's key.* One message in the colleague's name would take over a colleague
+  the user already trusts, which is worse than a first contact gone wrong.
+- *An invitation that the colleague's key opens, with the colleague sending their pairing string first.* The
+  inviting user still has to trust that the first message came from the colleague, so the check moves to
+  the start without growing stronger, and the colleague has to act before they can be invited.
 - *The two words alone, with a hosted machine answering for a user who has no computer.* The exchange
   needs both people on a call at once.
 - *A password-authenticated key exchange, such as SPAKE2 or CPace, with a code sent once.* It trusts the
@@ -347,8 +374,9 @@ port, in lines, with a token made from the cloud key) serves only reads and only
 a cloud session, and rejects serving a port in every daemon because it would be open for every user; a
 port that does nothing without the user's passkey signature answers that rejection differently, and D-301
 is rewritten to hold both. D-026 (there is no join token at all), D-048 (verification is a live
-commit-then-reveal exchange that derives two words) and D-051 (stranger pairing is not a supported case)
-stand.
+commit-then-reveal exchange that derives two words), D-051 (stranger pairing is not a supported case) and
+D-074 (a name means one master key, and a collision is where a new master key surfaces) stand, and the
+links rely on D-074 to send a changed key to the words.
 
 ## Questions the route leaves
 
