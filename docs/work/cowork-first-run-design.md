@@ -103,7 +103,19 @@ session key copied out of a sandbox speaks for the user, unless a removal of it 
 session's key is certified for twenty-four hours, and the session's daemon certifies a new one before it
 expires), whose renewal is done by a cloud key in the task, since the task holds no cloud key here.
 
+A passkey is not a cloud key, and D-280 (a user has one cloud key at a time) does not count it. A user may
+register several, such as one in iCloud Keychain and one in Windows Hello, each certified on its own, and
+may keep one uploaded cloud key beside them. D-280 refuses a second cloud key because the plugin that
+carries it reaches every cloud session of the account, so a second would hold the same authority as the
+first with no use. A passkey is in no session, signs only when its user answers a prompt, and certifies
+one task's key at a time, so a second passkey serves another device and not the same sessions twice.
+
 Rejected.
+- *Counting a passkey as the user's one cloud key.* A user whose devices keep passkeys with different
+  providers could register only one, and keeping an uploaded value would take the passkey's place, while
+  the risk D-280 limits is a secret copied into every session, which a passkey is not.
+- *Retiring the uploaded cloud key now, with the passkey and the token for unattended tasks in its place.*
+  It removes what users have before the passkey route is built and tried.
 - *Deriving a cloud key from the passkey's PRF secret in the page.* A script that keeps the derived key
   certifies for as long as the key is certified, where an assertion certifies one key until it expires, and
   carrying a PRF secret between pages puts it in an address.
@@ -337,11 +349,6 @@ stand.
   first set cogmer up on one of their own computers). In a Cowork cloud task, creating or joining a room, or
   `/cogmer:start`, would start the daemon and print the page's link instead, and D-286's Limits, which Draft 2 relies on, say the
   command says what D-281 has it say. A Claude Code cloud session could keep D-281's answer.
-- Whether a passkey that certifies tasks counts under D-280 (a user has one cloud key at a time). The
-  passkey is not a cloud key but a key of another kind that certifies a task's session key, and a user who
-  keeps the uploaded value keeps a cloud key beside it. Either page can run the passkey step: the machines
-  page stays at `127.0.0.1` and sends the user to a page under `cogmer.ai` with its challenge, taking back
-  the signature by navigation alone, with no hosts-file entry or local certificate (spike F).
 - How a task that joins a room with nobody there to tap is certified, such as a scheduled task whose prompt
   holds a cogmer command. An upload is the only way to store a secret where a new task reads it (spikes A
   to C), so such a user opts in by uploading a token that only their own machines honor, in place of
