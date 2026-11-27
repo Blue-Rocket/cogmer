@@ -314,6 +314,14 @@ invitation came first, when the invitation is old, and when the key is already a
 name. Refusing a reply records nothing of it, leaves the invitation open for the colleague it was meant for,
 and offers to cancel it.
 
+While a reply is awaited, the room's page on the inviting user's machines shows "Invited Ben by link,
+waiting for a reply" with a button that cancels the invitation, and the colleague's machine lists the room
+among its offers as "Waiting for Alice to open your reply" with the reply there to copy again, as D-188 (a
+waiting offer is shown with the rooms and a withheld one beside the peer who can release it) shows a
+waiting offer. An invitation expires 30 days after it is made: its page then says that it has expired and
+to ask the inviting user for a new one, and a reply that arrives after it is refused. The colleague keeps
+the inviting user as verified, since the link reached them in time.
+
 A link establishes a colleague who is new and never replaces the key of one the user has. A reply or an
 invitation whose key differs from the key of a colleague with the same name meets D-074 (a name means one
 master key, and a collision is where a new master key surfaces): nothing is recorded, and the page says
@@ -343,6 +351,9 @@ Rejected.
   colleagues to verify again with the words.
 - *A room that admits only guests verified by the words.* It adds a setting to every room and a refusal to
   explain to a colleague, for a need nobody has shown.
+- *An invitation that never expires, or one that expires in seven days.* One that never expires lets a link
+  found months later bring a reply the inviting user may accept without remembering whom they invited, and
+  seven days ends an invitation before a colleague back from two weeks away has seen it.
 - *A link that replaces a colleague's key.* One message in the colleague's name would take over a colleague
   the user already trusts, which is worse than a first contact gone wrong.
 - *An invitation that the colleague's key opens, with the colleague sending their pairing string first.* The
