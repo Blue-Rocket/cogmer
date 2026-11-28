@@ -10,6 +10,10 @@ user should check on a call before recording it, and that the way to record a ne
 `forget` the old one first. A colleague's new machine or new shared key is no key change,
 since its certificates end at the master key the name holds (D-219, a user is a master key
 that certifies machines through a shared key), so only a new master key meets this rule.
+A peer the user gave no name holds none, since its derived name is shown and never stored
+(D-021, peer names are word pairs derived from the identity, never chosen), so two peers whose
+keys derive one name are both recorded, and a name chosen for one peer may not be the derived
+name another peer is shown by.
 
 **Support.**
 - A peer's identifier is the user's master key, so a user who makes a new master key
@@ -23,6 +27,11 @@ that certifies machines through a shared key), so only a new master key meets th
 **Rejected.**
 - *Two keys under one name.* A name would then admit whichever key was listed first,
   which is the failure verification exists to prevent.
+- *Recording a peer given no name under its derived name.* Two peers whose keys derive one
+  name, about one pair in 8,280 (D-140, peer names come from 8,280 combinations), would look
+  like one name held by two keys, and the second would be refused as a changed key though
+  nobody named either. `cmd/cogmer/derivedname_test.go`,
+  `TestColleaguesWhoseKeysDeriveOneNameAreBothRecorded`.
 
 **Limits.** The rule does not detect a key change by itself. It catches only a key filed
 under a familiar name, and a peer that presents a new key is an unknown peer, refused
