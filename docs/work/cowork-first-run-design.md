@@ -242,9 +242,13 @@ any machine checks a record of the user's, and a reader checks the record the sa
 can withhold a record or serve an old one and never send a reader to a machine that is not the user's. It
 holds no name, so a user is found only by someone who already has their identifier, as D-142 (identities
 are exchanged through pairing strings, with no directory) has it, and it keeps no log of requests and only
-the latest record of each user. The page reads the user's identifier from the passkey's user handle, which
-holds up to 64 bytes and comes back at every sign-in on every device, and the user's colleagues hold it
-from pairing, so a colleague also finds a machine the user added since they last spoke. A user with a
+the latest record of each user. The page learns the user's identifier from a sign-in, as WebAuthn sites commonly look up a passkey's
+key: the identifier is the passkey's public key (Draft 6), which a sign-in never returns, so the user's
+record in the directory also holds the passkey's credential identifier, which every sign-in returns, and
+the page asks the directory for the record of that credential and keeps the identifier in its storage on
+the device. The user handle cannot hold the identifier, since the page sets it
+when the passkey is made, before the passkey's key exists. The user's colleagues hold the identifier from
+pairing, so a colleague also finds a machine the user added since they last spoke. A user with a
 hosted machine needs neither, since the user handle names the hosted machine.
 
 The cloud page shows the user's rooms, and a room holds the turns of every session of every guest in it,
@@ -267,10 +271,15 @@ certificate, which the page makes, gives them in one of three ways:
   from any device.
 - A user whose only machine is a computer, away from it, gets the first certificate from the passkey, and
   the page gives the task the computer's addresses from its memory, or from the directory, by the user's
-  identifier, which the passkey's user handle holds. A machine's overlay address is about 186 characters
+  identifier, which the page learns from the sign-in. A machine's overlay address is about 186 characters
   (`docs/work/cloud-run-20261025T171545Z.txt`), more than a user handle holds itself.
 
 Rejected.
+- *Computing the identifier from a sign-in's signature, which yields the two keys that could have made
+  it.* Few sites do it, and it depends on the page requiring P-256, rebuilding every byte of the signed data and
+  choosing between the two keys, where a lookup by credential depends on nothing the directory lacks.
+- *The directory answered by cogmer's relay, which would name the user's machines connected to it.* Joining
+  the two before either is built saves nothing, and they can be joined later if a benefit is found.
 - *A page for each session, reading only that session's daemon.* The page shows rooms, which hold every
   session's turns, and a page tied to one task is lost when the task ends or sleeps.
 - *Reading from a cloud task's daemon first, to spare a hosted machine.* The task's turns wake the hosted
@@ -302,7 +311,9 @@ a component cogmer runs, which D-115 (a centralized component must trace to a di
 benefits the person) admits only for a benefit to the user, recorded and disclosed: here, tasks that reach
 the user's computer from any device and colleagues who reach the user's new machines, said in the README's
 account of what leaves the user's machine, with its promise to log nothing. The page's memory is per
-device and per browser, and a private tab keeps none.
+device and per browser, and a private tab keeps none. The directory also learns each user's credential
+identifier, a value that recognizes the same passkey again and is tied to the identifier the record holds
+anyway.
 
 Revisit when the passkey providers most users hold carry data with a passkey to every device, so that a
 task could take its user's addresses from the passkey.
@@ -317,12 +328,14 @@ the room's identifier and name, and a random value naming this invitation, all a
 server never receives them, and none of them is a secret. The reply is `https://cogmer.ai/r#` followed by
 the colleague's pairing string and the value naming the invitation.
 
-Opening either link acts on it. The page the link opens loads the overlay module the cloud page loads
-(D-302, a cloud session's room is read on a static page), finds the opener's machines in its memory or in
+Opening either link acts on it. The page the link opens (D-302, a cloud session's room is read on a
+static page) finds the opener's machines in its memory or in
 the directory of Draft 4 under the identifier the opener's passkey names, and asks the opener to confirm,
 as "Join *room* from Alice?" for an invitation or "Add Ben to *room*?" for a reply. The confirmation is a
 passkey assertion whose challenge is a fresh value from the opener's machine with a hash of the link, and the
-page sends it through a relay to a port of the overlay on which the machine accepts only a link signed so,
+page sends it with the small encrypted client of the relay spike (`docs/work/relay-spike/page/client.js`),
+in place of tailcat's 27 MB browser build, to a hosted machine at its name under `cogmer.ai` or through
+cogmer's relay to a machine with no public name, at a port on which the machine accepts only a link signed so,
 checked against the user's passkey, which is the user's identifier (Draft 6). It works from any device the passkey reaches,
 the opener's phone among them, while one of the opener's machines answers. An opener who has no passkey,
 at the computer that runs cogmer, is sent by the page to the machines page at `127.0.0.1` with the link
@@ -427,11 +440,10 @@ then says to wait and run the command again, which a person opening their first 
 Cowork task on a phone. A verification by links trusts that the channel delivers what each person sent and shows who sent
 it, so a channel that substitutes both links is not found out, as with anything else said on that channel.
 The colleague waits for the inviting user to open the reply before reading the room, though neither has to
-be present when the other acts. Opening a link on a device first loads the overlay module, which took 19.6
-seconds to first data on an iPhone's first open and 1.6 on its second (`docs/open.md`, the item on the page
-that reads a cloud session's room), and the opener's machine has to be awake. Every machine whose user has
-a passkey listens on the overlay for a signed link, a listener that admits any dialer (D-157, the overlay
-listener admits any dialer) and acts on nothing but a link its user's passkey signed.
+be present when the other acts. The opener's machine has to be awake, and how long the page with the small
+client takes to open on a phone is not measured. Every machine whose user has a passkey listens for a signed
+link at its public name or through the relay, a listener that admits any dialer, as the overlay's does
+(D-157, the overlay listener admits any dialer), and acts on nothing but a link its user's passkey signed.
 
 Revisit when a reply is found to have come from someone other than the colleague invited, or when people
 come to send the links over channels that do not show who sent them.
