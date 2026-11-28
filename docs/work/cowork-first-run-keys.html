@@ -1,0 +1,443 @@
+<title>cogmer Keys and Where They Live</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; a chain-of-trust diagram, then two journeys as step lists whose items link to reference cards, then a "what lives where" map. */
+:root {
+  --bg: #f3f5f7; --surface: #ffffff; --fg: #18202b; --muted: #586474; --line: #d9dee5;
+  --accent: #9a6a12; --accent-soft: #f6ecd7;
+  --secret: #a2342c; --secret-soft: #f8e3e0;
+  --public: #1f6a5a; --public-soft: #dff1ec;
+  --proposed: #5a4fb3; --proposed-soft: #e9e6fb;
+  --code-bg: #eceff3;
+  --display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11151b; --surface: #19202a; --fg: #e5e9ef; --muted: #9aa5b4; --line: #2b3440;
+  --accent: #e0b05a; --accent-soft: #3a2f1a; --secret: #f08a7f; --secret-soft: #3d2220;
+  --public: #6fd0b8; --public-soft: #18342e; --proposed: #a99cf5; --proposed-soft: #28244a;
+  --code-bg: #232b36; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #11151b; --surface: #19202a; --fg: #e5e9ef; --muted: #9aa5b4; --line: #2b3440;
+  --accent: #e0b05a; --accent-soft: #3a2f1a; --secret: #f08a7f; --secret-soft: #3d2220;
+  --public: #6fd0b8; --public-soft: #18342e; --proposed: #a99cf5; --proposed-soft: #28244a;
+  --code-bg: #232b36; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15.5px/1.6 var(--body); }
+main { max-width: 52rem; margin: 0 auto; padding-block: 36px 80px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 44px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.2; text-wrap: balance; }
+h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); }
+h2 { font-size: 1.45rem; }
+h3 { font-size: 1.05rem; }
+p, ul, ol { margin: 0; }
+section { display: grid; gap: 16px; min-width: 0; }
+.lede { color: var(--muted); max-width: 42rem; }
+code, .mono { font-family: var(--mono); font-size: .86em; }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.eyebrow { font: 600 .72rem/1 var(--body); letter-spacing: .09em; text-transform: uppercase; color: var(--accent); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: .88rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+.sw.secret { background: var(--secret-soft); border: 1.5px solid var(--secret); }
+.sw.public { background: var(--public-soft); border: 1.5px solid var(--public); }
+.sw.prop { background: var(--proposed-soft); border: 1.5px dashed var(--proposed); }
+
+/* diagram */
+.diagram { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; overflow-x: auto; }
+.diagram svg { display: block; width: 100%; min-width: 620px; height: auto; }
+.diagram text { font-family: var(--body); fill: var(--fg); }
+.diagram .t-small { font-size: 11px; fill: var(--muted); }
+.diagram .t-title { font-size: 13px; font-weight: 600; font-family: var(--display); }
+.n-secret { fill: var(--secret-soft); stroke: var(--secret); stroke-width: 1.5; }
+.n-public { fill: var(--public-soft); stroke: var(--public); stroke-width: 1.5; }
+.n-prop { fill: var(--proposed-soft); stroke: var(--proposed); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.n-plain { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+.edge { stroke: var(--muted); stroke-width: 1.4; fill: none; }
+.edge.prop { stroke: var(--proposed); stroke-dasharray: 5 4; }
+.edge-label { font-size: 10.5px; fill: var(--muted); font-style: italic; }
+
+/* journeys */
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tab { font: 600 .9rem var(--body); padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--fg); cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.tab:focus-visible, .chip:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.steps { list-style: none; padding: 0; display: grid; gap: 0; counter-reset: s; }
+.step { position: relative; padding: 0 0 22px 46px; counter-increment: s; }
+.step::before { content: counter(s); position: absolute; left: 0; top: 0; width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center; font: 600 .9rem var(--display); background: var(--accent-soft); color: var(--accent); }
+.step::after { content: ""; position: absolute; left: 14.5px; top: 34px; bottom: 4px; width: 1px; background: var(--line); }
+.step:last-child::after { display: none; }
+.step.prop::before { background: var(--proposed-soft); color: var(--proposed); }
+.step h3 { margin-bottom: 4px; }
+.step p { color: var(--muted); font-size: .95rem; max-width: 40rem; }
+.step .where { font-size: .85rem; color: var(--muted); margin-top: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip { font: 500 .82rem var(--body); padding: 3px 9px; border-radius: 999px; cursor: pointer; text-decoration: none;
+  border: 1.5px solid var(--public); background: var(--public-soft); color: var(--fg); }
+.chip.secret { border-color: var(--secret); background: var(--secret-soft); }
+.chip.prop { border-style: dashed; border-color: var(--proposed); background: var(--proposed-soft); }
+.badge { font: 600 .68rem/1 var(--body); letter-spacing: .06em; text-transform: uppercase; padding: 3px 6px; border-radius: 4px;
+  vertical-align: 2px; margin-left: 6px; background: var(--proposed-soft); color: var(--proposed); }
+.badge.built { background: var(--public-soft); color: var(--public); }
+
+/* places */
+.places { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 12px; }
+.place { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.place.prop { border-style: dashed; border-color: var(--proposed); }
+.place ul { padding-left: 1.1rem; display: grid; gap: 4px; font-size: .9rem; }
+.place .k { color: var(--muted); font-size: .85rem; }
+
+/* reference cards */
+.cards { display: grid; gap: 10px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--public); border-radius: 8px;
+  padding: 12px 16px; display: grid; gap: 6px; scroll-margin-top: 16px; min-width: 0; }
+.card.secret { border-left-color: var(--secret); }
+.card.prop { border-left-style: dashed; border-left-color: var(--proposed); }
+.card.flash { box-shadow: 0 0 0 3px var(--accent); transition: box-shadow .2s; }
+.card dl { display: grid; grid-template-columns: 8.5rem 1fr; gap: 3px 12px; margin: 0; font-size: .9rem; }
+.card dt { color: var(--muted); }
+.card dd { margin: 0; min-width: 0; }
+@media (max-width: 560px) { .card dl { grid-template-columns: 1fr; } .card dt { margin-top: 4px; } }
+.card .dec { font-size: .82rem; color: var(--muted); }
+
+.confuse { display: grid; gap: 10px; }
+.confuse div { background: var(--accent-soft); border-radius: 8px; padding: 12px 16px; font-size: .93rem; }
+.foot { color: var(--muted); font-size: .85rem; }
+@media (prefers-reduced-motion: reduce) { .card.flash { transition: none; } }
+</style>
+
+<main>
+  <header style="display:grid;gap:12px">
+    <span class="eyebrow">cogmer · identity and trust</span>
+    <h1>Keys and where they live</h1>
+    <p class="lede">Every key, identifier and certificate a user's journey creates, the moment each appears, where its secret half is kept and where its public half travels. Read from the code and decisions on <code>host-probes</code> at <code>f6321bc</code>, 2026-11-27.</p>
+    <div class="legend">
+      <span><i class="sw secret"></i>a secret that never leaves where it is kept</span>
+      <span><i class="sw public"></i>public, or a secret meant to travel</span>
+      <span><i class="sw prop"></i>proposed, not built</span>
+    </div>
+  </header>
+
+  <section aria-labelledby="chain-h">
+    <span class="eyebrow">The chain of trust</span>
+    <h2 id="chain-h">Who vouches for whom</h2>
+    <p>A user is a master key. The master key never sits on a disk: it is derived from the recovery phrase when it is needed and signs only the shared key. The shared key, copied to each of the user's machines, signs everything below it. A colleague checks any signature by following this chain up to the user identifier they verified with two words.</p>
+    <p>Decided on 2026-11-28, not built: the user's master key becomes a passkey for <code>cogmer.ai</code>, and there is no recovery phrase. The passkey's public key is the user identifier, and it signs shared keys and removals itself (Draft 6 of the first-run design).</p>
+    <div class="diagram">
+      <svg viewBox="0 0 720 470" role="img" aria-labelledby="dg-t">
+        <title id="dg-t">Today the phrase derives the master key, which certifies the shared key; as decided and not built, a master passkey takes the place of both. The shared key certifies each machine, the cloud key and, as proposed, another passkey; the cloud key and a passkey each certify a cloud session's key.</title>
+        <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor" style="color:var(--muted)"/></marker></defs>
+        <!-- phrase -->
+        <rect class="n-secret" x="250" y="10" width="220" height="50" rx="8"/>
+        <text class="t-title" x="360" y="31" text-anchor="middle">Recovery phrase</text>
+        <text class="t-small" x="360" y="48" text-anchor="middle">18 words · stored nowhere</text>
+        <path class="edge" d="M360 60 V88" marker-end="url(#arr)"/>
+        <text class="edge-label" x="368" y="78">derives</text>
+        <!-- master -->
+        <rect class="n-secret" x="230" y="90" width="260" height="56" rx="8"/>
+        <text class="t-title" x="360" y="112" text-anchor="middle">Master key</text>
+        <text class="t-small" x="360" y="130" text-anchor="middle">public half = the user identifier</text>
+        <path class="edge" d="M360 146 V176" marker-end="url(#arr)"/>
+        <!-- master passkey, decided -->
+        <rect class="n-prop" x="510" y="90" width="200" height="56" rx="8"/>
+        <text class="t-title" x="610" y="112" text-anchor="middle">Master passkey</text>
+        <text class="t-small" x="610" y="130" text-anchor="middle">decided · replaces both on the left</text>
+        <path class="edge prop" d="M560 146 L472 180" marker-end="url(#arr)"/>
+        <text class="edge-label" x="368" y="166">certifies</text>
+        <!-- shared -->
+        <rect class="n-secret" x="230" y="178" width="260" height="56" rx="8"/>
+        <text class="t-title" x="360" y="200" text-anchor="middle">Shared key, version n</text>
+        <text class="t-small" x="360" y="218" text-anchor="middle">shared.key on each of the user's machines</text>
+        <!-- edges down -->
+        <path class="edge" d="M300 234 L120 300" marker-end="url(#arr)"/>
+        <path class="edge" d="M360 234 V300" marker-end="url(#arr)"/>
+        <path class="edge prop" d="M420 234 L600 300" marker-end="url(#arr)"/>
+        <text class="edge-label" x="215" y="262">certifies</text>
+        <!-- machine -->
+        <rect class="n-secret" x="20" y="302" width="200" height="56" rx="8"/>
+        <text class="t-title" x="120" y="324" text-anchor="middle">Each machine's key</text>
+        <text class="t-small" x="120" y="342" text-anchor="middle">identity.key · signs its turns</text>
+        <!-- cloud key -->
+        <rect class="n-public" x="260" y="302" width="200" height="56" rx="8"/>
+        <text class="t-title" x="360" y="324" text-anchor="middle">Cloud key</text>
+        <text class="t-small" x="360" y="342" text-anchor="middle">in the cloud value you upload</text>
+        <!-- passkey -->
+        <rect class="n-prop" x="500" y="302" width="200" height="56" rx="8"/>
+        <text class="t-title" x="600" y="324" text-anchor="middle">Passkey</text>
+        <text class="t-small" x="600" y="342" text-anchor="middle">proposed · master or certified</text>
+        <!-- session -->
+        <path class="edge" d="M360 358 V398" marker-end="url(#arr)"/>
+        <path class="edge prop" d="M600 358 L470 404" marker-end="url(#arr)"/>
+        <text class="edge-label" x="368" y="384">certifies · 24 h</text>
+        <text class="edge-label" x="548" y="394">proposed · 3 days</text>
+        <rect class="n-secret" x="250" y="400" width="220" height="56" rx="8"/>
+        <text class="t-title" x="360" y="422" text-anchor="middle">Cloud session's key</text>
+        <text class="t-small" x="360" y="440" text-anchor="middle">session.key · in the sandbox</text>
+      </svg>
+    </div>
+    <p class="foot">The overlay's node key sits outside this chain. It names a machine's address on tailcat's network, and a colleague trusts the address only because the TLS connection behind it is pinned to the machine's key.</p>
+  </section>
+
+  <section aria-labelledby="journey-h">
+    <span class="eyebrow">The journeys</span>
+    <h2 id="journey-h">When each one appears</h2>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-own" aria-controls="j-own" aria-selected="true" type="button">On their own computer</button>
+      <button class="tab" role="tab" id="tab-cloud" aria-controls="j-cloud" aria-selected="false" type="button">Cloud first, with a hosted machine</button>
+    </div>
+
+    <div id="j-own" role="tabpanel" aria-labelledby="tab-own">
+      <ol class="steps">
+        <li class="step"><h3>Install, and the first command or daemon start</h3>
+          <p>The machine makes its own key pair and its overlay key, before anyone has an identity. Nothing here belongs to the user yet.</p>
+          <div class="chips"><a class="chip secret" href="#c-machine">Machine key</a><a class="chip secret" href="#c-overlay">Overlay node key</a></div>
+          <p class="where">Kept in <code>~/.cogmer/identity.key</code>, <code>tailcat.key</code>, <code>tailcat-region.json</code>, <code>identity.json</code>.</p></li>
+        <li class="step"><h3>The first time an identity is needed</h3>
+          <p>Pairing, creating a room or adding a machine opens the daemon's page, which shows the 18-word phrase once. The master key is derived from it, certifies shared key version 1, and the shared key certifies this machine. The phrase and master key are then dropped from memory.</p>
+          <div class="chips"><a class="chip secret" href="#c-phrase">Recovery phrase</a><a class="chip secret" href="#c-master">Master key and user identifier</a><a class="chip secret" href="#c-shared">Shared key</a><a class="chip" href="#c-mcert">Machine certificate</a></div>
+          <p class="where">Kept: <code>shared.key</code>, and the certificates in <code>identity.json</code> and <code>membership.db</code>. Not kept anywhere: the phrase and the master key.</p></li>
+        <li class="step"><h3>Adding a second machine</h3>
+          <p>The new machine already has its own key. Its pairing string goes to the first machine, both show two words, and after the user confirms them the first machine certifies the new one and sends it a copy of the shared key and the user's lists.</p>
+          <div class="chips"><a class="chip" href="#c-pairing">Pairing string</a><a class="chip" href="#c-words">Two words</a><a class="chip" href="#c-mcert">Machine certificate</a><a class="chip secret" href="#c-shared">Shared key, copied</a><a class="chip" href="#c-lists">Lists</a></div></li>
+        <li class="step"><h3>Pairing with a colleague</h3>
+          <p>Each sends a pairing string carrying their user identifier. A live exchange shows both the same two words, computed over the two user identifiers. Comparing them is what makes the colleague verified, and the result is copied to the user's other machines.</p>
+          <div class="chips"><a class="chip" href="#c-pairing">Pairing string</a><a class="chip" href="#c-words">Two words</a><a class="chip" href="#c-lists">Verified, in the lists</a></div>
+          <p class="where">Kept: <code>known_peers.verified_at</code> in <code>membership.db</code>, on every machine of the user.</p></li>
+        <li class="step"><h3>Creating a room and inviting</h3>
+          <p>The room's identifier is a hash of the creator and a random value, so nobody can claim it. An invitation is a signed offer sent over the channel the pairing set up; there is no join token.</p>
+          <div class="chips"><a class="chip" href="#c-room">Room identifier</a><a class="chip" href="#c-offer">Offer</a></div></li>
+        <li class="step"><h3>Writing a turn</h3>
+          <p>The machine reserves the next number in its own count for the room, signs the event with its key and carries its certificate chain beside it. Colleagues' polls are signed requests over TLS pinned to each machine's key.</p>
+          <div class="chips"><a class="chip" href="#c-seq">Sequence number</a><a class="chip" href="#c-event">Event signature</a><a class="chip" href="#c-tls">TLS certificate</a><a class="chip" href="#c-req">Signed request</a></div>
+          <p class="where">The count lives in <code>membership.db</code>, not the room's database, so losing a room's file does not reset it.</p></li>
+        <li class="step"><h3>Optionally, a cloud environment</h3>
+          <p>The machines page makes a cloud key and gives it to the user once, as a value or a plugin to upload. Each cloud session then makes its own key, certified by the cloud key for 24 hours, and serves its room to a page through a token made from the cloud key.</p>
+          <div class="chips"><a class="chip" href="#c-cloud">Cloud key and value</a><a class="chip secret" href="#c-session">Session key</a><a class="chip" href="#c-token">View token</a></div></li>
+        <li class="step"><h3>Recovery, or a new shared key</h3>
+          <p>Typing the phrase again derives the same master key, which certifies a new version of the shared key. Machines not certified under it are suspended until they are.</p>
+          <div class="chips"><a class="chip secret" href="#c-phrase">Recovery phrase</a><a class="chip secret" href="#c-shared">Shared key, new version</a></div></li>
+      </ol>
+    </div>
+
+    <div id="j-cloud" role="tabpanel" aria-labelledby="tab-cloud" hidden>
+      <ol class="steps">
+        <li class="step"><h3>Install the plugin on the Claude account <span class="badge built">built</span></h3>
+          <p>A Cowork task with no cloud value fetches and starts nothing, so a task that never shares costs nothing.</p></li>
+        <li class="step prop"><h3>The first room command in a task <span class="badge">proposed</span></h3>
+          <p>The task's daemon starts with no secret of the user's, makes its session key, and prints a link to the cloud page with a token made from that session key.</p>
+          <div class="chips"><a class="chip secret" href="#c-session">Session key</a><a class="chip prop" href="#c-ptoken">Page token</a></div></li>
+        <li class="step prop"><h3>The page sets up a home for the identity <span class="badge">proposed</span></h3>
+          <p>The page suggests a hosted machine. The page creates the user's passkey, which is their master key; the hosted machine is made with a shared key the passkey certifies, and carries an operator certificate. It never holds the master key.</p>
+          <div class="chips"><a class="chip prop" href="#c-passkey">Passkey</a><a class="chip prop" href="#c-hosted">Hosted machine</a><a class="chip secret" href="#c-shared">Shared key</a><a class="chip prop" href="#c-passkey">Master passkey signs the shared key</a></div></li>
+        <li class="step prop"><h3>A passkey tap certifies the task <span class="badge">proposed</span></h3>
+          <p>A passkey assertion certifies the task's session key for 3 days, and the hosted machine renews it. The passkey's user handle names the hosted machine, so the page reaches it from any device.</p>
+          <div class="chips"><a class="chip prop" href="#c-passkey">Passkey assertion</a><a class="chip secret" href="#c-session">Session key, certified</a></div></li>
+        <li class="step prop"><h3>Inviting a colleague <span class="badge">proposed</span></h3>
+          <p>The inviter names the invitee and sends a link that carries no secret; the invitee's reply link comes back. Each link acts only after its opener's passkey tap.</p>
+          <div class="chips"><a class="chip prop" href="#c-links">Invitation and reply links</a><a class="chip" href="#c-room">Room identifier</a></div></li>
+      </ol>
+      <p class="foot">What is built today for a Cowork user is the uploaded cloud value, which needs one of the user's own computers first (D-246, a cloud environment is added from the machines page; D-281, a command in a cloud session with no value says the user must first set cogmer up on one of their own computers).</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="where-h">
+    <span class="eyebrow">What lives where</span>
+    <h2 id="where-h">One place at a time</h2>
+    <div class="places">
+      <div class="place"><h3>Each of your machines</h3><span class="k"><code>~/.cogmer/</code></span>
+        <ul><li><code>identity.key</code>: this machine's key</li><li><code>shared.key</code>: your shared key</li><li><code>identity.json</code>: your user identifier and this machine's certificates</li><li><code>membership.db</code>: identity records, colleagues and when each was verified, rooms, your counts, pending offers</li><li><code>rooms/*.db</code>: each room's events</li><li><code>tailcat.key</code>, <code>tailcat-region.json</code>: overlay key and region</li></ul></div>
+      <div class="place"><h3>Your colleagues' machines</h3><span class="k">public halves only</span>
+        <ul><li>your user identifier, verified</li><li>your shared-key and machine certificates</li><li>your machines' addresses</li><li>copies of every event in rooms you share</li></ul></div>
+      <div class="place"><h3>A cloud session's sandbox</h3><span class="k">gone when the sandbox ends</span>
+        <ul><li><code>session.key</code>: the session's own key</li><li>the cloud value, from your uploaded plugin</li><li>its certificate chain and your lists, fetched from one of your machines</li></ul></div>
+      <div class="place"><h3>Nowhere at all</h3><span class="k">exists only for a moment</span>
+        <ul><li>the recovery phrase, after it is shown</li><li>the master key, outside a request that needs it</li><li>the two words, once compared</li><li>the TLS certificate, made at each start</li><li>the view token, derived when asked for</li></ul></div>
+      <div class="place prop"><h3>A hosted machine <span class="badge">proposed</span></h3><span class="k">run by cogmer or an operator</span>
+        <ul><li>the same files as your own machine</li><li>an operator certificate</li><li>never your master key, which is your passkey</li></ul></div>
+      <div class="place prop"><h3>Your browser and passkey provider <span class="badge">proposed</span></h3><span class="k">under <code>cogmer.ai</code></span>
+        <ul><li>the passkey, which is your master key and whose user handle names your hosted machine</li><li>the machines the page has reached, in its storage on each device</li></ul></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="ref-h">
+    <span class="eyebrow">Reference</span>
+    <h2 id="ref-h">Each key and identifier</h2>
+    <div class="cards">
+      <article class="card secret" id="c-machine"><h3>Machine key <span class="badge built">built</span></h3>
+        <dl><dt>What</dt><dd>An Ed25519 key pair; its public half, written <code>ed25519:…</code>, is the machine's PeerID.</dd>
+        <dt>Made</dt><dd>At the first cogmer command or daemon start on the machine.</dd>
+        <dt>Secret kept</dt><dd><code>identity.key</code>, mode 0600, never sent anywhere.</dd>
+        <dt>Public travels</dt><dd>Every event it signs, its TLS certificate, its machine certificate, the pairing string for adding it.</dd>
+        <dt>Replaced</dt><dd>Never; a machine is ended by a removal record.</dd></dl>
+        <p class="dec">D-042 (peer identity is an Ed25519 key pair) · D-141 (a machine's key is created once and never leaves the machine)</p></article>
+
+      <article class="card secret" id="c-phrase"><h3>Recovery phrase <span class="badge built">built</span></h3>
+        <dl><dt>What</dt><dd>18 words of the PGP word list: 16 random bytes and 2 check bytes.</dd>
+        <dt>Made</dt><dd>On the daemon's page, the first time an identity is needed.</dd>
+        <dt>Secret kept</dt><dd>Nowhere. Shown once; held in memory at most 30 minutes for confirmation, then zeroed.</dd>
+        <dt>Used again</dt><dd>Only for recovery, or to certify a new shared key, and typed only into the daemon's page.</dd>
+        <dt>Decided</dt><dd>Withdrawn: a new user gets no phrase, since the passkey is the master key (Draft 6). Not built.</dd></dl>
+        <p class="dec">D-223 (the recovery phrase is typed only into the daemon's browser page) · D-237 (the recovery phrase is eighteen words of the PGP word list)</p></article>
+
+      <article class="card secret" id="c-master"><h3>Master key and user identifier <span class="badge built">built</span></h3>
+        <dl><dt>What</dt><dd>An Ed25519 key derived from the phrase with HKDF-SHA256. Its public half is the user identifier, which is who the user is to cogmer.</dd>
+        <dt>Made</dt><dd>At identity creation.</dd>
+        <dt>Secret kept</dt><dd>Never stored; exists only during a request.</dd>
+        <dt>Public travels</dt><dd><code>identity.json</code> (<code>user</code>), the colleague pairing string, every event, colleagues' records. The two words are computed over it.</dd>
+        <dt>Signs</dt><dd>Only shared-key certificates, and removals made with a new shared key.</dd>
+        <dt>Replaced</dt><dd>Never. A stolen phrase ends the identity.</dd>
+        <dt>Decided</dt><dd>The master key becomes a P-256 passkey for <code>cogmer.ai</code>, whose public key is the user identifier (Draft 6). Not built; what happens to identities made from a phrase is not decided.</dd></dl>
+        <p class="dec">D-219 (a user is a master key that certifies machines through a shared key) · D-230 (a user identity is made in the daemon's page the first time the user needs one)</p></article>
+
+      <article class="card secret" id="c-shared"><h3>Shared key <span class="badge built">built</span></h3>
+        <dl><dt>What</dt><dd>An Ed25519 key with a version number, certified by the master key.</dd>
+        <dt>Made</dt><dd>Version 1 at identity creation; a new version at recovery or "new key".</dd>
+        <dt>Secret kept</dt><dd><code>shared.key</code> on every one of the user's machines, copied over the pinned connection when a machine is added. A cloud session never holds it.</dd>
+        <dt>Public travels</dt><dd>Its certificate, in <code>identity.json</code>, <code>membership.db</code>, the TLS certificate and beside events; sent to colleagues until each acknowledges it.</dd>
+        <dt>Replaced</dt><dd>By a new version; machines not certified under it are suspended.</dd>
+        <dt>Decided</dt><dd>Each certificate names the hash of the one before it, so the version is the chain's length and no signer picks it; the longest chain wins. Every machine of the user's says when a new shared key was certified; one without it says it is suspended, and that a user who did not make the key signs a new one. Not built (Draft 6).</dd></dl>
+        <p class="dec">D-225 (a new shared key is sent to every colleague until each acknowledges) · D-234 (a machine not certified under the current shared key is suspended)</p></article>
+
+      <article class="card" id="c-mcert"><h3>Machine certificate <span class="badge built">built</span></h3>
+        <dl><dt>What</dt><dd>The shared key's signature over the user, the shared key's version, the machine's key, its kind (machine or cloud), its name and a serial.</dd>
+        <dt>Made</dt><dd>At identity creation, when a machine is added or renamed, and at recovery.</dd>
+        <dt>Kept and travels</dt><dd><code>identity.json</code>, <code>membership.db</code>, the TLS certificate's extension, events, requests and offers.</dd>
+        <dt>Replaced</dt><dd>By a higher serial; ended by a removal record.</dd></dl>
+        <p class="dec">D-229 (a machine is added from another of the user's machines, with the two-word check)</p></article>
+
+      <article class="card" id="c-pairing"><h3>Pairing string <span class="badge built">built</span></h3>
+        <dl><dt>What</dt><dd><code>&lt;id&gt;@&lt;address&gt;#&lt;name&gt;</code>. No secret. For a colleague the id is the user identifier; for adding a machine it is the new machine's key.</dd>
+        <dt>Kept</dt><dd>Not by the sender. The receiver records the colleague and the address in <code>membership.db</code>.</dd></dl>
+        <p class="dec">D-142 (identities are exchanged through pairing strings, with no directory)</p></article>
+
+      <article class="card" id="c-words"><h3>Two words <span class="badge built">built</span></h3>
+        <dl><dt>What</dt><dd>Two words from a hash over both sides' identifiers and random values, each side committing to its value before revealing it.</dd>
+        <dt>Made</dt><dd>In each live pairing with a colleague, and each machine add.</dd>
+        <dt>Kept</dt><dd>The words are not; the result is, as <code>verified_at</code>, copied to the user's other machines.</dd></dl>
+        <p class="dec">D-048 (verification is a live commit-then-reveal exchange that derives two words) · D-054 (verification gates synchronization and injection)</p></article>
+
+      <article class="card" id="c-lists"><h3>Lists <span class="badge built">built</span></h3>
+        <dl><dt>What</dt><dd>The user's colleagues, verifications, labels and rooms, each change signed by the machine that made it.</dd>
+        <dt>Kept</dt><dd><code>membership.db</code> on every machine of the user; a cloud session takes them only from one of those machines.</dd></dl>
+        <p class="dec">D-228 (a user's lists belong to the user and are copied between the user's machines) · D-245 (a cloud session takes its user's lists only from one of the user's machines)</p></article>
+
+      <article class="card secret" id="c-overlay"><h3>Overlay node key <span class="badge built">built</span></h3>
+        <dl><dt>What</dt><dd>tailcat's node key and the relay region pinned at the first start. Their public form is the machine's overlay address, about 186 characters.</dd>
+        <dt>Kept</dt><dd><code>tailcat.key</code> and <code>tailcat-region.json</code>; the address travels in pairing strings and the cloud value.</dd>
+        <dt>Replaced</dt><dd>Only if the file is lost, which changes the address. Under the proposed relay, an address becomes the machine's key alone.</dd></dl>
+        <p class="dec">D-104 (the overlay address holds no secret and is the same at every start) · D-187 (the overlay's relay region is chosen once and stored with the node key)</p></article>
+
+      <article class="card" id="c-room"><h3>Room identifier <span class="badge built">built</span></h3>
+        <dl><dt>What</dt><dd>A hash of the creator's user identifier and a random value, which the room's first event carries.</dd>
+        <dt>Kept</dt><dd><code>membership.db</code> and <code>rooms/&lt;id&gt;.db</code> on every member's machines.</dd></dl>
+        <p class="dec">D-240 (a room's identifier is the hash of its creator and a random value)</p></article>
+
+      <article class="card" id="c-offer"><h3>Offer <span class="badge built">built</span></h3>
+        <dl><dt>What</dt><dd>A signed invitation to a room, sent over the connection pairing set up. There is no join token.</dd>
+        <dt>Kept</dt><dd>The invitee's <code>membership.db</code>, until accepted.</dd></dl>
+        <p class="dec">D-105 (an invitation is delivered over the channel pairing established)</p></article>
+
+      <article class="card" id="c-seq"><h3>Sequence number <span class="badge built">built</span></h3>
+        <dl><dt>What</dt><dd>Each signing key's own count of the events it has written in a room, from 1.</dd>
+        <dt>Kept</dt><dd><code>membership.db</code>, reserved before each event is published, so a lost room file does not reset it.</dd></dl>
+        <p class="dec">D-029 (losing a room database does not end membership) · D-249 (each key that signs in a room counts its own sequence from 1)</p></article>
+
+      <article class="card" id="c-event"><h3>Event signature <span class="badge built">built</span></h3>
+        <dl><dt>What</dt><dd>Each turn's event, signed by the machine's or session's key, with the certificate chain beside it.</dd>
+        <dt>Kept</dt><dd><code>rooms/&lt;id&gt;.db</code> on every member's machines.</dd></dl>
+        <p class="dec">D-239 (an event a machine signs for its user names the user and the signing key)</p></article>
+
+      <article class="card" id="c-tls"><h3>TLS certificate <span class="badge built">built</span></h3>
+        <dl><dt>What</dt><dd>Self-signed with the machine's key, made in memory at each start. Colleagues pin the key, not the certificate.</dd></dl>
+        <p class="dec">D-101 (peer connections are TLS pinned to a key this machine has recorded)</p></article>
+
+      <article class="card" id="c-req"><h3>Signed request <span class="badge built">built</span></h3>
+        <dl><dt>What</dt><dd>Each poll and nudge carries a signature, a timestamp within two minutes and a nonce.</dd>
+        <dt>Kept</dt><dd>Only the nonces seen, in memory.</dd></dl>
+        <p class="dec">D-044 (sync requests are signed; authentication is not admission)</p></article>
+
+      <article class="card" id="c-cloud"><h3>Cloud key and cloud value <span class="badge built">built</span></h3>
+        <dl><dt>What</dt><dd>A key certified as kind "cloud" by the shared key. The value bundles its seed, its certificates, the user's name and the user's machines' addresses.</dd>
+        <dt>Made</dt><dd>On a machines page, once; one cloud key per user at a time.</dd>
+        <dt>Secret kept</dt><dd>By the user: in <code>COGMER_CLOUD_KEY</code> or an uploaded plugin. The machine keeps only the certificate. The model's shell can read it in a session.</dd>
+        <dt>Replaced</dt><dd>Removed, then added again. Its certificate does not expire.</dd></dl>
+        <p class="dec">D-216 (a cloud session signs with a key of its own that the user's shared key vouches for) · D-278 (the machines page offers the cloud value as a plugin) · D-280 (a user has one cloud key at a time)</p></article>
+
+      <article class="card secret" id="c-session"><h3>Cloud session's key <span class="badge built">built</span></h3>
+        <dl><dt>What</dt><dd>A key the session's daemon makes, certified by the cloud key for 24 hours and replaced by a new key 2 hours before that ends.</dd>
+        <dt>Secret kept</dt><dd><code>session.key</code> in the sandbox.</dd>
+        <dt>Proposed</dt><dd>Certified by a passkey tap for 3 days instead, with no cloud key (Draft 1).</dd></dl>
+        <p class="dec">D-247 (a cloud session's key is certified for twenty-four hours, and the session's daemon certifies a new one before it expires)</p></article>
+
+      <article class="card" id="c-token"><h3>View token <span class="badge built">built</span></h3>
+        <dl><dt>What</dt><dd>An HMAC of a fixed label under the cloud key's seed. It opens the session's room to the cloud page.</dd>
+        <dt>Kept</dt><dd>Never stored; derived when asked. It reaches the user in a link printed by a command, so the model sees it too.</dd></dl>
+        <p class="dec">D-301 (a cloud session's daemon serves its room on a second overlay port)</p></article>
+
+      <article class="card prop" id="c-ptoken"><h3>Page token from the session key <span class="badge">proposed</span></h3>
+        <dl><dt>What</dt><dd>The view token made under the task's session key instead of the cloud key, so a task with no cloud value can show its page.</dd></dl>
+        <p class="dec">Draft 2 of the first-run design</p></article>
+
+      <article class="card prop" id="c-passkey"><h3>Passkey <span class="badge">decided · not built</span></h3>
+        <dl><dt>What</dt><dd>A P-256 passkey for the site <code>cogmer.ai</code> that is the user's master key: its public key is the user identifier, and no recovery phrase exists. A passkey with another provider can be added, certified by the shared key.</dd>
+        <dt>Signs</dt><dd>Each shared-key certificate and each removal, with the record's hash as the challenge; a task's session key, for 3 days; invitation links.</dd>
+        <dt>Kept</dt><dd>In the user's passkey provider, synced to their devices; the authenticator never lets the key out. Its user handle names the hosted machine.</dd>
+        <dt>Replaced</dt><dd>Never. Losing it loses the identity, and a new passkey is a new user.</dd></dl>
+        <p class="dec">Drafts 1, 3, 5 and 6 of the first-run design</p></article>
+
+      <article class="card prop" id="c-hosted"><h3>Hosted machine and operator certificate <span class="badge">proposed</span></h3>
+        <dl><dt>What</dt><dd>One of the user's machines, run by cogmer or an operator, holding the shared key, certified as hosted under an operator certificate from cogmer's root key. It never holds the master key, which is the user's passkey.</dd></dl>
+        <p class="dec">D-285 (a user with no computer of their own has a machine hosted for them, not built)</p></article>
+
+      <article class="card prop" id="c-links"><h3>Invitation and reply links <span class="badge">proposed</span></h3>
+        <dl><dt>What</dt><dd><code>cogmer.ai/i#…</code> carries the inviter's pairing string, the room and a random value; <code>cogmer.ai/r#…</code> carries the invitee's pairing string and the same value. Neither is secret.</dd></dl>
+        <p class="dec">Draft 5 of the first-run design</p></article>
+    </div>
+  </section>
+
+  <section aria-labelledby="conf-h">
+    <span class="eyebrow">Easy to mix up</span>
+    <h2 id="conf-h">Pairs that look alike</h2>
+    <div class="confuse">
+      <div><strong>The user identifier and the machine key.</strong> Colleagues verify the user identifier; each machine signs with its own key, certified under it. A new machine never needs a colleague to verify again.</div>
+      <div><strong><code>user</code> and <code>userId</code> in identity.json.</strong> <code>user</code> is the master key's public half. <code>userId</code> is an older display field, the account's login name in lower case.</div>
+      <div><strong>The shared key and the master key.</strong> The shared key is on every machine and signs daily; the master key is on none and signs only a new shared key.</div>
+      <div><strong>The cloud key and the session key.</strong> The cloud key is the user's, uploaded once; each session makes its own key, which the cloud key certifies for a day.</div>
+    </div>
+  </section>
+
+  <p class="foot">Sources: <code>cmd/cogmer/keys.go</code>, <code>identity.go</code>, <code>userphrase.go</code>, <code>cloud.go</code>, <code>viewer.go</code>, <code>tailcat.go</code>, <code>sas.go</code>, the decisions cited, and <code>docs/work/cowork-first-run-design.md</code> for what is proposed.</p>
+</main>
+
+<script>
+(function () {
+  var tabs = document.querySelectorAll('.tab');
+  function show(id) {
+    tabs.forEach(function (t) {
+      var on = t.id === id;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+    });
+    try { localStorage.setItem('keys-journey-tab', id); } catch (e) {}
+  }
+  tabs.forEach(function (t) { t.addEventListener('click', function () { show(t.id); }); });
+  try { var saved = localStorage.getItem('keys-journey-tab'); if (saved && document.getElementById(saved)) show(saved); } catch (e) {}
+  document.querySelectorAll('a.chip').forEach(function (a) {
+    a.addEventListener('click', function (ev) {
+      var el = document.querySelector(a.getAttribute('href'));
+      if (!el) return;
+      ev.preventDefault();
+      el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+      el.classList.add('flash');
+      setTimeout(function () { el.classList.remove('flash'); }, 1400);
+    });
+  });
+})();
+</script>
