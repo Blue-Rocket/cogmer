@@ -337,12 +337,22 @@ page sends it with the small encrypted client of the relay spike (`docs/work/rel
 in place of tailcat's 27 MB browser build, to a hosted machine at its name under `cogmer.ai` or through
 cogmer's relay to a machine with no public name, at a port on which the machine accepts only a link signed so,
 checked against the user's passkey, which is the user's identifier (Draft 6). It works from any device the passkey reaches,
-the opener's phone among them, while one of the opener's machines answers. An opener who has no passkey,
-at the computer that runs cogmer, is sent by the page to the machines page at `127.0.0.1` with the link
-after `#`, as the passkey challenge was in spike F, and confirms there with a button. Where neither works,
-the page offers "Open in Claude", which opens a new session with the line already in its prompt,
-`/cogmer:room-join` followed by the invitation or `/cogmer:peer-pair` followed by the reply, so the opener
-only presses send, and shows the same line to copy beside it. On the user's iPhone,
+the opener's phone among them, while one of the opener's machines answers. The tap verifies no colleague, since
+the links over the channel do that, but tells the opener's machine that its own user asks it to act, from
+whatever device the page runs on. Every user has a passkey (Draft 6), and two other confirmations tell the
+machine the same where the device cannot reach it. An opener at the computer that runs cogmer is sent by
+the page to the machines page at `127.0.0.1` with the link after `#`, as the passkey challenge was in
+spike F, and confirms there with a button, which acts with the authority of whoever is signed in to that
+computer, who can read the shared key from its disk, as every pairing, join and invitation made there
+does, and which no other page can press, since the machines page takes only requests an outside page
+cannot make and refuses to be framed (`frame-ancestors 'none'` in `cmd/cogmer/ui.go`, read on
+2026-11-28). Where neither works, the page offers "Open in Claude", which opens a new session with the line
+already in its prompt, `/cogmer:room-join` followed by the invitation or `/cogmer:peer-pair` followed by
+the reply, so the opener only presses send, and shows the same line to copy beside it. The opener's send
+is the confirmation: a session on the opener's computer acts through its daemon, and a cloud session acts
+only once its key is certified, by the passkey, by the opener's computer approving it, or by an uploaded
+cloud key (Draft 1), so with no passkey within reach it serves only an opener with that computer or that
+key. On the user's iPhone,
 `https://claude.ai/code/new?q=` opened a new Claude Code session in Safari with the prompt filled in and
 unsent, under Claude's caution about running a prompt from a link, and a cogmer command sent from it ran
 (`docs/work/first-run-spike-G-20261127T1407Z.txt`), and tapped in Notes, Mail or Messages, where an invitation
