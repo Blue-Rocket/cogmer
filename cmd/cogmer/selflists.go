@@ -520,7 +520,13 @@ func (m *Membership) applyColleague(peer string, v colleagueEntry) error {
 		return nil
 	}
 	if !m.Knows(peer) || m.Label(peer) != v.Label {
-		if err := m.Allow(peer, v.Label); err != nil {
+		label := v.Label
+		if label == "" {
+			// A label cleared on another of the user's machines is cleared here too,
+			// and Allow keeps the name a known peer has when it is given none.
+			label = PeerName(peer)
+		}
+		if err := m.Allow(peer, label); err != nil {
 			// A label this machine already gives another key is the alarm D-074
 			// describes, and is left for the user to see rather than resolved here.
 			var taken *NameTakenError
