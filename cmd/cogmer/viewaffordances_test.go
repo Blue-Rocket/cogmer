@@ -139,6 +139,9 @@ func TestDeliveredEventIDsAreThoseAnySessionHolds(t *testing.T) {
 func TestTheExportNamesEachTurnAndKeepsItsContent(t *testing.T) {
 	d, room := testDaemon(t)
 	stranger := testIdentity(t).PeerID
+	for PeerName(stranger) == PeerName(d.id.PeerID) { // the test reads the two derived names apart
+		stranger = testIdentity(t).PeerID
+	}
 	hostile := "<script>alert(1)</script>\n```\nrm -rf /\n```"
 	appendFrom(t, d, room, stranger, 1, hostile)
 	appendFrom(t, d, room, d.id.PeerID, 1, "my turn")

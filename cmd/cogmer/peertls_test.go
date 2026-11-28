@@ -113,12 +113,12 @@ func TestAnAddressAnsweringForAnotherKeyIsRefused(t *testing.T) {
 	client, _ := testDaemon(t)
 	other, _ := testDaemon(t)
 	for _, p := range []string{client.id.PeerID, other.id.PeerID} {
-		if err := server.members.Allow(p, PeerName(p)); err != nil {
+		if err := server.members.Allow(p, testLabel(p)); err != nil {
 			t.Fatal(err)
 		}
 	}
 	for _, p := range []string{server.id.PeerID, other.id.PeerID} {
-		if err := client.members.Allow(p, PeerName(p)); err != nil {
+		if err := client.members.Allow(p, testLabel(p)); err != nil {
 			t.Fatal(err)
 		}
 	}

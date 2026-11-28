@@ -280,7 +280,7 @@ func TestOnlyAVerifiedGuestIsServedAnImage(t *testing.T) {
 	}
 	// A guest nobody has verified is refused as it is for turns (D-054).
 	unverified := testIdentity(t)
-	if err := a.d.members.Allow(unverified.PeerID, ""); err != nil {
+	if err := a.d.members.Allow(unverified.PeerID, testLabel(unverified.PeerID)); err != nil {
 		t.Fatal(err)
 	}
 	if err := a.d.members.Invite(imageRoom, unverified.PeerID); err != nil {
