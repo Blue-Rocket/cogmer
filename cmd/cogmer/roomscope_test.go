@@ -59,7 +59,7 @@ func TestARoomsPeersAreOnlyItsOwnGuests(t *testing.T) {
 	b, _ := m.CreateRoom(self.PeerID, false)
 	inA, inB, inBoth := testIdentity(t).PeerID, testIdentity(t).PeerID, testIdentity(t).PeerID
 	for peer, addr := range map[string]string{inA: "tc://in-a", inB: "tc://in-b", inBoth: "tc://in-both"} {
-		if err := m.Allow(peer, ""); err != nil {
+		if err := m.Allow(peer, testLabel(peer)); err != nil {
 			t.Fatal(err)
 		}
 		if err := m.SetPeerEndpoint(peer, addr); err != nil {
@@ -128,7 +128,7 @@ func TestAnImageIsServedOnlyInItsOwnRoomAndOnlyToThatRoomsGuests(t *testing.T) {
 
 	// A guest of the other room only asks for it by the room that holds it.
 	c := testIdentity(t)
-	if err := a.d.members.Allow(c.PeerID, ""); err != nil {
+	if err := a.d.members.Allow(c.PeerID, testLabel(c.PeerID)); err != nil {
 		t.Fatal(err)
 	}
 	if err := a.d.members.MarkVerified(c.PeerID); err != nil {

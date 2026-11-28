@@ -623,7 +623,7 @@ func TestForgettingIsNarrow(t *testing.T) {
 	self, one, two := testIdentity(t), testIdentity(t), testIdentity(t)
 	room, _ := m.CreateRoom(self.PeerID, false)
 	for _, p := range []*Identity{one, two} {
-		if err := m.Allow(p.PeerID, ""); err != nil {
+		if err := m.Allow(p.PeerID, testLabel(p.PeerID)); err != nil {
 			t.Fatal(err)
 		}
 		if err := m.Invite(room.RoomID, p.PeerID); err != nil {
@@ -880,10 +880,10 @@ func TestRoomPeersAreItsGuests(t *testing.T) {
 	guest := testIdentity(t).PeerID
 	stranger := testIdentity(t).PeerID
 	for _, p := range []string{guest, stranger} {
-		if err := m.Allow(p, PeerName(p)); err != nil {
+		if err := m.Allow(p, testLabel(p)); err != nil {
 			t.Fatal(err)
 		}
-		if err := m.SetPeerEndpoint(p, "tc://"+PeerName(p)); err != nil {
+		if err := m.SetPeerEndpoint(p, "tc://"+testLabel(p)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -892,7 +892,7 @@ func TestRoomPeersAreItsGuests(t *testing.T) {
 	}
 
 	peers := m.RoomPeers(room.RoomID, self.PeerID)
-	if len(peers) != 1 || peers[0] != "tc://"+PeerName(guest) {
+	if len(peers) != 1 || peers[0] != "tc://"+testLabel(guest) {
 		t.Fatalf("room peers = %v; want only the guest's address", peers)
 	}
 

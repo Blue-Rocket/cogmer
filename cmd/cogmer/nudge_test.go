@@ -48,7 +48,7 @@ func TestANudgeFromAMachineThatIsNotAGuestIsRefused(t *testing.T) {
 	introduce(t, a, b, "room-nudge")
 	// Known and verified both ways, so the handshake passes, and never invited.
 	for _, pair := range []struct{ from, to *offlinePeer }{{a, stranger}, {stranger, a}} {
-		if err := pair.from.d.members.Allow(pair.to.d.id.PeerID, ""); err != nil {
+		if err := pair.from.d.members.Allow(pair.to.d.id.PeerID, testLabel(pair.to.d.id.PeerID)); err != nil {
 			t.Fatal(err)
 		}
 		if err := pair.from.d.members.MarkVerified(pair.to.d.id.PeerID); err != nil {

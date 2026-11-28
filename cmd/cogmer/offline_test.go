@@ -79,7 +79,8 @@ func newOfflinePeer(t *testing.T, roomID, roomName string) *offlinePeer {
 func introduce(t *testing.T, a, b *offlinePeer, roomID string) {
 	t.Helper()
 	for _, pair := range []struct{ from, to *offlinePeer }{{a, b}, {b, a}} {
-		if err := pair.from.d.members.Allow(pair.to.d.id.PeerID, ""); err != nil {
+		peer := pair.to.d.id.PeerID
+		if err := pair.from.d.members.Allow(peer, testLabel(pair.from.d.members.colleagueOf(peer))); err != nil {
 			t.Fatal(err)
 		}
 		if err := pair.from.d.members.MarkVerified(pair.to.d.id.PeerID); err != nil {

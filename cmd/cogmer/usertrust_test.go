@@ -119,7 +119,7 @@ func introduceUsers(t *testing.T, a, b *offlinePeer, roomID string) {
 	t.Helper()
 	for _, pair := range []struct{ from, to *offlinePeer }{{a, b}, {b, a}} {
 		peer := pair.to.d.id.Peer()
-		if err := pair.from.d.members.Allow(peer, ""); err != nil {
+		if err := pair.from.d.members.Allow(peer, testLabel(pair.from.d.members.colleagueOf(peer))); err != nil {
 			t.Fatal(err)
 		}
 		if err := pair.from.d.members.MarkVerified(peer); err != nil {
@@ -136,7 +136,7 @@ func introduceUsers(t *testing.T, a, b *offlinePeer, roomID string) {
 func copyColleague(t *testing.T, machine, colleague *offlinePeer, roomID string) {
 	t.Helper()
 	peer := colleague.d.id.Peer()
-	if err := machine.d.members.Allow(peer, ""); err != nil {
+	if err := machine.d.members.Allow(peer, testLabel(machine.d.members.colleagueOf(peer))); err != nil {
 		t.Fatal(err)
 	}
 	if err := machine.d.members.MarkVerified(peer); err != nil {
@@ -777,7 +777,7 @@ func TestARoomsTargetsAreOnlyTheMachinesOfItsOwnGuests(t *testing.T) {
 	b, _ := m.CreateRoom(self.Peer(), false)
 	inA, inB := newTestUser(t), newTestUser(t)
 	for user, addrs := range map[*testUser][]string{inA: {"tc://a-one", "tc://a-two"}, inB: {"tc://b-one"}} {
-		if err := m.Allow(user.id, ""); err != nil {
+		if err := m.Allow(user.id, testLabel(user.id)); err != nil {
 			t.Fatal(err)
 		}
 		for _, addr := range addrs {
