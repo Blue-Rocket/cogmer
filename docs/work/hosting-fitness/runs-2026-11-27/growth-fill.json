@@ -16,36 +16,36 @@
    "dirty": false,
    "built": "2026-11-27T19:22:20Z"
   },
-  "started": "2026-11-27T22:35:10Z"
+  "started": "2026-11-28T11:52:46Z"
  },
  "seed_sizes": {
   "u00": {
    "rooms_db": 245760,
    "rooms_wal": 0,
    "membership": 674560,
-   "other": 1971,
-   "total": 922291
+   "other": 1972,
+   "total": 922292
   },
   "u01": {
    "rooms_db": 163840,
    "rooms_wal": 0,
-   "membership": 777560,
-   "other": 2082,
-   "total": 943482
+   "membership": 707520,
+   "other": 2081,
+   "total": 873441
   },
   "u02": {
    "rooms_db": 81920,
    "rooms_wal": 0,
    "membership": 810520,
-   "other": 2187,
-   "total": 894627
+   "other": 2185,
+   "total": 894625
   },
   "u03": {
-   "rooms_db": 163840,
+   "rooms_db": 81920,
    "rooms_wal": 0,
-   "membership": 847600,
-   "other": 2418,
-   "total": 1013858
+   "membership": 814640,
+   "other": 2360,
+   "total": 898920
   }
  },
  "errors": [],
@@ -59,51 +59,65 @@
     "u02": 1083,
     "u03": 1083
    },
-   "write_s": 64.1,
+   "write_s": 51.4,
    "turn_write_s": {
-    "median": 0.162,
-    "p95": 0.31
+    "median": 0.135,
+    "p95": 0.217
+   },
+   "prompt_hook_s": {
+    "median": 0.055,
+    "p95": 0.108
+   },
+   "stop_hook_s": {
+    "median": 0.067,
+    "p95": 0.126
    },
    "delivered": 6,
    "rooms": 6,
-   "delivery_max_s": 0.88,
+   "delivery_max_s": 0.945,
    "sizes": {
     "u00": {
-     "rooms_db": 8962048,
-     "rooms_wal": 12577880,
+     "rooms_db": 7831552,
+     "rooms_wal": 12614960,
      "membership": 4328928,
-     "other": 182220,
-     "total": 26051076
+     "other": 109111,
+     "total": 24884551
     },
     "u01": {
-     "rooms_db": 8888320,
-     "rooms_wal": 12577880,
+     "rooms_db": 7847936,
+     "rooms_wal": 12606720,
      "membership": 4333024,
-     "other": 182693,
-     "total": 25981917
+     "other": 109814,
+     "total": 24897494
     },
     "u02": {
-     "rooms_db": 8925184,
-     "rooms_wal": 12577880,
+     "rooms_db": 7798784,
+     "rooms_wal": 12582000,
      "membership": 4333024,
-     "other": 181806,
-     "total": 26017894
+     "other": 109569,
+     "total": 24823377
     },
     "u03": {
-     "rooms_db": 8900608,
-     "rooms_wal": 12606720,
-     "membership": 4337144,
-     "other": 180246,
-     "total": 26024718
+     "rooms_db": 7815168,
+     "rooms_wal": 12573760,
+     "membership": 4333024,
+     "other": 109472,
+     "total": 24831424
     }
    },
    "idle": {
-    "cpu_s_per_h": 12.29,
-    "pss_mb": 43.01,
-    "loop_sent_per_h": 793691.0,
+    "cpu_s_per_h": 12.97,
+    "pss_mb": 37.98,
+    "loop_sent_per_h": 784471.25,
     "disk_write_per_h": 0.0
    },
-   "idle_windows_disagree": false,
+   "idle_windows_disagree": true,
+   "confirmed_lines": {
+    "u00": 141,
+    "u01": 140,
+    "u02": 139,
+    "u03": 139
+   },
    "exited": []
   },
   {
@@ -115,51 +129,65 @@
     "u02": 2163,
     "u03": 2163
    },
-   "write_s": 79.7,
+   "write_s": 67.6,
    "turn_write_s": {
-    "median": 0.208,
-    "p95": 0.354
+    "median": 0.175,
+    "p95": 0.306
+   },
+   "prompt_hook_s": {
+    "median": 0.065,
+    "p95": 0.136
+   },
+   "stop_hook_s": {
+    "median": 0.097,
+    "p95": 0.185
    },
    "delivered": 6,
    "rooms": 6,
-   "delivery_max_s": 0.997,
+   "delivery_max_s": 1.304,
    "sizes": {
     "u00": {
-     "rooms_db": 17571840,
-     "rooms_wal": 12606720,
+     "rooms_db": 16023552,
+     "rooms_wal": 12631440,
      "membership": 4328928,
-     "other": 364916,
-     "total": 34872404
+     "other": 221385,
+     "total": 33205305
     },
     "u01": {
-     "rooms_db": 17891328,
-     "rooms_wal": 12594360,
+     "rooms_db": 16134144,
+     "rooms_wal": 12652040,
      "membership": 4333024,
-     "other": 365613,
-     "total": 35184325
+     "other": 222917,
+     "total": 33342125
     },
     "u02": {
-     "rooms_db": 17715200,
-     "rooms_wal": 12577880,
+     "rooms_db": 16326656,
+     "rooms_wal": 12643800,
      "membership": 4333024,
-     "other": 363858,
-     "total": 34989962
+     "other": 221953,
+     "total": 33525433
     },
     "u03": {
-     "rooms_db": 17928192,
-     "rooms_wal": 12664400,
-     "membership": 4337144,
-     "other": 362086,
-     "total": 35291822
+     "rooms_db": 16064512,
+     "rooms_wal": 12594360,
+     "membership": 4333024,
+     "other": 221962,
+     "total": 33213858
     }
    },
    "idle": {
-    "cpu_s_per_h": 14.83,
-    "pss_mb": 55.7,
-    "loop_sent_per_h": 789080.25,
+    "cpu_s_per_h": 15.23,
+    "pss_mb": 57.2,
+    "loop_sent_per_h": 784423.25,
     "disk_write_per_h": 0.0
    },
    "idle_windows_disagree": true,
+   "confirmed_lines": {
+    "u00": 324,
+    "u01": 322,
+    "u02": 322,
+    "u03": 322
+   },
    "exited": []
   },
   {
@@ -171,51 +199,65 @@
     "u02": 4323,
     "u03": 4323
    },
-   "write_s": 272.1,
+   "write_s": 176.3,
    "turn_write_s": {
-    "median": 0.369,
-    "p95": 0.577
+    "median": 0.236,
+    "p95": 0.353
+   },
+   "prompt_hook_s": {
+    "median": 0.08,
+    "p95": 0.141
+   },
+   "stop_hook_s": {
+    "median": 0.143,
+    "p95": 0.233
    },
    "delivered": 6,
    "rooms": 6,
-   "delivery_max_s": 1.814,
+   "delivery_max_s": 2.528,
    "sizes": {
     "u00": {
-     "rooms_db": 35840000,
-     "rooms_wal": 12623200,
+     "rooms_db": 33206272,
+     "rooms_wal": 12664400,
      "membership": 4328928,
-     "other": 747481,
-     "total": 53539609
+     "other": 462173,
+     "total": 50661773
     },
     "u01": {
-     "rooms_db": 36024320,
-     "rooms_wal": 12623200,
+     "rooms_db": 32890880,
+     "rooms_wal": 12656160,
      "membership": 4333024,
-     "other": 748690,
-     "total": 53729234
+     "other": 465416,
+     "total": 50345480
     },
     "u02": {
-     "rooms_db": 36200448,
-     "rooms_wal": 12664400,
+     "rooms_db": 32858112,
+     "rooms_wal": 12652040,
      "membership": 4333024,
-     "other": 745826,
-     "total": 53943698
+     "other": 462955,
+     "total": 50306131
     },
     "u03": {
-     "rooms_db": 35799040,
-     "rooms_wal": 12664400,
-     "membership": 4337144,
-     "other": 743493,
-     "total": 53544077
+     "rooms_db": 33124352,
+     "rooms_wal": 12610840,
+     "membership": 4333024,
+     "other": 463101,
+     "total": 50531317
     }
    },
    "idle": {
-    "cpu_s_per_h": 16.11,
-    "pss_mb": 67.89,
-    "loop_sent_per_h": 813244.5,
+    "cpu_s_per_h": 17.22,
+    "pss_mb": 63.59,
+    "loop_sent_per_h": 831712.5,
     "disk_write_per_h": 0.0
    },
    "idle_windows_disagree": true,
+   "confirmed_lines": {
+    "u00": 802,
+    "u01": 800,
+    "u02": 799,
+    "u03": 799
+   },
    "exited": []
   },
   {
@@ -227,51 +269,65 @@
     "u02": 8643,
     "u03": 8643
    },
-   "write_s": 1045.2,
+   "write_s": 558.5,
    "turn_write_s": {
-    "median": 0.712,
-    "p95": 1.154
+    "median": 0.374,
+    "p95": 0.557
+   },
+   "prompt_hook_s": {
+    "median": 0.115,
+    "p95": 0.199
+   },
+   "stop_hook_s": {
+    "median": 0.247,
+    "p95": 0.386
    },
    "delivered": 6,
    "rooms": 6,
-   "delivery_max_s": 3.23,
+   "delivery_max_s": 4.145,
    "sizes": {
     "u00": {
-     "rooms_db": 72171520,
-     "rooms_wal": 12730320,
+     "rooms_db": 65912832,
+     "rooms_wal": 12804480,
      "membership": 4328928,
-     "other": 1564461,
-     "total": 90795229
+     "other": 1022003,
+     "total": 84068243
     },
     "u01": {
-     "rooms_db": 72097792,
-     "rooms_wal": 12783880,
+     "rooms_db": 66301952,
+     "rooms_wal": 12656160,
      "membership": 4333024,
-     "other": 1568707,
-     "total": 90783403
+     "other": 1028914,
+     "total": 84320050
     },
     "u02": {
-     "rooms_db": 72048640,
-     "rooms_wal": 12767400,
+     "rooms_db": 65863680,
+     "rooms_wal": 12672640,
      "membership": 4333024,
-     "other": 1561994,
-     "total": 90711058
+     "other": 1021565,
+     "total": 83890909
     },
     "u03": {
-     "rooms_db": 71917568,
-     "rooms_wal": 12759160,
-     "membership": 4337144,
-     "other": 1558805,
-     "total": 90572677
+     "rooms_db": 66011136,
+     "rooms_wal": 12639680,
+     "membership": 4333024,
+     "other": 1024547,
+     "total": 84008387
     }
    },
    "idle": {
-    "cpu_s_per_h": 20.83,
-    "pss_mb": 89.7,
-    "loop_sent_per_h": 831677.25,
+    "cpu_s_per_h": 21.16,
+    "pss_mb": 111.44,
+    "loop_sent_per_h": 831705.25,
     "disk_write_per_h": 0.0
    },
    "idle_windows_disagree": true,
+   "confirmed_lines": {
+    "u00": 2288,
+    "u01": 2289,
+    "u02": 2278,
+    "u03": 2287
+   },
    "exited": []
   }
  ]

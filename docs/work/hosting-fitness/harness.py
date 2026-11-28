@@ -312,7 +312,10 @@ def filler(n, token):
     return body[:n]
 
 
-def write_turn(d, other, k, token):
+def write_turn(d, other, k, token, hook_s=None):
+    """One turn as Claude Code runs it: the prompt hook, then the session's transcript, which grows by
+    the user's record and the block the hook gave, then the stop hook, which confirms delivery of the
+    block only when the transcript shows it (§19). hook_s, if given, gets each hook's time."""
     s = session(d, other, k)
     tdir = os.path.join(d.home, "transcripts")
     os.makedirs(tdir, exist_ok=True)
@@ -321,16 +324,31 @@ def write_turn(d, other, k, token):
     pid = os.urandom(8).hex()
     payload = json.dumps({"session_id": s, "prompt": prompt, "prompt_id": pid, "cwd": d.home,
                           "transcript_path": transcript, "hook_event_name": "UserPromptSubmit"})
-    d.cli("hook", "prompt", session=s, stdin=payload)
-    open(transcript, "w").write(json.dumps({"type": "user", "promptSource": "typed", "isSidechain": False,
-                                            "sessionId": s, "promptId": pid,
-                                            "message": {"role": "user", "content": prompt}}) + "\n")
+    t0 = time.time()
+    p = subprocess.run([d.bin(), "hook", "prompt"], env=d.env(s), input=payload, capture_output=True,
+                       text=True, timeout=240)
+    t1 = time.time()
+    if "daemon unreachable" in p.stderr:
+        raise RuntimeError(p.stderr)
+    given = p.stdout.strip()
+    lines = [json.dumps({"type": "user", "promptSource": "typed", "isSidechain": False, "sessionId": s,
+                         "promptId": pid, "message": {"role": "user", "content": prompt}})]
+    if given:
+        lines.append(json.dumps({"type": "attachment", "attachment": {
+            "type": "hook_success", "hookName": "UserPromptSubmit", "hookEvent": "UserPromptSubmit",
+            "content": given}}))
+    with open(transcript, "a") as f:
+        f.write("\n".join(lines) + "\n")
     stop = json.dumps({"session_id": s, "prompt_id": pid, "transcript_path": transcript, "cwd": d.home,
                        "last_assistant_message": reply, "hook_event_name": "Stop"})
+    t2 = time.time()
     rc, out = d.cli("hook", "stop", session=s, stdin=stop)
+    t3 = time.time()
     if "daemon unreachable" in out:
         raise RuntimeError(out)
-    return time.time()
+    if hook_s is not None:
+        hook_s["prompt"], hook_s["stop"] = t1 - t0, t3 - t2
+    return t3
 
 
 def wait_delivered(reader, room, token, within):
@@ -765,28 +783,40 @@ def cmd_fill(run, name, days, idle):
     errors, checkpoints = [], []
     seed_sizes = {d.name: store_sizes(d.home) for d in fleet.daemons}
 
-    def fill_room(r, target, times):
+    def fill_room(r, target, times, hooks):
         host, guest, k = fleet.daemons[r["host"]], fleet.daemons[r["guest"]], r["k"]
         while written[r["id"]] < target:
             writer, other = (host, guest) if r["next"] == 0 else (guest, host)
             r["next"] ^= 1
-            t0 = time.time()
+            t0, hook_s = time.time(), {}
             try:
-                write_turn(writer, other, k, "fill%08x" % random.getrandbits(32))
+                write_turn(writer, other, k, "fill%08x" % random.getrandbits(32), hook_s)
             except Exception as e:
                 errors.append({"room": r["id"], "error": str(e)[:200]})
                 if len(errors) > 20:
                     return
             times.append(time.time() - t0)
+            if hook_s:
+                hooks["prompt"].append(hook_s["prompt"])
+                hooks["stop"].append(hook_s["stop"])
             written[r["id"]] += 1
+            if written[r["id"]] % 100 == 0:
+                say("%s: %d turns, prompt hook %s, stop hook %s over the last 50 turns of any room, %d failed" % (
+                    r["id"][:8], written[r["id"]], spread(hooks["prompt"][-50:]), spread(hooks["stop"][-50:]),
+                    len(errors)))
+
+    def spread(xs):
+        xs = sorted(xs)
+        return {"median": round(xs[len(xs) // 2], 3) if xs else None,
+                "p95": round(xs[int(len(xs) * 0.95)], 3) if xs else None}
 
     fleet.start_all()
     try:
         for day in days:
             target = int(1440 * day)
             say("%s: writing to %d turns in each room" % (name, target))
-            t_start, times = time.time(), []
-            ts = [threading.Thread(target=fill_room, args=(r, target, times)) for r in rooms]
+            t_start, times, hooks = time.time(), [], {"prompt": [], "stop": []}
+            ts = [threading.Thread(target=fill_room, args=(r, target, times, hooks)) for r in rooms]
             for t in ts:
                 t.start()
             for t in ts:
@@ -802,14 +832,13 @@ def cmd_fill(run, name, days, idle):
             os.makedirs(cp_dir)
             sample_loop(os.path.join(cp_dir, "samples.jsonl"), fleet.daemons, idle)
             idle_summary = summarize(os.path.join(cp_dir, "samples.jsonl"))
-            times.sort()
             cp = {"days": day, "turns_per_room": written[rooms[0]["id"]],
                   "turns_per_daemon": {d.name: sum(written[r["id"]] for r in rooms
                                                    if fleet.daemons[r["host"]] is d or fleet.daemons[r["guest"]] is d)
                                        for d in fleet.daemons},
                   "write_s": round(write_s, 1),
-                  "turn_write_s": {"median": round(times[len(times) // 2], 3) if times else None,
-                                   "p95": round(times[int(len(times) * 0.95)], 3) if times else None},
+                  "turn_write_s": spread(times), "prompt_hook_s": spread(hooks["prompt"]),
+                  "stop_hook_s": spread(hooks["stop"]),
                   "delivered": sum(1 for c in check if c.get("delivery_s") is not None), "rooms": len(check),
                   "delivery_max_s": max([c["delivery_s"] for c in check if c.get("delivery_s") is not None],
                                         default=None),
@@ -817,6 +846,7 @@ def cmd_fill(run, name, days, idle):
                   "idle": {k: idle_summary["mean_daemon"][k] for k in ("cpu_s_per_h", "pss_mb", "loop_sent_per_h",
                                                                          "disk_write_per_h")},
                   "idle_windows_disagree": idle_summary["windows_disagree"],
+                  "confirmed_lines": {d.name: d.log_count("delivery: confirmed") for d in fleet.daemons},
                   "exited": [d.name for d in fleet.daemons if d.proc.poll() is not None]}
             checkpoints.append(cp)
             say(json.dumps(cp))

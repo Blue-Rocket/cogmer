@@ -9,84 +9,84 @@
  },
  "wakes": [
   {
-   "answers_s": 0.105,
-   "peer_port_s": 0.105,
-   "missed_turn_s": 0.988,
-   "own_turn_to_colleague_s": 0.799,
-   "pss_mb_at_60s": 76.8,
-   "stopped_disk_mb": 74.68
+   "answers_s": 0.113,
+   "peer_port_s": 0.113,
+   "missed_turn_s": 2.242,
+   "own_turn_to_colleague_s": 0.759,
+   "pss_mb_at_60s": 80.9,
+   "stopped_disk_mb": 68.62
   },
   {
    "answers_s": 0.089,
    "peer_port_s": 0.089,
-   "missed_turn_s": 0.843,
-   "own_turn_to_colleague_s": 1.385,
-   "pss_mb_at_60s": 43.8,
-   "stopped_disk_mb": 74.71
+   "missed_turn_s": 0.863,
+   "own_turn_to_colleague_s": 1.414,
+   "pss_mb_at_60s": 74.5,
+   "stopped_disk_mb": 68.64
+  },
+  {
+   "answers_s": 0.119,
+   "peer_port_s": 0.119,
+   "missed_turn_s": 2.067,
+   "own_turn_to_colleague_s": 0.68,
+   "pss_mb_at_60s": 84.8,
+   "stopped_disk_mb": 68.65
   },
   {
    "answers_s": 0.093,
    "peer_port_s": 0.093,
-   "missed_turn_s": 0.867,
-   "own_turn_to_colleague_s": 0.651,
-   "pss_mb_at_60s": 47.1,
-   "stopped_disk_mb": 74.74
+   "missed_turn_s": 1.6,
+   "own_turn_to_colleague_s": 0.623,
+   "pss_mb_at_60s": 73.0,
+   "stopped_disk_mb": 68.66
   },
   {
-   "answers_s": 0.089,
-   "peer_port_s": 0.089,
-   "missed_turn_s": 0.939,
-   "own_turn_to_colleague_s": 0.664,
-   "pss_mb_at_60s": 48.9,
-   "stopped_disk_mb": 74.75
+   "answers_s": 0.151,
+   "peer_port_s": 0.221,
+   "missed_turn_s": 2.61,
+   "own_turn_to_colleague_s": 0.814,
+   "pss_mb_at_60s": 42.1,
+   "stopped_disk_mb": 68.68
   },
   {
-   "answers_s": 0.098,
-   "peer_port_s": 0.098,
-   "missed_turn_s": 1.755,
-   "own_turn_to_colleague_s": 0.78,
-   "pss_mb_at_60s": 79.8,
-   "stopped_disk_mb": 74.76
+   "answers_s": 0.062,
+   "peer_port_s": 0.062,
+   "missed_turn_s": 1.534,
+   "own_turn_to_colleague_s": 0.649,
+   "pss_mb_at_60s": 46.5,
+   "stopped_disk_mb": 68.7
   },
   {
-   "answers_s": 0.067,
-   "peer_port_s": 0.067,
-   "missed_turn_s": 1.58,
-   "own_turn_to_colleague_s": 0.591,
-   "pss_mb_at_60s": 48.1,
-   "stopped_disk_mb": 74.78
+   "answers_s": 0.111,
+   "peer_port_s": 0.111,
+   "missed_turn_s": 1.944,
+   "own_turn_to_colleague_s": 0.738,
+   "pss_mb_at_60s": 43.5,
+   "stopped_disk_mb": 68.71
   },
   {
-   "answers_s": 0.097,
-   "peer_port_s": 0.097,
-   "missed_turn_s": 1.807,
-   "own_turn_to_colleague_s": 0.659,
-   "pss_mb_at_60s": 80.5,
-   "stopped_disk_mb": 74.8
+   "answers_s": 0.115,
+   "peer_port_s": 0.115,
+   "missed_turn_s": 1.813,
+   "own_turn_to_colleague_s": 0.783,
+   "pss_mb_at_60s": 47.9,
+   "stopped_disk_mb": 68.73
   },
   {
-   "answers_s": 0.058,
-   "peer_port_s": 0.091,
-   "missed_turn_s": 0.871,
-   "own_turn_to_colleague_s": 0.688,
-   "pss_mb_at_60s": 72.0,
-   "stopped_disk_mb": 74.81
+   "answers_s": 0.139,
+   "peer_port_s": 0.139,
+   "missed_turn_s": 2.497,
+   "own_turn_to_colleague_s": 1.052,
+   "pss_mb_at_60s": 85.4,
+   "stopped_disk_mb": 68.75
   },
   {
-   "answers_s": 0.058,
-   "peer_port_s": 0.058,
-   "missed_turn_s": 1.475,
-   "own_turn_to_colleague_s": 0.668,
-   "pss_mb_at_60s": 86.6,
-   "stopped_disk_mb": 74.83
-  },
-  {
-   "answers_s": 0.064,
-   "peer_port_s": 0.099,
-   "missed_turn_s": 0.862,
-   "own_turn_to_colleague_s": 0.765,
-   "pss_mb_at_60s": 85.8,
-   "stopped_disk_mb": 74.84
+   "answers_s": 0.092,
+   "peer_port_s": 0.092,
+   "missed_turn_s": 0.947,
+   "own_turn_to_colleague_s": 0.817,
+   "pss_mb_at_60s": 43.5,
+   "stopped_disk_mb": 68.76
   }
  ]
 }
