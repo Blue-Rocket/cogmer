@@ -216,6 +216,11 @@ and serves the hosted machine's page and the self-hosted machines page through t
 site, so one passkey under `cogmer.ai` serves every page under it, and one made for
 `blue-rocket.github.io` would serve that site only.
 
+The page decrypts a hosted machine's room traffic in the browser, since the page and the machine
+encrypt it end to end inside TLS (the hosting item's provisional choice of 2026-11-28), so the code
+`cogmer.ai` serves is what a user trusts with their rooms. Whether each page is pinned to a published
+build, so that a changed page is seen before it runs, is not decided.
+
 Rejected.
 - *Keeping the page on GitHub Pages.* Its passkeys would belong to `blue-rocket.github.io`, which
   `Blue-Rocket` controls on GitHub, and could never be used by a page under `cogmer.ai`.
