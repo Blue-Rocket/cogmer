@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -133,5 +134,25 @@ func TestALabelledColleaguesDerivedNameIsNotFreeForAnother(t *testing.T) {
 	var taken *NameTakenError
 	if err := m.Allow(b, PeerName(a)); !errors.As(err, &taken) || taken.Existing != a {
 		t.Fatalf("a labelled colleague's derived name was given to another: %v", err)
+	}
+}
+
+// Two colleagues given no name whose keys derive one name are told apart by naming
+// one, and the name is not reported as a possible substituted key, since nobody
+// chose it (D-174).
+func TestADerivedNameSharedByTwoKeysIsReportedAsChance(t *testing.T) {
+	m := testMembership(t)
+	a, b := twoKeysDerivingOneName(t)
+	for _, p := range []string{a, b} {
+		if err := m.Allow(p, ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_, err := resolvePeer(m, PeerName(a))
+	if err == nil {
+		t.Fatal("a derived name two keys share resolved to one of them")
+	}
+	if !strings.Contains(err.Error(), "Nobody chose that name") || strings.Contains(err.Error(), "substituted") {
+		t.Errorf("the refusal does not say the shared derived name is chance:\n%v", err)
 	}
 }

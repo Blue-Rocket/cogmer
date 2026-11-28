@@ -3,7 +3,11 @@
 **Date:** 2026-09-19 · **Status:** active · **Areas:** identity
 
 **Decision.** `resolvePeer` refuses a name that matches more than one key, lists each key,
-and says what that probably means, and it never picks one.
+and says what that probably means, and it never picks one. When no key it matches carries
+that name as a label the user gave, every match is a name derived from its key, which
+nobody chose, so the message says the keys share it by chance and that giving one a name
+tells them apart, and it says nothing of a substituted key (D-074, a name means one master
+key, and a collision is where a new master key surfaces).
 
 **Support.**
 - A store written before names were limited to one key may hold two under one name, and
