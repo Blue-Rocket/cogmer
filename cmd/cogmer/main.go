@@ -924,11 +924,23 @@ func resolvePeer(m *Membership, arg string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var matches []string
+	// A name matches the colleague who has it as a label or is shown by it. A derived
+	// name reaches a colleague with a label only when no colleague without one is
+	// shown by it, so naming one of two keys that derive one name tells them apart.
+	var matches, labelled []string
 	for _, p := range known {
-		if p.Name == arg || PeerName(p.PeerID) == arg {
+		switch {
+		case m.Label(p.PeerID) == arg:
 			matches = append(matches, p.PeerID)
+		case PeerName(p.PeerID) != arg:
+		case m.Label(p.PeerID) == "":
+			matches = append(matches, p.PeerID)
+		default:
+			labelled = append(labelled, p.PeerID)
 		}
+	}
+	if len(matches) == 0 {
+		matches = labelled
 	}
 	switch len(matches) {
 	case 1:
@@ -948,11 +960,22 @@ func resolvePeer(m *Membership, arg string) (string, error) {
 		}
 	}
 	if !chosen {
-		// Every key matches by the name derived from it, which nobody chose, so two of
-		// them is chance and not a substituted key (D-074, D-140).
-		b.WriteString("\n\nNobody chose that name: it is derived from each of these keys, and two keys")
-		b.WriteString("\nderive the same name about once in 8,280 pairs. Give one of them a name of its")
-		b.WriteString(commandText("\nown with /cogmer:peer-rename <key> <name>, or use its key."))
+		// Every key matches by the name derived from it, which nobody chose. Two keys
+		// share one by chance about once in 8,280 pairs, and a key can also be made
+		// until it does (D-021's limits), so the message says which keys are verified.
+		b.Reset()
+		fmt.Fprintf(&b, "%q is the name derived from %d different keys, so it names nobody. Say which:", arg, len(matches))
+		for _, k := range matches {
+			state := "not verified"
+			if m.IsVerified(k) {
+				state = "verified"
+			}
+			fmt.Fprintf(&b, "\n  %s (%s)", k, state)
+		}
+		b.WriteString("\n\nNobody chose that name. Two keys derive the same one about once in 8,280")
+		b.WriteString("\npairs, and a key can also be made until it does, so the colleague you compared")
+		b.WriteString("\nwords with is the verified one. Give one of them a name of its own with")
+		b.WriteString(commandText("\n/cogmer:peer-rename <key> <name>, or use its key."))
 		return "", errors.New(b.String())
 	}
 	b.WriteString("\n\nTwo keys under one name is what a substituted key looks like once it has been")
