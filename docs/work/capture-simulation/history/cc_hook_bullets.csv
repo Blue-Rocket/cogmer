@@ -1,0 +1,1013 @@
+version,date,verb,families,text
+2.1.332,2026-11-24,added,hooks_general,"Added a `PreSkillShellCommand` hook event that can refuse a skill or command's inline shell commands as it loads; on 2.1.331 and older, a settings file naming it opens a dialog at start"
+2.1.332,2026-11-24,added,compaction,"Added a warning in VS Code and Desktop's Code tab when part of a session couldn't be saved, saying how to save it with `/compact`"
+2.1.332,2026-11-24,fixed,compaction,"Fixed Read, @-mentions and compaction hanging on a named pipe that nothing writes to, such as a `.env` mounted by a locked secrets manager; the read now fails after 20 seconds"
+2.1.332,2026-11-24,fixed,compaction,"Fixed turns ending in ""Prompt is too long"" after repeated auto-compaction failures when one more compaction at the context limit could have kept them going"
+2.1.332,2026-11-24,fixed,compaction,"Fixed compaction failing when a summary kept running past the output limit: after three cut-off replies, the last try now asks for a shorter summary"
+2.1.332,2026-11-24,fixed,hooks_general,Fixed a freeze when a permission rule or hook condition with several wildcards was checked against a long command
+2.1.332,2026-11-24,fixed,hooks_general,Fixed freezes and runaway memory use in most cases while a hook prints output without end
+2.1.332,2026-11-24,fixed,compaction|hooks_general,"Fixed a freeze and context overflow when a hook blocks or fails during a turn, or after `/compact`, with a very large log; text over about 50,000 characters is now shortened"
+2.1.332,2026-11-24,fixed,transcript,Fixed resuming a session and `/stats` freezing for seconds when a transcript holds many damaged lines
+2.1.332,2026-11-24,fixed,transcript,"Fixed keys lagging for seconds while `/stats` reads large session transcripts, also after the dialog is closed, and with debug logging on while a language server floods its stderr"
+2.1.332,2026-11-24,fixed,hooks_general,"Fixed a PreToolUse hook's reason for asking not showing on terminal Read, Grep, Glob, Edit and Write prompts (anthropics/claude-code#102892, anthropics/claude-code#105343)"
+2.1.332,2026-11-24,fixed,compaction,Fixed idle compaction being skipped for subscribers still well under their weekly limit
+2.1.332,2026-11-24,other,compaction,Remote Control: Fixed sessions hosted by the desktop app or VS Code showing as idle while /compact runs
+2.1.332,2026-11-24,fixed,transcript,"Fixed moving an empty session to the background sometimes failing with ""Couldn't load transcript from file"""
+2.1.332,2026-11-24,fixed,hooks_general,"Fixed interrupting a turn while a mod's `turn.step` hook was waiting showing ""user-cancel"" as an error instead of ""Interrupted"""
+2.1.332,2026-11-24,added,compaction,"Improved recovery for long conversations behind a proxy or gateway with a request size limit, where every message and `/compact` failed with a 413"
+2.1.332,2026-11-24,changed,compaction,Changed Claude Desktop's Code tab on Anthropic's API to ignore a `CLAUDE_CODE_AUTO_COMPACT_WINDOW` under 200K in your own settings beside a gateway address; use `/autocompact` instead
+2.1.332,2026-11-24,changed,transcript,"Changed `/feedback` drafts in the terminal to open on Not now, above separate rows to send the report alone or with the transcript"
+2.1.332,2026-11-24,changed,hooks_general,Changed the `hint` a mod's `PromptHint` hook receives to leave out the hint for selected text when the fullscreen footer has a label on its right
+2.1.332,2026-11-24,other,compaction,"[VSCode] Fixed the compaction summary showing as your own prompt, and in Rewind and prompt history, after reloading, resuming or forking a compacted conversation"
+2.1.331,2026-11-23,fixed,hooks_general,"Fixed one-line tool results cut with no ellipsis in narrow windows, Markdown stars in the Auto mode tab of /permissions, and a hook's reason to stop a forked skill showing twice"
+2.1.331,2026-11-23,fixed,compaction,Fixed /compact and auto-compact sometimes losing part of the conversation summary when the summary quoted certain XML tags
+2.1.331,2026-11-23,fixed,stop_hook|transcript|hooks_general,Fixed Stop hooks that read the transcript missing the last reply in Claude Desktop; SubagentStop hooks now wait for it too
+2.1.331,2026-11-23,fixed,hooks_general,Fixed PermissionRequest hooks not saving `Skill(name:*)` allow rules outside local settings
+2.1.331,2026-11-23,changed,compaction,"Changed the questions for stopping auto-connect in `/ide` and for `/clear`, `/compact` or `/rewind` in a subagent's view to list Yes first; they still start on No, so Down then Enter now answers No"
+2.1.331,2026-11-23,changed,hooks_general,Changed what a `PermissionDenied` hook's `retry: true` tells Claude: make the refused call again only if you asked for that call
+2.1.331,2026-11-23,other,hooks_general,"[VSCode] Fixed Escape stopping Claude at a Remove or Delete confirmation in MCP, Hooks and Memory dialogs, on a side question panel's button or link, and on the Bookmarks button with its panel open"
+2.1.331,2026-11-23,other,hooks_general,"[VSCode] Fixed Electron apps and extension tests failing to start from Claude, a hook or an MCP server; a wrapper, hook or server that runs VS Code as Node must now set `ELECTRON_RUN_AS_NODE=1`"
+2.1.331,2026-11-23,other,compaction,"[VSCode] Fixed a quick double click in the panel pressing a button or row that appeared after the first click, or starting a second compaction from the context usage circle"
+2.1.331,2026-11-23,other,transcript,"[VSCode] Fixed the session list opening every transcript at once, which stalled the editor's extensions and could leave sessions out in projects with many sessions"
+2.1.330,2026-11-20,other,hooks_general,"Self-hosted runner: Added `--start-dir` / `SELF_HOSTED_RUNNER_START_DIR` to have Claude start its work in a folder of a repository, while settings and hooks load as without it"
+2.1.330,2026-11-20,fixed,compaction,Fixed Claude Code freezing for up to several minutes right after compacting a very long conversation
+2.1.330,2026-11-20,fixed,transcript,"Fixed turns failing with ""JSON schema is invalid"", and session files growing by many megabytes, when many MCP tools have an input schema that the API refuses"
+2.1.330,2026-11-20,fixed,compaction,Fixed Code Mode not restoring a file that a script had read after Esc and `/compact`
+2.1.330,2026-11-20,fixed,session_start|hooks_general,Fixed environment variables written by a SessionStart hook being lost with `claude -p --continue`
+2.1.330,2026-11-20,fixed,hooks_general,Fixed Edit refusing some valid hook commands in Claude settings files
+2.1.330,2026-11-20,other,hooks_general,Self-hosted runner: Fixed one slow `spawn-runner` hook keeping the orchestrator from claiming sessions for its free slots; it now polls every 4 to 6 seconds while a slot is free
+2.1.330,2026-11-20,fixed,hooks_general,Fixed `claude plugin validate` wrongly warning that a mod's `AbovePrompt` or `AbovePromptList` hook never runs in VS Code
+2.1.330,2026-11-20,changed,compaction,"Changed skills that Claude runs with a `model` setting, other than `context: fork` skills, to leave subagents, forks, compaction and `/recap` on the session's model"
+2.1.330,2026-11-20,other,hooks_general,"Self-hosted runner: Changed `spawn-runner` hooks to start while earlier ones still run, up to `--hook-concurrency` per orchestrator (4 by default); set it to 1 if yours can't run beside another"
+2.1.330,2026-11-20,other,transcript,"Self-hosted runner: Changed Bash commands to skip the file diff when nothing needs it, so transcripts can lack it; set `bashEditDiffEnabled` to true in managed settings to get every diff"
+2.1.330,2026-11-20,changed,hooks_general,"Changed self-hosted runners to stop a session's start at once, without trying other runners, when a checkout hook exits with status 108"
+2.1.330,2026-11-20,changed,hooks_general,Changed prompt hooks to accept model aliases such as `haiku` or `sonnet` in their `model` field
+2.1.329,2026-11-19,added,hooks_general,Added a trust dialog warning that says where a folder's hooks are declared
+2.1.329,2026-11-19,added,hooks_general,"Added a warning in the conversation, in Claude Desktop and other non-interactive hosts, when hooks in managed settings fail to load"
+2.1.329,2026-11-19,fixed,compaction,"Fixed Remote Control using memory for the earlier conversation after a compaction or `/clear` in sessions run by Claude Desktop, IDEs or the SDK"
+2.1.329,2026-11-19,fixed,plugin_hooks|hooks_general,"Fixed another case of claude.ai-synced plugin hooks failing with ""Plugin directory does not exist"" while a session was still running on macOS"
+2.1.329,2026-11-19,fixed,compaction,Fixed sessions started from a pre-warmed process ignoring the `autoCompactWindow` setting in the project's `.claude/settings.json`
+2.1.329,2026-11-19,fixed,compaction,Fixed `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` staying in effect in a running session after it is removed from settings.json
+2.1.329,2026-11-19,fixed,compaction,"Fixed auto-scroll, the PR status badge, the auto-compact warning and the ultracode tag not following the `/config` switches that control them in a running session"
+2.1.329,2026-11-19,fixed,prompt_hook|hooks_general,Fixed `/rename` and `UserPromptSubmit` hook titles in `claude remote-control` sessions not showing on claude.ai and mobile
+2.1.329,2026-11-19,changed,hooks_general,"Changed Code Mode so a PreToolUse hook that errors no longer refuses a script's tool call, as outside Code Mode; set `""onFailure"": ""block""` on a command, HTTP or MCP tool hook that must refuse"
+2.1.329,2026-11-19,changed,stop_hook|hooks_general,"Changed Stop and SubagentStop hooks to list a Monitor's script as `monitor`, not `shell`, in `background_tasks`"
+2.1.328,2026-11-18,added,mcp_tool_hook|hooks_general,"Added `""onFailure"": ""block""` for `mcp_tool` hooks, as for command and HTTP hooks: a hook whose call fails blocks the action"
+2.1.328,2026-11-18,added,hooks_general,"Added `CLAUDE_CODE_DISABLE_DEFERRED_TOOL_RESUME`, which lets a host stop `claude -p --resume` and `--continue` from running a tool call that a hook deferred"
+2.1.328,2026-11-18,other,hooks_general,"Self-hosted runner: Added `--hook-label` to `claude self-hosted-runner orchestrator`, to hand chosen session labels to the `spawn-runner` hook"
+2.1.328,2026-11-18,other,hooks_general,"Self-hosted runner: Added `--metadata key=value` to `claude --environment`, to label a session for the `spawn-runner` hook"
+2.1.328,2026-11-18,fixed,compaction,Fixed automatic compaction reusing the session's earlier system prompt instead of rebuilding it the way `/compact` does
+2.1.328,2026-11-18,fixed,compaction,Fixed a case where a resumed cloud session could lose its compaction summary or recent messages when a message was saved late
+2.1.328,2026-11-18,fixed,hooks_general,"Fixed Code Mode losing a loaded skill, hook context or a note typed with a permission approval when resuming a session in which one reply ran several scripts"
+2.1.328,2026-11-18,fixed,stop_hook|hooks_general,"Fixed `/goal` removing a skill's Stop hook, or ending early on another hook's result, when both had the same wording"
+2.1.328,2026-11-18,fixed,transcript,Fixed Esc not dismissing the transcript share question for Pro and Max users
+2.1.328,2026-11-18,fixed,hooks_general,Fixed `/hooks` losing your place when going back
+2.1.328,2026-11-18,fixed,compaction|hooks_general,Fixed agent hooks running past their timeout while compacting after a request was refused as too large
+2.1.328,2026-11-18,other,hooks_general,Self-hosted runner: Fixed sessions with Anthropic-managed git losing git access to GitHub after a script or hook in the session ran `claude` again
+2.1.328,2026-11-18,other,hooks_general,Self-hosted runner: Fixed a failed start's message losing the words that say what failed when a checkout hook or git printed a lot
+2.1.328,2026-11-18,fixed,hooks_general,Fixed the self-hosted runner skipping its post-session hook when a disk stalled for a few seconds; on a dead disk a session's end can take 25 seconds longer by default
+2.1.328,2026-11-18,other,hooks_general,Self-hosted runner: Fixed `--correlation-id` of `claude --environment` not reaching the `spawn-runner` hook
+2.1.328,2026-11-18,changed,prompt_hook|hooks_general,"Changed Code Mode to no longer run UserPromptSubmit hooks, managed ones included, on scripts' output; to redact that output, use a PostToolUse hook with `updatedToolOutput`"
+2.1.328,2026-11-18,changed,hooks_general,"Changed managed `PostToolUse` hooks to no longer fire for calls refused before they ran: no log entry, rewrite, block or stop there; `PostToolBatch` gets most, not marked as refused"
+2.1.328,2026-11-18,changed,hooks_general,Changed a shell command rewritten by a PermissionRequest hook to a sandbox-excluded command to run outside the sandbox
+2.1.328,2026-11-18,other,hooks_general,"Self-hosted runner: Changed `CLAUDE_RUNNER_SESSION_UUID` and `CLAUDE_CODE_REMOTE_SESSION_UUID` to both be set for the session and its `checkout`, `post-session` and `spawn-runner` hooks"
+2.1.327,2026-11-17,added,hooks_general,"Added a list in `/status` of broken agent, skill, command and output style files, keybinding errors, an unavailable sandbox, ignored permission settings and hook matchers that never match"
+2.1.327,2026-11-17,fixed,compaction,Fixed a compaction right after a reply cut at the output token limit losing that reply's tool call and its result
+2.1.327,2026-11-17,fixed,compaction,"Fixed stalls on a compaction reply with thousands of unclosed tags and on some very long WebFetch URLs; WebFetch now refuses a URL over 2,000 characters before any permission prompt"
+2.1.327,2026-11-17,fixed,compaction,"Fixed Edit refusing with ""File has not been read yet"" after a compaction on unchanged files outside the project that Claude had already read in full"
+2.1.327,2026-11-17,fixed,compaction,"Fixed in-process agent teammates on a different model from the lead compacting at the lead's context limit and on the wrong model; they now use their own limit and model, at that model's rate"
+2.1.327,2026-11-17,fixed,prompt_hook|hooks_general,Fixed cloud sessions giving no error when a `UserPromptSubmit` hook blocks a message sent while Claude works
+2.1.327,2026-11-17,fixed,hooks_general,"Fixed failing hooks showing nothing: SubagentStop in background agents, SessionEnd at `/clear` and `/resume`, and CwdChanged and FileChanged in fullscreen"
+2.1.327,2026-11-17,fixed,stop_hook|hooks_general,Fixed a Stop hook that failed to run being shown as having reported a problem
+2.1.327,2026-11-17,fixed,stop_hook|hooks_general,Fixed focus view keeping a finished reply hidden while a Stop hook was running
+2.1.327,2026-11-17,fixed,hook_output|hooks_general,Fixed Claude getting a long managed PostToolUse hook output twice when a mod added context to the tool call
+2.1.327,2026-11-17,other,hooks_general,"Self-hosted runner: Fixed `claude -p` started by a session's script or hook waiting out rate limits, because it inherited the session's own retry setting"
+2.1.327,2026-11-17,fixed,hooks_general,Fixed `/hooks` leaving out hooks given by `--settings`
+2.1.327,2026-11-17,fixed,transcript,Fixed n and N in transcript search skipping matches
+2.1.327,2026-11-17,fixed,transcript,"Fixed cancelling a transcript search (ctrl+o, then /) in a long session landing far from where the search started"
+2.1.327,2026-11-17,fixed,transcript,"Fixed the ""+N lines"" count being too high for command output with links or colors, and the transcript's `?` help hiding how to exit in a short window"
+2.1.327,2026-11-17,fixed,hooks_general,Fixed `/hooks` help naming input fields that do not exist
+2.1.327,2026-11-17,added,transcript,"Improved resuming very long sessions: a transcript read that ends early is now retried once, so messages are lost less often"
+2.1.327,2026-11-17,added,compaction,"Improved the reminder about a completed subagent after compaction: if Claude can't read the agent's output file, it is now told to ask the agent with `SendMessage`"
+2.1.327,2026-11-17,added,transcript,Improved transcript search to find text in edits and written files
+2.1.327,2026-11-17,changed,compaction,"Changed the Artifact publish prompt to stop offering ""don't ask again"" in subagents and after a background task result, someone else's message or a compaction"
+2.1.327,2026-11-17,changed,plugin_hooks|hooks_general,"Changed `claude plugin eval` to keep its deny rules over a plugin's permission hook, and to flag calls the hook let through"
+2.1.327,2026-11-17,changed,hooks_general,"Changed MCP server logs to record the mode, action, and field names of elicitation requests and hook answers, not their full contents"
+2.1.327,2026-11-17,changed,hooks_general,Changed Code Mode to no longer refuse to start when an installed mod hooks tool calls; an administrator can still keep Code Mode off in managed settings
+2.1.327,2026-11-17,other,hooks_general,[VSCode] Fixed the permission prompt not showing the reason that a PreToolUse hook gives when it asks for confirmation (anthropics/claude-code#85950)
+2.1.326,2026-11-16,fixed,transcript,"Fixed Bash commands that delete or overwrite files (`find -delete`, `cat a > b`, `sort -o`) being summed up in the transcript as a search or a read"
+2.1.326,2026-11-16,fixed,hooks_general,Fixed PreToolUse hooks in managed settings leaving no OpenTelemetry `tool_decision` event or `permission_denials` entry when they refused a direct tool call
+2.1.326,2026-11-16,fixed,compaction,"Fixed compaction on Bedrock, Vertex and Foundry, and with telemetry turned off, sometimes replying to one of your messages instead of summarizing, or leaving Claude's last reply out of the summary"
+2.1.326,2026-11-16,fixed,compaction,"Fixed image-heavy sessions on Vertex AI getting stuck on a 400 error about the request size exceeding a 30 MB limit, instead of compacting and retrying"
+2.1.326,2026-11-16,fixed,hooks_general,"Fixed a crashed Node or Python hook showing only the first line of its stack trace; the error is now shown, and Ctrl+O shows up to 10,000 characters of the output"
+2.1.326,2026-11-16,fixed,stop_hook|hooks_general,Fixed `/goal clear` or a new `/goal` not sticking when typed while Stop hooks were running and background work was still in progress
+2.1.326,2026-11-16,fixed,transcript,"Fixed the transcript dropping a few rows, or the prompt jumping up, as a reply started streaming"
+2.1.326,2026-11-16,fixed,transcript,"Fixed the fullscreen transcript going blank when searching or jumping far back, and freezing partway through a fast scroll, in long sessions"
+2.1.326,2026-11-16,fixed,transcript,Fixed the screen freezing for seconds when showing long newly created files in the permission prompt and the Ctrl+O transcript
+2.1.326,2026-11-16,fixed,transcript,"Fixed code or a diff pasted into a prompt losing its indentation in the transcript, and a pasted diff's added lines showing as removed"
+2.1.326,2026-11-16,fixed,transcript,"Fixed asterisks disappearing from your own prompts in the transcript, such as `src/**/*.ts` or `2*3*4`"
+2.1.326,2026-11-16,fixed,transcript,"Fixed the transcript share question for Pro and Max users staying open after the next message, `/clear` or `/resume`"
+2.1.326,2026-11-16,fixed,compaction,"Fixed Program Status Protocol (OSC 7501) terminals showing a finished turn after idle compaction, or no status for background sessions opened with `claude agents`, `claude attach` or `--resume`"
+2.1.326,2026-11-16,fixed,transcript,"Fixed the Ctrl+O transcript hinting Ctrl+B to background a command in fullscreen, where it pages up, and showing no sign that Claude is still working"
+2.1.326,2026-11-16,added,transcript,Improved CPU use when more than 20 subagents are running: token counts of background agents whose transcript isn't open now update every 5 seconds
+2.1.326,2026-11-16,added,compaction,Improved response time of the first message after `/compact` in git repositories
+2.1.326,2026-11-16,added,hooks_general,Improved how a PreToolUse hook's `updatedInput` is kept when more than one hook answers a tool call; the rewrite now runs in more cases
+2.1.326,2026-11-16,added,hooks_general,"Improved the error when a PreToolUse hook exits 127, saying its check may not have run"
+2.1.326,2026-11-16,added,transcript|hooks_general,"Improved hook failures, blocks and timeouts in the transcript: failures are now red instead of grey, a hook that stops Claude is yellow, and the reason is shown under them"
+2.1.326,2026-11-16,added,compaction,"Improved `/plugin` Marketplaces and Add marketplace: a compact list, a clearer remove confirmation, a clear text field and shorter errors when adding fails"
+2.1.326,2026-11-16,added,hooks_general,"Improved key hints in many dialogs and the `?` lists: they show the keys that work, in one order and wording, and fit narrow windows; deeper screens in `/hooks` and `/permissions` say Esc goes back"
+2.1.326,2026-11-16,added,transcript,"Improved dialogs, panels and the transcript: errors, warnings and confirmations in many dialogs start with ✘, ⚠ or ✔, and loading lines, status rows, counts and durations look and read more alike"
+2.1.326,2026-11-16,added,compaction,"Improved `/autocompact` and `/scroll-speed` with a slider that shows every value, takes Home, End and (in fullscreen) clicks, and fits narrow terminals"
+2.1.326,2026-11-16,changed,hooks_general,"Changed a hook's `""decision"": ""block""` to hold in more cases, so a hook that always prints one may start blocking calls"
+2.1.326,2026-11-16,changed,hooks_general,Changed commands that a permission hook or SDK host rewrites while approving to stay in the sandbox if the original was checked as sandboxed; the approver can add `dangerouslyDisableSandbox: true`
+2.1.326,2026-11-16,changed,hooks_general,"Changed enabled plugins that were refused for a malformed `plugin.json` display field: they now load, with their hooks and MCP servers; administrators should check the plugins they deploy"
+2.1.326,2026-11-16,changed,hooks_general,Changed how `allowedHttpHookUrls` and `httpHookAllowedEnvVars` apply to hooks from managed settings
+2.1.326,2026-11-16,changed,hooks_general,Changed HTTP hooks to ignore `Content-Length` and `Transfer-Encoding` in their `headers` setting; the request's length comes from its body
+2.1.326,2026-11-16,changed,compaction,"Changed automatic compaction in plan mode to use the model answering you, such as Opus with `opusplan`, so it can cost more"
+2.1.325,2026-11-13,fixed,compaction,Fixed sessions on many third-party gateways and Foundry stopping with a context length error on every turn instead of compacting
+2.1.325,2026-11-13,fixed,plugin_hooks|hooks_general,Fixed `--worktree` skipping a `WorktreeCreate` hook from a plugin in `CLAUDE_CODE_PLUGIN_SEED_DIR` on the first run in a new home directory
+2.1.325,2026-11-13,fixed,mcp_tool_hook|hooks_general,"Fixed an MCP server staying ""needs authentication"", and its `mcp_tool` hooks being skipped, after a token refresh that was refused only for a moment"
+2.1.325,2026-11-13,fixed,hooks_general,Fixed deny and ask permission rules and hooks for the Artifact tool not applying in some cloud sessions
+2.1.325,2026-11-13,fixed,hooks_general,Fixed a case where the Bash sandbox did not fully protect a worktree's settings and hooks
+2.1.325,2026-11-13,changed,hooks_general,Changed scheduled tasks and `/loop` to ask before running a skill that declares `allowed-tools` or hooks; add `Skill(name)` to `permissions.allow` to run it unattended
+2.1.325,2026-11-13,changed,hooks_general,"Changed the sandbox to refuse sandboxed writes to `.claude` settings, skills, agents, commands and hooks in added directories, as it does in the launch folder"
+2.1.325,2026-11-13,changed,hooks_general,Changed EnterWorktree to refuse a `WorktreeCreate` hook path that goes through a symlink inside the project; have the hook print the real path
+2.1.325,2026-11-13,changed,hooks_general,"Changed requests for settings, permission rules, hooks or status over a cloud or self-hosted session's connection to return less or be refused; what applies in the session is unchanged"
+2.1.325,2026-11-13,changed,hooks_general,"Changed self-hosted runners to refuse a session whose session folder or repository path is a symbolic link, other than a `checkout` hook's checkout"
+2.1.323,2026-11-12,added,plugin_hooks|hooks_general,"Added type checking of a plugin's TypeScript hooks module to `claude plugin validate`; each finding is a warning, and `--strict` fails on it"
+2.1.323,2026-11-12,added,hooks_general,"Added to `claude plugin validate` the `$` nouns a mod's `engine.create` hook adds, withholds or replaces"
+2.1.323,2026-11-12,added,hooks_general,"Added a progress heartbeat every 30 seconds while hooks run long in `claude -p` and SDK sessions, so a host such as Claude Desktop won't end the turn as hung (once it includes this version)"
+2.1.323,2026-11-12,fixed,compaction,"Fixed running `/compact` again, or after a command such as `/context`, summarizing away a message that Claude had not answered yet"
+2.1.323,2026-11-12,fixed,transcript|hooks_general,Fixed subagent transcripts and large tool results being saved apart from the session's transcript after entering a worktree created by a `WorktreeCreate` hook or belonging to a nested repository
+2.1.323,2026-11-12,fixed,plugin_hooks|hooks_general,Fixed a permission prompt from a mod's `tool.check` hook naming every plugin hooked on the tool instead of the one that asked
+2.1.323,2026-11-12,fixed,hooks_general,Fixed HTTP hooks failing with HTTP 500 on Linux when `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB` is set and `sandbox.enabled` is off
+2.1.323,2026-11-12,fixed,plugin_hooks|hooks_general,"Fixed `/fast on` and `/fast off` on Vertex not asking a plugin's `config.set` hook, as the `/fast` menu does"
+2.1.323,2026-11-12,fixed,prompt_hook|plugin_hooks|hooks_general,Fixed a Stop pressed right after sending a message showing as an error in remote and SDK sessions while a `UserPromptSubmit` or plugin prompt hook was still running
+2.1.323,2026-11-12,fixed,plugin_hooks|hooks_general,Fixed text-output `claude -p` runs printing nothing to stderr when a `--plugin-dir` mod's hook hangs or crashes the hooks worker
+2.1.323,2026-11-12,fixed,mcp_tool_hook|hooks_general,Fixed SDK sessions giving an MCP server named by `--allowedTools` or an `mcp_tool` hook less than 2s before the first turn when settings lowered `CLAUDE_CODE_MCP_STARTUP_WAIT_MS` after start-up
+2.1.323,2026-11-12,fixed,hooks_general,Fixed `CLAUDE_CODE_RESUME_INTERRUPTED_TURN` re-running a turn that a hook's `continue: false` had stopped
+2.1.323,2026-11-12,fixed,transcript,"Fixed some Claude in Chrome tool calls, such as `browser_batch`, not showing the tool's name in the fullscreen transcript (ctrl+o) or in a subagent's progress"
+2.1.323,2026-11-12,fixed,session_start|compaction|hooks_general,"Fixed `PreCompact`, `PostCompact` and post-compaction `SessionStart` hooks not receiving `agent_id` and `agent_type` when a subagent compacts"
+2.1.323,2026-11-12,fixed,transcript,Fixed `CLAUDE_CODE_TRANSCRIPT_LOCAL_GC` dropping messages from the saved transcript when another process rewrote the file while it was being trimmed
+2.1.323,2026-11-12,added,transcript,Improved memory use with many subagents: a finished subagent's transcript is freed sooner instead of staying in memory while later subagents run
+2.1.323,2026-11-12,changed,compaction,"Changed the context window assumed for a model ID that Claude Code doesn't recognize from 200K to 1M; use `/autocompact` to compact earlier, or `CLAUDE_CODE_DISABLE_1M_CONTEXT=1` to keep 200K"
+2.1.323,2026-11-12,changed,hooks_general,"Changed Claude Code's own ripgrep and most internal git commands to run without most of its sign-in tokens and API keys, so a credential helper or hook under such a git command no longer finds them"
+2.1.323,2026-11-12,changed,hooks_general,"Changed what happens when a tool's permission check fails with an error after a `PreToolUse` hook returned ""allow"": Claude Code now decides the call as if no hook had answered"
+2.1.323,2026-11-12,changed,hooks_general,"Changed what happens when a tool's permission check fails on input that a `PermissionRequest` hook rewrote: Claude Code now asks again, or refuses the call where nobody can answer"
+2.1.323,2026-11-12,changed,hooks_general,"Changed mods: a `*`, namespace or negated hook on `engine.create` now only observes. To add or withhold a `$` noun, hook `engine.create` by name"
+2.1.323,2026-11-12,changed,hooks_general,Changed `claude plugin validate` to fail a mod whose `engine.create` hook isn't written in the one accepted form; installed mods keep loading
+2.1.323,2026-11-12,changed,plugin_hooks|hooks_general,Changed self-hosted runners under `--trust-workspace false` and VS Code sessions in an untrusted folder: the repository's settings can no longer disable your hooks or turn plugins on or off
+2.1.323,2026-11-12,changed,plugin_hooks|hooks_general,Changed `tool.list` plugin hooks so the tools they add or remove apply to the model and every agent
+2.1.323,2026-11-12,changed,hooks_general,Changed cloud scheduled tasks: a `PostToolUse` hook from your own settings can no longer replace the plan in `ExitPlanMode`'s result
+2.1.323,2026-11-12,changed,compaction,"Changed `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` in Anthropic-hosted cloud sessions to stop applying to auto-memory extraction and, in some sessions, to `/btw`; the main conversation still follows it"
+2.1.323,2026-11-12,other,compaction,[VSCode] Fixed a queued message missing from a conversation or fork when it directly followed a compaction summary
+2.1.323,2026-11-12,other,transcript,"[Claude Tag] Added Claude Tag sessions started in Slack to the Compliance API on Enterprise plans, in beta: list the sessions and read their transcripts"
+2.1.321,2026-11-09,other,hooks_general,"Windows: Fixed `FileChanged` hooks stopping for paths set through `watchPaths` after the first shell command, when the session's working directory had a lowercase drive letter"
+2.1.321,2026-11-09,fixed,compaction,Fixed `/compact` showing twice in Remote Control on web and mobile
+2.1.321,2026-11-09,fixed,compaction,Fixed auto mode losing a background subagent's report that had started a turn when the conversation was compacted before Claude answered it
+2.1.321,2026-11-09,fixed,hook_output|hooks_general,Fixed a large hook output pointing Claude to a file that held another hook's output from the same tool call
+2.1.321,2026-11-09,fixed,hooks_general,Fixed apps that embed Claude Code getting their own PreToolUse hook's `ask` reason instead of another hook's when both asked
+2.1.321,2026-11-09,fixed,hooks_general,Fixed a PreToolUse hook's `ask` being lost when another hook's `defer` finished first and could not be honored
+2.1.321,2026-11-09,fixed,transcript,"Fixed new messages not being saved, and `claude -p`, SDK and VS Code sessions hanging, when memory ran out while the transcript was being read"
+2.1.321,2026-11-09,fixed,prompt_hook|hooks_general,Fixed remote sessions giving no reply after a restart when a `UserPromptSubmit` hook blocked a replayed permission answer; these hooks no longer run on that replay
+2.1.321,2026-11-09,fixed,mcp_tool_hook|hooks_general,Fixed `PreToolUse` `mcp_tool` hooks on stdio and HTTP MCP servers being skipped when their answer was over 16 MiB; the tool call is now refused
+2.1.321,2026-11-09,fixed,transcript,"Fixed `claude -p` on Linux exiting 0 in silence when a full NFS export or a used-up NFS quota lost transcript lines: it now prints an error and, in text and json output, exits 1"
+2.1.321,2026-11-09,fixed,hooks_general,"Fixed NotebookEdit reporting success to hooks and telemetry when the edit failed, for example when the notebook changed while the permission prompt was open"
+2.1.321,2026-11-09,changed,hooks_general,Changed OpenTelemetry hook events in non-interactive sessions to leave two built-in hooks out of `num_hooks` and `num_success` after Bash and PowerShell calls
+2.1.321,2026-11-09,changed,hooks_general,Changed Cowork cloud sessions: a PostToolUse hook can no longer replace the answer to AskUserQuestion or the plan in ExitPlanMode's result; Claude reads the originals
+2.1.319,2026-11-06,fixed,hooks_general,"Fixed cloud sessions losing session-scoped deny and ask permission rules, such as those a PermissionRequest hook adds, when the session moves to a new worker"
+2.1.319,2026-11-06,fixed,hooks_general,"Fixed a case where deny and ask rules, hook matchers and `disallowedTools` entries written with a claude.ai connector's terminal name (`mcp__claude_ai_Slack`) were ignored in Claude Desktop (takes effect once Claude Desktop includes this version)"
+2.1.319,2026-11-06,fixed,hooks_general,Fixed self-hosted runners: `--trust-workspace false` now also stops hooks in the repository's settings files and skills from running
+2.1.319,2026-11-06,fixed,transcript,Fixed `/rename` reporting plain success when the new name could not be saved to the session transcript; it now warns that the new name may not last
+2.1.319,2026-11-06,fixed,compaction,Fixed subagents being told after compaction to expect a completion notice for background agents they neither started nor took over
+2.1.319,2026-11-06,changed,hooks_general,"Changed PostToolUse hooks to run, with up to 10 seconds to finish, on tool calls that finish after a new message interrupts the turn"
+2.1.319,2026-11-06,other,compaction,"[VSCode] Improved the chat panel's diagnostics tool for large workspaces: it leaves out files with no problems, returns compact JSON, and accepts an optional minimum severity"
+2.1.318,2026-11-03,fixed,compaction,Fixed idle compaction replacing a conversation with a reply that was not a summary
+2.1.318,2026-11-03,fixed,transcript,Fixed a deleted session transcript being re-created with its last prompt when an idle non-interactive session exited
+2.1.318,2026-11-03,fixed,hooks_general,Fixed variables a `Setup` hook writes to `CLAUDE_ENV_FILE` not reaching the Bash tool in some cloud sessions
+2.1.318,2026-11-03,fixed,hooks_general,Fixed a mod's `turn.step` hook making a stopped reply finish as a success in headless runs
+2.1.318,2026-11-03,other,hooks_general,"Self-hosted runner: Added `CLAUDE_RUNNER_SPAWN_REASON` to the orchestrator's spawn-runner hook environment: why Anthropic sent the request (e.g. `runner_lost`, `resumed`); unset when none was sent"
+2.1.317,2026-11-02,added,hooks_general,"Added `onFailure: ""block""` for Agent SDK hook callbacks, so a callback that fails blocks the action instead of letting it run"
+2.1.317,2026-11-02,added,hook_ids|transcript,"Added `CLAUDE_CODE_DISABLE_NESTED_SESSION_ID`: set it to `1` on a self-hosted runner to have `claude -p` run inside a session use that session's ID and transcript, as in earlier versions"
+2.1.317,2026-11-02,fixed,transcript,"Fixed `claude -p` exiting 0 when a full disk or quota lost its transcript or ~/.claude.json writes; it now prints an error and, in text and json output, exits 1. Full NFS exports may be missed"
+2.1.317,2026-11-02,fixed,transcript,"Fixed old transcripts not being cleaned up on machines where some runs skip cleanup, such as runs using `--setting-sources`"
+2.1.317,2026-11-02,fixed,compaction,"Fixed the Claude apps gateway hiding Amazon Bedrock's ""Input is too long."" error, which left sessions failing every turn with ""upstream rejected the request"" instead of compacting"
+2.1.317,2026-11-02,fixed,compaction,"Fixed ""Prompt is too long"" after automatic compaction in sessions whose very large CLAUDE.md changed since it was last sent"
+2.1.317,2026-11-02,fixed,compaction,Fixed very long conversations losing their earlier summary when compaction had to shorten its own request
+2.1.317,2026-11-02,fixed,transcript,"Fixed `claude -p` run inside a cloud or self-hosted runner session sharing that session's ID: it wrote into the session's transcript, and a restart could resume the wrong conversation"
+2.1.317,2026-11-02,other,compaction,"[VSCode] Fixed forked conversations dropping messages: only one of the tool calls Claude ran in parallel was kept, and the last messages a compaction kept were lost, which could leave Claude's answer without the question it answered"
+2.1.316,2026-10-31,fixed,hooks_general,"Fixed PowerShell hooks not blocking on exit code 2 when the command begins with a type cast, `param`, `using` or an attribute"
+2.1.316,2026-10-31,fixed,compaction,Fixed `/model <id>` not warning when the model isn't recognized by this version and auto-compact will assume a 200K context window
+2.1.314,2026-10-30,added,compaction,"Added idle compaction to VS Code and Claude Desktop's Code tab: a 200K+ token conversation left idle is summarized, and the summary is used on your next message if the prompt cache has expired"
+2.1.314,2026-10-30,fixed,compaction,"Fixed Bedrock sessions with many images failing every turn and `/compact` with ""400 Input is too long."" instead of removing older images and compacting"
+2.1.314,2026-10-30,fixed,compaction|hooks_general,"Fixed a PreCompact hook with very large output making compaction fail or repeat; each hook's output is now cut at 10,000 characters"
+2.1.314,2026-10-30,fixed,transcript,Fixed `/btw` answering from the main conversation when asked from a subagent's open transcript
+2.1.314,2026-10-30,fixed,hooks_general,"Fixed shell and MCP calls that auto mode, a deny rule or a PreToolUse hook blocked, or that otherwise did not run, reading as if they ran in a collapsed tool group"
+2.1.314,2026-10-30,fixed,hooks_general,"Fixed hooks matching Bash not running on shell commands started by the Monitor tool; such hooks can block or ask, but not approve or rewrite those commands"
+2.1.314,2026-10-30,fixed,compaction,"Fixed Remote Control clients showing a stray ""Compacted (ctrl+o to see full summary)"" row after /compact"
+2.1.314,2026-10-30,fixed,transcript,Fixed a blank line appearing above some `⎿` rows in the transcript view (Ctrl+O)
+2.1.314,2026-10-30,fixed,transcript,"Fixed Esc on a command's panel, such as `/btw`, also interrupting the subagent whose transcript is open"
+2.1.314,2026-10-30,fixed,transcript,"Fixed the fullscreen transcript being left mid-conversation after ""Restore conversation"" in the rewind menu while scrolled up"
+2.1.314,2026-10-30,added,transcript,Improved `--resume` speed and memory use on damaged transcripts
+2.1.314,2026-10-30,changed,hooks_general,"Changed auto mode in Cowork cloud sessions: a hook's allow of an MCP tool call now counts as no answer, so the classifier or a permission prompt decides"
+2.1.314,2026-10-30,changed,hooks_general,Changed hook `if` conditions such as `Monitor(tail *)` to match the Monitor tool's shell commands as `Bash(tail *)` matches Bash's
+2.1.314,2026-10-30,changed,compaction,"Changed idle compaction to also run for subscribers with telemetry turned off, and on Bedrock, Vertex, Foundry and LLM gateways once the one-hour prompt cache is on"
+2.1.314,2026-10-30,other,hooks_general,[VSCode] Fixed missing spinner and Stop button while a queued message's hooks run
+2.1.314,2026-10-30,other,transcript,"[Cloud sessions] Improved cloud session transcripts: a rename row now names the new title, and repository and environment lists show as a table instead of one line of JSON"
+2.1.312,2026-10-27,fixed,transcript,"Fixed the Read tool sometimes failing on PDF pages with ""pdftoppm failed: Could not write image"" when the clean-up of old session files ran at the same time"
+2.1.312,2026-10-27,fixed,transcript,"Fixed the spinner, OpenTelemetry `effort` values and transcripts naming a newly picked effort level during a task before the model applied it; they now show the level in force"
+2.1.312,2026-10-27,changed,hooks_general,"Changed prompt and agent hooks to run at most 24 at a time per session, sub-agents included, plus at most 12 that have waited longer than their event's timeout; a `timeout` under 1 second now counts as 1 second"
+2.1.312,2026-10-27,changed,compaction,"Changed a subagent's `autoCompactWindow` to lower the window set by `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, where it had no effect before; it still never raises that window"
+2.1.311,2026-10-26,fixed,compaction,"Fixed standard-context sessions stopping with ""Usage credits required for 1M context"" when a request ran over 200K tokens; Claude Code now compacts the conversation and continues"
+2.1.311,2026-10-26,fixed,compaction,Fixed Claude seeing stale MEMORY.md and CLAUDE.md content right after automatic compaction when those files were edited earlier in the session
+2.1.311,2026-10-26,fixed,transcript,Fixed `claude -p` and SDK sessions saving transcript messages out of order or keeping messages that were taken back
+2.1.311,2026-10-26,fixed,hooks_general,Fixed `SubagentStop` hooks running about twice a minute for each running subagent instead of once when it finishes
+2.1.311,2026-10-26,fixed,compaction,Fixed agent teammates compacting their history when `DISABLE_COMPACT` is set
+2.1.311,2026-10-26,fixed,compaction,"Fixed the rewind menu offering ""Summarize from here"" and ""Summarize up to here"" when `DISABLE_COMPACT` is set"
+2.1.311,2026-10-26,added,compaction,"Improved `/teleport` and `claude --teleport` to warn when a compacted cloud session loads from its last compaction, so the messages it summarized aren't in the local copy"
+2.1.311,2026-10-26,added,compaction,"Improved compaction: when the model's reply has no summary in it, Claude Code now usually asks for the summary once more before it replaces the conversation"
+2.1.311,2026-10-26,changed,compaction,"Changed `DISABLE_COMPACT` in settings files and in a mod's `$.env.set` so they can only turn compaction off, not back on"
+2.1.311,2026-10-26,other,prompt_hook|hooks_general,"[VSCode] Added a ""Running UserPromptSubmit hooks"" spinner status and screen reader announcement for slow UserPromptSubmit hooks"
+2.1.310,2026-10-23,fixed,compaction,"Fixed compaction after a ""Prompt is too long"" error keeping too much of a conversation with dense text, such as base64 or SVG, so the next request could fail again"
+2.1.310,2026-10-23,other,hooks_general,"Windows: Fixed PreToolUse and PermissionRequest hooks letting a tool call through when Git Bash is missing and the hook's command is only quoted strings, such as a quoted path"
+2.1.310,2026-10-23,added,transcript|compaction,"Improved memory use of non-interactive sessions (`-p`, Agent SDK) during compaction when the transcript file is very large"
+2.1.309,2026-10-22,fixed,compaction,Fixed sessions compacting repeatedly after reading files under a very large nested CLAUDE.md; a nested CLAUDE.md over the size limit now loads only its start
+2.1.309,2026-10-22,fixed,hooks_general,"Fixed ctrl+enter (send now) only queuing a message when pressed before the response had started, and restarting a prompt's hooks while leaving the message queued when pressed while those hooks were running"
+2.1.309,2026-10-22,fixed,transcript,"Fixed ctrl+o not showing messages from other agents and sessions that are still waiting to be delivered; they now appear in full under the transcript, marked as waiting"
+2.1.309,2026-10-22,fixed,transcript,"Fixed long tool output previews being cut through an emoji, leaving session transcripts that `jq` could not parse"
+2.1.309,2026-10-22,fixed,transcript,Fixed oversized /feedback reports failing instead of being resent without the transcript
+2.1.309,2026-10-22,fixed,hooks_general,"Fixed hooks that run in PowerShell not blocking when the hook's program exits with code 2, and on Windows `PreToolUse` and `PermissionRequest` hooks with `""shell"": ""powershell""` failing open when Git for Windows isn't installed"
+2.1.309,2026-10-22,fixed,hooks_general,"Fixed a mod's `turn.step` hook that names a model by alias, such as `haiku`, failing every request with a model error: the alias now resolves to its model"
+2.1.309,2026-10-22,fixed,compaction,Fixed Claude asking for permission on each artifact update for the rest of a turn after the conversation was compacted in that turn
+2.1.309,2026-10-22,added,hooks_general,Improved the error when a hooks module is nested too deep to load: it now names the file instead of showing a bare stack-overflow message
+2.1.307,2026-10-21,added,hooks_general,"Added the `claude_code.safety_event` OpenTelemetry event for each tool call a permission rule, auto mode, a safety check, a hook or the sandbox stopped, prompted or sent back"
+2.1.307,2026-10-21,fixed,compaction,"Fixed some ""Autocompact is thrashing"" errors in turns that read many PDF pages, images or other large tool results"
+2.1.307,2026-10-21,fixed,compaction,Fixed `/autocompact` in cloud sessions going back to the default window after the session restarted
+2.1.307,2026-10-21,fixed,transcript,Fixed subagent transcripts recording placeholder token usage and an empty stop reason for streamed responses
+2.1.307,2026-10-21,other,hooks_general,"Self-hosted runner: Fixed archiving or requeueing a session, or stopping the runner, during its checkout hook leaving the hook's processes running and the runner's slot held"
+2.1.307,2026-10-21,added,transcript,Improved Remote Control connect time for sessions whose transcript contains large pasted images or PDF reads
+2.1.307,2026-10-21,other,hooks_general,"Self-hosted runner: Changed checkout hooks to be stopped after 30 minutes by default, failing the session's setup; if yours needs longer, raise `--checkout-hook-timeout-min` or set it to `0`"
+2.1.306,2026-10-21,fixed,compaction,"Fixed an API error being replaced by ""prompt is too long"", and an unneeded compaction, in sessions with many MCP tools"
+2.1.305,2026-10-20,fixed,compaction,Fixed `/effort` and `/autocompact` settings not applying when the model name differed from a `modelOverrides` value by letter case or a `[1m]` tag
+2.1.305,2026-10-20,fixed,compaction,Fixed cloud sessions and teammates not telling Claude when a compaction had to leave the oldest messages out of its summary to fit
+2.1.305,2026-10-20,other,hooks_general,Self-hosted runner: Fixed the orchestrator reporting a spawn-runner hook as timed out when a runner it started in the background kept its output open
+2.1.305,2026-10-20,other,session_start|hooks_general,"[VSCode] Added a ""Running start-up hooks"" spinner status, with a screen reader announcement, while SessionStart or Setup hooks run"
+2.1.305,2026-10-20,other,compaction,"[VSCode] Fixed the spinner cutting off ""Compacting..."" when your `spinnerVerbs` setting replaces the built-in verbs with short ones"
+2.1.305,2026-10-20,other,hooks_general,[VSCode] Changed the message shown when a session does not start in time and no hook is running: it now leads with the output logs and lists causes instead of pointing to sign-in and network first
+2.1.304,2026-10-19,added,transcript|plugin_hooks|hooks_general,"Added a transcript line when a plugin that runs first skips one of your mod's hooks, naming the event and the plugin"
+2.1.304,2026-10-19,added,transcript|compaction,Added the names of the tools called earlier to the compaction summary in the transcript view (Ctrl+O)
+2.1.304,2026-10-19,fixed,transcript,Fixed `CLAUDE_CODE_TRANSCRIPT_LOCAL_GC` dropping messages from the saved transcript when the disk filled up while the file was being trimmed
+2.1.304,2026-10-19,fixed,compaction,"Fixed a ""Context limit reached"" or ""Prompt is too long"" error after stopping a turn while Claude Code was compacting a conversation the API had rejected as too long"
+2.1.304,2026-10-19,fixed,hooks_general,Fixed a PreToolUse hook's deny reason being replaced by a timeout error when an Agent SDK callback hook on the same tool call timed out
+2.1.304,2026-10-19,fixed,hooks_general,Fixed a skill's `once` hook also removing another skill's identical hook after it ran
+2.1.304,2026-10-19,fixed,transcript,"Fixed transcript mode's `{` and `}` landing the prompt on an inconsistent row, or off screen, instead of the transcript's first row"
+2.1.304,2026-10-19,fixed,compaction,"Fixed `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200k` silently setting a 100K window: the variable now accepts `k` and `M` suffixes like `--autocompact`, and warns when a value is out of range or ignored"
+2.1.304,2026-10-19,added,transcript,Improved session file size in auto mode: the safety classifier's context is no longer stored with every request
+2.1.304,2026-10-19,added,compaction,Improved resume of large compacted sessions in SDK and headless mode: the first request after resuming is sent sooner
+2.1.304,2026-10-19,changed,hooks_general,"Changed mods' `settings.read` hooks to receive each settings layer and rewrite the merged settings, so a managed mod can make an organization's setting a ceiling, including the `cleanupPeriodDays` the retention sweep uses"
+2.1.304,2026-10-19,changed,compaction,Changed compaction to send Claude the skill list again afterwards; `/reload-skills` now sends only new or changed skills
+2.1.304,2026-10-19,changed,plugin_hooks|hooks_general,"Changed skill hooks: the skills of one source (a repo, your own folder, or a plugin) can register at most 1,024 hooks and 16,384 matcher characters per session"
+2.1.304,2026-10-19,changed,plugin_hooks|hooks_general,Changed skills under a policy that allows hooks from plugins only: a skill used in the main conversation whose hooks are kept out no longer gets its `allowed-tools`
+2.1.304,2026-10-19,removed,plugin_hooks|hooks_general,Removed the notes from `claude plugin validate` that predicted where a mod's hooks would run
+2.1.304,2026-10-19,other,session_start|hooks_general,"[VSCode] Fixed one cause of sessions failing to start with ""Subprocess initialization did not complete within 60000ms"": time a SessionStart command hook spends running no longer counts toward the limit, up to 10 minutes in total"
+2.1.304,2026-10-19,other,transcript,[VSCode] Changed background sub-agents to show as one status line under their Agent card instead of streaming every step into the chat; the full transcript stays in /tasks
+2.1.302,2026-10-16,added,compaction,Added an `Idle compaction` row to `/config` for turning idle compaction off or back on; the notices shown after an idle compaction now say how to turn it off
+2.1.302,2026-10-16,fixed,compaction,"Fixed a ""Prompt is too long"" error when stopping a turn while the conversation was being compacted"
+2.1.302,2026-10-16,fixed,compaction,"Fixed `/autocompact` and `/effort` saving to the wrong model when a gateway names Opus 4 or 4.1 with a prefix, such as `anthropic/claude-opus-4-1`"
+2.1.302,2026-10-16,fixed,compaction,Fixed a prompt cache miss when a tool added mid-session was loaded again through ToolSearch or after compaction
+2.1.302,2026-10-16,added,compaction,"Improved auto mode with the server-side classifier: a conversation too long for the safety check is now compacted, instead of every checked tool call being denied"
+2.1.302,2026-10-16,changed,hooks_general,Changed prompt and agent hooks so that at most 12 of one event run at a time; the rest wait their turn
+2.1.301,2026-10-15,fixed,hooks_general,Fixed quitting removing a worktree made by a `WorktreeCreate` hook without asking when it may hold unpushed commits
+2.1.301,2026-10-15,fixed,hooks_general,Fixed artifact updates being refused where a PreToolUse hook covers Edit or Write; Claude now edits the file and then republishes instead of changing it in the publish call
+2.1.301,2026-10-15,fixed,hooks_general,"Fixed skills, commands and hooks using very large amounts of memory when their arguments fill many placeholders"
+2.1.301,2026-10-15,fixed,hooks_general,Fixed switching to a model whose name contains `application-inference-profile` running your `awsAuthRefresh` command and delaying model-switch hooks when the provider is not Bedrock
+2.1.301,2026-10-15,fixed,compaction,"Fixed conversations being compacted over and over, on a model you didn't pick, behind an LLM gateway whose responses name a different model than the one requested"
+2.1.301,2026-10-15,fixed,compaction,"Fixed the compaction row in a resumed session offering ctrl+o for history that is not loaded; it now says where the earlier messages are saved, and also shows in fullscreen"
+2.1.301,2026-10-15,fixed,plugin_hooks|hooks_general,Fixed the permission prompt for a plugin or skill hook's `ask` decision not showing which plugin or skill the hook comes from
+2.1.301,2026-10-15,other,transcript|compaction,Fullscreen mode: Fixed `/compact` and auto-compact briefly freezing the UI while the visible transcript is rebuilt
+2.1.301,2026-10-15,changed,hooks_general,Changed a mod hook's `.catch` handler to run only when the hook throws or times out; events raised beneath the hook's own calls now skip that hook without asking its `.catch`
+2.1.300,2026-10-14,added,transcript,"Added `$.ui.view({ agentId })` for mods: shows an agent's transcript in the main view when you ask, and `$.ui.view({})` goes back"
+2.1.300,2026-10-14,added,hooks_general,"Added support for rewriting a workflow agent's `prompt` and `model` in the `agent.spawn` mod hook, which could only refuse workflow agents before"
+2.1.300,2026-10-14,added,hooks_general,"Added the `prompt.change` mod hook, raised when the prompt box's text changes without a typed edit: a recalled history entry, a clear, an undo, or a plugin's fill"
+2.1.300,2026-10-14,fixed,compaction,Fixed `/autocompact` warning about high token usage when you choose a smaller auto-compact window
+2.1.300,2026-10-14,fixed,hooks_general,Fixed SessionEnd hooks sometimes not running when you exit while a background command is still running
+2.1.300,2026-10-14,fixed,transcript,Fixed the first transcript entry written after resuming a session being lost when a crash had cut the transcript's last line short
+2.1.300,2026-10-14,fixed,plugin_hooks|hooks_general,Fixed plugin `WorktreeCreate` and `WorktreeRemove` hooks not running when Claude Code starts with `--worktree` (not yet with `--tmux`)
+2.1.300,2026-10-14,fixed,hooks_general,"Fixed a prompt that a mod's `prompt.submit` hook rewrote or dropped still being recorded as typed in the OpenTelemetry `user_prompt` event and interaction span, and in session title requests"
+2.1.300,2026-10-14,fixed,transcript,Fixed a note meant for Claude about mod hot-reloading appearing in the transcript as if you had typed it
+2.1.300,2026-10-14,fixed,hooks_general,"Fixed agent hooks ignoring their `model`: aliases like `haiku` now resolve, a subagent's model no longer overrides it, and an unavailable model falls back to the caller's instead of allowing the action"
+2.1.300,2026-10-14,fixed,hooks_general,"Fixed a mod's `prompt.edit` hook not being raised for a newline entered with the `chat:newline` keybinding (Ctrl+J, or a rebound Enter)"
+2.1.300,2026-10-14,fixed,compaction,"Fixed resuming a headless or Agent SDK session losing the recent messages a compaction had kept, when the compaction followed a reply cut at the output token limit (compactions from this version on)"
+2.1.300,2026-10-14,fixed,compaction,"Fixed Claude not being told about an MCP server's tools and instructions until its next tool call, when the server finished connecting after a compaction"
+2.1.300,2026-10-14,fixed,compaction,"Fixed resuming a headless or Agent SDK session losing its compaction summary or bringing back pre-compaction history, when the compaction followed a retried or unfinished reply in the same turn"
+2.1.300,2026-10-14,changed,transcript,"Changed local session transcripts to also record each API request's system prompt, tools and parameters, so a transcript you choose to share can reproduce a request exactly"
+2.1.300,2026-10-14,changed,hooks_general,Changed `PermissionRequest` hooks in Cowork cloud sessions: a `setMode` update in a hook's allow is now ignored; the rest of the approval still applies
+2.1.300,2026-10-14,changed,hooks_general,"Changed hooks: `updatedInput` from PreToolUse and PermissionRequest hooks is now validated like Claude's own input: unknown keys are dropped, and input the tool rejects denies the call"
+2.1.300,2026-10-14,other,transcript,[Claude Tag] Added support for Slack voice clips in Claude in Slack: Claude reads Slack's transcript of a clip when Slack has one
+2.1.299,2026-10-14,added,compaction,"Added idle compaction in the terminal: a 200K+ token conversation left idle for about 54 minutes is compacted before its one-hour prompt cache expires, so your next message doesn't reprocess it all"
+2.1.299,2026-10-14,added,compaction,"Added `CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS` to change idle compaction's 200K-token minimum; `""idleCompaction"": false` in settings.json turns it off. Both need v2.1.290 or later"
+2.1.299,2026-10-14,added,hooks_general,Added `$.prompt.media` so a `prompt.submit` hook of a mod installed by managed settings can read the bytes of an image or document attached to the prompt
+2.1.299,2026-10-14,added,hooks_general,Added `--shutdown-drain-sec` to `claude self-hosted-runner orchestrator`: on SIGTERM it stops polling and gives the poll in flight and running spawn hooks up to that many seconds to finish
+2.1.299,2026-10-14,added,hooks_general,"Added the skill's frontmatter, source, plugin name and file path to what a mod's `skill.prompt` hook receives"
+2.1.299,2026-10-14,added,transcript|hooks_general,"Added a `queue` door to the `session.append` mod hook, so a mod can make the transcript's queue records differ from the prompt as sent"
+2.1.299,2026-10-14,added,plugin_hooks|hooks_general,Added a note in `/plugin` and `claude plugin validate` naming a mod's hooks that are skipped where an organization manages Claude Code
+2.1.299,2026-10-14,fixed,compaction,"Fixed sessions on a gateway-specific model name behind a custom `ANTHROPIC_BASE_URL` ending with ""Prompt is too long · automatic compaction failed"" near 200K tokens instead of sending the request"
+2.1.299,2026-10-14,fixed,prompt_hook|hooks_general,Fixed Edit and Retry in Cowork and claude.ai cloud sessions failing on a message stopped while its `UserPromptSubmit` or mod `prompt.submit` hooks were still running (regression in 2.1.296)
+2.1.299,2026-10-14,fixed,transcript,Fixed double-clicking a word in an expanded transcript row in fullscreen mode collapsing the row instead of selecting the word
+2.1.299,2026-10-14,fixed,transcript,Fixed `/btw` jumping the transcript to the bottom when asked while scrolled up in fullscreen
+2.1.299,2026-10-14,fixed,hooks_general,Fixed a Remote Control prompt that had passed its hooks being dropped from prompt history when Stop interrupted the next queued prompt's hook
+2.1.299,2026-10-14,fixed,hooks_general,"Fixed a mod hook, with or without a `.catch`, being run again without end when it waits on another mod's noun that does its work outside the call"
+2.1.299,2026-10-14,fixed,plugin_hooks|hooks_general,Fixed `claude plugin test` pausing a hook's time budget while a served `$` method it had called kept making `$` calls after answering
+2.1.299,2026-10-14,fixed,plugin_hooks|hooks_general,Fixed plugin hooks being skipped when they pass a very deeply nested tool input or message on with next()
+2.1.299,2026-10-14,fixed,hooks_general,"Fixed a value a mod's hook passes to `next()`, returns, or sends to a `$` method being refused whole when one of its getters throws a `RangeError`; now only that key is refused"
+2.1.299,2026-10-14,fixed,plugin_hooks|hooks_general,"Fixed the `plugin_loaded` telemetry event reporting `has_hooks` as false for plugins whose hooks are a hooks module, built-in plugins included"
+2.1.299,2026-10-14,fixed,hooks_general,Fixed mods loaded from source files being refused when a hook hands `$` to a function declaration imported from another file of the mod
+2.1.299,2026-10-14,fixed,hooks_general,"Fixed mods' hooks being handed values with `__proto__` keys silently removed, which could skip a `tool.check` guard on a tool call another mod made"
+2.1.299,2026-10-14,fixed,hooks_general,"Fixed the `agent.spawn` mod hook not running when a finished subagent or a killed teammate is resumed: the hook's event now carries `resume`, and a mod can refuse it"
+2.1.299,2026-10-14,fixed,hooks_general,"Fixed plan mode running a write (an MCP tool's, a file's, a shell command's) that a `PreToolUse` hook or a mod's `tool.check` hook allowed"
+2.1.299,2026-10-14,fixed,compaction,Fixed `SendMessage` not finding a subagent by name after the CLI restarted and resumed the session (names given before the last compaction still need the agent ID)
+2.1.299,2026-10-14,fixed,compaction,Fixed cloud sessions sometimes leaving a message unanswered when the worker was replaced right after a compaction
+2.1.299,2026-10-14,fixed,hooks_general,Fixed a user-installed mod's `$.env.set` changing the environment or shell prefix that command hooks from managed settings start with
+2.1.299,2026-10-14,other,hooks_general,Windows: Fixed PreToolUse and PermissionRequest hooks that set no shell failing open when Git for Windows isn't installed; a guard that fails now blocks the call
+2.1.299,2026-10-14,added,hooks_general,"Improved enforcement of managed permission rules, managed hooks and organization MCP tool names against user-installed mods"
+2.1.299,2026-10-14,added,transcript,Improved memory and disk use when PDFs are @-mentioned: their bytes are no longer kept in the session transcript
+2.1.299,2026-10-14,added,compaction,"Improved `/reload-skills` to say it re-sends the full skill list to Claude, which is how to get skills back after compaction"
+2.1.299,2026-10-14,changed,plugin_hooks|hooks_general,"Changed plugin hooks and workflow scripts to refuse values they hand back that nest deeper than 28,000 levels, with an error naming the limit (workflow scripts allowed 100,000)"
+2.1.299,2026-10-14,changed,plugin_hooks|hooks_general,"Changed actions a plugin hook can block to be refused, not let through, when the hook cannot be handed them or cannot hand back its answer; a tool that already ran has its result withheld"
+2.1.299,2026-10-14,changed,hooks_general,Changed auto mode in Cowork cloud sessions: a `PermissionRequest` hook can no longer approve shell commands or subagents; those prompts wait or are denied
+2.1.299,2026-10-14,changed,prompt_hook|hooks_general,"Changed `UserPromptSubmit` hooks to run before a skill or custom slash command expands, so a hook that blocks the prompt now also stops its embedded shell commands"
+2.1.299,2026-10-14,changed,prompt_hook|hooks_general,Changed a skill's own front-matter `UserPromptSubmit` hook to first run on the prompt after the one that invokes the skill
+2.1.299,2026-10-14,changed,hooks_general,"Changed the `turn.start` mod hook to also hear subagents' and teammates' turns, not only the main loop's; tell them apart by `e.agentId` (absent on the main loop)"
+2.1.296,2026-10-09,added,compaction,"Added `autoCompactWindow` to subagent frontmatter and `--agents` definitions, so a subagent can auto-compact earlier than the main conversation's window"
+2.1.296,2026-10-09,added,plugin_hooks|hooks_general,Added a note in `/plugin` on a plugin whose hooks are left out because another enabled plugin has the same name
+2.1.296,2026-10-09,fixed,hooks_general,"Fixed managed-settings `PreToolUse` hooks that deny a tool call with `""continue"": false`, and managed `prompt` hooks that block one, refusing the call but not ending the turn"
+2.1.296,2026-10-09,fixed,hooks_general,Fixed PostToolUse hooks in managed settings not applying `updatedMCPToolOutput` in some sessions
+2.1.296,2026-10-09,fixed,hook_output|hooks_general,Fixed hook output being altered when it contained text resembling a plugin hint tag
+2.1.296,2026-10-09,fixed,transcript,"Fixed secret redaction in shared transcripts and debug logs missing some values that follow a key with no value, including in JSON written inside a shell string"
+2.1.296,2026-10-09,fixed,prompt_hook|hooks_general,"Fixed Esc or an interrupt during a `UserPromptSubmit` hook or a mod's `prompt.submit` hook ending headless sessions, clearing the typed prompt, or letting the unchecked prompt through"
+2.1.296,2026-10-09,fixed,session_start|plugin_hooks|hooks_general,"Fixed SessionStart hooks of a plugin loaded after a headless session starts being skipped when a different plugin with the same name, or another spelling of it, had already run"
+2.1.296,2026-10-09,fixed,hooks_general,"Fixed a plugin's served `$` methods running in the main session's working directory instead of the calling agent's, and ignoring the turn their calling hook holds"
+2.1.296,2026-10-09,fixed,hooks_general,Fixed `$.agent.register` succeeding from a mod's hook that was still running after the mod was reloaded or removed; the call is now refused
+2.1.296,2026-10-09,fixed,session_start|hooks_general,"Fixed a prompt sent while SessionStart hooks were still running vanishing when `←` moved the session to the background; it is still not sent, but `↑` now brings it back"
+2.1.296,2026-10-09,fixed,session_start|hook_output|plugin_hooks|hooks_general,Fixed a late-loading plugin's SessionStart hook output reaching the new conversation after `/clear` in headless sessions
+2.1.296,2026-10-09,fixed,hooks_general,Fixed PowerShell commands not seeing variables that hooks write to CLAUDE_ENV_FILE (when the file holds only plain assignments)
+2.1.296,2026-10-09,fixed,transcript,"Fixed `CLAUDE_CODE_TRANSCRIPT_LOCAL_GC` dropping a message from the saved transcript when its text held a Unicode line or paragraph separator (U+2028, U+2029)"
+2.1.296,2026-10-09,added,transcript,Improved transcript toggle (ctrl+o) responsiveness in code-heavy conversations by caching syntax-highlighted code blocks
+2.1.296,2026-10-09,added,session_start|hooks_general,"Improved `--debug` output for hooks: command hooks on tool calls, prompts, SessionStart and Stop now log their command, plugin, outcome and duration when they finish, so a slow hook is identifiable"
+2.1.296,2026-10-09,added,transcript,Improved `CLAUDE_CODE_TRANSCRIPT_LOCAL_GC`: a large transcript file is no longer rewritten when that would free under 10% of it
+2.1.296,2026-10-09,other,compaction,"Updated the bundled dataviz skill: lighter violet for the seventh series in light mode, softer primary text in dark mode, and compact y-axis labels like 1K"
+2.1.295,2026-10-08,added,hooks_general,"Added `onFailure: ""block""` for command and HTTP hooks: a hook that can't start, times out, or exits with an unexpected code blocks the action instead of letting it through"
+2.1.295,2026-10-08,fixed,hooks_general,"Fixed a mod's hook being handed a deeply nested tool input cut short with no error, so a guard could pass content it never saw"
+2.1.295,2026-10-08,fixed,hooks_general,"Fixed commands and hooks in background sessions inheriting `FORCE_COLOR=3`, which put color escape codes into the output Claude reads"
+2.1.295,2026-10-08,fixed,plugin_hooks|hooks_general,Fixed calls a mod makes while it reloads during a plugin hooks worker restart getting past another mod's guard hook that has a `.catch`; such calls are now refused
+2.1.295,2026-10-08,fixed,plugin_hooks|hooks_general,Fixed plugins whose hooks module nests code thousands of levels deep failing to load or validate with a bare stack-overflow message
+2.1.295,2026-10-08,fixed,plugin_hooks|hooks_general,"Fixed `claude plugin test` passing a `session.append` hook that removes tool call, tool result or thinking blocks that a real session keeps"
+2.1.295,2026-10-08,fixed,plugin_hooks|hooks_general,"Fixed `/model`, `/fast` and `/output-style` saving their setting without asking a plugin's `config.set` hook"
+2.1.295,2026-10-08,fixed,session_start|hooks_general,Fixed an async SessionStart hook's unchanged context being added to the conversation again on every resume
+2.1.295,2026-10-08,fixed,session_start|hooks_general,Fixed variables a SessionStart hook writes to `CLAUDE_ENV_FILE` not reaching the Bash tool after an in-app `/resume` or `/branch`
+2.1.295,2026-10-08,fixed,hooks_general,Fixed an async hook's JSON output being ignored when it is printed over several lines
+2.1.295,2026-10-08,fixed,transcript|hooks_general,Fixed a prompt that a mod's `prompt.submit` hook rewrote or dropped still being saved as typed to prompt history and to the transcript's queued-prompt records
+2.1.295,2026-10-08,fixed,plugin_hooks|hooks_general,Fixed a plugin that adds very large interfaces getting another plugin unloaded when the plugin hooks worker stalls
+2.1.295,2026-10-08,fixed,compaction,"Fixed a stopped scheduled task coming back on resume after a rewind, and a scheduled task being lost on resume after Esc or a rewind following a compaction"
+2.1.295,2026-10-08,fixed,plugin_hooks|hooks_general,"Fixed claude.ai-synced plugin hooks failing with ""Plugin directory does not exist"" in long-running sessions after another session synced a plugin update"
+2.1.295,2026-10-08,fixed,hooks_general,Fixed cloud sessions hanging when a mod's `session.receive` hook asked for permission before passing a message on
+2.1.295,2026-10-08,fixed,plugin_hooks|hooks_general,Fixed changing the auto-update channel in `/config` saving before a plugin's `config.set` hook was asked
+2.1.295,2026-10-08,added,plugin_hooks|hooks_general,"Improved `claude plugin validate` and plugin loading: when a hooks module is refused over a rebound top-level `var`, the error now names the line that rebinds it, the cause, and a fix"
+2.1.295,2026-10-08,fixed,hooks_general,Fixed web searches and `agent` hook evaluations taking much longer at `xhigh` and `max` effort
+2.1.294,2026-10-08,fixed,hooks_general,"Fixed `prompt` and `agent` hooks written as instructions (such as ""Block commands that..."") allowing what they should block"
+2.1.294,2026-10-08,added,stop_hook|hooks_general,"Improved how `prompt` hooks on Stop and SubagentStop written as instructions (such as ""Carry on if the build is broken"") are judged, so Claude is less likely to stop early"
+2.1.293,2026-10-07,fixed,compaction,"Fixed Claude sometimes treating its own last actions before a context compaction as done after it, and retracting or redoing finished work"
+2.1.293,2026-10-07,fixed,transcript,"Fixed the Artifact tool's transcript row briefly reading `Artifact(""(unprintable path)"")` while a publish call was still streaming in"
+2.1.293,2026-10-07,fixed,plugin_hooks|hooks_general,"Fixed a mod's hooks on `classic.*` events being skipped while the plugin hooks worker restarts, which left settings hooks to answer without them"
+2.1.293,2026-10-07,other,hooks_general,"Windows: Fixed stopping a status line, hook, or shell command sometimes terminating an unrelated process that had been given the same process ID"
+2.1.292,2026-10-06,added,hooks_general,"Added `prompt.autocomplete`, an event a mod hooks to add its own rows to the prompt box's autocomplete list"
+2.1.292,2026-10-06,added,hooks_general,"Added workflow agents to the `agent.spawn` mod hook, with their run and index, so a mod can refuse them"
+2.1.292,2026-10-06,other,hooks_general,Security: Fixed PreToolUse hook approvals and auto mode bypassing the permission prompt for file reads from network (UNC) paths
+2.1.292,2026-10-06,fixed,transcript,"Fixed ""instruction file not loaded"" lines going stale or missing after `/cd` or a permission change, and added a transcript line when a nested one isn't loaded"
+2.1.292,2026-10-06,fixed,compaction,Fixed a compaction summary that repeated `/name` letting Claude invoke a skill that is reserved for the user
+2.1.292,2026-10-06,fixed,transcript,Fixed cloud sessions with a large transcript sometimes asking for a permission again after it was approved
+2.1.292,2026-10-06,fixed,plugin_hooks|hooks_general,Fixed plugins whose hooks module makes many `$.state` calls through one const taking minutes to load or validate
+2.1.292,2026-10-06,fixed,hooks_general,Fixed `claude plugin validate` listing a matcher or state value for a hooks module that the engine reads from elsewhere
+2.1.292,2026-10-06,fixed,plugin_hooks|hooks_general,"Fixed a plugin's served `$` method restarting the hook origin, which could run a guard hook with a `.catch` above it again without end"
+2.1.292,2026-10-06,fixed,plugin_hooks|hooks_general,Fixed plugin interface calls made while the plugin hooks worker restarts running without the hooks other plugins put on them
+2.1.292,2026-10-06,fixed,hooks_general,"Fixed a mod's `config.set`, `state.set`, `env.set` or `agent.spawn` hook that denies after calling `next(e)` being answered as a refusal: the hook is now reported as failed, by name"
+2.1.292,2026-10-06,fixed,plugin_hooks|hooks_general,"Fixed `/theme`, the `/config` Theme menu and the first-run theme step saving a theme before a plugin's `config.set` hook was asked"
+2.1.292,2026-10-06,fixed,plugin_hooks|hooks_general,"Fixed a plugin's `tool.check` hook answering allow running a tool that requires your answer (a question, a plan approval) without showing its dialog"
+2.1.292,2026-10-06,fixed,hooks_general,"Fixed a mod's start-up prompt, command or subagent being queued a second time when the hooks worker was replaced"
+2.1.292,2026-10-06,fixed,hooks_general,Fixed a mod's hook that called `next(e)` and then failed while the turn was interrupted letting the call through; the call is now rejected
+2.1.292,2026-10-06,fixed,plugin_hooks|hooks_general,Fixed tool calls made while the plugin hooks worker restarts being answered without the plugins' permission hooks
+2.1.292,2026-10-06,fixed,plugin_hooks|hooks_general,Fixed plugin `tool.call` hooks seeing some tool calls before misnamed parameters were repaired; a hook now sees the arguments the tool will run with
+2.1.292,2026-10-06,fixed,hooks_general,Fixed a mod's guard hook with a `.catch` being skipped silently for calls another mod's hook makes beneath the guard's own `$` call; its `.catch` is now asked
+2.1.292,2026-10-06,added,transcript,"Improved rendering speed of long bulleted or numbered replies: they stream, resize and re-open in the transcript (ctrl+o) much faster"
+2.1.292,2026-10-06,added,hook_output|hooks_general,Improved hook output handling: `<system-reminder>` tags written in a hook's output are escaped before they reach Claude
+2.1.292,2026-10-06,changed,plugin_hooks|hooks_general,"Changed `claude plugin test`: a failed `expect` inside a hook the test registered, or a stub answer the engine refuses, now fails the test instead of passing silently"
+2.1.290,2026-10-05,added,hooks_general,"Added `serverToolUses` to the result of a mod's `turn.step` hook: the tool calls the API ran itself (the advisor), each with its id, name, input, start and end"
+2.1.290,2026-10-05,added,plugin_hooks|hooks_general,"Added `agentId` to the `tool.check` event of plugin hooks, so a hook can tell a subagent's permission check from the main session's"
+2.1.290,2026-10-05,added,hooks_general,"Added `ceiling` to the question and verdict a mod's `tool.check` hook reads, naming the approval an organization requires for a tool"
+2.1.290,2026-10-05,added,plugin_hooks|hooks_general,"Added `ThemeKey` and `Color` types to the plugin hooks typings, so an editor lists the theme colors a mod's drawing can name"
+2.1.290,2026-10-05,added,plugin_hooks|hooks_general,Added to `claude plugin validate`: each hook a mod registers at a gating site is listed with whether it has a `.catch` (`gatingHooks` under `--json`)
+2.1.290,2026-10-05,fixed,compaction,"Fixed scheduled tasks (`/loop` with an interval, reminders) silently not coming back on resume once the conversation was compacted; covers compactions made from this version on"
+2.1.290,2026-10-05,fixed,plugin_hooks|hooks_general,"Fixed a plugin hook with a `.catch` being unloaded, and its `.catch` skipped, when the hook kept the hooks worker busy on a prompt or tool call"
+2.1.290,2026-10-05,fixed,plugin_hooks|hooks_general,Fixed `claude plugin validate` and plugin loading refusing a hooks module that destructures an option named like one of its top-level functions
+2.1.290,2026-10-05,fixed,compaction,"Fixed conversation compaction sometimes failing with a ""null is not an object"" error"
+2.1.290,2026-10-05,fixed,plugin_hooks|hooks_general,Fixed plugin hooks reading an empty `answer` on `turn.complete` for a subagent that hands its report back in auto mode
+2.1.290,2026-10-05,fixed,hooks_general,"Fixed a mod's `prompt.submit` hook that drops a prompt after calling `next(e)` being ignored silently: the hook is now reported as failed, by name"
+2.1.290,2026-10-05,fixed,plugin_hooks|hooks_general,Fixed plugin hooks stalling each redraw when a mod draws a long multi-line text holding non-Latin characters
+2.1.290,2026-10-05,fixed,transcript,"Fixed a slowdown when expanding the transcript (ctrl+o) or resizing over large tool output that contains non-ASCII characters such as arrows, dashes or box-drawing"
+2.1.290,2026-10-05,fixed,transcript,Fixed `claude respawn` re-sending an earlier message to a backgrounded session that has no saved transcript instead of starting it with an empty conversation
+2.1.290,2026-10-05,fixed,compaction,"Fixed automatic compaction giving up with ""Prompt is too long"" when a Mac went to sleep while it was running"
+2.1.290,2026-10-05,fixed,transcript,"Fixed sessions moved to the background while idle reopening as ""no saved transcript"" after a restart or idle cleanup; they now resume their conversation"
+2.1.290,2026-10-05,fixed,stop_hook|plugin_hooks|hooks_general,"Fixed Claude replying in an endless loop when a plugin's async Stop hook passes an unquoted script path under a folder with a space, such as Application Support"
+2.1.290,2026-10-05,fixed,hooks_general,Fixed some permission rules and safety checks not being applied to a tool call after a PreToolUse hook rewrote its input
+2.1.290,2026-10-05,fixed,hooks_general,Fixed sandboxed Bash commands on Linux running `ConfigChange` hooks and reloading settings mid-command when `.claude/settings.json` or `.claude/settings.local.json` does not exist
+2.1.290,2026-10-05,added,transcript,"Improved responsiveness while resuming large sessions: timers, input and rendering keep running while the transcript loads"
+2.1.290,2026-10-05,changed,plugin_hooks|hooks_general,Changed plugin hooks so long text is clipped and logged instead of being refused or dropped silently
+2.1.290,2026-10-05,changed,hooks_general,Changed an in-process teammate's `agent_id` in Agent results to its agent ID (its `name@team` address stays in `teammate_id`); TeammateIdle hooks no longer fire from its subagents or forks
+2.1.289,2026-10-03,added,plugin_hooks|hooks_general,"Added `agent.spawn` for teammates, one agent id across plugin hook events, and idle and waiting states in `$.agent.list()`"
+2.1.289,2026-10-03,fixed,hooks_general,"Fixed sessions ending with ""unrecoverable interface error"" when a value a mod's `ui.render` hook wrote made a row throw while drawn; the engine now draws its own row instead"
+2.1.288,2026-10-02,added,transcript,"Added `$.ui.selection()` for mods: returns the text you last selected in fullscreen mode and, when the selection lies within one transcript row, that row"
+2.1.288,2026-10-02,fixed,compaction,"Fixed long conversations failing with ""Prompt is too long"" instead of auto-compacting when the last reply reported zero token usage"
+2.1.288,2026-10-02,fixed,compaction,Fixed `--resume` sometimes dropping files and other context that a compaction had just restored
+2.1.288,2026-10-02,fixed,transcript,Fixed resume occasionally loading a transcript cut short when the same session rewrote the file during the load
+2.1.288,2026-10-02,fixed,hooks_general,"Fixed session titles, memory recall and prompt hooks failing on Mantle or behind gateways that reject structured outputs; added `CLAUDE_CODE_DISABLE_STRUCTURED_OUTPUTS` to turn structured outputs off"
+2.1.288,2026-10-02,fixed,plugin_hooks|hooks_general,Fixed a plugin's `tool.call` hook making Bash fail and file searches read the wrong folder in subagents that run in a worktree
+2.1.288,2026-10-02,fixed,hooks_general,Fixed OpenTelemetry `claude_code.tool.blocked_on_user` spans reporting `unknown` source or decision in `-p` and SDK sessions and for PreToolUse hook approvals
+2.1.288,2026-10-02,fixed,compaction,Fixed Edit and Retry in Cowork cloud sessions refusing a message sent before `/compact` even though its history was still saved
+2.1.288,2026-10-02,fixed,hooks_general,Fixed `idle_prompt` notification hooks firing while background agents are still running (anthropics/claude-code#93672)
+2.1.288,2026-10-02,fixed,hooks_general,Fixed PreToolUse and PermissionRequest hooks being skipped when matching them failed or the tool's input could not be serialized to JSON; the call is now blocked
+2.1.288,2026-10-02,fixed,compaction,"Fixed the first request in a fresh environment or after a model switch using the built-in output limit and auto-compact window, not the server's; that request may now wait up to 1.5 seconds"
+2.1.288,2026-10-02,fixed,hooks_general,Fixed the InstructionsLoaded hook omitting agent_id and agent_type when a subagent's file access loads a rule or nested CLAUDE.md; rules and nested CLAUDE.md files loaded on file access now also report effort
+2.1.288,2026-10-02,fixed,transcript,Fixed the terminal cursor not following the typed text in the fullscreen transcript viewer's search and in `/theme`'s custom color search
+2.1.288,2026-10-02,added,compaction,"Improved auto mode: when a conversation grows too long for the client-side safety classifier to review, it is now compacted instead of prompting for, or failing, every tool call"
+2.1.288,2026-10-02,changed,compaction,"Changed `/autocompact` to save the auto-compact window per model, so each model keeps its own setting when you switch"
+2.1.287,2026-10-01,fixed,hooks_general,"Fixed hooks configured with `asyncRewake` waking Claude over and over with ""found issues"" notifications when the hook's script file is missing; the broken hook is now reported once"
+2.1.287,2026-10-01,fixed,compaction,Fixed a folder's CLAUDE.md being attached a second time after resuming a session or after a compaction
+2.1.287,2026-10-01,fixed,compaction,Fixed the commit attribution reminder being delivered inside a tool result after a compaction
+2.1.287,2026-10-01,fixed,hooks_general,"Fixed `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS` not removing the structured-output format from session-title and prompt-hook requests, which Bedrock-backed gateways reject"
+2.1.287,2026-10-01,fixed,compaction,Fixed cloud sessions sometimes losing the earlier conversation when the session restarted while it was being compacted
+2.1.287,2026-10-01,fixed,session_start|plugin_hooks|hooks_general,Fixed SessionStart hooks from synced plugins not running in new cloud sessions
+2.1.287,2026-10-01,fixed,transcript|hooks_general,"Fixed the transcript's ""N hooks ran"" summary and the verbose debug log's matched-hooks count including Claude Code's internal callbacks, so one configured hook no longer shows as two"
+2.1.287,2026-10-01,added,transcript,"Improved handling of large MCP tool results: less memory, smaller session files, and no extra upload to count tokens for results far over the limit"
+2.1.287,2026-10-01,changed,hooks_general,"Changed whole-tool `Bash` allow rules and allowing hooks to prompt for, not run, shell writes to files Claude Code's file tools refuse outright (the Anthropic profile store, the host credentials file)"
+2.1.286,2026-09-30,fixed,hooks_general,"Fixed API 400 errors after a tool or hook returned an object, number or boolean instead of text, including in resumed sessions"
+2.1.286,2026-09-30,fixed,transcript,Fixed cloud sessions with very large histories never waking up because the container was stopped while the transcript was still loading
+2.1.286,2026-09-30,fixed,transcript,"Fixed redacted logs and transcripts showing a secret whose key name has an invisible character inside, such as a zero-width space"
+2.1.286,2026-09-30,fixed,transcript,"Fixed logs and transcripts showing part of a URL password that contains punctuation such as `)`, quotes, `]`, `&` or a second `@`, or that runs past a `/` to a bracketed host such as `[::1]` in an ssh URL"
+2.1.286,2026-09-30,fixed,transcript,Fixed the session transcript in the zip that `/feedback` saves to disk containing invalid JSON lines after secret redaction
+2.1.286,2026-09-30,fixed,transcript,Fixed a message typed into a running subagent showing twice in its transcript after the subagent read it
+2.1.286,2026-09-30,fixed,transcript|compaction,"Fixed `/compact`, `/clear`, and `/rewind` typed while viewing a background agent's or teammate's transcript silently acting on the main conversation: a dialog now names the target and asks first"
+2.1.286,2026-09-30,added,hooks_general,"Improved `/hooks`: the closing line of a hook's detail screen now says ""this hook"" instead of ""it"""
+2.1.286,2026-09-30,added,compaction,Improved the model fallback notice and the autocompact-thrashing error to say when a fallback dropped the context window from 1M to 200K tokens
+2.1.286,2026-09-30,changed,hooks_general,"Changed list screens (`/artifacts`, `/mcp`, `/skills`, `/hooks` and others) to always line up each row's details in one column after the names"
+2.1.286,2026-09-30,changed,hooks_general,"Changed `/hooks` to open on one list of your configured hooks grouped by event, so viewing a hook takes one Enter instead of three"
+2.1.285,2026-09-29,fixed,compaction,Fixed cloud sessions that restarted after their conversation was compacted refusing the next update to an artifact the session had already read or published
+2.1.285,2026-09-29,fixed,compaction,Fixed switching models mid-session with a `set_model` request (such as the Agent SDK's `setModel`) leaving the new model on the built-in output-token limit and auto-compact window until restart
+2.1.285,2026-09-29,fixed,transcript,"Fixed redacted logs and transcripts showing part of a URL password that contains `@`, or all of it when the URL writes its `@` as `%40`"
+2.1.285,2026-09-29,fixed,hooks_general,Fixed hooks and SDK permission callbacks seeing a missing or outdated plan on ExitPlanMode when the plan was written in the same response
+2.1.285,2026-09-29,fixed,hooks_general,Fixed synchronous hooks hanging Claude Code while a background process the hook started (for example `some-daemon &`) kept its output open; the hook now finishes shortly after its own process exits
+2.1.285,2026-09-29,fixed,transcript,Fixed the fullscreen ctrl+o transcript freezing briefly when opened on turns with hundreds of file reads or searches; tool calls still running when the transcript opens now show their results when they finish
+2.1.285,2026-09-29,fixed,hooks_general,"Fixed a cancelled shell command or hook still starting, and running to its end, when the cancel arrived while it was being set up"
+2.1.285,2026-09-29,fixed,transcript|compaction,"Fixed compacting or resuming a session failing, opening without its history, or crashing when its saved transcript holds a compaction marker or loop wakeup entry with missing or malformed fields"
+2.1.285,2026-09-29,fixed,compaction,"Fixed a brief freeze (up to a second) partway through long sessions outside fullscreen mode, which came back after `/clear` or `/compact`"
+2.1.285,2026-09-29,added,transcript,Improved responsiveness when leaving the ctrl+o transcript view in long sessions when fullscreen rendering is off
+2.1.285,2026-09-29,changed,compaction,"Changed sessions behind a custom `ANTHROPIC_BASE_URL` to use the 1M context window of models that have one (Opus 4.7+, Sonnet 5+, Fable); run `/autocompact 200k` if your gateway stops at 200K"
+2.1.285,2026-09-29,other,transcript,[VSCode] Fixed an open agent transcript losing the agent's newer messages during a long session
+2.1.285,2026-09-29,other,hooks_general,[VSCode] Fixed a hook's reason for blocking or stopping a prompt disappearing after a window reload
+2.1.285,2026-09-29,other,session_start|hooks_general,"[VSCode] Fixed the editor tab keeping an old name after a session was renamed with /rename, by a SessionStart hook, or on claude.ai"
+2.1.285,2026-09-29,other,transcript,[VSCode] Fixed the agent map's transcript view leaving out messages sent to a running agent
+2.1.284,2026-09-28,fixed,compaction,"Fixed ""Prompt is too long"" errors that persisted after compacting: when the compacted request is still too long, Claude Code now compacts once more, keeping less of the recent conversation"
+2.1.284,2026-09-28,fixed,transcript,Fixed fullscreen rendering erasing the terminal output above the session when `[` in transcript mode writes the conversation to scrollback (macOS and Linux)
+2.1.284,2026-09-28,fixed,hook_output|hooks_general,"Fixed the debug log dropping a failed hook's stderr when the hook also wrote to stdout, and logging nothing for a failed hook with no output; failed hooks now also log their status code"
+2.1.284,2026-09-28,fixed,hooks_general,"Fixed `{""decision"":""block""}` returned by Elicitation and ElicitationResult hooks being ignored; it now declines the MCP elicitation, as exit code 2 does"
+2.1.284,2026-09-28,added,hooks_general,Improved Workflow tool sandbox hardening for errors thrown by async script hooks
+2.1.284,2026-09-28,added,hooks_general,"Improved lists such as `/tasks`, `/copy` and `/hooks`: the details after each name now line up in one column when they fit, and otherwise sit at the right edge"
+2.1.284,2026-09-28,changed,mcp_tool_hook|hooks_general,"Changed the non-interactive first turn to still wait up to 2s for connecting MCP servers named by `--allowedTools` or an `mcp_tool` hook, even when `CLAUDE_CODE_MCP_STARTUP_WAIT_MS` is `0`"
+2.1.284,2026-09-28,other,compaction,"[VSCode] Fixed ""Prompt is too long"" errors after compaction when a large text file is attached to a message"
+2.1.283,2026-09-25,added,hooks_general,"Improved lists in `/help`, `/hooks`, `/copy`, `/chrome`, `/memory`, `/ide`, `/release-notes`, `/rewind`, `/diff`, `/remote-env`, `/plugin` and other pickers with page keys, mouse wheel and clicks"
+2.1.283,2026-09-25,added,compaction,"Improved the compaction spinner: its timer now starts when compaction begins and it counts the summary's tokens as they stream, replacing the percentage bar"
+2.1.283,2026-09-25,other,hooks_general,"Self-hosted runner: Changed lifecycle hooks' git to skip a repository's Git LFS `pre-push` hook, ignore a writable system `core.hooksPath`, and not sign commits without `--configure-git`"
+2.1.283,2026-09-25,other,compaction,"[VSCode] Fixed a reloaded session showing a rewound-away turn, or only the rows before a compaction"
+2.1.282,2026-09-24,fixed,compaction,Fixed compaction failing when the summarization request is refused; it now retries on a fallback model
+2.1.282,2026-09-24,fixed,session_start|hooks_general,Fixed the prompt's example text flashing and disappearing at startup in projects with a `SessionStart` hook
+2.1.282,2026-09-24,added,compaction,"Improved the time to resume very large sessions, including ones that were never compacted"
+2.1.282,2026-09-24,added,transcript,Improved the error shown on Windows when a session can't be resumed because its transcript file could not be read (EBADF): it now names possible causes and what to try
+2.1.281,2026-09-23,fixed,hooks_general,"Fixed `claude --bg` starting a background session, and running its project hooks, in a directory that had not passed the workspace trust prompt; it now asks for trust first, or exits when not run interactively"
+2.1.281,2026-09-23,fixed,mcp_tool_hook|hooks_general,"Fixed `mcp_tool` hooks on blocking events (PreToolUse and similar) being skipped while their MCP server was still connecting; they now wait for it, up to the MCP connect timeout"
+2.1.281,2026-09-23,fixed,hooks_general,"Fixed Ctrl+C or Ctrl+D pressed twice quitting Claude Code instead of closing the dialog in the remaining dialogs and pickers, such as `/memory`, `/hooks`, `/mcp` (including a server's sign-in screen), `/export`, `/copy`, `/theme`, and `/teleport`'s uncommitted-changes and login prompts (where Esc also quit)"
+2.1.281,2026-09-23,fixed,hooks_general,Fixed `/hooks` and `/mcp` detail views printing a long value over the row below it in narrow terminals
+2.1.281,2026-09-23,added,compaction,"Improved the time to resume very long sessions that have been compacted, most noticeably through the Agent SDK and Claude Desktop"
+2.1.281,2026-09-23,added,hooks_general,"Improved `/batch` to run where a WorktreeCreate hook provides the agent worktrees, not only inside a git repository"
+2.1.281,2026-09-23,added,plugin_hooks|hooks_general,"Improved plugin hook-failure errors to name the offending plugin, and added a `claude plugin validate` warning when a shell-form hook leaves `${CLAUDE_PLUGIN_ROOT}` unquoted (it breaks on plugin paths with spaces)"
+2.1.281,2026-09-23,added,hooks_general,"Improved `/hooks`: a hook's detail screen now says what kind of hook it is and where to change it, instead of always pointing at settings.json, and the hooks-disabled, safe mode and managed-hooks-only notices each say what is happening in one plain sentence"
+2.1.281,2026-09-23,changed,hooks_general,"Changed self-hosted runners to pass system prompts to Claude Code as private files instead of command-line text, so large prompts no longer fail the launch; a wrapper or `command` hook that appends `--system-prompt` or `--append-system-prompt` must switch to `--system-prompt-file` or `--append-system-prompt-file`"
+2.1.281,2026-09-23,other,hooks_general,[Claude Tag] Fixed a Slack request blocked by your organization's inference hook showing a generic retry notice; the thread now shows the hook's deny message and Claude doesn't retry
+2.1.280,2026-09-22,added,hook_output|hooks_general,Added hook output sizes and the number of oversized outputs saved to a file to the `hook_execution_complete` OpenTelemetry event
+2.1.280,2026-09-22,fixed,transcript,"Fixed voice dictation not stopping on Ctrl+C (the prompt cleared but the microphone kept recording), Esc not cancelling while a transcript was processing, and held Space starting dictation from the transcript view and vim NORMAL mode"
+2.1.280,2026-09-22,fixed,compaction,Fixed a session failing on every turn and `/compact` when its saved history held a malformed notice about MCP tools that could not be loaded
+2.1.280,2026-09-22,fixed,transcript,Fixed a crash when resuming a session whose saved transcript holds a malformed system message or a memory-saved notice without its file list
+2.1.280,2026-09-22,fixed,compaction,Fixed a finished subagent's report being lost when the conversation that launched it was compacted before the report was read
+2.1.280,2026-09-22,fixed,plugin_hooks|hooks_general,"Fixed background sessions (`claude --bg`) being unable to run git, hooks, plugins and other helper programs when an environment variable handed to the session contained a NUL character"
+2.1.280,2026-09-22,fixed,hooks_general,"Fixed IDE selection being dropped when a sent prompt comes back into the input, such as pressing Esc to edit it, rewinding to it, or pressing Esc while startup hooks run"
+2.1.280,2026-09-22,fixed,compaction,Fixed the Claude app showing a missing or stale context usage figure for Remote Control and cloud sessions right after /compact or /clear
+2.1.280,2026-09-22,other,hooks_general,Self-hosted runner: Fixed lifecycle-hook commits failing to sign under `--configure-git`
+2.1.280,2026-09-22,changed,transcript,Reverted `ctrl+l` / `cmd+k` in fullscreen mode clearing the transcript view (added in 2.1.260); they redraw the screen again
+2.1.280,2026-09-22,added,prompt_hook|hooks_general,Improved the UserPromptSubmit hook timeout notice and the debug log to name which hook command timed out
+2.1.280,2026-09-22,changed,compaction,"Changed `/autocompact`'s footer hint to name ←/→, the keys that adjust other ordered values"
+2.1.280,2026-09-22,other,hooks_general,Self-hosted runner: Changed git in lifecycle hooks to ignore hook folders and programs named in the runner's shared git files; local-path and `git://` remotes there now need `GIT_ALLOW_PROTOCOL`
+2.1.280,2026-09-22,changed,hooks_general,"Changed `PermissionRequest` hooks: an agent-type hook no longer runs there, since its answer could never allow or deny the request; it now shows an error pointing to command or http hooks"
+2.1.280,2026-09-22,other,transcript,[Claude Code on the web] Fixed file links in a cloud session transcript that point outside the session's working directory opening a file card that never loads; they're now disabled and say why
+2.1.277,2026-09-18,fixed,session_start|hooks_general,"Fixed sessions continued after `/clear` (restart, `--continue`, `--resume`) missing part of their first message when a SessionStart hook printed output, causing a full prompt-cache miss"
+2.1.277,2026-09-18,fixed,stop_hook|transcript|hooks_general,"Fixed a crash (""unrecoverable interface error"") when resuming a session whose saved transcript contains a stop hook summary without a well-formed hook list"
+2.1.277,2026-09-18,other,hooks_general,"[VSCode] Fixed the ""General config"" menu row showing `/config` usage text instead of opening settings, and made typed `/mcp`, `/hooks`, `/memory`, `/rewind` and similar commands open their dialogs"
+2.1.275,2026-09-17,fixed,compaction,"Fixed a restored memory file's age note changing between requests after a compaction or resume, which caused prompt cache misses"
+2.1.275,2026-09-17,fixed,transcript,Fixed a resumed cloud session leaving an unanswered question open in the transcript after a queued message superseded it
+2.1.275,2026-09-17,fixed,transcript,"Fixed `--resume`, the resume picker preview, resumed background agents and the transcript view failing on a session whose saved history contains a malformed task-reminder or @-file attachment entry"
+2.1.275,2026-09-17,fixed,transcript,"Fixed a crash when resuming a conversation whose transcript contains a malformed message entry, and a fullscreen crash when such a conversation received new messages while scrolled up"
+2.1.275,2026-09-17,fixed,transcript,Fixed sessions failing to resume or start when their saved transcript contains a malformed message content block
+2.1.275,2026-09-17,fixed,hooks_general,Fixed `SubagentStop` hooks with a specific `matcher` firing for every stopping subagent whose agent type was empty
+2.1.275,2026-09-17,fixed,hooks_general,Fixed sandboxed Bash commands being unable to write to project directories named `hooks/` or `config/`
+2.1.275,2026-09-17,other,transcript,[VSCode] Fixed the transcript creeping toward the bottom in small steps while a permission card waits and content keeps arriving
+2.1.275,2026-09-17,other,hooks_general,[VSCode] Fixed unreadable code in the plan preview and the Hooks and Permission rules dialogs with the High Contrast Light theme
+2.1.274,2026-09-16,fixed,transcript,"Fixed sessions getting stuck endlessly retrying ""unexpected tool_use_id"" 400 errors: corrupted transcripts now self-heal where possible, and otherwise a clear error (with a `/rewind` hint) ends the loop"
+2.1.274,2026-09-16,fixed,compaction|hooks_general,"Fixed hook-driven sessions (such as an active `/goal`) ending with ""Prompt is too long"" instead of compacting when the context overflowed again after a reactive compaction"
+2.1.274,2026-09-16,fixed,compaction,Fixed an active `/goal` being lost when resuming (`--continue` / `--resume`) a session that had compacted
+2.1.274,2026-09-16,fixed,transcript,"Fixed the transcript renumbering ordered lists in your own messages (typing ""3. 2. 1."" displayed ""3. 4. 5.""); numbers and ""N)"" markers now show as typed"
+2.1.274,2026-09-16,fixed,hooks_general,Fixed Stop prompt hooks re-sending their whole prompt on every block in a conversation; repeat blocks now name the condition with a 500-character label
+2.1.274,2026-09-16,fixed,plugin_hooks|hooks_general,"Fixed plugins with a top-level `$schema` in `hooks/hooks.json` showing an ""unknown key"" notice"
+2.1.274,2026-09-16,fixed,transcript,Fixed a message a subagent sends to the main session disappearing from the Claude Desktop transcript after a relaunch
+2.1.274,2026-09-16,added,transcript,Improved `OTEL_LOG_RAW_API_BODIES=file:<dir>` output: a new `index.jsonl` and `request_body_id` / `message.id` event attributes link each response to its request file and transcript message
+2.1.273,2026-09-15,added,compaction,"Added `x-claude-code-request-class`, `x-claude-code-agent-type`, `x-claude-code-prev-tool-durations`, `x-claude-code-compaction` and `x-claude-code-context-compacted` request headers for LLM gateways; opt in with `CLAUDE_CODE_GATEWAY_HINT_HEADERS=1`"
+2.1.273,2026-09-15,fixed,compaction,"Fixed the context meter and auto-compact counting advisor-tool turns at roughly twice their real context size, which made auto-compact fire at about half the real window"
+2.1.273,2026-09-15,fixed,compaction|hooks_general,"Fixed the spinner showing a doubled ellipsis (""……"") on compaction status lines such as ""Running PreCompact hooks…"""
+2.1.273,2026-09-15,added,hooks_general,Improved responsiveness in long sessions: hook progress and sub-agent activity no longer re-process the whole conversation on every update
+2.1.271,2026-09-14,fixed,transcript,"Fixed Ctrl+O cancelling pending MCP server reconnects, and `/mcp` sent from Remote Control failing while the transcript view is open"
+2.1.271,2026-09-14,fixed,compaction,Fixed Claude starting a second copy of a background command (such as a watch task or dev server) that was still running after the conversation was compacted
+2.1.271,2026-09-14,fixed,hooks_general,Fixed the interactive `/hooks` menu crashing when a hook matcher is named after an inherited object property such as `__proto__` or `constructor`
+2.1.271,2026-09-14,added,transcript,"Improved terminal rendering performance: large diffs and long transcripts render faster, with fewer slow frames"
+2.1.271,2026-09-14,added,prompt_hook|session_start|hooks_general,"Improved hook feedback: while a SessionStart, UserPromptSubmit, PreToolUse or SessionEnd hook runs, the spinner says so with elapsed time, and Esc cancels a prompt waiting on a SessionStart hook"
+2.1.271,2026-09-14,other,plugin_hooks|hooks_general,"[VSCode] Fixed the Hooks and Permission rules dialogs reporting a save that landed as failed, and the Hooks dialog going blank under a plugin-only policy lock or showing color codes in save errors"
+2.1.271,2026-09-14,other,hooks_general,"[VSCode] Fixed Hooks dialog saves: no duplicate hook on replace, a header name retyped in other capitals keeps its secret, and settings.local.json is gitignored before the save returns"
+2.1.271,2026-09-14,other,compaction,"[VSCode] Fixed the prompt cache clock's hover text appearing only after a delay, and the auto-compact icon showing the browser's own tooltip beside its popup"
+2.1.271,2026-09-14,other,hooks_general,"[VSCode] Improved the Hooks dialog: a save refused because of the settings file itself now opens a popup with an ""Open settings file"" button and the reason behind ""Copy error"""
+2.1.269,2026-09-11,fixed,transcript,Fixed rows at the top or bottom of the transcript going blank in fullscreen after resizing the terminal
+2.1.269,2026-09-11,fixed,compaction,"Fixed the git status Claude is told after a compaction: it is now the current status, not the one from the start of the session"
+2.1.269,2026-09-11,fixed,compaction,"Fixed sessions getting permanently stuck on ""Prompt is too long"" when auto-compaction had no complete earlier exchange to summarize (mostly Agent SDK sessions with very large prompts)"
+2.1.269,2026-09-11,added,transcript,Improved responsiveness in long sessions: transcript updates no longer re-process the whole conversation to build the collapsed tool-use summaries
+2.1.269,2026-09-11,other,transcript,"[VSCode] Added an agent map: an ""N agents"" footer pill opens a map of the session's sub-agents with per-agent cards, Stop agent, and read-only transcripts"
+2.1.269,2026-09-11,other,plugin_hooks|hooks_general,"[VSCode] Added a Hooks dialog to the command menu for viewing hooks and adding, editing, or removing them in user, project, and local settings; managed, plugin, and session hooks stay read-only"
+2.1.269,2026-09-11,other,compaction,"[VSCode] Fixed the prompt cache clock and reopen notice for a session compacted after its last reply and then closed, which now reads as cold when reopened"
+2.1.269,2026-09-11,other,transcript,[Claude Code on the web] Fixed file links in cloud session transcripts opening a GitHub 404 when Claude was working from a subfolder of the repository
+2.1.268,2026-09-10,fixed,compaction,Fixed the conversation summary produced by `/compact` and auto-compact mangling text that contained `$` sequences
+2.1.268,2026-09-10,fixed,compaction,Fixed resuming a conversation that ended with `/compact`: its restored-file notes now load in the same order on every resume
+2.1.268,2026-09-10,fixed,compaction,"Fixed SDK prompt suggestions, side questions and `/rename` sending the conversation from before a compaction"
+2.1.268,2026-09-10,fixed,hooks_general,Fixed PermissionRequest hooks not firing in `--print` mode
+2.1.268,2026-09-10,fixed,hooks_general,Fixed `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` not extending SessionEnd hooks that have no per-hook `timeout` (they were still cancelled after 1.5 seconds)
+2.1.268,2026-09-10,added,transcript,Improved fullscreen mode: adding or removing a prompt line (Shift+Enter) now repaints as fast as typing a character instead of re-rendering the visible transcript
+2.1.268,2026-09-10,added,session_start|transcript|hooks_general,"Improved `--continue` / `--resume`: the conversation appears immediately instead of waiting for SessionStart hooks, and the first message no longer re-reads the whole transcript"
+2.1.268,2026-09-10,added,transcript,Improved responsiveness during tool-heavy turns by no longer redrawing the transcript for a hidden per-tool-batch reminder
+2.1.268,2026-09-10,other,session_start|hooks_general,[VSCode] Fixed session names reverting to the last prompt after a window reload when a SessionStart hook is configured
+2.1.267,2026-09-09,fixed,compaction,"Fixed resuming a session after `/compact` or another slash command ran via `-p --resume`: a spurious ""Continue from where you left off."" turn is no longer inserted"
+2.1.267,2026-09-09,fixed,hook_output|transcript|hooks_general,Fixed resuming a large session (transcript over 5 MB): parallel tool calls and their hook output are no longer dropped from the reloaded conversation
+2.1.267,2026-09-09,fixed,plugin_hooks,"Fixed managed `allowedHttpHookUrls`, `httpHookAllowedEnvVars` and `allowedChannelPlugins` to admit nothing, not everything, when unreadable"
+2.1.267,2026-09-09,other,transcript,"[VSCode] Fixed the extension host hanging at 100% CPU when forking, editing an earlier message, or rewinding in a conversation whose saved transcript contains a cyclic parent link"
+2.1.265,2026-09-08,fixed,hooks_general,"Fixed agent teammates and resumed subagents moving SubagentStart hook context and preloaded skills out of the prompt prefix on later turns, which broke prompt-cache reuse"
+2.1.265,2026-09-08,fixed,transcript,Fixed the fullscreen transcript jumping by one row whenever the slash-command or @-file suggestion list opened or closed
+2.1.265,2026-09-08,fixed,session_start|hooks_general,Fixed `/clear` from Remote Control waiting on SessionStart hooks and on open terminal dialogs before completing
+2.1.261,2026-09-04,fixed,hook_output|hooks_general,"Fixed resuming a session losing hook output and other context around parallel tool calls, which changed the resumed request"
+2.1.261,2026-09-04,fixed,transcript,Fixed `claude -p --resume <file>` adopting a malformed session ID recorded in the transcript; it now resumes under a fresh session ID instead
+2.1.260,2026-09-03,fixed,plugin_hooks|hooks_general,Fixed model switching staying blocked for the rest of the session after a plugin hook load failure; each switch now re-checks and the refusal names the cause
+2.1.260,2026-09-03,fixed,transcript,"Fixed agent teams: an in-process teammate's transcript losing messages, or going blank, during long API retry waits (e.g. under `CLAUDE_CODE_RETRY_WATCHDOG`) as retry notices evicted real messages"
+2.1.260,2026-09-03,fixed,compaction,Fixed Workflow tool subagents being restarted as stalled while a long context compaction was still in progress
+2.1.260,2026-09-03,added,compaction,"Improved auto-compact for 1M-context models: Opus and Fable sessions now compact shortly before the 1M-token limit, and recovery compaction on very large contexts no longer times out at 10 minutes"
+2.1.260,2026-09-03,changed,transcript,Changed `ctrl+l` / `cmd+k` in fullscreen mode to clear the transcript view like a terminal `clear`; scroll up to see earlier messages
+2.1.260,2026-09-03,changed,hooks_general,"Changed server-managed settings so a managed CLAUDE.md (`claudeMd`) no longer triggers the security approval dialog; hooks, shell-command, sandbox, and unsafe `env` settings still require approval"
+2.1.260,2026-09-03,other,compaction,"[VSCode] Added the selected effort level to the footer model pill, fixed a stale effort level after switching models, and returned the footer pills to their earlier compact size"
+2.1.259,2026-09-02,fixed,hooks_general,"Fixed worktree isolation refusing hook-created worktrees on machines where `git rev-parse` fails with a message other than ""not a git repository"""
+2.1.259,2026-09-02,fixed,stop_hook|hooks_general,"Fixed blocking Stop hooks causing the turn after a block to lose the model's reasoning from that turn and, on some models, miss the prompt cache"
+2.1.259,2026-09-02,added,transcript,"Improved nested background subagent results to be saved in the parent subagent's transcript, so resumed subagents keep them and shared transcripts show the delivery"
+2.1.257,2026-09-01,added,transcript,"Added ""Time format"" (`timeFormat`) and `timeZone` settings: 12-hour, 24-hour, 24-hour UTC, or a strftime pattern for the turn-end clock and transcript-view timestamps"
+2.1.257,2026-09-01,fixed,transcript,"Fixed the token counter freezing or crawling after switching to another subagent's transcript, and made background subagents' and teammates' counters update live while a response streams"
+2.1.257,2026-09-01,fixed,compaction,"Fixed sessions with an advisor model set missing the prompt cache on background requests (compaction, `/recap`, prompt suggestions) and re-sending the full conversation uncached each time"
+2.1.257,2026-09-01,fixed,hooks_general,"Fixed plugins being able to read files outside their own directory through a declared command, agent, skill, hooks or other component path that is a symlink; such paths are now refused with an error"
+2.1.257,2026-09-01,fixed,transcript,Fixed the main agent not being told when you resume a subagent you had stopped from its transcript view
+2.1.257,2026-09-01,fixed,transcript,Fixed unbounded memory growth when non-JSONL data is piped into `claude -p --input-format stream-json`; it now fails fast with a clear error
+2.1.257,2026-09-01,fixed,transcript,"Fixed resuming or messaging a subagent whose transcript had grown past 5 MB (for example after reading many images) failing with ""No transcript found"""
+2.1.257,2026-09-01,added,transcript|hooks_general,Improved verbose/transcript output: async hook completion notices that arrive together now appear on one line instead of one line per hook
+2.1.251,2026-08-28,added,session_start|hooks_general,"Added `PreModelSwitch` and `PostModelSwitch` hook events (block, confirm, or annotate a model switch); `SessionStart` resume hooks now receive session staleness and the estimated re-cache cost"
+2.1.251,2026-08-28,fixed,transcript,Fixed TUI lag with many parallel subagents: per-second progress ticks now replace their predecessor instead of piling up in the transcript
+2.1.251,2026-08-28,fixed,transcript,Fixed session transcripts being silently overwritten when a directory change relocated a session onto an existing same-ID transcript
+2.1.251,2026-08-28,fixed,hooks_general,"Fixed an `additionalDirectories` entry containing a null byte crashing startup, or breaking `/add-dir` and later settings updates when it came from an SDK host, IDE, or hook; it is now skipped"
+2.1.251,2026-08-28,added,transcript,"Improved the prompt placeholder to read ""Message @name…"" while viewing a background subagent or fork transcript opened from the subagent panel or `/tasks`"
+2.1.248,2026-08-27,fixed,transcript,Fixed Claude Desktop and Cowork sessions disappearing after 30 days: the transcript cleanup now keeps desktop-written sessions while they are in the app (unless org policy manages retention); the new `desktopSessionCleanupPeriodDays` setting caps the exemption
+2.1.248,2026-08-27,fixed,hooks_general,Fixed background sessions waiting silently when a `PermissionRequest` or `PreToolUse` hook prints an invalid answer: the `claude agents` row now names the hook and the schema error
+2.1.248,2026-08-27,fixed,hooks_general,Fixed hooks silently treating a stdout `{…}` object that isn't valid JSON as plain text; it's now reported as a hook error with the parse message
+2.1.248,2026-08-27,fixed,transcript,"Fixed startup warnings (e.g. ""N MCP servers need authentication"") rendering one column right of the rest of the transcript"
+2.1.247,2026-08-26,fixed,hooks_general,"Fixed a hook or background agent that printed megabytes of error output being able to overflow the conversation and wedge the session on ""Prompt is too long"""
+2.1.247,2026-08-26,fixed,compaction,"Fixed `/compact` and ""Summarize from here"" in sessions started with `--agent` summarizing under the default system prompt instead of the conversation's own"
+2.1.247,2026-08-26,fixed,hooks_general,Fixed unbounded memory growth when a hook's or background task's output file could not be written; the file now notes where output was lost
+2.1.247,2026-08-26,changed,compaction,"Changed Sonnet 5's default auto-compact window to its full 1M context, so sessions on the 1M window now auto-compact at about 967K tokens instead of about 934K"
+2.1.246,2026-08-25,fixed,transcript,Fixed fullscreen mode showing a blank transcript after resizing the terminal and jumping to the bottom until the next keypress
+2.1.246,2026-08-25,fixed,transcript,Fixed a severe transcript slowdown when a diff contained a very long single line (e.g. a base64 string); such lines now render truncated with a marker
+2.1.246,2026-08-25,fixed,transcript,"Fixed erratic fullscreen scrolling when positioned at an earlier message, including jump-to-bottom getting stuck mid-transcript"
+2.1.246,2026-08-25,fixed,hooks_general,Fixed hook error messages showing a literal `${CLAUDE_PLUGIN_ROOT}` instead of the resolved plugin path
+2.1.246,2026-08-25,fixed,hooks_general,"Fixed the `Notification` hook not firing while the sandbox ""Network request outside of sandbox"" permission prompt is waiting"
+2.1.246,2026-08-25,fixed,transcript,Fixed memory growing with session length in the fullscreen and Ctrl+O transcript views: each rendered message row no longer retains a full copy of the transcript-wide tool lookups
+2.1.246,2026-08-25,added,hooks_general,"Improved `/cd`: the new directory's project settings, hooks, `.mcp.json` servers (behind the usual approval prompt), skills, and agents now take effect right after the move instead of on `--resume`"
+2.1.243,2026-08-24,fixed,hooks_general,Fixed cloud sessions resuming after a mid-turn restart with a pending hook or background-task notification re-sent as the prompt instead of the normal continuation message
+2.1.243,2026-08-24,fixed,hooks_general,Fixed hook `if` conditions like `Bash(cat *)` firing on unrelated Bash commands when the command contained `$()` or backtick command substitution followed by more arguments
+2.1.243,2026-08-24,fixed,transcript,Fixed Ctrl+R history search and up-arrow history breaking when `~/.claude/history.jsonl` contains a malformed entry
+2.1.243,2026-08-24,added,compaction,Improved native binary size: about 2 MB smaller by storing the bundled skill and prompt text more compactly
+2.1.239,2026-08-21,fixed,hooks_general,Fixed OpenTelemetry trace fragmentation: tool executions deferred by a `PreToolUse` hook now resume in the original turn's trace instead of starting a new trace
+2.1.239,2026-08-21,fixed,hooks_general,"Fixed hooks failing with ""posix_spawn ENOENT"" after the session's working directory was deleted; they now run from the project root or home directory instead"
+2.1.239,2026-08-21,added,compaction,Improved the reminder shown after compaction so a skill's original arguments are not re-run as a new request
+2.1.239,2026-08-21,other,session_start|hooks_general,"Remote sessions keep sending keep-alives while a long `SessionStart` or `Setup` hook runs, so the container is not idle-reaped mid-hook"
+2.1.238,2026-08-20,fixed,transcript,Fixed Remote Control messages sent from the web or Desktop while Claude is mid-turn disappearing from the transcript after the turn finishes
+2.1.236,2026-08-19,fixed,hooks_general,"Fixed self-hosted runner sessions released on idle, retire, or startup timeout occasionally resuming on another runner before the post-session hook had finished"
+2.1.236,2026-08-19,other,transcript,"[VSCode] Added screen reader support for the transcript: live announcements for replies, permission requests, errors, and status changes, plus per-turn heading navigation"
+2.1.235,2026-08-18,added,compaction,Improved the context-limit error to say when auto-compact is off and point to `/config` to re-enable it
+2.1.235,2026-08-18,other,transcript,Vim mode: NORMAL mode and cursor position are now preserved when toggling the detailed transcript (ctrl+o) or closing a panel
+2.1.234,2026-08-17,added,transcript,Added the optional `CLAUDE_CODE_PROJECT_DIR_NAME` environment variable: hosts that give each session its own config directory can choose a short name for the per-project transcript directory
+2.1.234,2026-08-17,fixed,compaction,Fixed auto mode in very long sessions repeatedly re-checking and denying sandboxed commands' network access after the conversation had been compacted
+2.1.234,2026-08-17,added,transcript,"Improved the transcript: your own prompts now render markdown (highlighted code blocks, inline code, lists) the same way replies do"
+2.1.234,2026-08-17,other,compaction,"`/add-dir <path>` can now be used while Claude is working; `/add-dir`, `/autocompact`, `/theme`, `/help`, `/config` and `/advisor` dialogs open mid-turn in the fullscreen TUI"
+2.1.233,2026-08-14,fixed,hooks_general,Fixed Notification hooks not firing for permission prompts when running under Claude Desktop or VS Code
+2.1.233,2026-08-14,added,compaction,"Improved apps gateway error forwarding: 400/413 errors from Vertex, Foundry, and Claude Platform on AWS upstreams now carry the upstream's own message; fixes a bug with auto-compact on apps gateway"
+2.1.232,2026-08-13,fixed,transcript,Fixed Remote Control sessions hosted by a bridge inside a cloud session inheriting that session's transcript or credentials
+2.1.229,2026-08-12,added,hooks_general,"Added server-supplied Claude Code hook support for self-hosted runner sessions, matching managed-environment behavior"
+2.1.229,2026-08-12,fixed,compaction,Fixed conversations whose messages alone exceed the API's 32 MB request limit retrying compaction when no images or documents can be stripped; they now fail once with a clear message
+2.1.229,2026-08-12,added,compaction,"Improved ""prompt is too long"" errors to explain why automatic compaction could not recover instead of only suggesting `/compact`"
+2.1.228,2026-08-11,fixed,hooks_general,Fixed `claude self-hosted-runner` sessions failing on every fresh runner when the `checkout` hook fails for a repository the session doesn't push to; that repository is now skipped with a warning
+2.1.228,2026-08-11,added,compaction,Improved compaction progress: the retry countdown and stall hint now appear during compaction instead of only a progress bar
+2.1.225,2026-08-07,fixed,compaction,Fixed conversation history breaking on Remote Control session resume after very large conversations were compacted
+2.1.224,2026-08-07,fixed,transcript,Fixed the feedback survey's transcript share silently failing on long sessions; a failed share now shows an error instead of a success message
+2.1.224,2026-08-07,added,compaction,"Improved fullscreen mode to keep the full pre-compaction history in scrollback across repeated compactions, instead of only the most recent interval"
+2.1.224,2026-08-07,added,compaction,Improved Remote Control: attached web and mobile clients now see compaction progress and the post-compaction boundary instead of a silent pause; `/clear` resets now propagate to attached clients
+2.1.224,2026-08-07,changed,transcript,"Changed the feedback-survey transcript share: with your consent it now also uploads the last request's model settings — the system prompt (which includes your `CLAUDE.md` instructions), tool definitions, and model parameters. Secrets are redacted as before, and these fields are dropped first if the share is too large"
+2.1.224,2026-08-07,changed,compaction,Changed Remote Control to archive the stale server session instead of leaving a dead one listed when a fresh session is minted after compaction or `/resume`
+2.1.223,2026-08-05,changed,compaction,"Changed `CLAUDE_CODE_DISABLE_1M_CONTEXT` to hold every Claude model with a native 1M window to 200K via auto-compaction, not just a fixed list; a startup warning now appears when auto-compaction isn't holding the session to 200K"
+2.1.223,2026-08-05,changed,compaction,Changed auto-compact to keep sessions on unrecognized model IDs within the assumed context window instead of letting them grow past it; set `CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT=1` to restore the previous behavior
+2.1.222,2026-08-04,fixed,compaction|hooks_general,"Fixed PreToolUse auto-allow hooks bypassing tool restrictions in background agent tasks (summaries, compaction, renames)"
+2.1.222,2026-08-04,fixed,transcript,Fixed the spinner's effort label in a subagent's transcript view showing the session's effort level instead of the subagent's own `effort:` setting
+2.1.221,2026-08-03,fixed,transcript,"Fixed Vim mode: the yank register now survives dialogs, history search, and the transcript view instead of being silently emptied"
+2.1.219,2026-07-24,added,hooks_general,Added `DirectoryAdded` hook that fires after `/add-dir` or the SDK `register_repo_root` control request registers a new working directory mid-session
+2.1.218,2026-07-22,fixed,compaction,Fixed `/context` reporting stale pre-compact token usage after compacting from the message picker
+2.1.218,2026-07-22,fixed,transcript,"Fixed spurious ""[Request interrupted by user]"" messages after interrupted tool calls, and an unpaired `tool_use` block left in the transcript when a tool aborted mid-response"
+2.1.218,2026-07-22,fixed,hooks_general,Fixed agent frontmatter hooks running from untrusted folders: hooks now require the agent file's own folder to have accepted workspace trust
+2.1.218,2026-07-22,fixed,compaction,Fixed fork-session lineage being lost after compaction in headless and SDK sessions
+2.1.217,2026-07-21,added,transcript,"Added warnings when transcript writes are failing (e.g. disk full) or when session saving is off due to an inherited environment variable, instead of losing transcripts silently"
+2.1.217,2026-07-21,fixed,compaction,Fixed auto-compact never triggering for Claude Opus 4.8 on Bedrock and `/compact` failing once over the limit
+2.1.217,2026-07-21,fixed,transcript,Fixed `--resume`/`--continue` and `/resume` failing with a TypeError when a transcript has a malformed attachment entry
+2.1.217,2026-07-21,fixed,transcript,"Fixed the transcript preview sitting flush against the input area when attaching to a starting background session; it now leaves the same one-line gap as the live layout, so the transcript no longer shifts when the session takes over"
+2.1.216,2026-07-20,fixed,hooks_general,"Fixed @-mentions silently attaching nothing after file-modifying hooks, vim dot-repeat of `c`-operators and paste, statusline running twice on resume, and resume-picker hangs on failure"
+2.1.216,2026-07-20,fixed,transcript,Fixed the transcript-mode (Ctrl+O) footer hint wrapping on terminals narrower than 104 columns
+2.1.216,2026-07-20,other,compaction,"`/context` now shows an explicit warning when the conversation exceeds the context window, and a failed `/compact` displays as an error"
+2.1.214,2026-07-18,fixed,hook_output|hooks_general,Fixed hooks with exit code 2 not blocking as documented when the hook's stdout JSON fails schema validation
+2.1.214,2026-07-18,changed,hooks_general,Changed single-segment `dir/**` hook `if:` conditions to match only `<cwd>/dir`; write `**/dir/**` for any-depth matching. `deny`/`ask` permission rules keep their any-depth match.
+2.1.214,2026-07-18,changed,session_start|hooks_general,"Changed SessionStart hooks to report source `""fork""` when a session begins as a fork instead of `""resume""`"
+2.1.212,2026-07-16,fixed,hooks_general,"Fixed a `continue:false` hook's halt being dropped when the tool fails or completes mid-stream, and hook infrastructure errors being misreported as user rejections"
+2.1.212,2026-07-16,added,transcript,"Improved background agent attach: cold-attaching now instantly shows the formatted transcript while the session boots, instead of a blank wait"
+2.1.212,2026-07-16,changed,transcript,Changed session transcripts to record the reasoning effort level on each assistant message
+2.1.211,2026-07-15,fixed,hooks_general,Fixed auto mode overriding a PreToolUse hook's `ask` decision for unsandboxed Bash — a hook `ask` now floors the decision at a prompt
+2.1.210,2026-07-14,fixed,hooks_general,"Fixed a hook callback timeout being misreported to the model as a user rejection, which made unattended sessions stop and wait"
+2.1.208,2026-07-13,fixed,compaction,"Fixed the context window (and auto-compact indicator) briefly resetting to 200k after the CLI auto-updates, causing a false ""100% context used"" when resuming long-context sessions"
+2.1.208,2026-07-13,fixed,hook_output|hooks_general,"Fixed several memory leaks in long sessions: MCP stdio server stderr accumulating up to 64 MB per server, LSP documents staying open indefinitely (now LRU with 50-doc cap), async hook output retained after backgrounding, and unbounded growth in headless/SDK sessions from large tool-result payloads"
+2.1.208,2026-07-13,other,transcript,Reduced session transcript size (up to 79x in edit-heavy sessions) and bounded checkpoint disk usage by pruning superseded file-history backups
+2.1.208,2026-07-13,other,transcript,"Attaching to a stopped background agent now shows its transcript immediately while the session warms up, instead of a blank ""Session is starting"" screen"
+2.1.207,2026-07-10,fixed,transcript,Fixed the transcript jumping above the start of the answer when a response finishes streaming
+2.1.207,2026-07-10,other,plugin_hooks|hooks_general,Plugin hooks/monitors/MCP headersHelper: `${user_config.*}` in shell-form commands is now rejected (shell-injection fix). Hooks: use exec form (`args` array) or `$CLAUDE_PLUGIN_OPTION_<KEY>`; monitors and headersHelper: read the value inside the script (config file or the server's `env` block).
+2.1.206,2026-07-09,fixed,transcript,"Fixed the fullscreen jump-to-bottom pill suggesting Ctrl+End on macOS, not showing rebound chords, and wrapping over the transcript"
+2.1.205,2026-07-08,added,transcript,Added an auto mode rule that blocks tampering with session transcript files
+2.1.205,2026-07-08,other,transcript,"Background task notifications now explicitly state that no human input has occurred, preventing fabricated in-transcript approvals from being acted on"
+2.1.204,2026-07-08,fixed,session_start|hooks_general,"Fixed hook events not streaming during SessionStart hooks in headless sessions, which could cause remote workers to be idle-reaped mid-hook"
+2.1.203,2026-07-07,fixed,transcript,Fixed a memory and per-turn CPU regression in interactive sessions: the context-usage indicator no longer re-analyzes the entire transcript after every turn
+2.1.203,2026-07-07,fixed,hooks_general,Fixed background sessions started from a non-git directory unable to edit files when a `WorktreeCreate` hook was configured
+2.1.203,2026-07-07,fixed,transcript,Fixed content jumping when scrolling up through long transcript history
+2.1.200,2026-07-03,added,transcript,"Improved screen-reader output: decorative glyphs are now hidden, transcript symbols read as short labels, and nested tables read as `Header: value.` lines"
+2.1.199,2026-07-02,fixed,session_start|transcript|hooks_general,"Fixed `SessionStart`, `Setup`, and `SubagentStart` hooks silently hiding stderr when exiting with code 2 — the error is now shown in the transcript"
+2.1.199,2026-07-02,fixed,transcript,Fixed opening or resuming a session with no new messages needlessly growing the transcript file
+2.1.198,2026-07-01,added,hooks_general,Added background agent notifications in `claude agents` — sessions that need input or finish now fire the `Notification` hook (`agent_needs_input` / `agent_completed`)
+2.1.198,2026-07-01,other,compaction,"Subagents and context compaction now inherit the session's extended thinking configuration, improving output quality on delegated tasks"
+2.1.198,2026-07-01,fixed,compaction,Fixed `/branch` deriving its default fork name from the compaction summary instead of the first real prompt
+2.1.196,2026-06-29,fixed,transcript,"Fixed waking a background job permanently deleting its conversation and re-running the original prompt when the transcript probe misread a real transcript; the file is now set aside, never deleted"
+2.1.195,2026-06-26,fixed,hooks_general,"Fixed hook matchers with hyphenated identifiers (e.g. `code-reviewer`, `mcp__brave-search`) accidentally substring-matching — they now exact-match. Use `mcp__brave-search__.*` to match all tools from a hyphenated MCP server."
+2.1.195,2026-06-26,added,compaction,Improved `claude agents` completed list to fill available vertical space; on short terminals the header compacts so live sessions stay visible
+2.1.193,2026-06-25,added,transcript,"Added auto-mode denial reasons to the transcript, the denial toast, and `/permissions` recent denials"
+2.1.191,2026-06-24,fixed,hooks_general,"Fixed hooks with comma-separated matchers (e.g. `""Bash,PowerShell""`) silently never firing"
+2.1.187,2026-06-23,fixed,mcp_tool_hook,Fixed remote MCP tool calls that hang with no response for 5 minutes — they now abort with an error instead of blocking indefinitely (override with `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT`)
+2.1.186,2026-06-22,fixed,transcript,Fixed subagent transcript scroll position bleeding into the main transcript on exit
+2.1.186,2026-06-22,added,compaction,Improved memory: the agent is now reminded to compact its `MEMORY.md` index when nearing the size limit
+2.1.183,2026-06-19,fixed,hooks_general,"Fixed focus mode showing ""Ran N PostToolUse hooks"" timing lines under each response"
+2.1.181,2026-06-17,fixed,transcript,Fixed long-running idle sessions losing their history when another Claude Code process ran the 30-day transcript cleanup
+2.1.181,2026-06-17,fixed,transcript,"Fixed `/remote-control` leaving a stale ""connecting…"" line; it now confirms in the transcript once connected"
+2.1.181,2026-06-17,fixed,transcript,Fixed user prompts queued mid-turn not showing a full-width background highlight in the transcript
+2.1.179,2026-06-16,fixed,transcript,Fixed Ctrl+O not showing the subagent's transcript when viewing a subagent
+2.1.178,2026-06-15,fixed,transcript,"Fixed several subagent issues: viewing a subagent's transcript now shows tool results and live progress, messages sent while it finishes its turn are no longer dropped, and backgrounding a running subagent (ctrl+b) no longer restarts it from scratch"
+2.1.178,2026-06-15,fixed,compaction,Fixed compaction not honoring `--fallback-model`: compaction now falls back to the configured fallback model chain on overload or model-availability errors
+2.1.178,2026-06-15,fixed,hooks_general,Fixed Linux sandbox failing to start when `.claude/skills` or `.claude/hooks` is a symlink
+2.1.176,2026-06-12,fixed,hooks_general,"Fixed hook `if` conditions for Read/Edit/Write tool paths: documented patterns like `Edit(src/**)`, `Read(~/.ssh/**)`, and `Read(.env)` now match correctly"
+2.1.176,2026-06-12,fixed,transcript,"Fixed Remote Control disconnect notifications showing a bare numeric code instead of a human-readable reason, and connection failures adding a duplicate line to the conversation transcript"
+2.1.172,2026-06-10,fixed,compaction,Fixed sessions using 1M context without usage credits getting permanently stuck — the session now automatically compacts back under the standard context limit
+2.1.170,2026-06-09,fixed,transcript,Fixed sessions not saving transcripts (and not appearing in --resume) when launched from the VS Code integrated terminal or any shell that inherited Claude Code environment variables.
+2.1.169,2026-06-08,added,plugin_hooks|hooks_general,"Added `--safe-mode` flag (and `CLAUDE_CODE_SAFE_MODE`) to start Claude Code with all customizations (CLAUDE.md, plugins, skills, hooks, MCP servers) disabled for troubleshooting"
+2.1.166,2026-06-05,fixed,transcript,Fixed duplicated thinking text in the Ctrl+O transcript view while streaming
+2.1.163,2026-06-04,other,stop_hook|hook_output|hooks_general,Hooks: Stop and SubagentStop hooks can now return `hookSpecificOutput.additionalContext` to give Claude feedback and keep the turn going without being labeled a hook error
+2.1.163,2026-06-04,other,hook_ids|hooks_general,stdio MCP servers now receive the same `CLAUDE_CODE_SESSION_ID` as hooks/Bash on `--resume`
+2.1.163,2026-06-04,fixed,hooks_general,"Fixed hook `if: ""Bash(...)""` conditions firing on every Bash command containing `$()` or `$VAR`; the pattern now matches against commands inside subshells and backticks too"
+2.1.163,2026-06-04,fixed,transcript,"Fixed a stray ""(no content)"" line left in the transcript after closing panel dialogs like /mcp and /plugins"
+2.1.162,2026-06-03,fixed,mcp_tool_hook,"Fixed MCP per-server `timeout` config values below 1000 ms being floored to a 1-second watchdog that aborted every tool call; sub-1000 ms values are now ignored (falling back to `MCP_TOOL_TIMEOUT` or default), and `claude mcp get` annotates them accordingly"
+2.1.162,2026-06-03,other,compaction,Failed turns now show a compact warning line instead of a multi-line red error block
+2.1.161,2026-06-02,fixed,hooks_general,"Fixed Windows hooks that invoke bash explicitly (e.g., `/usr/bin/bash script.sh`) failing with ""command not found"" or ""cannot execute binary file"""
+2.1.160,2026-06-01,fixed,transcript,Fixed mouse wheel scrolling prompt history instead of the transcript right after opening a session from the agents list
+2.1.154,2026-05-28,other,hook_ids,Stdio MCP server subprocesses now receive `CLAUDE_CODE_SESSION_ID` and `CLAUDECODE=1` in their environment
+2.1.153,2026-05-27,fixed,transcript,Fixed excessive memory usage (multiple GB) when resuming a session by transcript file path on machines with many stored sessions
+2.1.152,2026-05-26,other,session_start|hooks_general,"`SessionStart` hooks can now return `reloadSkills: true` to re-scan skill directories, making skills installed by the hook available in the same session"
+2.1.152,2026-05-26,other,session_start|hooks_general,`SessionStart` hooks can now set the session title via `hookSpecificOutput.sessionTitle` on startup and resume
+2.1.152,2026-05-26,added,hooks_general,Added a `MessageDisplay` hook event that lets hooks transform or hide assistant message text as it is displayed
+2.1.152,2026-05-26,other,transcript,The `/usage` breakdown now includes large session files; files are scanned with a streaming read so memory usage stays flat
+2.1.152,2026-05-26,fixed,transcript,Fixed `cache_creation_input_tokens` reporting as 0 in transcript and result usage when the API reports cache writes only via the nested `cache_creation` breakdown
+2.1.149,2026-05-22,fixed,hooks_general,Fixed the sandbox write allowlist in git worktrees covering the entire main repository root instead of only the shared `.git` directory (with `hooks/` and `config` denied)
+2.1.149,2026-05-22,fixed,transcript,Fixed Ctrl+O transcript view freezing at the moment it was opened instead of tailing new messages
+2.1.149,2026-05-22,fixed,compaction,Fixed `/config` exit summary reporting phantom changes to auto-compact and theme when toggling unrelated settings
+2.1.149,2026-05-22,fixed,transcript,Fixed malformed PowerShell and History tool calls with missing input being misclassified as reads in transcript collapsing
+2.1.149,2026-05-22,added,compaction,"Improved `/feedback` reports to include the conversation that happened before context compaction, making issues from earlier in long sessions easier to triage"
+2.1.147,2026-05-21,fixed,hooks_general,Fixed hook `if` conditions like `PowerShell(git push*)` never matching — only `PowerShell(*)` worked
+2.1.145,2026-05-19,other,plugin_hooks|hooks_general,"`/plugin` Discover and Browse screens now show a plugin's commands, agents, skills, hooks, and MCP/LSP servers before installation"
+2.1.145,2026-05-19,other,stop_hook|hooks_general,Stop and SubagentStop hook input now includes `background_tasks` and `session_crons` fields
+2.1.144,2026-05-18,fixed,transcript,"Fixed scrolling in attached background sessions on Windows — PgUp/PgDn, mouse wheel, and Ctrl+O transcript navigation now work"
+2.1.144,2026-05-18,other,hooks_general,Background session worktree isolation guard now applies for non-git VCS users with `WorktreeCreate` hooks configured
+2.1.144,2026-05-18,other,hooks_general,`/doctor` now shows an exec-form example when a command hook is missing the `command` field
+2.1.143,2026-05-15,fixed,stop_hook|hooks_general,Fixed stop hooks that block repeatedly looping forever — the turn now ends with a warning after 8 consecutive blocks (override via `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`)
+2.1.143,2026-05-15,fixed,transcript,Fixed deleting a session from agent view not removing its transcript file
+2.1.142,2026-05-14,fixed,mcp_tool_hook,"Fixed `MCP_TOOL_TIMEOUT` not raising the per-request fetch timeout for remote HTTP and SSE MCP servers, which capped tool calls at 60 seconds regardless of the configured value"
+2.1.142,2026-05-14,fixed,transcript,Fixed redundant `set_model` requests from remote clients injecting duplicate `/model` breadcrumbs into the transcript
+2.1.142,2026-05-14,added,compaction,"Improved reactive compaction: the first summarize attempt now seeds from the original request's overflow size, avoiding a wasted near-full-context retry"
+2.1.142,2026-05-14,added,session_start|hooks_general,"Improved hook configuration error: configuring a prompt- or agent-type hook for `SessionStart`/`Setup`/`SubagentStart` now shows a clear ""use a command-type hook instead"" error"
+2.1.141,2026-05-13,added,hooks_general,"Added `terminalSequence` field to hook JSON output so hooks can emit desktop notifications, window titles, and bells without a controlling terminal"
+2.1.141,2026-05-13,fixed,compaction,Fixed `/model` in one session silently changing the autocompact threshold in other concurrent sessions
+2.1.141,2026-05-13,fixed,hook_ids|transcript|hooks_general,Fixed hooks receiving a non-existent `transcript_path` after `EnterWorktree` switches the working directory
+2.1.141,2026-05-13,fixed,hooks_general,"Fixed ""Allowed by PermissionRequest hook"" repeating once per tool call under a collapsed read/search group"
+2.1.140,2026-05-12,fixed,hooks_general,Fixed a regression in settings hot-reload where symlinked settings files caused misattributed change events and spurious `ConfigChange` hooks
+2.1.139,2026-05-11,added,transcript,"Added transcript view navigation: `?` for keyboard shortcuts, `{`/`}` to jump between user prompts, `v` to toggle shortcut panel"
+2.1.139,2026-05-11,added,hooks_general,"Added hook `args: string[]` field (exec form) that spawns the command directly without a shell, so path placeholders never need quoting"
+2.1.139,2026-05-11,added,hooks_general,Added hook `continueOnBlock` config option for `PostToolUse` — set to `true` to feed the hook's rejection reason back to Claude and continue the turn
+2.1.139,2026-05-11,other,plugin_hooks|hooks_general,"MCP stdio servers now receive `CLAUDE_PROJECT_DIR` in their environment, matching hooks. Plugin configs can reference `${CLAUDE_PROJECT_DIR}` in commands"
+2.1.139,2026-05-11,other,compaction,Compaction prompt now asks the model to preserve sensitive user instructions
+2.1.139,2026-05-11,other,plugin_hooks|hooks_general,`/plugin` installed-plugin details now show hook event names and MCP server names cleanly
+2.1.139,2026-05-11,fixed,hooks_general,Fixed a bug where a hook writing to the terminal could corrupt an on-screen interactive prompt; hooks now run without terminal access
+2.1.139,2026-05-11,fixed,transcript,Fixed transcript view letter shortcuts not working after mouse click
+2.1.136,2026-05-08,fixed,prompt_hook|plugin_hooks|hooks_general,Fixed plugin `Stop`/`UserPromptSubmit` hooks failing when cache cleanup deletes a version still in use by a running session
+2.1.136,2026-05-08,fixed,session_start|hooks_general,Fixed env vars from `CLAUDE_ENV_FILE` SessionStart hooks going stale after `/resume` or `/clear`
+2.1.133,2026-05-07,other,hooks_general,"Hooks now receive the active effort level via the `effort.level` JSON input field and the `$CLAUDE_EFFORT` environment variable, and Bash tool commands can read `$CLAUDE_EFFORT`"
+2.1.133,2026-05-07,fixed,compaction,"Fixed pressing Esc during conversation compaction showing a spurious ""Error compacting conversation"" notification"
+2.1.132,2026-05-06,added,hook_ids|hooks_general,"Added `CLAUDE_CODE_SESSION_ID` environment variable to the Bash tool subprocess environment, matching the `session_id` passed to hooks"
+2.1.129,2026-05-05,fixed,compaction,Fixed cache-miss warning appearing spuriously after `/clear` or compaction when changing `/effort` or `/model`
+2.1.129,2026-05-05,other,transcript,[VSCode] Fixed `/clear` not clearing the conversation context and displayed transcript
+2.1.128,2026-05-04,other,hooks_general,"Subprocesses (Bash, hooks, MCP, LSP) no longer inherit `OTEL_*` environment variables, so OTEL-instrumented apps run via the Bash tool no longer pick up the CLI's own OTLP endpoint"
+2.1.128,2026-05-04,other,compaction,"Auto mode: when the classifier can't evaluate an action, the error now includes a hint (retry, `/compact`, or run with `--debug`)"
+2.1.128,2026-05-04,fixed,compaction,"Fixed sessions on 1M-context models with a smaller autocompact window being falsely blocked with ""Prompt is too long"" before reaching the actual API limit"
+2.1.128,2026-05-04,fixed,compaction,Fixed `/rename` without args failing on resumed sessions whose last entry is a compact boundary
+2.1.128,2026-05-04,fixed,transcript,"Fixed sub-agent summaries firing repeatedly while a sub-agent's transcript is static, capping worst-case token cost on idle sub-agents"
+2.1.126,2026-04-30,other,transcript,"- Added `claude project purge [path]` to delete all Claude Code state for a project (transcripts, tasks, file history, config entry) — supports `--dry-run`, `-y/--yes`, `-i/--interactive`, and `--all`"
+2.1.122,2026-04-28,fixed,hooks_general,Fixed a malformed hooks entry in `settings.json` no longer invalidating the entire file
+2.1.121,2026-04-27,other,hooks_general,PostToolUse hooks can now replace tool output for all tools via `hookSpecificOutput.updatedToolOutput` (previously MCP-only)
+2.1.121,2026-04-27,fixed,transcript,Fixed `/usage` leaking up to ~2GB of memory on machines with large transcript histories
+2.1.121,2026-04-27,fixed,transcript,Fixed `--resume` failing on large sessions when a transcript line was corrupted by an unclean shutdown — the corrupt line is now skipped
+2.1.120,2026-04-24,other,compaction,"Auto-compact in auto mode now displays `auto` (lowercase, no token count) instead of a misleading token value"
+2.1.119,2026-04-23,other,hooks_general,"Hooks: `PostToolUse` and `PostToolUseFailure` hook inputs now include `duration_ms` (tool execution time, excluding permission prompts and PreToolUse hooks)"
+2.1.119,2026-04-23,fixed,transcript|hooks_general,Fixed async `PostToolUse` hooks that emit no response payload writing empty entries to the session transcript
+2.1.119,2026-04-23,fixed,compaction,Fixed skills invoked before auto-compaction being re-executed against the next user message
+2.1.118,2026-04-22,other,mcp_tool_hook|hooks_general,"Hooks can now invoke MCP tools directly via `type: ""mcp_tool""`"
+2.1.118,2026-04-22,fixed,hooks_general,"Fixed agent-type hooks failing with ""Messages are required for agent hooks"" when configured for events other than `Stop` or `SubagentStop`"
+2.1.118,2026-04-22,fixed,hooks_general,Fixed `prompt` hooks re-firing on tool calls made by an agent-hook verifier subagent
+2.1.117,2026-04-21,other,compaction,"Advisor Tool (experimental): dialog now carries an ""experimental"" label, learn-more link, and startup notification when enabled; sessions no longer get stuck with ""Advisor tool result content could not be processed"" errors on every prompt and `/compact`"
+2.1.117,2026-04-21,fixed,compaction,Fixed Opus 4.7 sessions showing inflated `/context` percentages and autocompacting too early — Claude Code was computing against a 200K context window instead of Opus 4.7's native 1M
+2.1.116,2026-04-20,other,hooks_general,Agent frontmatter `hooks:` now fire when running as a main-thread agent via `--agent`
+2.1.116,2026-04-20,fixed,transcript,Fixed `/branch` rejecting conversations with transcripts larger than 50MB
+2.1.116,2026-04-20,fixed,transcript,Fixed `/resume` silently showing an empty conversation on large session files instead of reporting the load error
+2.1.113,2026-04-17,other,transcript,"Bash tool: multi-line commands whose first line is a comment now show the full command in the transcript, closing a UI-spoofing vector"
+2.1.113,2026-04-17,fixed,transcript,Fixed messages typed while viewing a running subagent being hidden from its transcript and misattributed to the parent AI
+2.1.113,2026-04-17,fixed,compaction,"Fixed compacting a resumed long-context session failing with ""Extra usage is required for long context requests"""
+2.1.113,2026-04-17,fixed,transcript,"Fixed ""Refine with Ultraplan"" not showing the remote session URL in the transcript"
+2.1.113,2026-04-17,fixed,transcript,Fixed Remote Control sessions not streaming subagent transcripts
+2.1.111,2026-04-16,added,transcript,Added `/less-permission-prompts` skill — scans transcripts for common read-only Bash and MCP tool calls and proposes a prioritized allowlist for `.claude/settings.json`
+2.1.111,2026-04-16,other,transcript,Transcript view footer now shows `[` (dump to scrollback) and `v` (open in editor) shortcuts
+2.1.111,2026-04-16,other,session_start|hooks_general,Windows: `CLAUDE_ENV_FILE` and SessionStart hook environment files now apply (previously a no-op)
+2.1.110,2026-04-15,changed,transcript,Changed `Ctrl+O` to toggle between normal and verbose transcript only; focus view is now toggled separately with the new `/focus` command
+2.1.110,2026-04-15,fixed,transcript,Fixed session cleanup not removing the full session directory including subagent transcripts
+2.1.110,2026-04-15,fixed,hooks_general,Fixed `PermissionRequest` hooks returning `updatedInput` not being re-checked against `permissions.deny` rules; `setMode:'bypassPermissions'` updates now respect `disableBypassPermissionsMode`
+2.1.110,2026-04-15,fixed,hook_output|hooks_general,Fixed `PreToolUse` hook `additionalContext` being dropped when the tool call fails
+2.1.108,2026-04-14,added,transcript,"Added ""verbose"" indicator when viewing the detailed transcript (`Ctrl+O`)"
+2.1.108,2026-04-14,fixed,transcript,Fixed Agent tool prompting for permission in auto mode when the safety classifier's transcript exceeded its context window
+2.1.108,2026-04-14,fixed,transcript,Fixed `--resume` truncating sessions when the transcript contained a self-referencing message
+2.1.108,2026-04-14,fixed,transcript,"Fixed transcript write failures (e.g., disk full) being silently dropped instead of being logged"
+2.1.105,2026-04-13,added,compaction|hooks_general,"Added PreCompact hook support: hooks can now block compaction by exiting with code 2 or returning `{""decision"":""block""}`"
+2.1.101,2026-04-10,added,hooks_general,Improved settings resilience: an unrecognized hook event name in `settings.json` no longer causes the entire file to be ignored
+2.1.101,2026-04-10,added,plugin_hooks|hooks_general,Improved plugin hooks from plugins force-enabled by managed settings to run when `allowManagedHooksOnly` is set
+2.1.101,2026-04-10,fixed,hooks_general,"Fixed `permissions.deny` rules not overriding a PreToolUse hook's `permissionDecision: ""ask""` — previously the hook could downgrade a deny into a prompt"
+2.1.101,2026-04-10,fixed,transcript,"Fixed several Remote Control issues: worktrees removed on session crash, connection failures not persisting in the transcript, spurious ""Disconnected"" indicator in brief mode for local sessions, and `/remote-control` failing over SSH when only `CLAUDE_CODE_ORGANIZATION_UUID` is set"
+2.1.98,2026-04-09,fixed,transcript,Fixed voice mode leaking dozens of space characters into the input when re-holding the push-to-talk key while the previous transcript is still processing
+2.1.98,2026-04-09,fixed,hooks_general,"Fixed prompt-type Stop/SubagentStop hooks failing on long sessions, and hook evaluator API errors showing ""JSON validation failed"" instead of the real message"
+2.1.98,2026-04-09,added,transcript|hooks_general,Improved hook errors in the transcript to include the first line of stderr for self-diagnosis without `--debug`
+2.1.98,2026-04-09,added,transcript,Improved transcript entries to carry final token usage instead of streaming placeholders
+2.1.98,2026-04-09,fixed,compaction,Fixed `CLAUDE_CODE_MAX_CONTEXT_TOKENS` to honor `DISABLE_COMPACT` when it is set.
+2.1.98,2026-04-09,other,compaction,Dropped `/compact` hints when `DISABLE_COMPACT` is set.
+2.1.97,2026-04-08,fixed,compaction,Fixed rate-limit upgrade options disappearing after context compaction
+2.1.97,2026-04-08,fixed,transcript,Fixed `--resume` cache misses and lost mid-turn input from attachment messages not being saved to the transcript
+2.1.97,2026-04-08,fixed,transcript,Fixed messages typed while Claude is working not being persisted to the transcript
+2.1.97,2026-04-08,fixed,hooks_general,"Fixed prompt-type `Stop`/`SubagentStop` hooks failing on long sessions, and hook evaluator API errors displaying ""JSON validation failed"" instead of the actual message"
+2.1.97,2026-04-08,fixed,transcript|compaction,Fixed compaction writing duplicate multi-MB subagent transcript files on prompt-too-long retries
+2.1.97,2026-04-08,added,transcript|hooks_general,Improved session transcript size by skipping empty hook entries and capping stored pre-edit file copies
+2.1.97,2026-04-08,added,transcript,Improved transcript accuracy: per-block entries now carry the final token usage instead of the streaming placeholder
+2.1.94,2026-04-07,added,compaction,Added compact `Slacked #channel` header with a clickable channel link for Slack MCP send-message tool calls
+2.1.94,2026-04-07,added,prompt_hook|hooks_general,Added `hookSpecificOutput.sessionTitle` to `UserPromptSubmit` hooks for setting the session title
+2.1.94,2026-04-07,fixed,plugin_hooks|hooks_general,Fixed plugin skill hooks defined in YAML frontmatter being silently ignored
+2.1.94,2026-04-07,fixed,plugin_hooks|hooks_general,"Fixed plugin hooks failing with ""No such file or directory"" when `CLAUDE_PLUGIN_ROOT` was not set"
+2.1.94,2026-04-07,fixed,transcript,Fixed multiline user prompts in the transcript indenting wrapped lines under the `❯` caret instead of under the text
+2.1.92,2026-04-04,fixed,stop_hook|hooks_general,"Fixed prompt-type Stop hooks incorrectly failing when the small fast model returns `ok:false`, and restored `preventContinuation:true` semantics for non-Stop prompt-type hooks"
+2.1.91,2026-04-02,fixed,transcript,Fixed transcript chain breaks on `--resume` that could lose conversation history when async transcript writes fail silently
+2.1.90,2026-04-01,fixed,hooks_general,"Fixed `Edit`/`Write` failing with ""File content has changed"" when a PostToolUse format-on-save hook rewrites the file between consecutive edits"
+2.1.90,2026-04-01,fixed,hook_output|hooks_general,Fixed `PreToolUse` hooks that emit JSON to stdout and exit with code 2 not correctly blocking the tool call
+2.1.90,2026-04-01,added,transcript,Improved performance: SDK sessions with long conversations no longer slow down quadratically on transcript writes
+2.1.89,2026-03-31,added,hooks_general,"Added `""defer""` permission decision to `PreToolUse` hooks — headless sessions can pause at a tool call and resume with `-p --resume` to have the hook re-evaluate"
+2.1.89,2026-03-31,added,hooks_general,Added `PermissionDenied` hook that fires after auto mode classifier denials — return `{retry: true}` to tell the model it can retry
+2.1.89,2026-03-31,fixed,transcript,Fixed a crash when removing a message from very large session files (over 50MB)
+2.1.89,2026-03-31,fixed,transcript,Fixed prompt history entries containing CJK or emoji being silently dropped when they fall on a 4KB boundary in `~/.claude/history.jsonl`
+2.1.89,2026-03-31,fixed,hooks_general,"Fixed PreToolUse/PostToolUse hooks to receive `file_path` as an absolute path for Write/Edit/Read tools, matching the documented behavior"
+2.1.89,2026-03-31,fixed,compaction,Fixed autocompact thrash loop — now detects when context refills to the limit immediately after compacting three times in a row and stops with an actionable error instead of burning API calls
+2.1.89,2026-03-31,fixed,transcript,Fixed `--resume` crash when transcript contains a tool result from an older CLI version or interrupted write
+2.1.89,2026-03-31,fixed,hooks_general,Fixed hooks `if` condition filtering not matching compound commands (`ls && git push`) or commands with env-var prefixes (`FOO=bar git push`)
+2.1.89,2026-03-31,changed,hook_output|hooks_general,"Changed hook output over 10,000 characters to be saved to disk with a file path + a 2,000-character preview instead of being injected directly into context"
+2.1.89,2026-03-31,changed,transcript,Changed `cleanupPeriodDays: 0` in settings.json to be rejected with a validation error — it previously silently disabled transcript persistence
+2.1.89,2026-03-31,other,hooks_general,Documented `TaskCreated` hook event and its blocking behavior
+2.1.86,2026-03-27,fixed,transcript,Fixed potential out-of-memory crash when using `/feedback` on very long sessions with large transcript files
+2.1.86,2026-03-27,fixed,transcript,Fixed a regression where pressing Enter after clicking could leave the transcript blank until the response arrived
+2.1.86,2026-03-27,other,compaction,"Read tool now uses compact line-number format and deduplicates unchanged re-reads, reducing token usage"
+2.1.85,2026-03-26,added,hooks_general,"Added conditional `if` field for hooks using permission rule syntax (e.g., `Bash(git *)`) to filter when they run, reducing process spawning overhead"
+2.1.85,2026-03-26,added,transcript,"Added timestamp markers in transcripts when scheduled tasks (`/loop`, `CronCreate`) fire"
+2.1.85,2026-03-26,other,hooks_general,"PreToolUse hooks can now satisfy `AskUserQuestion` by returning `updatedInput` alongside `permissionDecision: ""allow""`, enabling headless integrations that collect answers via their own UI"
+2.1.85,2026-03-26,fixed,compaction,"Fixed `/compact` failing with ""context exceeded"" when the conversation has grown too large for the compact request itself to fit"
+2.1.85,2026-03-26,fixed,hooks_general,Fixed `--worktree` exiting with an error in non-git repositories before the `WorktreeCreate` hook could run
+2.1.85,2026-03-26,added,transcript,Improved scroll performance with large transcripts by replacing WASM yoga-layout with a pure TypeScript implementation
+2.1.85,2026-03-26,other,compaction,Reduced UI stutter when compaction triggers on large sessions
+2.1.84,2026-03-25,added,hooks_general,Added `TaskCreated` hook that fires when a task is created via `TaskCreate`
+2.1.84,2026-03-25,added,hooks_general,"Added `WorktreeCreate` hook support for `type: ""http""` — return the created worktree path via `hookSpecificOutput.worktreePath` in the response JSON"
+2.1.84,2026-03-25,fixed,transcript,"Fixed voice push-to-talk: holding the voice key no longer leaks characters into the text input, and transcripts now insert at the correct position"
+2.1.84,2026-03-25,fixed,transcript,"Fixed mouse events inserting literal ""mouse"" text into transcript search input"
+2.1.84,2026-03-25,other,compaction,Reduced scroll-to-top resets in long sessions by making the message window immune to compaction and grouping changes
+2.1.83,2026-03-24,added,hooks_general,"Added `CwdChanged` and `FileChanged` hook events for reactive environment management (e.g., direnv)"
+2.1.83,2026-03-24,added,hooks_general,"Added `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1` to strip Anthropic and cloud provider credentials from subprocess environments (Bash tool, hooks, MCP stdio servers)"
+2.1.83,2026-03-24,added,transcript,"Added transcript search — press `/` in transcript mode (`Ctrl+O`) to search, `n`/`N` to step through matches"
+2.1.83,2026-03-24,fixed,compaction,"Fixed background subagents becoming invisible after context compaction, which could cause duplicate agents to be spawned"
+2.1.83,2026-03-24,fixed,plugin_hooks|hooks_general,Fixed uninstalled plugin hooks continuing to fire until the next session
+2.1.83,2026-03-24,fixed,hooks_general,Fixed SDK session history loss on resume caused by hook progress/attachment messages forking the parentUuid chain
+2.1.83,2026-03-24,fixed,transcript,Fixed remote sessions forgetting conversation history after a container restart due to progress-message gaps in the resumed transcript chain
+2.1.81,2026-03-20,added,plugin_hooks|hooks_general,"Added `--bare` flag for scripted `-p` calls — skips hooks, LSP, plugin sync, and skill directory walks; requires `ANTHROPIC_API_KEY` or an `apiKeyHelper` via `--settings` (OAuth and keychain auth disabled); auto-memory fully disabled"
+2.1.81,2026-03-20,fixed,plugin_hooks|hooks_general,Fixed plugin hooks blocking prompt submission when the plugin directory is deleted mid-session
+2.1.81,2026-03-20,fixed,transcript|hooks_general,Fixed invisible hook attachments inflating the message count in transcript mode
+2.1.79,2026-03-18,fixed,hooks_general,Fixed `SessionEnd` hooks not firing when using interactive `/resume` to switch sessions
+2.1.78,2026-03-17,added,hooks_general,"Added `StopFailure` hook event that fires when the turn ends due to an API error (rate limit, auth failure, etc.)"
+2.1.78,2026-03-17,fixed,stop_hook|hooks_general,Fixed infinite loop when API errors triggered stop hooks that re-fed blocking errors to the model
+2.1.78,2026-03-17,fixed,transcript,Fixed ctrl+u in normal mode scrolling instead of readline kill-line (ctrl+u/ctrl+d half-page scroll moved to transcript mode only)
+2.1.78,2026-03-17,fixed,hooks_general,Fixed `--worktree` flag not loading skills and hooks from the worktree directory
+2.1.77,2026-03-16,fixed,transcript,Fixed `--resume` silently truncating recent conversation history due to a race between memory-extraction writes and the main transcript
+2.1.77,2026-03-16,fixed,hooks_general,"Fixed PreToolUse hooks returning `""allow""` bypassing `deny` permission rules, including enterprise managed settings"
+2.1.77,2026-03-16,fixed,compaction,Fixed memory growth in long-running sessions from progress messages surviving compaction
+2.1.77,2026-03-16,added,hooks_general,"Improved `claude plugin validate` to check skill, agent, and command frontmatter plus `hooks/hooks.json`, catching YAML parse errors and schema violations"
+2.1.76,2026-03-14,added,hooks_general,Added new `Elicitation` and `ElicitationResult` hooks to intercept and override responses before they're sent back
+2.1.76,2026-03-14,added,compaction|hooks_general,Added `PostCompact` hook that fires after compaction completes
+2.1.76,2026-03-14,fixed,compaction,"Fixed deferred tools (loaded via `ToolSearch`) losing their input schemas after conversation compaction, causing array and number parameters to be rejected with type errors"
+2.1.76,2026-03-14,fixed,compaction,Fixed auto-compaction retrying indefinitely after consecutive failures — a circuit breaker now stops after 3 attempts
+2.1.76,2026-03-14,fixed,transcript,Fixed transcript not auto-scrolling to new messages after selecting text
+2.1.75,2026-03-13,added,plugin_hooks|hooks_general,Added hook source display (settings/plugin/skill) in permission prompts when a hook requires confirmation
+2.1.75,2026-03-13,fixed,compaction,"Fixed token estimation over-counting for thinking and `tool_use` blocks, preventing premature context compaction"
+2.1.75,2026-03-13,other,transcript|hooks_general,Suppressed async hook completion messages by default (visible with `--verbose` or transcript mode)
+2.1.74,2026-03-11,fixed,hooks_general,Fixed `SessionEnd` hooks being killed after 1.5 s on exit regardless of `hook.timeout` — now configurable via `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS`
+2.1.73,2026-03-11,fixed,session_start|hooks_general,Fixed SessionStart hooks firing twice when resuming a session via `--resume` or `--continue`
+2.1.73,2026-03-11,fixed,hooks_general,Fixed JSON-output hooks injecting no-op system-reminder messages into the model's context on every turn
+2.1.72,2026-03-09,added,transcript,"Improved voice input transcription accuracy for repo names and common dev terms (regex, OAuth, JSON)"
+2.1.72,2026-03-09,fixed,hooks_general,Fixed slow exits when background tasks or hooks were slow to respond
+2.1.72,2026-03-09,fixed,hooks_general,Fixed skill hooks firing twice per event when a hooks-enabled skill is invoked by the model
+2.1.72,2026-03-09,fixed,transcript,"Fixed several voice mode issues: occasional input lag, false ""No speech detected"" errors after releasing push-to-talk, and stale transcripts re-filling the prompt after submission"
+2.1.72,2026-03-09,fixed,compaction,Fixed `--continue` not resuming from the most recent point after `--compact`
+2.1.72,2026-03-09,fixed,transcript,Fixed backgrounded Ctrl+B queries losing their transcript or corrupting the new conversation after `/clear`
+2.1.72,2026-03-09,fixed,hook_ids|transcript|hooks_general,"Fixed several hooks issues: `transcript_path` pointing to the wrong directory for resumed/forked sessions, agent `prompt` being silently deleted from settings.json on every settings write, PostToolUse block reason displaying twice, async hooks not receiving stdin with bash `read -r`, and validation error message showing an example that fails validation"
+2.1.71,2026-03-06,fixed,compaction,"Fixed background agent completion notifications missing the output file path, which made it difficult for parent agents to recover agent results after context compaction"
+2.1.70,2026-03-06,added,compaction,"Improved compaction to preserve images in the summarizer request, allowing prompt cache reuse for faster and cheaper compaction"
+2.1.69,2026-03-04,added,hooks_general,Added `InstructionsLoaded` hook event that fires when CLAUDE.md or `.claude/rules/*.md` files are loaded into context
+2.1.69,2026-03-04,added,hooks_general,Added `agent_id` (for subagents) and `agent_type` (for subagents and `--agent`) to hook events
+2.1.69,2026-03-04,added,hooks_general,"Added `worktree` field to status line hook commands with name, path, branch, and original repo directory when running in a `--worktree` session"
+2.1.69,2026-03-04,fixed,transcript,Fixed ctrl+o (transcript toggle) freezing for many seconds in long sessions with lots of file edits
+2.1.69,2026-03-04,fixed,transcript,Fixed `/stats` crash when transcript files contain entries with missing or malformed timestamps
+2.1.69,2026-03-04,fixed,transcript,Fixed a brief hang after a streaming error on long sessions (the transcript was being fully rewritten to drop one line; it is now truncated in place)
+2.1.69,2026-03-04,fixed,plugin_hooks|hooks_general,Fixed plugin Stop/SessionEnd/etc hooks not firing after any `/plugin` operation
+2.1.69,2026-03-04,fixed,plugin_hooks|hooks_general,Fixed plugin hooks being silently dropped when two plugins use the same `${CLAUDE_PLUGIN_ROOT}/...` command template
+2.1.69,2026-03-04,fixed,compaction,"Fixed API 400 errors in forked agents (autocompact, summarization) when resuming sessions that were interrupted mid-tool-batch"
+2.1.69,2026-03-04,fixed,compaction,Fixed `CLAUDE_CODE_MAX_OUTPUT_TOKENS` being ignored during conversation compaction
+2.1.69,2026-03-04,fixed,compaction,"Fixed `/compact` summary rendering as a user bubble in SDK consumers (Claude Code Remote web UI, VSCode extension)"
+2.1.69,2026-03-04,fixed,compaction,"Fixed memory retention in in-process teammates where the parent's full conversation history was pinned for the teammate's lifetime, preventing GC after `/clear` or auto-compact"
+2.1.69,2026-03-04,fixed,hooks_general,Fixed a memory leak in interactive mode where hook events could accumulate unboundedly during long sessions
+2.1.69,2026-03-04,fixed,hooks_general,"Fixed `TeammateIdle` and `TaskCompleted` hooks to support `{""continue"": false, ""stopReason"": ""...""}` to stop the teammate, matching `Stop` hook behavior"
+2.1.69,2026-03-04,fixed,plugin_hooks|hooks_general,Fixed `WorktreeCreate` and `WorktreeRemove` plugin hooks being silently ignored
+2.1.69,2026-03-04,fixed,transcript,Fixed extra blank lines appearing below each tool call in the expanded subagent transcript view (Ctrl+O)
+2.1.69,2026-03-04,other,compaction,Reduced memory usage when resuming large sessions (including compacted history)
+2.1.69,2026-03-04,changed,compaction,Changed resuming after compaction to no longer produce a preamble recap before continuing
+2.1.69,2026-03-04,other,compaction,"[VSCode] Added compaction display as a collapsible ""Compacted chat"" card with the summary inside"
+2.1.63,2026-02-28,added,hooks_general,"Added HTTP hooks, which can POST JSON to a URL and receive JSON instead of running a shell command"
+2.1.63,2026-02-28,fixed,hooks_general,Fixed memory leak when navigating hooks configuration menu
+2.1.63,2026-02-28,fixed,compaction,Fixed memory leak where long-running teammates retained all messages in AppState even after conversation compaction
+2.1.63,2026-02-28,added,compaction,Improved memory usage in long sessions with subagents by stripping heavy progress message payloads during context compaction
+2.1.51,2026-02-23,fixed,hooks_general,Fixed a security issue where `statusLine` and `fileSuggestion` hook commands could execute without workspace trust acceptance in interactive mode.
+2.1.50,2026-02-20,added,hooks_general,"Added `WorktreeCreate` and `WorktreeRemove` hook events, enabling custom VCS setup and teardown when agent worktree isolation creates or removes worktrees."
+2.1.50,2026-02-20,fixed,hooks_general,"Fixed a bug where resumed sessions could be invisible when the working directory involved symlinks, because the session storage path was resolved at different times during startup. Also fixed session data loss on SSH disconnect by flushing session data before hooks and analytics in the graceful shutdown sequence."
+2.1.50,2026-02-20,other,hooks_general,"`CLAUDE_CODE_SIMPLE` mode now also disables MCP tools, attachments, hooks, and CLAUDE.md file loading for a fully minimal experience."
+2.1.50,2026-02-20,added,compaction,Improved memory usage during long sessions by clearing internal caches after compaction
+2.1.49,2026-02-19,added,hooks_general,"Added `ConfigChange` hook event that fires when configuration files change during a session, enabling enterprise security auditing and optional blocking of settings changes."
+2.1.49,2026-02-19,fixed,hooks_general,Fixed `disableAllHooks` setting to respect managed settings hierarchy — non-managed settings can no longer disable managed hooks set by policy (#26637)
+2.1.47,2026-02-18,fixed,compaction,Fixed compaction failing when conversation contains many PDF documents by stripping document blocks alongside images before sending to the compaction API (anthropics/claude-code#26188)
+2.1.47,2026-02-18,added,session_start|hooks_general,"Improved startup performance by deferring SessionStart hook execution, reducing time-to-interactive by ~500ms."
+2.1.47,2026-02-18,added,stop_hook|transcript|hooks_general,"Added `last_assistant_message` field to Stop and SubagentStop hook inputs, providing the final assistant response text so hooks can access it without parsing transcript files."
+2.1.47,2026-02-18,fixed,compaction,"Fixed built-in slash commands (`/help`, `/model`, `/compact`, etc.) being hidden from the autocomplete dropdown when many user skills are installed (anthropics/claude-code#22020)"
+2.1.47,2026-02-18,fixed,transcript,Fixed background agent results returning raw transcript data instead of the agent's final answer (anthropics/claude-code#26012)
+2.1.47,2026-02-18,fixed,compaction,"Fixed plan mode being lost after context compaction, causing the model to switch from planning to implementation mode (anthropics/claude-code#26061)"
+2.1.47,2026-02-18,fixed,compaction,Fixed session name being lost after context compaction — renamed sessions now preserve their custom title through compaction (anthropics/claude-code#26121)
+2.1.47,2026-02-18,fixed,transcript,Fixed crash when using `/fork` on sessions that used web search — null entries in search results from transcript deserialization are now handled gracefully (anthropics/claude-code#25811)
+2.1.47,2026-02-18,fixed,hooks_general,"Fixed hooks (PreToolUse, PostToolUse) silently failing to execute on Windows by using Git Bash instead of cmd.exe (anthropics/claude-code#25981)"
+2.1.45,2026-02-17,fixed,compaction,Fixed skills invoked by subagents incorrectly appearing in main session context after compaction
+2.1.45,2026-02-17,fixed,plugin_hooks|hooks_general,"Fixed plugin-provided commands, agents, and hooks not being available immediately after installation without requiring a restart"
+2.1.42,2026-02-13,fixed,compaction,Fixed image dimension limit errors to suggest /compact
+2.1.41,2026-02-13,fixed,hooks_general,Fixed hook blocking errors (exit code 2) not showing stderr to the user
+2.1.41,2026-02-13,fixed,compaction,Fixed auto-compact failure error notifications being shown to users
+2.1.41,2026-02-13,fixed,hooks_general,Fixed hook blocking errors showing stderr content in UI
+2.1.39,2026-02-10,fixed,transcript,Fixed blank lines in verbose transcript view
+2.1.33,2026-02-06,added,hooks_general,Added `TeammateIdle` and `TaskCompleted` hook events for multi-agent workflows
+2.1.30,2026-02-03,fixed,transcript,Fixed a hang when resuming sessions with corrupted transcript files containing `parentUuid` cycles
+2.1.23,2026-01-29,fixed,hooks_general,Fixed pending async hooks not being cancelled when headless streaming sessions ended
+2.1.21,2026-01-28,fixed,compaction,Fixed auto-compact triggering too early on models with large output token limits
+2.1.20,2026-01-27,fixed,compaction,Fixed session compaction issues that could cause resume to load full history instead of the compact summary
+2.1.19,2026-01-23,fixed,hooks_general,"Fixed backgrounded hook commands not returning early, potentially causing the session to wait on a process that was intentionally backgrounded"
+2.1.19,2026-01-23,changed,hooks_general,Changed skills without additional permissions or hooks to be allowed without requiring approval
+2.1.16,2026-01-22,fixed,compaction,"Fixed an issue where the ""context remaining"" warning was not hidden after running `/compact`"
+2.1.15,2026-01-21,fixed,compaction,"Fixed the ""Context left until auto-compact"" warning not disappearing after running `/compact`"
+2.1.14,2026-01-20,fixed,compaction,"Fixed slash command autocomplete selecting wrong command when typing similar commands (e.g., `/context` vs `/compact`)"
+2.1.10,2026-01-17,added,hooks_general,"Added new `Setup` hook event that can be triggered via `--init`, `--init-only`, or `--maintenance` CLI flags for repository setup and maintenance operations"
+2.1.9,2026-01-15,added,hook_output|hooks_general,Added support for `PreToolUse` hooks to return `additionalContext` to the model
+2.1.9,2026-01-15,added,hook_ids,Added `${CLAUDE_SESSION_ID}` string substitution for skills to access the current session ID
+2.1.7,2026-01-13,added,transcript,"Added inline display of agent's final response in task notifications, making it easier to see results without reading the full transcript file"
+2.1.6,2026-01-13,other,compaction,[VSCode] Fixed usage indicator not updating after manual compact
+2.1.3,2026-01-09,fixed,compaction,Fixed sub-agents using the wrong model during conversation compaction
+2.1.3,2026-01-09,fixed,hooks_general,Fixed trust dialog acceptance when running from the home directory not enabling trust-requiring features like hooks during the session
+2.1.3,2026-01-09,changed,hooks_general,Changed tool hook execution timeout from 60 seconds to 10 minutes
+2.1.2,2026-01-08,added,session_start|hooks_general,"Added `agent_type` to SessionStart hook input, populated if `--agent` is specified"
+2.1.2,2026-01-08,other,compaction,[VSCode] Fixed usage display not updating after manual compact
+2.1.0,2026-01-07,fixed,hooks_general,"Fixed PreToolUse hooks to allow `updatedInput` when returning `ask` permission decision, enabling hooks to act as middleware while still requesting user consent"
+2.1.0,2026-01-07,added,stop_hook|hooks_general,"Added hooks support to agent frontmatter, allowing agents to define PreToolUse, PostToolUse, and Stop hooks scoped to the agent's lifecycle"
+2.1.0,2026-01-07,added,hooks_general,Added hooks support for skill and slash command frontmatter
+2.1.0,2026-01-07,added,hooks_general,Added support for `once: true` config for hooks
+2.1.0,2026-01-07,added,plugin_hooks|hooks_general,Added support for prompt and agent hook types from plugins (previously only command hooks were supported)
+2.1.0,2026-01-07,added,transcript,Added real-time thinking block display in Ctrl+O transcript mode
+2.1.0,2026-01-07,fixed,hooks_general,Fixed `/hooks` menu selecting wrong hook type when scrolling to a different option
+2.1.0,2026-01-07,fixed,hooks_general,Fixed hook success message showing trailing colon when hook has no output
+2.1.0,2026-01-07,added,compaction,Improved compaction reliability
+2.0.64,2025-12-10,other,compaction,Made auto-compacting instant
+2.0.54,2025-11-25,other,hooks_general,Hooks: Enable PermissionRequest hooks to process 'always allow' suggestions and apply permission updates
+2.0.45,2025-11-18,added,hooks_general,Added `PermissionRequest` hook to automatically approve or deny tool permission requests with custom logic
+2.0.43,2025-11-17,added,hooks_general,Added the `SubagentStart` hook event
+2.0.42,2025-11-14,added,hook_ids|transcript|hooks_general,Added `agent_id` and `agent_transcript_path` fields to `SubagentStop` hooks.
+2.0.41,2025-11-14,added,stop_hook|hooks_general,"Added `model` parameter to prompt-based stop hooks, allowing users to specify a custom model for hook evaluation"
+2.0.41,2025-11-14,fixed,plugin_hooks|hooks_general,Fixed crash when plugin command hooks timeout during execution
+2.0.41,2025-11-14,other,hooks_general,SDK: Support custom timeouts for hooks
+2.0.37,2025-11-10,other,hooks_general,Hooks: Added matcher values for Notification hook events
+2.0.35,2025-11-06,fixed,hooks_general,"Fixed menu navigation getting stuck on items with empty string or other falsy values (e.g., in the `/hooks` menu)"
+2.0.32,2025-11-03,fixed,hooks_general,Fixed hook progress messages not updating correctly during PostToolUse hook execution
+2.0.31,2025-10-31,fixed,compaction,Fixed issue causing `/compact` to fail with `prompt_too_long` by making it respect existing compact boundaries
+2.0.30,2025-10-30,added,stop_hook|hooks_general,Added prompt-based stop hooks
+2.0.30,2025-10-30,fixed,plugin_hooks|hooks_general,Fixed hooks and plugins not executing when using --dangerously-skip-permissions flag
+2.0.12,2025-10-09,other,hooks_general,"**Plugin System Released**: Extend Claude Code with custom commands, agents, hooks, and MCP servers from marketplaces"
+2.0.12,2025-10-09,other,hooks_general,Avoid mentioning hooks in `/resume` summaries
+2.0.10,2025-10-07,other,hooks_general,PreToolUse hooks can now modify tool inputs
+2.0.0,2025-09-29,other,hooks_general,Hooks: Reduced PostToolUse 'tool_use' ids were found without 'tool_result' blocks errors
+1.0.115,2025-09-16,other,hooks_general,Show condensed output for post-tool hooks to reduce visual clutter
+1.0.113,2025-09-13,other,transcript,Move Ctrl+R keybinding for toggling transcript to Ctrl+O
+1.0.112,2025-09-12,other,transcript,Transcript mode (Ctrl+R): Added the model used to generate each assistant message
+1.0.112,2025-09-12,other,hook_output|hooks_general,Hooks: Added systemMessage support for SessionEnd hooks
+1.0.85,2025-08-19,other,hooks_general,Hooks: Introduced SessionEnd hook
+1.0.64,2025-07-30,other,hook_output|hooks_general,Hooks: Added systemMessage field to hook JSON output for displaying warnings and context
+1.0.62,2025-07-28,other,session_start|hooks_general,Hooks: Added SessionStart hook for new session initialization
+1.0.61,2025-07-25,other,transcript,Transcript mode (Ctrl+R): Changed Esc to exit transcript mode rather than interrupt
+1.0.59,2025-07-23,other,hooks_general,"Hooks: Exposed PermissionDecision to hooks (including ""ask"")"
+1.0.59,2025-07-23,other,prompt_hook|hook_output|hooks_general,Hooks: UserPromptSubmit now supports additionalContext in advanced JSON output
+1.0.58,2025-07-22,other,hooks_general,Hooks: Added CLAUDE_PROJECT_DIR env var for hook commands
+1.0.54,2025-07-16,other,prompt_hook|hooks_general,Hooks: Added UserPromptSubmit hook and the current working directory to hook inputs
+1.0.51,2025-07-11,other,compaction,Increased auto-compact warning threshold from 60% to 80%
+1.0.48,2025-07-10,other,compaction|hooks_general,Hooks: Added a PreCompact hook
+1.0.45,2025-07-08,other,stop_hook|transcript|hooks_general,Stop Hooks: Fixed transcript path after /clear and fixed triggering when loop ends with tool call
+1.0.43,2025-07-03,other,hooks_general,Hooks: Added EPIPE system error handling
+1.0.41,2025-07-02,other,stop_hook|hooks_general,Hooks: Split Stop hook triggering into Stop and SubagentStop
+1.0.41,2025-07-02,other,hooks_general,Hooks: Enabled optional timeout configuration for each command
+1.0.41,2025-07-02,other,hooks_general,"Hooks: Added ""hook_event_name"" to hook input"
+1.0.38,2025-06-30,other,hooks_general,Released hooks. Special thanks to community input in https://github.com/anthropics/claude-code/issues/712. Docs: https://code.claude.com/docs/en/hooks
+1.0.11,2025-06-04,added,compaction,Improved todo list handling during compaction
+1.0.8,2025-06-02,fixed,mcp_tool_hook,Fixed edge cases where MCP_TIMEOUT and MCP_TOOL_TIMEOUT weren't being respected
+1.0.8,2025-06-02,added,compaction,Improved compacting UI
+0.2.98,2025-05-01,fixed,compaction,Fixed an issue where auto-compact was running twice
+0.2.47,2025-03-18,other,compaction,Automatic conversation compaction for infinite conversation length (toggle with /config)

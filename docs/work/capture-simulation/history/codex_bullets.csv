@@ -1,0 +1,795 @@
+tag,date,text
+rust-v0.123.0,2026-04-23,"- Improved realtime handoffs so background agents receive transcript deltas and can explicitly stay silent when appropriate (#18597, #18761, #18635)."
+rust-v0.123.0,2026-04-23,- Removed leaked review prompts from TUI transcripts (#18659).
+rust-v0.123.0,2026-04-23,- #18631 Remove simple TUI legacy_core reexports @etraut-openai
+rust-v0.123.0,2026-04-23,- #18597 Update realtime handoff transcript handling @guinness-oai
+rust-v0.123.0,2026-04-23,- #18761 [codex] Send realtime transcript deltas on handoff @guinness-oai
+rust-v0.124.0,2026-04-23,"- Hooks are now stable, can be configured inline in `config.toml` and managed `requirements.toml`, and can observe MCP tools as well as `apply_patch` and long-running Bash sessions. (#18893, #18385, #18391, #18888, #19012)"
+rust-v0.124.0,2026-04-23,- #18876 [rollout_trace] Add rollout trace crate @cassirer-openai
+rust-v0.124.0,2026-04-23,- #18391 fix(core): emit hooks for apply_patch edits @fcoury-oai
+rust-v0.124.0,2026-04-23,- #18948 chore: remove unused Bedrock auth lazy loading @celia-oai
+rust-v0.124.0,2026-04-23,- #18877 [rollout_trace] Record core session rollout traces @cassirer-openai
+rust-v0.124.0,2026-04-23,- #18281 rollout: persist turn permission profiles @bolinfest
+rust-v0.124.0,2026-04-23,- #18888 hooks: emit Bash PostToolUse when exec_command completes via write_stdin @eternal-openai
+rust-v0.124.0,2026-04-23,- #18893 codex: support hooks in config.toml and requirements.toml @eternal-openai
+rust-v0.124.0,2026-04-23,- #19012 Mark codex_hooks stable @abhinav-oai
+rust-v0.124.0,2026-04-23,- #18385 Support MCP tools in hooks @abhinav-oai
+rust-v0.125.0,2026-04-24,"- Rollout tracing now records tool, code-mode, session, and multi-agent relationships, with a debug reducer command for inspection. (#18878, #18879, #18880)"
+rust-v0.125.0,2026-04-24,- Rollout-trace documentation now covers the debug trace reduction workflow. (#18880)
+rust-v0.125.0,2026-04-24,"- Plugin marketplace add/remove/startup-sync internals moved out of `codex-core`, and curated plugin cache versions now use short SHAs. (#19099, #19095)"
+rust-v0.125.0,2026-04-24,- #19099 Move marketplace add/remove and startup sync out of core. @xl-openai
+rust-v0.125.0,2026-04-24,- #18878 [rollout_trace] Trace tool and code-mode boundaries @cassirer-openai
+rust-v0.125.0,2026-04-24,- #19194 Mark hooks schema fixtures as generated @abhinav-oai
+rust-v0.125.0,2026-04-24,- #18880 [rollout_trace] Add debug trace reduction command @cassirer-openai
+rust-v0.125.0,2026-04-24,- #18879 [rollout_trace] Trace sessions and multi-agent edges @cassirer-openai
+rust-v0.128.0,2026-04-30,"- Improved plugin workflows with marketplace installation, remote bundle caching, remote uninstall, plugin-bundled hooks, hook enablement state, and external-agent config import. (#18704, #19914, #19456, #19705, #19840, #19949)"
+rust-v0.128.0,2026-04-30,- Deprecated `--full-auto` while steering users toward explicit permission profiles and trust flows. (#20133)
+rust-v0.128.0,2026-04-30,- #19449 permissions: remove legacy read-only access modes @bolinfest
+rust-v0.128.0,2026-04-30,- #19410 Remove js_repl feature @fjord-oai
+rust-v0.128.0,2026-04-30,- #19640 [codex] remove responses command @tibo-openai
+rust-v0.128.0,2026-04-30,- #19394 permissions: remove core legacy policy round trips @bolinfest
+rust-v0.128.0,2026-04-30,- #19863 [codex-analytics] remove ga flag @rhan-oai
+rust-v0.128.0,2026-04-30,- #19841 permissions: remove cwd special path @bolinfest
+rust-v0.128.0,2026-04-30,- #19481 Remove ghost snapshots  @pakrym-oai
+rust-v0.128.0,2026-04-30,- #20066 [rollout-trace] Include x-request-id in rollout trace. @cassirer-openai
+rust-v0.128.0,2026-04-30,- #19705 Discover hooks bundled with plugins @abhinav-oai
+rust-v0.128.0,2026-04-30,- #20088 Fix flaky plugin hook env test @abhinav-oai
+rust-v0.128.0,2026-04-30,- #20100 Increase plugin hook env test timeout @abhinav-oai
+rust-v0.128.0,2026-04-30,- #20041 core tests: migrate hook turns to profiles @bolinfest
+rust-v0.128.0,2026-04-30,"- #19949 Support detect and import MCP, Subagents, hooks, commands from external @alexsong-oai"
+rust-v0.128.0,2026-04-30,- #20133 chore(cli) deprecate --full-auto @dylan-hurd-oai
+rust-v0.128.0,2026-04-30,- #20144 Fix migrated hook path rewriting @alexsong-oai
+rust-v0.128.0,2026-04-30,- #20172 TUI: Remove core protocol dependency [1/7] @etraut-openai
+rust-v0.128.0,2026-04-30,- #20123 [rollout-tracer] Match analysis messages on encrypted id. @cassirer-openai
+rust-v0.128.0,2026-04-30,- #20173 TUI: Remove core protocol dependency [2/7] @etraut-openai
+rust-v0.128.0,2026-04-30,- #20174 TUI: Remove core protocol dependency [3/7] @etraut-openai
+rust-v0.128.0,2026-04-30,- #20228 [codex-backend] Prefer sqlite git info for rollout-path reads @joeytrasatti-openai
+rust-v0.128.0,2026-04-30,- #20064 Include auto-review rollout in feedback uploads @won-openai
+rust-v0.128.0,2026-04-30,- #19778 Add hooks/list app-server RPC @abhinav-oai
+rust-v0.128.0,2026-04-30,- #20291 app-server: remove dead api version handling from bespoke events @pakrym-oai
+rust-v0.128.0,2026-04-30,- #19840 Add persisted hook enablement state @abhinav-oai
+rust-v0.129.0,2026-05-07,"- Plugin management now supports workspace sharing, share access controls, source filtering, local share path tracking, marketplace removal/upgrades, remote bundle sync, and admin-disabled status handling. (#20278, #21124, #21419, #20560, #19843, #20478, #20268, #20298)"
+rust-v0.129.0,2026-05-07,"- Hooks can be browsed and toggled from `/hooks`, can run before/after compaction, and can add `PreToolUse` context; Codex Apps auth and eligible MCP elicitations now surface through TUI/Guardian flows. (#19882, #19905, #20692, #19193, #19431)"
+rust-v0.129.0,2026-05-07,"- Fixed custom CA login behind TLS-inspecting proxies, Bedrock runtime endpoint reporting, dangerous project config keys, heredoc redirect approval matching, and unbounded MCP/hook output growth. (#20676, #20275, #20098, #20113, #20260, #21069)"
+rust-v0.129.0,2026-05-07,- Removed local-only planning/spec docs and redirected config docs toward the maintained external documentation surface. (#20896)
+rust-v0.129.0,2026-05-07,- #20260 fix(core): truncate large mcp tool outputs in rollouts @owenlin0
+rust-v0.129.0,2026-05-07,- #19843 /plugins: remove marketplace @canvrno-oai
+rust-v0.129.0,2026-05-07,- #20324 Remove core protocol dependency [1/2] @etraut-openai
+rust-v0.129.0,2026-05-07,- #20325 Remove core protocol dependency [2/2] @etraut-openai
+rust-v0.129.0,2026-05-07,- #19882 Add /hooks browser for lifecycle hooks @abhinav-oai
+rust-v0.129.0,2026-05-07,- #20463 feat(rollouts): store EventMsg::ApplyPatchEnd in limited history mode @owenlin0
+rust-v0.129.0,2026-05-07,- #20522 Alias codex_hooks feature as hooks @abhinav-oai
+rust-v0.129.0,2026-05-07,- #20511 [codex] Remove unused event messages @pakrym-oai
+rust-v0.129.0,2026-05-07,- #20523 Remove no-tool goal continuation suppression @etraut-openai
+rust-v0.129.0,2026-05-07,- #20524 deprecate legacy notify @abhinav-oai
+rust-v0.129.0,2026-05-07,- #20674 Clear live hook rows when turns finalize @abhinav-oai
+rust-v0.129.0,2026-05-07,- #20896 Remove local docs and specs @etraut-openai
+rust-v0.129.0,2026-05-07,- #21054 rollout: store web search and mcp tool calls @owenlin0
+rust-v0.129.0,2026-05-07,- #20722 Remove remote plugin uninstall prefix gate @xli-oai
+rust-v0.129.0,2026-05-07,- #21122 Add turn_id to Codex skill invocation analytics @edwardysun3
+rust-v0.129.0,2026-05-07,- #21069 Spill large hook outputs from context @abhinav-oai
+rust-v0.129.0,2026-05-07,- #21170 tools: remove unused experimental `list_dir` tool @jif-oai
+rust-v0.129.0,2026-05-07,- #20692 Support PreToolUse additionalContext @abhinav-oai
+rust-v0.129.0,2026-05-07,- #21152 revert legacy notify deprecation @abhinav-oai
+rust-v0.129.0,2026-05-07,- #20321 hook trust metadata and enforcement @abhinav-oai
+rust-v0.129.0,2026-05-07,- #21276 [codex] Remove unused ListModels op @pakrym-oai
+rust-v0.129.0,2026-05-07,- #21282 [codex] Remove legacy ListSkills op @pakrym-oai
+rust-v0.129.0,2026-05-07,- #21367 rollout: coalesce thread updated_at touches @jif-oai
+rust-v0.129.0,2026-05-07,- #21281 Remove core MCP list tools op @pakrym-oai
+rust-v0.129.0,2026-05-07,- #19905 Add compact lifecycle hooks (started by vincentkoc - external contrib) @eternal-openai
+rust-v0.130.0,2026-05-08,"- Plugin details now show bundled hooks, and plugin sharing exposes link metadata plus discoverability controls. (#21447, #21495, #21637)"
+rust-v0.130.0,2026-05-08,"- Thread summaries, renames, resume, and fork paths work better through `ThreadStore`, including threads without local rollout paths. (#21264, #21265, #21266)"
+rust-v0.130.0,2026-05-08,- Removed stale “research preview” wording from the `codex exec` startup banner. (#21683)
+rust-v0.130.0,2026-05-08,"- Simplified internal surfaces by removing unused device-key APIs, extra skills roots, the remote thread-store implementation, and string-keyed MCP tool maps. (#21487, #21485, #21596, #21454)"
+rust-v0.130.0,2026-05-08,- #21447 Show plugin hooks in plugin details @abhinav-oai
+rust-v0.130.0,2026-05-08,- #21454 [codex] Remove string-keyed MCP tool maps @pakrym-oai
+rust-v0.130.0,2026-05-08,- #21265 Route ThreadManager rollout path reads through thread store @wiltzius-openai
+rust-v0.130.0,2026-05-08,- #21596 [codex] Remove remote thread store implementation @wiltzius-openai
+rust-v0.130.0,2026-05-08,- #21485 Remove skills list extra roots @xli-oai
+rust-v0.130.0,2026-05-08,- #21683 Remove exec research preview banner wording @etraut-openai
+rust-v0.131.0,2026-05-18,"- Plugin workflows gained marketplace CLI commands, version-aware sharing, share checkout, clearer shared-workspace buckets, and default-enabled plugin hooks. (#21396, #22397, #22425, #22435, #22549)"
+rust-v0.131.0,2026-05-18,"- Improved Git and auth reliability by using root worktree hooks consistently, ignoring repo hook/fsmonitor config in helper commands, binding local MCP OAuth callbacks, and revoking superseded login tokens. (#21969, #22843, #22652, #20237, #21747)"
+rust-v0.131.0,2026-05-18,"- Removed obsolete tool paths, feature flags, config gates, and legacy hooks as defaults stabilized. (#21651, #21805, #22173, #22246, #22565, #22711, #22717, #22724, #22730)"
+rust-v0.131.0,2026-05-18,- #21443 [sandboxing] Remove Darwin user cache write from Seatbelt network policy @evawong-oai
+rust-v0.131.0,2026-05-18,- #21465 Remove ToolName display helper @pakrym-oai
+rust-v0.131.0,2026-05-18,- #21805 [codex] Remove legacy after tool use hooks @pakrym-oai
+rust-v0.131.0,2026-05-18,- #21755 Improve hooks trust flow in TUI @abhinav-oai
+rust-v0.131.0,2026-05-18,- #21843 app-server: remove TCP websocket listener @euroelessar
+rust-v0.131.0,2026-05-18,- #21853 daemon: refresh updater after validated binary rollout @euroelessar
+rust-v0.131.0,2026-05-18,- #22159 Add Windows hook command overrides @abhinav-oai
+rust-v0.131.0,2026-05-18,- #22311 [rollout-trace] Add x-codex-inference-call-id header to inference calls. @cassirer-openai
+rust-v0.131.0,2026-05-18,- #22382 tools: remove is_mutating dispatch gating @pakrym-oai
+rust-v0.131.0,2026-05-18,- #20509 [codex] Remove workspace owner usage nudge gate @richardopenai
+rust-v0.131.0,2026-05-18,- #22381 [codex] Remove tool search bucket limit override @sayan-oai
+rust-v0.131.0,2026-05-18,- #22386 mark Feature::RemoteControl as removed @owenlin0
+rust-v0.131.0,2026-05-18,"- #22268 hooks: use new session IDs instead of thread IDs for hooks, apply parent's session ID to subagents' hooks @eternal-openai"
+rust-v0.131.0,2026-05-18,- #20319 Add allow_managed_hooks_only hook requirement @eternal-openai
+rust-v0.131.0,2026-05-18,- #22413 Remove CODEX_RS_SSE_FIXTURE test hook @pakrym-oai
+rust-v0.131.0,2026-05-18,- #22439 Remove unavailable MCP placeholder tool backfill @sayan-oai
+rust-v0.131.0,2026-05-18,- #21969 Use root repo hooks in linked worktrees @abhinav-oai
+rust-v0.131.0,2026-05-18,- #21768 add --dangerously-bypass-hook-trust CLI flag @abhinav-oai
+rust-v0.131.0,2026-05-18,- #22476 feat: add thread lifecycle contributor hooks @jif-oai
+rust-v0.131.0,2026-05-18,- #22485 feat: add token usage contributor hook @jif-oai
+rust-v0.131.0,2026-05-18,- #22214 feat(tui): remove Zellij TUI workarounds @fcoury-oai
+rust-v0.131.0,2026-05-18,- #22326 [rollout-trace] Add a trace ID to MCP calls. @cassirer-openai
+rust-v0.131.0,2026-05-18,- #22246 [codex] Remove unused legacy shell tools @pakrym-oai
+rust-v0.131.0,2026-05-18,- #22520 revert: mark Feature::RemoteControl as removed @owenlin0
+rust-v0.131.0,2026-05-18,- #22519 Deprecate TurnContext cwd and resolve_path @pakrym-oai
+rust-v0.131.0,2026-05-18,- #22527 [codex] Reuse Apps MCP path override for plugin-service rollout @adaley-openai
+rust-v0.131.0,2026-05-18,- #22549 Enable plugin hooks by default @abhinav-oai
+rust-v0.131.0,2026-05-18,- #22529 Spill oversized PreToolUse additionalContext @abhinav-oai
+rust-v0.131.0,2026-05-18,- #22535 Remove resurrected `/collab` slash command @etraut-openai
+rust-v0.131.0,2026-05-18,- #22574 Deprecate issue labeler @maxb-openai
+rust-v0.131.0,2026-05-18,- #22555 Remove connector_openai prefix filtering @ericning-o
+rust-v0.131.0,2026-05-18,- #22684 Remove SSE fixture loaders @pakrym-oai
+rust-v0.131.0,2026-05-18,- #22730 [codex] Group removed feature flags @dylan-hurd-oai
+rust-v0.131.0,2026-05-18,- #22724 [codex] Remove experimental instructions file config @dylan-hurd-oai
+rust-v0.131.0,2026-05-18,- #22820 Remove zombie tools spec module @jif-oai
+rust-v0.131.0,2026-05-18,- #22828 Run compact hooks for remote compaction v2 @jif-oai
+rust-v0.131.0,2026-05-18,- #22843 Ignore configured hooks in git helpers @bookholt-oai
+rust-v0.131.0,2026-05-18,- #22790 context: remove legacy permissions instructions helper @bolinfest
+rust-v0.132.0,2026-05-20,- #22924 app-server-protocol: remove PermissionProfile from API @bolinfest
+rust-v0.132.0,2026-05-20,- #23291 Make extension lifecycle hooks async @jif-oai
+rust-v0.132.0,2026-05-20,- #22706 [codex] Remove legacy shell output formatting paths @pakrym-oai
+rust-v0.133.0,2026-05-21,- Removed stale background terminal poll events after a process exits. (#23231)
+rust-v0.133.0,2026-05-21,- #23384 [codex] Remove external websocket session resets @pakrym-oai
+rust-v0.133.0,2026-05-21,- #22721 cleanup: Remove skill env var dependency prompting @xl-openai
+rust-v0.133.0,2026-05-21,- #23389 Remove ToolSearch feature toggle @sayan-oai
+rust-v0.133.0,2026-05-21,- #23081 [2 of 7] Remove UserInputWithTurnContext @etraut-openai
+rust-v0.133.0,2026-05-21,- #23075 [3 of 7] Remove UserTurn @etraut-openai
+rust-v0.133.0,2026-05-21,- #23390 Remove explicit connector tool undeferral @sayan-oai
+rust-v0.133.0,2026-05-21,- #22835 Remove ToolsConfig from tool planning @jif-oai
+rust-v0.133.0,2026-05-21,- #23388 [codex] Move hook request plumbing into hook runtime @pakrym-oai
+rust-v0.133.0,2026-05-21,- #22782 Add SubagentStart hook @abhinav-oai
+rust-v0.133.0,2026-05-21,- #23400 Fix empty rollout path app-server handling @wiltzius-openai
+rust-v0.133.0,2026-05-21,- #23573 Remove unused ARC monitor path @mzeng-openai
+rust-v0.133.0,2026-05-21,- #23666 feat: add turn_id and truncation_policy to extension tool calls @jif-oai
+rust-v0.133.0,2026-05-21,- #18868 Add MITM hook config model @evawong-oai
+rust-v0.133.0,2026-05-21,- #21272 Support compact SessionStart hooks @abhinav-oai
+rust-v0.133.0,2026-05-21,- #20659 Wire MITM hooks into runtime enforcement @evawong-oai
+rust-v0.133.0,2026-05-21,- #22873 Add SubagentStop hook @abhinav-oai
+rust-v0.133.0,2026-05-21,- #23764 Remove Windows sandbox resource stamping @iceweasel-oai
+rust-v0.134.0,2026-05-26,"- Added richer extension and hook context, including conversation history for extension tools and subagent identity in hook inputs. (#22882, #23963)"
+rust-v0.134.0,2026-05-26,- #23882 [codex] Stabilize subagent start hook test @jif-oai
+rust-v0.134.0,2026-05-26,- #23886 cli: remove legacy profile v1 plumbing @jif-oai
+rust-v0.134.0,2026-05-26,- #23519 [codex] Add rollout-backed thread content search @fc-oai
+rust-v0.134.0,2026-05-26,- #22552 Remove plugin hooks feature flag @abhinav-oai
+rust-v0.134.0,2026-05-26,- #23836 npm: remove legacy package artifact synthesis @bolinfest
+rust-v0.134.0,2026-05-26,- #22882 Add subagent identity to hook inputs @abhinav-oai
+rust-v0.134.0,2026-05-26,- #24051 config: remove legacy profile v1 resolution @jif-oai
+rust-v0.134.0,2026-05-26,- #24055 config: remove legacy profile write paths @jif-oai
+rust-v0.134.0,2026-05-26,- #24157 [codex] Remove external client session reset plumbing @pakrym-oai
+rust-v0.135.0,2026-05-28,"- Clarified image-viewing tool detail behavior and removed stale TUI composer documentation references. (#23949, #24641)"
+rust-v0.135.0,2026-05-28,"- Removed remaining legacy config-profile consumers and routed more TUI config/plugin state through app-server-owned APIs. (#24076, #24254, #24255, #24265, #24266, #24257)"
+rust-v0.135.0,2026-05-28,- #23757 Default function tools into tool hooks @abhinav-oai
+rust-v0.135.0,2026-05-28,- #24317 Respect hook trust bypass during TUI startup @etraut-openai
+rust-v0.135.0,2026-05-28,- #24474 Log rollout writer OS errors @etraut-openai
+rust-v0.135.0,2026-05-28,- #24609 Remove reserved namespaces dedup @pakrym-oai
+rust-v0.135.0,2026-05-28,- #23813 windows-sandbox: remove SandboxPolicy runner plumbing @bolinfest
+rust-v0.135.0,2026-05-28,- #24652 [codex] remove plain image wrapper spans @pakrym-oai
+rust-v0.135.0,2026-05-28,- #24658 [codex] Remove obsolete goal continuation turn marker @pakrym-oai
+rust-v0.135.0,2026-05-28,- #24744 feat: add thread idle lifecycle hook @jif-oai
+rust-v0.135.0,2026-05-28,- #24751 Drop startup context when truncating forked rollouts @jif-oai
+rust-v0.135.0,2026-05-28,- #24778 make vercel webhook url an env secret @sayan-oai
+rust-v0.135.0,2026-05-28,- #24641 [codex] Remove stale composer narrative doc references @canvrno-oai
+rust-v0.136.0,2026-06-01,"- Command-safety hardening prevents `/diff` from running repository-provided Git helpers/hooks, avoids PowerShell parser execution on non-Windows hosts, and rejects browser-origin exec-server websocket handshakes. (#24954, #24946, #24947)"
+rust-v0.136.0,2026-06-01,"- Resumed TUI sessions seed prompt history from the session transcript, multiline hook output renders as separate rows, and Vim normal-mode editing behaves correctly. (#24298, #24965, #25022)"
+rust-v0.136.0,2026-06-01,"- Refreshed Amazon Bedrock catalog metadata, including GPT-5.5, removal of unsupported OSS entries, and default-tier-only GPT model behavior. (#24701, #24960, #25318)"
+rust-v0.136.0,2026-06-01,"- Removed the stale app-server debug-client pieces and cleaned up the workspace after deletion. (#25063, #25064, #25065, #25066, #25067, #25068, #25069, #25070, #25075)"
+rust-v0.136.0,2026-06-01,"- Trimmed CI/build maintenance by moving Bazel Windows jobs to Codex runners, removing the libubsan workaround, and reverting the startup benchmark that broke musl builders. (#24952, #24782, #24937)"
+rust-v0.136.0,2026-06-01,- #24819 [codex] Remove redundant SQLite dynamic tool storage @sayan-oai
+rust-v0.136.0,2026-06-01,- #24868 [codex] Remove Python SDK language classifiers @aibrahim-oai
+rust-v0.136.0,2026-06-01,- #24870 [codex] Remove Python SDK beta warning note @aibrahim-oai
+rust-v0.136.0,2026-06-01,- #24782 Remove libubsan CI workaround @anp-oai
+rust-v0.136.0,2026-06-01,- #24960 [codex] Remove Bedrock OSS models from catalog @celia-oai
+rust-v0.136.0,2026-06-01,- #24962 Tighten hook output event schemas @abhinav-oai
+rust-v0.136.0,2026-06-01,- #25064 Remove the generated debug-client README @jif-oai
+rust-v0.136.0,2026-06-01,- #25067 Remove the debug-client CLI entrypoint @jif-oai
+rust-v0.136.0,2026-06-01,- #25069 Remove debug-client server event reader @jif-oai
+rust-v0.136.0,2026-06-01,- #25106 Remove stale rollout TODO tests @jif-oai
+rust-v0.136.0,2026-06-01,- #24965 Render multiline hook output in TUI @abhinav-oai
+rust-v0.137.0,2026-06-04,"- Local session history is safer for compressed rollouts, renamed titles, pathless side-chat reloads, and stack-heavy startup/config rebuilds (#25087, #25624, #25661, #25814, #25844, #25847)."
+rust-v0.137.0,2026-06-04,- #25577 Remove Plan-mode gate from idle turn injection @jif-oai
+rust-v0.137.0,2026-06-04,- #25087 Read compressed rollouts and materialize before append @jif-oai
+rust-v0.137.0,2026-06-04,- #25628 [codex] fix compressed rollout fixture SessionMeta initialization @fcoury-oai
+rust-v0.137.0,2026-06-04,- #25089 Compress cold local rollouts @jif-oai
+rust-v0.137.0,2026-06-04,- #25654 Parallelize cold rollout compression @jif-oai
+rust-v0.137.0,2026-06-04,- #25659 Throttle repeated rollout compression runs @jif-oai
+rust-v0.137.0,2026-06-04,- #25679 Add rollout compression counters @jif-oai
+rust-v0.137.0,2026-06-04,- #25680 Add rollout compression histograms @jif-oai
+rust-v0.137.0,2026-06-04,- #25661 Reject directory rollout paths for pathless side chats @bolinfest
+rust-v0.137.0,2026-06-04,- #25712 app-server: remove experimental persist_extended_history bool flag @owenlin0
+rust-v0.137.0,2026-06-04,- #25814 feat: reuse compressed rollout search snippets @jif-oai
+rust-v0.137.0,2026-06-04,- #25943 config: remove dead profile sandbox fallback @bolinfest
+rust-v0.138.0,2026-06-08,"- Plugin automation got richer structured output: add/remove and marketplace commands support `--json`, plugin list JSON includes marketplace source, and plugin detail data now exposes default prompts, remote MCP servers, and unavailable app templates. (#26631, #26417, #25887, #26453, #26317)"
+rust-v0.138.0,2026-06-08,- The CLI README was refreshed to remove stale guidance and better match the current documentation flow. (#26313)
+rust-v0.138.0,2026-06-08,"- TUI startup does less repeated plugin work by reusing discovery results and loading only hook metadata on the critical path. (#26469, #26272)"
+rust-v0.138.0,2026-06-08,- #26272 Load plugin hooks without other plugin capabilities @charliemarsh-oai
+rust-v0.138.0,2026-06-08,- #26447 Remove response.processed websocket request @pakrym-oai
+rust-v0.138.0,2026-06-08,- #26674 protocol: remove submission-side serde from Op @pakrym-oai
+rust-v0.138.0,2026-06-08,- #25936 [codex] Remove legacy remote plugin startup sync @xl-openai
+rust-v0.138.0,2026-06-08,- #26716 Remove `just bench-smoke` from `just test`. @anp-oai
+rust-v0.139.0,2026-06-09,- #27106 [codex] Remove remote compaction failure log @pakrym-oai
+rust-v0.140.0,2026-06-15,"- Corrupted SQLite state databases are now backed up and rebuilt automatically from rollout data, including malformed database-directory cases. (#26859, #27719)"
+rust-v0.140.0,2026-06-15,"- Persisted “Don’t remind me” update dismissals reliably and cleared stale running-hook indicators after completed turns. (#27619, #27783)"
+rust-v0.140.0,2026-06-15,- Removed the experimental `/realtime` voice controls and related audio dependencies from the TUI. (#27801)
+rust-v0.140.0,2026-06-15,- #27031 Avoid rereading rollout history during cold resume @zanie-oai
+rust-v0.140.0,2026-06-15,- #27174 feat: keep child MCP warnings out of parent transcript @jif-oai
+rust-v0.140.0,2026-06-15,- #27383 Remove async-trait from extension contributors @jif-oai
+rust-v0.140.0,2026-06-15,- #27264 [codex] Store compact window id in rollout @pakrym-oai
+rust-v0.140.0,2026-06-15,- #27276 Reduce archive rollout lookup CPU @etraut-openai
+rust-v0.140.0,2026-06-15,- #27407 Fix compressed rollout search path matching @jif-oai
+rust-v0.140.0,2026-06-15,- #27304 [codex] Remove async_trait from ToolExecutor @anp-oai
+rust-v0.140.0,2026-06-15,- #27064 [codex] remove blocking external agent migration flow @stefanstokic-oai
+rust-v0.140.0,2026-06-15,- #27465 [codex] Remove redundant plugin app auth state @xl-openai
+rust-v0.140.0,2026-06-15,- #27484 Remove TUI legacy core test_support dependencies @etraut-openai
+rust-v0.140.0,2026-06-15,- #27490 Remove TUI legacy Windows sandbox dependency @etraut-openai
+rust-v0.140.0,2026-06-15,- #27433 [codex] remove EnvironmentPathRef @anp-oai
+rust-v0.140.0,2026-06-15,- #26418 [codex] Avoid duplicate hooks.json discovery with profiles @abhinav-oai
+rust-v0.140.0,2026-06-15,- #27700 Remove fs/join and fs/parent from exec-server protocol @anp-oai
+rust-v0.140.0,2026-06-15,- #26426 Warn when hooks.json has unsupported top-level fields @abhinav-oai
+rust-v0.140.0,2026-06-15,- #27619 tui: clear stale hook row after turn completion @kotakem-openai
+rust-v0.140.0,2026-06-15,- #27475 [codex] Remove async_trait from first-party code @anp-oai
+rust-v0.140.0,2026-06-15,- #27791 Reject transcript backtrack in side conversations @etraut-openai
+rust-v0.140.0,2026-06-15,- #27801 Remove TUI realtime voice support @etraut-openai
+rust-v0.141.0,2026-06-18,"- Hook trust bypass now persists through `codex exec` thread start and resume, while blocking `PostToolUse` hooks correctly reject code-mode tool calls. (#26434, #28365)"
+rust-v0.141.0,2026-06-18,- #27794 Remove terminal resize reflow flag gates @etraut-openai
+rust-v0.141.0,2026-06-18,- #28344 [codex] remove stale PathExt import @pakrym-oai
+rust-v0.141.0,2026-06-18,- #28365 Respect blocking PostToolUse hooks in code mode @abhinav-oai
+rust-v0.141.0,2026-06-18,- #26434 Preserve hook trust bypass in codex exec threads @abhinav-oai
+rust-v0.142.0,2026-06-22,"- Configurable rollout token budgets track usage across agent threads, provide remaining-budget reminders, and abort turns when exhausted. (#28746, #28494, #28707, #29423)"
+rust-v0.142.0,2026-06-22,"- Reduced persistent-log churn by removing per-event WebSocket payload logging and filtering duplicated telemetry records. (#29432, #29457)"
+rust-v0.142.0,2026-06-22,- #28338 [codex] Compress cold active rollouts @jif-oai
+rust-v0.142.0,2026-06-22,- #28638 core: remove redundant TurnContext and Prompt fields @pakrym-oai
+rust-v0.142.0,2026-06-22,- #28632 Tell codex to avoid changing rollout format. @anp-oai
+rust-v0.142.0,2026-06-22,- #28746 [codex] add rollout token budget configuration (1/N) @rka-oai
+rust-v0.142.0,2026-06-22,- #28494 [codex] rollout budget implementation (2/N) @rka-oai
+rust-v0.142.0,2026-06-22,- #28947 [codex] Remove hardcoded app ID filters @ericning-o
+rust-v0.142.0,2026-06-22,- #28993 [codex] Remove child AGENTS.md prompt experiment @pakrym-oai
+rust-v0.142.0,2026-06-22,- #28707 [codex] abort turns when rollout budgets expire (token budget 3/3) @rka-oai
+rust-v0.142.0,2026-06-22,- #29429 remove flag for image preparation @rka-oai
+rust-v0.142.0,2026-06-22,- #29468 core: remove unused permissions cwd plumbing @bolinfest
+rust-v0.142.0,2026-06-22,- #29423 [codex] configure rollout budget reminder thresholds @rka-oai
+rust-v0.142.2,2026-06-25,- #28360 feat(core): store turn_id on ResponseItem metadata @owenlin0
+rust-v0.143.0,2026-07-08,"- Preserved trailing realtime transcript text and terminal rollout events during shutdown. (#29918, #30144)"
+rust-v0.143.0,2026-07-08,- #28360 feat(core): store turn_id on ResponseItem metadata @owenlin0
+rust-v0.143.0,2026-07-08,- #29518 Remove redundant Codex Apps manager flag @aibrahim-oai
+rust-v0.143.0,2026-07-08,- #29575 Remove redundant Codex Apps cache guard @aibrahim-oai
+rust-v0.143.0,2026-07-08,- #28426 Share resumed rollout history @charliemarsh-oai
+rust-v0.143.0,2026-07-08,- #29498 [codex] Instrument rollout persistence bytes @wiltzius-openai
+rust-v0.143.0,2026-07-08,- #29672 [codex] Handle additional tools in rollout persistence metrics @rka-oai
+rust-v0.143.0,2026-07-08,- #29669 Handle additional tools in rollout persistence metrics @winston-openai
+rust-v0.143.0,2026-07-08,"- #29680 Revert ""Handle additional tools in rollout persistence metrics"" @rasmusrygaard"
+rust-v0.143.0,2026-07-08,- #29158 path-uri: remove legacy path deserialization @anp-oai
+rust-v0.143.0,2026-07-08,- #29715 [codex] surface rollout budget exhaustion @rka-oai
+rust-v0.143.0,2026-07-08,- #29732 code-mode: Remove Session::is_alive() @cconger
+rust-v0.143.0,2026-07-08,- #29744 [codex] rename rollout budget error to session budget error @rka-oai
+rust-v0.143.0,2026-07-08,- #29815 [codex] Remove auto-compaction opt-out @rhan-oai
+rust-v0.143.0,2026-07-08,- #29835 [2/3] core: persist world state in rollouts @sayan-oai
+rust-v0.143.0,2026-07-08,- #29928 chore(app-server): mark thread/rollback as deprecated @owenlin0
+rust-v0.143.0,2026-07-08,- #30110 [codex] add code-mode host failure supervision hooks @cconger
+rust-v0.143.0,2026-07-08,- #30144 [codex] fix terminal rollout event durability @wiltzius-openai
+rust-v0.143.0,2026-07-08,- #30229 Relax hooks.json top-level metadata validation @charlesgong-openai
+rust-v0.143.0,2026-07-08,- #30277 feat(app-server): add optional turn_id to thread/fork @owenlin0
+rust-v0.143.0,2026-07-08,- #30282 feat(protocol): define missing rollout turn items @owenlin0
+rust-v0.143.0,2026-07-08,- #30757 fix(core) Remove full text websocket trace @dylan-hurd-oai
+rust-v0.143.0,2026-07-08,- #31066 chore: remove unused git-cliff configuration @bolinfest
+rust-v0.143.0,2026-07-08,- #31179 Remove TUI exec-policy core exports @etraut-openai
+rust-v0.143.0,2026-07-08,- #31252 [tui] Truncate hook context in conversation history @abhinav-oai
+rust-v0.143.0,2026-07-08,- #29918 [codex] Flush trailing realtime transcript tail @guinness-oai
+rust-v0.144.0,2026-07-09,- #31501 trace hook command execution @wiltzius-openai
+rust-v0.144.0,2026-07-09,- #31587 Stabilize shared rollout budget test @jif-oai
+rust-v0.144.0,2026-07-09,- #31452 test: remove TestAppServer constructors @anp-oai
+rust-v0.144.0,2026-07-09,- #31630 feat(core): emit canonical hook prompt items @owenlin0
+rust-v0.144.0,2026-07-09,- #31461 chore: remove inert cargo audit workflow @anp-oai
+rust-v0.144.0,2026-07-09,- #31663 test(app-server): use native rollout fixture paths @fcoury-oai
+rust-v0.144.0,2026-07-09,- #30188 feat(rollout): persist TurnItems for paginated thread rollouts @owenlin0
+rust-v0.145.0,2026-07-21,"- Improved Windows execution and sandbox reliability, including native exec-server sandboxing, network-proxy enforcement, hidden helper consoles, and correctly quoted hook commands. (#32849, #32857, #33926, #34423)"
+rust-v0.145.0,2026-07-21,- #31767 Remove the network proxy config wrapper @jif-oai
+rust-v0.145.0,2026-07-21,- #32093 Remove the legacy exec policy engine @copyberry
+rust-v0.145.0,2026-07-21,- #32213 Generate unique IDs for review rollout messages @copyberry
+rust-v0.145.0,2026-07-21,- #32232 Let permission hooks resolve strict auto-review requests @copyberry
+rust-v0.145.0,2026-07-21,- #32274 Remove the personality migration @copyberry
+rust-v0.145.0,2026-07-21,- #32276 Repair unterminated rollout files before appending @copyberry
+rust-v0.145.0,2026-07-21,- #32301 Trust hooks from materialized workspace plugins @copyberry
+rust-v0.145.0,2026-07-21,- #32332 Add ordinals to paginated rollout records @copyberry
+rust-v0.145.0,2026-07-21,- #32896 Load model context from a bounded rollout suffix @copyberry
+rust-v0.145.0,2026-07-21,- #33030 Remove task messages from `list_agents` output @copyberry
+rust-v0.145.0,2026-07-21,- #33446 Remove the unused network proxy loader @copyberry
+rust-v0.145.0,2026-07-21,- #33467 Remove template IDs from MCP tool call metadata @copyberry
+rust-v0.145.0,2026-07-21,- #33632 Remove generated-default filesystem path variants @copyberry
+rust-v0.145.0,2026-07-21,- #33639 Remove the unused realtime WebRTC crate @copyberry
+rust-v0.145.0,2026-07-21,- #33855 Tag realtime transcript tail flush delegations @copyberry
+rust-v0.145.0,2026-07-21,- #33858 Isolate core tests from shell and rollout persistence @copyberry
+rust-v0.145.0,2026-07-21,- #33866 Remove the redundant tool dispatch wrapper @copyberry
+rust-v0.145.0,2026-07-21,- #33868 Remove stale ignored core tests @copyberry
+rust-v0.145.0,2026-07-21,- #33870 Remove the redundant borrowed line wrapping helper @copyberry
+rust-v0.145.0,2026-07-21,- #33872 Remove unused TUI collaboration mode indicators @copyberry
+rust-v0.145.0,2026-07-21,- #33892 Limit rollout metadata reads to headers @copyberry
+rust-v0.145.0,2026-07-21,- #33895 Add SessionEnd hooks for thread teardown @copyberry
+rust-v0.145.0,2026-07-21,- #33926 Fix quoted hook commands on Windows @copyberry
+rust-v0.145.0,2026-07-21,- #33930 Track inherited paginated rollout prefixes @copyberry
+rust-v0.145.0,2026-07-21,- #34038 Handle compressed rollouts in doctor thread inventory @copyberry
+rust-v0.145.0,2026-07-21,- #34194 Avoid cloning thread data when rendering transcripts @copyberry
+rust-v0.145.0,2026-07-21,- #34232 Remeasure dynamic cells in the transcript overlay @copyberry
+rust-v0.145.0,2026-07-21,- #34344 Reject unsupported history modes when loading rollouts @copyberry
+rust-v0.145.0,2026-07-21,- #34345 Remove unused Rust helpers @copyberry
+rust-v0.145.0,2026-07-21,- #34393 Add configurable hook context spill limits @copyberry
+rust-v0.145.0,2026-07-21,- #34396 Run compact session-start hooks before turn continuation @copyberry
+rust-v0.145.0,2026-07-21,- #34403 Update tests for history and hook API changes @copyberry
+rust-v0.145.0,2026-07-21,- #34407 Resolve paginated rollout lineages @copyberry
+rust-v0.145.0,2026-07-21,- #34413 Remove CSV-backed agent jobs @copyberry
+rust-v0.145.0,2026-07-21,- #34416 Show completed hook warnings in TUI headers @copyberry
+rust-v0.146.0,2026-07-29,"- Support Agent Plugins manifests, workspace plugin publishing, and additional plugin marketplaces for Amazon Bedrock and Claude Code. (#35105, #35254, #34931, #34979)"
+rust-v0.146.0,2026-07-29,- #34533 Centralize compacted rollout item construction @copyberry
+rust-v0.146.0,2026-07-29,- #34552 Remove unused RtOptions setters @copyberry
+rust-v0.146.0,2026-07-29,- #34553 Remove the unused TUI shutdown app command @copyberry
+rust-v0.146.0,2026-07-29,- #34558 Remove obsolete ignored tests @copyberry
+rust-v0.146.0,2026-07-29,- #34562 Record rollout boundaries for materialized turns @copyberry
+rust-v0.146.0,2026-07-29,- #34566 Protect fork history references during rollout cleanup @copyberry
+rust-v0.146.0,2026-07-29,- #34621 Load paginated model context across rollout lineages @copyberry
+rust-v0.146.0,2026-07-29,- #34734 Remove step-scoped data from extension contributors @copyberry
+rust-v0.146.0,2026-07-29,- #34795 Remove obsolete step store from git attribution tests @copyberry
+rust-v0.146.0,2026-07-29,- #34827 Remove Windows Bazel lint toolchain overrides @copyberry
+rust-v0.146.0,2026-07-29,- #34844 Remove first-party type from app metadata @copyberry
+rust-v0.146.0,2026-07-29,- #35194 Preserve output from hooks that exit before reading stdin @copyberry
+rust-v0.146.0,2026-07-29,- #35221 Avoid persisting non-local threads for hook transcripts @copyberry
+rust-v0.147.0,2026-08-07,"- Organize conversations into persistent, manually ordered sections and browse long transcripts incrementally. (#35722, #36007, #36380, #36948, #36950)"
+rust-v0.147.0,2026-08-07,- Remove the deprecated `codex exec --full-auto` flag; use `--sandbox workspace-write` instead. (#36054)
+rust-v0.147.0,2026-08-07,- #35644 Preserve thread metadata when rollout files are missing @copyberry
+rust-v0.147.0,2026-08-07,- #35982 Avoid cloning rollout history when truncating forks @copyberry
+rust-v0.147.0,2026-08-07,- #35997 Remove obsolete rusty_v8 146.4.0 Bazel targets @copyberry
+rust-v0.147.0,2026-08-07,- #36006 Reduce response serialization and rollout scan overhead @copyberry
+rust-v0.147.0,2026-08-07,- #36054 Remove legacy `--full-auto` handling from `codex exec` @copyberry
+rust-v0.147.0,2026-08-07,- #36076 Remove codex-core's direct reqwest dependency @copyberry
+rust-v0.147.0,2026-08-07,- #36188 Make thread history projection resilient to malformed rollouts @copyberry
+rust-v0.147.0,2026-08-07,- #36221 Ignore passthrough metadata when reconciling rollout items @copyberry
+rust-v0.147.0,2026-08-07,- #36271 Derive report prompt hashes from persisted rollouts @copyberry
+rust-v0.147.0,2026-08-07,- #36411 Use Git repositories as pre-tool hook test markers @copyberry
+rust-v0.147.0,2026-08-07,- #36641 Capture rollout budget units from response usage @copyberry
+rust-v0.147.0,2026-08-07,- #36715 Use provider-reported rollout budget units @copyberry
+rust-v0.147.0,2026-08-07,- #36948 Paginate transcript history in the TUI @copyberry
+rust-v0.147.0,2026-08-07,- #36950 Paginate TUI transcript history @copyberry
+rust-v0.147.0,2026-08-07,- #36990 Remove legacy collaboration mode variants @copyberry
+rust-v0.147.0,2026-08-07,- #37175 Add legacy rollout migration to paginated history @copyberry
+rust-v0.148.0,2026-08-18,"- Hooks can now run commands asynchronously and invoke MCP tools. (#37533, #38705)"
+rust-v0.148.0,2026-08-18,"- Resumed sessions now restore their persisted working directory and approval policy, with more accurate transcript previews. (#37198, #37368, #38605)"
+rust-v0.148.0,2026-08-18,"- Composer and transcript rendering now handle CRLF pastes, wrapped whitespace, and long URLs correctly. (#37709, #38380, #38704)"
+rust-v0.148.0,2026-08-18,- #37191 Preserve legacy semantics during rollout migration @copyberry
+rust-v0.148.0,2026-08-18,- #37348 Add rollout migration tooling and background migration @copyberry
+rust-v0.148.0,2026-08-18,- #37363 Recognize MCP tool hook configurations @copyberry
+rust-v0.148.0,2026-08-18,- #37457 Remove the legacy core skill loader @copyberry
+rust-v0.148.0,2026-08-18,- #37461 Remove the unused remote skills client @copyberry
+rust-v0.148.0,2026-08-18,- #37500 Remove the legacy code-mode tool metadata inventory @copyberry
+rust-v0.148.0,2026-08-18,- #37505 Remove the codex-core-skills crate @copyberry
+rust-v0.148.0,2026-08-18,- #37527 Terminate timed-out hook process trees @copyberry
+rust-v0.148.0,2026-08-18,- #37533 Support asynchronous command hooks @copyberry
+rust-v0.148.0,2026-08-18,- #37538 Expose execution mode in hook listings @copyberry
+rust-v0.148.0,2026-08-18,- #37644 Generalize hook handler execution @copyberry
+rust-v0.148.0,2026-08-18,- #37832 Remove obsolete plugin skill discovery helpers @copyberry
+rust-v0.148.0,2026-08-18,- #38011 Remove config lockfile support @copyberry
+rust-v0.148.0,2026-08-18,- #38034 Filter live rollout items in place @copyberry
+rust-v0.148.0,2026-08-18,- #38083 Remove standard form input from app-server docs @copyberry
+rust-v0.148.0,2026-08-18,- #38127 Distinguish rollout IDs from thread IDs @copyberry
+rust-v0.148.0,2026-08-18,- #38243 Track client-authored developer messages in rollout history @copyberry
+rust-v0.148.0,2026-08-18,- #38244 Resolve paginated thread history by rollout ID @copyberry
+rust-v0.148.0,2026-08-18,- #38291 Remove unused apply_patch prompt fallback @copyberry
+rust-v0.148.0,2026-08-18,- #38361 Test hook rejection for explicitly started queue items @copyberry
+rust-v0.148.0,2026-08-18,- #38363 Persist security risk scores in rollout history @copyberry
+rust-v0.148.0,2026-08-18,- #38394 Reject sessions with unloadable required managed hooks @copyberry
+rust-v0.148.0,2026-08-18,- #38399 Preserve floating-point values when decoding rollout lines @copyberry
+rust-v0.148.0,2026-08-18,- #38414 Add bounded transcript rendering for Guardian v2 @copyberry
+rust-v0.148.0,2026-08-18,- #38555 Preserve Guardian transcript boundaries in sampling input @copyberry
+rust-v0.148.0,2026-08-18,- #38558 Improve Guardian transcript context selection @copyberry
+rust-v0.148.0,2026-08-18,- #38568 Run tool start callbacks after pre-tool hooks @copyberry
+rust-v0.148.0,2026-08-18,- #38579 Report thread storage changes after rollout migration @copyberry
+rust-v0.148.0,2026-08-18,- #38604 Avoid paginated resume requests for verified legacy rollouts @copyberry
+rust-v0.148.0,2026-08-18,- #38605 Fix resume transcript preview line selection @copyberry
+rust-v0.148.0,2026-08-18,- #38615 Remove the gRPC code-mode enabled tool limit @copyberry
+rust-v0.148.0,2026-08-18,- #38630 Remove the gRPC code-mode open session limit @copyberry
+rust-v0.148.0,2026-08-18,- #38635 Remove repository-local Codex skills @copyberry
+rust-v0.148.0,2026-08-18,- #38703 Refresh hook runtimes after plugin changes @copyberry
+rust-v0.148.0,2026-08-18,- #38705 Add MCP tool handler support to the hooks engine @copyberry
+rust-v0.148.0,2026-08-18,- #38746 Remove the TUI test dependency on `codex-cli` @copyberry
+rust-v0.149.0,2026-08-20,- #38987 Include images in Guardian v2 transcripts @copyberry
+rust-v0.149.0,2026-08-20,- #38994 Remove the workspace settings gate for apps and plugins @copyberry
+rust-v0.149.0,2026-08-20,- #39047 Skip plugin hook loading when hooks are disabled @copyberry
+rust-v0.149.0,2026-08-20,- #39063 Render only visible rows in the transcript pager @copyberry
+rust-v0.149.0,2026-08-20,- #39068 Remove skill model delegation support @copyberry
+rust-v0.149.0,2026-08-20,- #39115 Remove the experimental thread config endpoint @copyberry
+rust-v0.149.0,2026-08-20,- #39256 Deduplicate rollout moves when archiving threads @copyberry
+rust-v0.149.0,2026-08-20,- #39273 Preserve thread names during rollout migration @copyberry
+rust-v0.149.0,2026-08-20,- #39293 Remove app-server's direct reqwest dependency @copyberry
+rust-v0.149.0,2026-08-20,- #39296 Enable MCP tool hooks in Codex sessions @copyberry
+rust-v0.149.0,2026-08-20,- #39314 Run hooks with the captured session environment @copyberry
+rust-v0.149.0,2026-08-20,- #39315 Evict guardian transcript entries in cacheable chunks @copyberry
+rust-v0.149.0,2026-08-20,- #39331 Route hook MCP calls through current connections @copyberry
+rust-v0.149.0,2026-08-20,- #39402 Remove npm package staging from repo checks @copyberry
+rust-v0.149.0,2026-08-20,- #39452 Remove the feature gate for async user messages @copyberry
+rust-v0.149.0,2026-08-20,- #39494 Test panoramic Guardian transcript image resizing @copyberry
+rust-v0.149.0,2026-08-20,- #39509 Test disabled enhanced Node REPL transcript images separately @copyberry
+rust-v0.149.0,2026-08-20,- #39657 Warn when launching the deprecated MCP server @copyberry
+rust-v0.150.0,2026-08-26,- New `Interrupt` hooks can run commands or MCP handlers when an active top-level turn is interrupted. (#40511)
+rust-v0.150.0,2026-08-26,- #39707 Remove redundant code mode image helper test @copyberry
+rust-v0.150.0,2026-08-26,- #39731 Avoid rollout reads for configured TUI sessions @copyberry
+rust-v0.150.0,2026-08-26,- #39736 Remove private executor directory creation @copyberry
+rust-v0.150.0,2026-08-26,- #39784 Classify rollout migration failures @copyberry
+rust-v0.150.0,2026-08-26,- #40009 Run allowlisted executor plugin stop hooks @copyberry
+rust-v0.150.0,2026-08-26,- #40012 Preserve executor context for MCP stop hooks @copyberry
+rust-v0.150.0,2026-08-26,- #40020 Add end-to-end tests for executor Stop hooks @copyberry
+rust-v0.150.0,2026-08-26,- #40200 Remove the Plan mode composer nudge @copyberry
+rust-v0.150.0,2026-08-26,- #40398 Stabilize the mismatched executor Stop hook test @copyberry
+rust-v0.150.0,2026-08-26,- #40499 Harden startup rollout migration against concurrent updates @copyberry
+rust-v0.150.0,2026-08-26,- #40511 Add hooks for interrupted turns @copyberry
+rust-v0.150.0,2026-08-26,- #40554 Register the transcript v2 feature flag @copyberry
+rust-v0.150.0,2026-08-26,- #40587 Scope stop hooks for memory consolidation @copyberry
+rust-v0.150.0,2026-08-26,- #40594 Preserve conversation context in Guardian transcripts @copyberry
+rust-v0.152.0,2026-09-01,- Automatic approval reviews can retain longer messages and a larger conversation transcript. (#41931)
+rust-v0.152.0,2026-09-01,- #41357 Support compression for shared rollout lineages @copyberry
+rust-v0.152.0,2026-09-01,- #41364 Test resuming compressed shared rollouts @copyberry
+rust-v0.152.0,2026-09-01,- #41422 Add shared Guardian transcript collection @copyberry
+rust-v0.152.0,2026-09-01,- #41432 Run executor hooks for interrupted turns @copyberry
+rust-v0.152.0,2026-09-01,- #41435 Allow bundled browser cleanup hooks on subagent stop @copyberry
+rust-v0.152.0,2026-09-01,- #41456 Support app targets in executor plugin hooks @copyberry
+rust-v0.152.0,2026-09-01,- #41931 Increase Guardian message transcript limits
+rust-v0.153.0,2026-09-03,"- The plugin CLI can list, install, and remove plugins from remote marketplaces. ([#42150](https://github.com/openai/codex/pull/42150))"
+rust-v0.153.0,2026-09-03,"- TUI sessions reconnect after an external app-server connection drops, preserving drafts and transcripts while keeping uncertain or queued submissions paused for review. ([#41911](https://github.com/openai/codex/pull/41911), [#41916](https://github.com/openai/codex/pull/41916), [#41918](https://github.com/openai/codex/pull/41918))"
+rust-v0.153.0,2026-09-03,"- Rollout compression includes shared histories, `codex exec resume` handles compressed rollouts when selecting by working directory, and thread forks work with symlinked session roots. ([#42039](https://github.com/openai/codex/pull/42039), [#42135](https://github.com/openai/codex/pull/42135))"
+rust-v0.153.0,2026-09-03,- [#41870](https://github.com/openai/codex/pull/41870) Use shared transcript collection for Guardian reviews
+rust-v0.153.0,2026-09-03,- [#41908](https://github.com/openai/codex/pull/41908) Avoid scanning archived rollouts when archiving threads
+rust-v0.153.0,2026-09-03,- [#41912](https://github.com/openai/codex/pull/41912) Persist response token usage in rollout history
+rust-v0.153.0,2026-09-03,- [#41940](https://github.com/openai/codex/pull/41940) Preserve transcript layout caches during backtrack selection
+rust-v0.153.0,2026-09-03,- [#42039](https://github.com/openai/codex/pull/42039) Include shared histories in rollout compression
+rust-v0.153.0,2026-09-03,- [#42066](https://github.com/openai/codex/pull/42066) Remove selected core test cases
+rust-v0.153.0,2026-09-03,- [#42069](https://github.com/openai/codex/pull/42069) Remove redundant test coverage
+rust-v0.153.0,2026-09-03,- [#42110](https://github.com/openai/codex/pull/42110) Treat bundled cleanup hooks as built-ins
+rust-v0.153.0,2026-09-03,- [#42118](https://github.com/openai/codex/pull/42118) Refine hook activity rendering in the TUI
+rust-v0.154.0,2026-09-09,"- Existing sessions pick up newly installed plugin tools and refresh skills and hooks after external plugin upgrades or rollbacks. (#42284, #42593, #42990)"
+rust-v0.154.0,2026-09-09,- Resuming a conversation open in another app now shows a read-only transcript with a retry option while preserving your draft. (#43253)
+rust-v0.154.0,2026-09-09,- The deprecated `codex mcp-server` entry point is no longer available. (#42993)
+rust-v0.154.0,2026-09-09,- #42378 Route rollout reads through the canonical JSON decoder @copyberry
+rust-v0.154.0,2026-09-09,- #42602 Deprecate detached review delivery @copyberry
+rust-v0.154.0,2026-09-09,- #42990 Refresh session hooks after external plugin updates @copyberry
+rust-v0.154.0,2026-09-09,- #42993 Remove the deprecated `codex mcp-server` command @copyberry
+rust-v0.154.0,2026-09-09,- #43421 Remove the app-server README and its contributor guidance references @copyberry
+rust-v0.154.0,2026-09-09,- #43423 Remove the app-server docs update requirement from `AGENTS.md` @copyberry
+rust-v0.154.0,2026-09-09,- #43462 Remove legacy Guardian approval review paths @copyberry
+rust-v0.154.0,2026-09-09,- #43494 Limit archive rollout reads to requested threads @copyberry
+python-v0.154.0,2026-09-10,"- `HookMetadata` wraps its handler in `.root`. Replace accesses such as `hook.command` with `hook.root.command`, checking `hook.root.handler_type` before reading handler-specific fields."
+rust-v0.155.0,2026-09-17,"- Added experimental `/voice` conversations with live transcripts and microphone controls on supported builds, enabled through `/experimental`. (#43581, #43651, #44331)"
+rust-v0.155.0,2026-09-17,"- Fixed missed tmux resizes, transcript viewport restoration, and stale history appearing after switching threads. (#43603, #43889, #43994)"
+rust-v0.155.0,2026-09-17,- #43584 Remove a stale transcript field assignment from the TUI @copyberry
+rust-v0.155.0,2026-09-17,- #43656 Animate live voice transcripts with split-flap tiles @copyberry
+rust-v0.155.0,2026-09-17,- #43676 Style spoken prompts and link workspace files in voice transcripts @copyberry
+rust-v0.155.0,2026-09-17,- #43699 Preserve split-flap animation state when voice transcripts scroll @copyberry
+rust-v0.155.0,2026-09-17,- #43798 Batch non-user history eviction to preserve Guardian transcript deltas @copyberry
+rust-v0.155.0,2026-09-17,- #43806 Centralize Guardian transcript policy in context profiles @copyberry
+rust-v0.155.0,2026-09-17,- #43876 Detach Unix hook commands from the controlling terminal @copyberry
+rust-v0.155.0,2026-09-17,- #43889 Fix transcript viewer restoration and half-page scrolling @copyberry
+rust-v0.155.0,2026-09-17,- #43915 Remove the repository devcontainer configurations @copyberry
+rust-v0.155.0,2026-09-17,- #43994 Clear stale transcript history when switching threads @copyberry
+rust-v0.155.0,2026-09-17,- #44138 Coordinate rollout compression with active thread writers @copyberry
+rust-v0.155.0,2026-09-17,- #44175 Attach compressed rollouts to diagnostic reports as JSONL @copyberry
+rust-v0.155.0,2026-09-17,- #44226 Continue rollout searches when a compressed rollout cannot be searched @copyberry
+rust-v0.155.0,2026-09-17,- #44250 Remove retired model entries while preserving migration prompts @copyberry
+rust-v0.155.0,2026-09-17,- #44259 Remove the Windows `/sandbox-add-read-dir` slash command @copyberry
+rust-v0.155.0,2026-09-17,- #44273 Remove the unused legacy remote compaction implementation @copyberry
+rust-v0.155.0,2026-09-17,- #44288 Prevent command hooks from hanging on blocked stdin @copyberry
+rust-v0.155.0,2026-09-17,- #44297 Isolate the hook pipe I/O timeout test from shell startup files @copyberry
+rust-v0.155.0,2026-09-17,- #44349 Distinguish forked sessions in session-start hooks @copyberry
+rust-v0.155.0,2026-09-17,- #44352 Remove path-bearing fields from Guardian review analytics @copyberry
+rust-v0.155.0,2026-09-17,- #44377 Update the forked-thread hook test to use `StartThreadOptions` @copyberry
+rust-v0.155.0,2026-09-17,- #44586 Remove `repo_url` from skill invocation analytics events @copyberry
+rust-v0.156.0,2026-09-22,"- Choose an optional fullscreen UI with `/tui` for your next launch, including transcript search, mouse selection, and right-click copying. (#46732, #46734, #46883, #46895)"
+rust-v0.156.0,2026-09-22,- Clarify that deprecated `friendly` and `pragmatic` personality settings no longer select response styles. (#45809)
+rust-v0.156.0,2026-09-22,- #44915 Remove the deprecated `thread/rollback` API @owenlin0
+rust-v0.156.0,2026-09-22,- #44933 Remove Windows world-writable scans and warnings from the TUI @etraut-openai
+rust-v0.156.0,2026-09-22,- #44935 Remove personality selection from the TUI @rhan-oai
+rust-v0.156.0,2026-09-22,- #45137 Remove Astra sparkle animation from the TUI composer @fcoury-oai
+rust-v0.156.0,2026-09-22,- #45248 Use captured step settings for request metadata and tool hooks @abhinav-oai
+rust-v0.156.0,2026-09-22,- #45417 Extract guardian transcript selection into `guardian-context` @felixxia-oai
+rust-v0.156.0,2026-09-22,- #45461 Label rollout compression failures by stage and I/O error kind @jif-oai
+rust-v0.156.0,2026-09-22,- #45491 Remove Guardian subagent-spawner plumbing @felixxia-oai
+rust-v0.156.0,2026-09-22,- #45683 Consolidate guardian transcript tests in `guardian-context` @felixxia-oai
+rust-v0.156.0,2026-09-22,- #45809 Retire the personality feature flag and document deprecated settings @rhan-oai
+rust-v0.156.0,2026-09-22,- #45964 Expose partial completion in rollout compression metrics @jif-oai
+rust-v0.156.0,2026-09-22,- #45966 Measure rollout read and materialization durations @jif-oai
+rust-v0.156.0,2026-09-22,- #46020 Add an experimental rollout compression endpoint @jif-oai
+rust-v0.156.0,2026-09-22,- #46029 Allow browser app cleanup hooks on interrupt @syuan-oai
+rust-v0.156.0,2026-09-22,- #46047 Tag rollout compression metrics by trigger @jif-oai
+rust-v0.156.0,2026-09-22,- #46067 Remove the `done` prefix from TUI completion timestamps @etraut-openai
+rust-v0.156.0,2026-09-22,- #46532 Remove `com.apple.runningboard` from Seatbelt platform defaults @nornagon-openai
+rust-v0.156.0,2026-09-22,- #46559 Encapsulate rollout budget accounting in `LocalAgentControl` @jif-oai
+rust-v0.156.0,2026-09-22,- #46709 Add compact activity rendering and preserve transcript source text @etraut-openai
+rust-v0.156.0,2026-09-22,- #46710 Restore rich tool details in persisted TUI transcripts @etraut-openai
+rust-v0.156.0,2026-09-22,- #46719 Extract the TUI transcript overlay into its own module @etraut-openai
+rust-v0.156.0,2026-09-22,- #46720 Cache transcript layouts across measurement and rendering @etraut-openai
+rust-v0.156.0,2026-09-22,- #46721 Anchor transcript scrolling to entries and bound viewport rendering @etraut-openai
+rust-v0.156.0,2026-09-22,- #46722 Cancel pending transcript Home jumps on subsequent navigation @etraut-openai
+rust-v0.156.0,2026-09-22,- #46732 Add selection and copying to the transcript viewer @etraut-openai
+rust-v0.156.0,2026-09-22,- #46733 Integrate the interactive transcript into the alternate-screen TUI @etraut-openai
+rust-v0.156.0,2026-09-22,- #46734 Add transcript search and per-activity detail controls @etraut-openai
+rust-v0.156.0,2026-09-22,- #46739 Add compact transcript browsing and prompt navigation to the TUI @etraut-openai
+rust-v0.156.0,2026-09-22,- #46749 Stabilize transcript and composer interactions in the TUI @etraut-openai
+rust-v0.156.0,2026-09-22,- #46849 Move fullscreen transcript control to TUI configuration @etraut-openai
+rust-v0.156.0,2026-09-22,- #46861 Remove analytics TUI snapshots @etraut-openai
+rust-v0.156.0,2026-09-22,- #46879 Count TUI launches by fullscreen transcript configuration @etraut-openai
+rust-v0.156.0,2026-09-22,- #46884 Enable plain clicks on transcript links and style bare URLs @etraut-openai
+rust-v0.156.0,2026-09-22,- #46895 Add right-click copying for transcript and composer selections @fcoury-oai
+rust-v0.156.0,2026-09-22,- #46899 Make transcript list spacing uniform after streaming @fcoury-oai
+rust-v0.156.0,2026-09-22,- #46902 Hide Back to bottom when the current transcript tail is visible @fcoury-oai
+rust-v0.156.0,2026-09-22,- #46910 Preserve transcript position when opening settings pickers @etraut-openai
+rust-v0.156.0,2026-09-22,- #46922 Fix realtime V3 transcript reconciliation for handoffs @etraut-openai
+rust-v0.156.0,2026-09-22,- #46929 Remove the `Error` prefix from TUI `config.toml` load errors @etraut-openai
+rust-v0.156.0,2026-09-22,- #47026 Add diagnostics for rollout compression metadata failures @jif-oai
+rust-v0.156.0,2026-09-22,- #47039 Preserve delivered messages through post-tool hook failures @felixxia-oai
+rust-v0.157.0,2026-09-25,"- Enabled fullscreen transcripts by default and added Shift-click to extend text selections. (#47178, #47414)"
+rust-v0.157.0,2026-09-25,- #47065 Deduplicate deprecation notices in the TUI transcript @etraut-openai
+rust-v0.157.0,2026-09-25,- #47068 Highlight selected newlines in the transcript view @etraut-openai
+rust-v0.157.0,2026-09-25,- #47077 Serialize environment updates and cancel removed pending attachments @sayan-oai
+rust-v0.157.0,2026-09-25,- #47095 Remove the `rust-release-prepare` workflow @andrewgu-oai
+rust-v0.157.0,2026-09-25,- #47113 Persist thread creator identity in rollouts and SQLite @nornagon-openai
+rust-v0.157.0,2026-09-25,- #47130 Remove the `ultrafast` service tier from `gpt-5.6-sol` @andrewgu-oai
+rust-v0.157.0,2026-09-25,- #47137 Prevent horizontal transcript selection from triggering autoscroll @imac-oai
+rust-v0.157.0,2026-09-25,- #47178 Enable the fullscreen transcript by default @etraut-openai
+rust-v0.157.0,2026-09-25,- #47258 Test spawn settings reporting after child removal @jif-oai
+rust-v0.157.0,2026-09-25,- #47331 Avoid redundant spacing above the transcript composer @fcoury-oai
+rust-v0.157.0,2026-09-25,- #47355 Reserve spacing after recaps at the transcript tail @fcoury-oai
+rust-v0.157.0,2026-09-25,- #47384 Restore composer hints after clearing selection at the transcript bottom @fcoury-oai
+rust-v0.157.0,2026-09-25,- #47414 Support Shift-click to extend transcript selections @etraut-openai
+rust-v0.158.0,2026-09-28,"- Configure copy-on-select and right-click paste in the fullscreen TUI. Copied transcript selections now preserve Markdown formatting. (#47639, #47896, #48118)"
+rust-v0.158.0,2026-09-28,- #47441 Use secondary text styling for the transcript footer shortcut hint @etraut-openai
+rust-v0.158.0,2026-09-28,- #47565 Classify rollout read failures by reason and progress @jif-oai
+rust-v0.158.0,2026-09-28,- #47610 Use native POSIX spawning for command hooks @charliemarsh-oai
+rust-v0.158.0,2026-09-28,- #47639 Add configurable copy-on-select for transcript selections @fcoury-oai
+rust-v0.158.0,2026-09-28,- #47653 Attach inherited rollout history to diagnostic reports @dkovalenko-oai
+rust-v0.158.0,2026-09-28,- #47679 Add extension hooks for model requests and response streams @euroelessar
+rust-v0.158.0,2026-09-28,- #47688 Remove legacy Guardian authorization evidence paths @felixxia-oai
+rust-v0.158.0,2026-09-28,- #47690 Remove obsolete Guardian context capture mode branches @felixxia-oai
+rust-v0.158.0,2026-09-28,- #47691 Materialize rollout persistence for pending inter-agent messages @dermanyang-oai
+rust-v0.158.0,2026-09-28,- #47896 Preserve Markdown formatting when copying transcript selections @fcoury-oai
+rust-v0.158.0,2026-09-28,- #47932 Remove GPT-5.4 from bundled catalogs and preserve migration prompts @andrewgu-oai
+rust-v0.158.0,2026-09-28,- #47943 Remove unused Windows world-writable audit code @iceweasel-oai
+rust-v0.158.0,2026-09-28,- #47954 Move fullscreen startup tips into the transcript @etraut-openai
+rust-v0.158.0,2026-09-28,- #48035 Remove plugin extension metadata from discovery and summaries @victor-openai
+rust-v0.158.0,2026-09-28,- #48109 Deduplicate retained instructions against Guardian transcripts @felixxia-oai
+rust-v0.159.0,2026-09-29,- You can scroll the transcript while deciding whether to implement a plan. (#48805)
+rust-v0.159.0,2026-09-29,"- Copying transcript selections preserves Markdown tables, formatting, and significant whitespace. More terminals now copy automatically on selection. (#48548, #48549, #48469)"
+rust-v0.159.0,2026-09-29,- Removed automatic follow-up prompt suggestions and the `tui.prompt_suggestions` setting. (#48621)
+rust-v0.159.0,2026-09-29,- Removed the bundled `plugin-creator` skill. (#48604)
+rust-v0.159.0,2026-09-29,- #48469 Default to copying transcript selections in more terminals @fcoury-oai
+rust-v0.159.0,2026-09-29,- #48560 Keep working tips stable during transcript interaction @fcoury-oai
+rust-v0.159.0,2026-09-29,- #48604 Remove the bundled `plugin-creator` skill @martinauyeung-oai
+rust-v0.159.0,2026-09-29,- #48621 Remove follow-up prompt suggestions from the TUI @etraut-openai
+rust-v0.159.0,2026-09-29,- #48686 Remove WebSocket headers and tool payloads from info logs @chess-oai
+rust-v0.159.0,2026-09-29,- #48775 Match pinned transcript headers to the original prompt style @etraut-openai
+rust-v0.159.0,2026-09-29,- #48776 Remove the `current` badge from TUI task rows @etraut-openai
+rust-v0.159.0,2026-09-29,- #48805 Allow transcript wheel scrolling while a modal is open @fcoury-oai
+rust-v0.159.0,2026-09-29,- #48827 Show a hand pointer over transcript links in Ghostty and Kitty @bc-openai
+rust-v0.160.0,2026-10-01,- Select transcript text and paste with middle-click in fullscreen mode on supported local Linux X11 terminals. (#49112)
+rust-v0.160.0,2026-10-01,- #49136 Remove the plus separator after Option symbols in TUI key hints @bc-openai
+rust-v0.161.0,2026-10-07,- #49266 Remove the remote agent message board client README @jif-oai
+rust-v0.161.0,2026-10-07,- #49379 Compile hook matchers during discovery @jif-oai
+rust-v0.161.0,2026-10-07,- #49395 Remove randomized greetings from TUI session headers @etraut-openai
+rust-v0.161.0,2026-10-07,- #49692 Keep compressed rollout snippet searches on one blocking worker @npancha-openai
+rust-v0.161.0,2026-10-07,- #49694 Batch rollout listing scans on cancellable blocking workers @charliemarsh-oai
+rust-v0.161.0,2026-10-07,"- #49713 Remove repository-local Codex guidance, skills, and environment config @anp-oai"
+rust-v0.161.0,2026-10-07,- #49787 Remove `AGENTS.md` from Bazel core test data @andrewgu-oai
+rust-v0.161.0,2026-10-07,- #49816 Remove browser-open success messages from the TUI @bc-openai
+rust-v0.161.0,2026-10-07,- #49876 Remove personality plumbing from the TUI @etraut-openai
+rust-v0.161.0,2026-10-07,- #49956 Cache the placeholder regex for MCP hook argument expansion @jif-oai
+rust-v0.161.0,2026-10-07,- #49959 Test session index thread-name append and removal @jif-oai
+rust-v0.162.0,2026-10-08,"- Navigate and copy transcript blocks with `/copy`, use `Ctrl+Insert` to copy selections, and tune mouse-wheel scrolling with `tui.mouse_scroll_speed`. (#50434, #50215, #50209)"
+rust-v0.162.0,2026-10-08,- #50039 Keep transcript Find results readable after closing the query @fcoury-oai
+rust-v0.162.0,2026-10-08,- #50045 Keep transcript Find expansion scoped to the current match @fcoury-oai
+rust-v0.162.0,2026-10-08,- #50166 Upgrade `age` to 0.12.1 and remove the obsolete advisory exception @michaelm-openai
+rust-v0.162.0,2026-10-08,- #50209 Make transcript mouse scroll speed configurable @etraut-openai
+rust-v0.162.0,2026-10-08,- #50359 Render ANSI styles in TUI hook system messages @etraut-openai
+rust-v0.162.0,2026-10-08,- #50360 Remove initial messages from session configuration events @owenlin0
+rust-v0.162.0,2026-10-08,- #50389 Honor configured keybindings before transcript navigation @etraut-openai
+rust-v0.162.0,2026-10-08,- #50396 Honor pager bindings for transcript page keys @bc-openai
+rust-v0.162.0,2026-10-08,- #50434 Add keyboard copy selection to the owned transcript @bc-openai
+rust-v0.162.0,2026-10-08,- #50435 Persist additional tool definitions in rollout history @pakrym-oai
+rust-v0.162.0,2026-10-08,- #50446 Bundle rollout attachments into a gzip tar archive @dkovalenko-oai
+rust-v0.162.0,2026-10-08,- #50447 Remove the provider capability gate for tool namespaces @pakrym-oai
+rust-v0.162.0,2026-10-08,- #50454 Measure rollout persistence size reductions @owenlin0
+rust-v0.162.0,2026-10-08,- #50467 Copy transcript selections as literal text while preserving rich HTML @fcoury-oai
+rust-v0.162.0,2026-10-08,- #50503 Use Enter to accept transcript Find results and Escape to cancel @fcoury-oai
+rust-v0.162.0,2026-10-08,- #50505 Keep Command Center selection adjacent after task removal @bc-openai
+rust-v0.162.0,2026-10-08,- #50531 Persist realtime transcript tails before closure without inference @guinness-oai
+rust-v0.162.0,2026-10-08,- #50564 Allow transcript selection and copying while bottom modals are open @etraut-openai
+rust-v0.162.0,2026-10-08,- #51184 Remove obsolete Guardian thread-context enables from tests @felixxia-oai
+rust-v0.162.0,2026-10-08,- #51202 Distinguish namespace removals in incremental tool updates @akira-oai
+rust-v0.162.0,2026-10-08,- #51223 Remove legacy personality template metadata @rhan-oai
+rust-v0.162.0,2026-10-08,- #51235 Remove default model labels from TUI model pickers @etraut-openai
+rust-v0.162.0,2026-10-08,- #51329 Remove partial-history subagent forks @jif-oai
+rust-v0.162.0,2026-10-08,- #51426 Remove the Bazel JVM override for Windows ARM64 voice builds @anp-oai
+rust-v0.162.0,2026-10-08,- #51433 Show hook status messages as titles in the hooks browser @abhinav-oai
+rust-v0.162.0,2026-10-08,- #51465 Add an optional JSON transcript format for Guardian @felixxia-oai
+rust-v0.162.0,2026-10-08,- #51466 Keep Guardian transcript records structured through budget recovery @felixxia-oai
+rust-v0.162.0,2026-10-08,- #51473 Preserve URL destinations in wrapped hook details @charliemarsh-oai
+rust-v0.162.0,2026-10-08,- #51492 Remove obsolete fields from persisted turn context @pakrym-oai
+rust-v0.162.0,2026-10-08,- #51499 Load rollout history on a single blocking worker @charliemarsh-oai
+rust-v0.163.0,2026-10-15,"- The network proxy now checks permission before a DNS lookup, rejects duplicate `Host` headers, and prevents credential aliases from bypassing inspection hooks. (#51650, #52661, #53506)"
+rust-v0.163.0,2026-10-15,- #51800 Remove duplicate field initializers in extension registry tests @anp-oai
+rust-v0.163.0,2026-10-15,- #52160 Remove the patched zsh shell execution backend @jif-oai
+rust-v0.163.0,2026-10-15,- #52288 Remove duplicate field initializers from extension registry tests @anp-oai
+rust-v0.163.0,2026-10-15,- #52329 Remove per-content source attribution metadata @anp-oai
+rust-v0.163.0,2026-10-15,- #52661 Prevent brokered credential aliases from bypassing MITM hooks @viyatb-oai
+rust-v0.163.0,2026-10-15,- #52778 Make pinned transcript prompts clickable @fcoury-oai
+rust-v0.163.0,2026-10-15,- #52964 Defer owned transcript redraws during raw paste bursts @etraut-openai
+rust-v0.163.0,2026-10-15,"- #53358 Remove selected protocol, apply-patch, MCP, and TUI tests @vb-openai"
+rust-v0.163.0,2026-10-15,- #53657 Share hook configuration across cloned hook views @jif-oai
+rust-v0.163.0,2026-10-15,- #53693 Add keyboard selection support to the transcript view @fcoury-oai
+rust-v0.164.0,2026-10-23,- Preview viewed and generated images in the fullscreen transcript on terminals supporting Kitty or Sixel graphics. (#54216)
+rust-v0.164.0,2026-10-23,- #53732 Reuse compiled search patterns across compressed rollouts @ethernetdan-openai
+rust-v0.164.0,2026-10-23,- #53745 Remove `modelSlug` from the latest-model resolver output @kkahadze-oai
+rust-v0.164.0,2026-10-23,- #53780 Remove redundant Codex manual cache directory check @kkahadze-oai
+rust-v0.164.0,2026-10-23,- #53781 Remove the product-gating TODO from `SkillPolicy` @kkahadze-oai
+rust-v0.164.0,2026-10-23,- #53794 Retain rollout migration locks across worker cancellation @jif-oai
+rust-v0.164.0,2026-10-23,- #53908 Keep the agent dashboard browsable during task removal @etraut-openai
+rust-v0.164.0,2026-10-23,- #53940 Bound rollout input for memory extraction @jif-oai
+rust-v0.164.0,2026-10-23,- #53947 Stop rollout reads when the calling task is cancelled @jif-oai
+rust-v0.164.0,2026-10-23,- #53997 Filter rollout filenames before checking compressed siblings @bbrown-oai
+rust-v0.164.0,2026-10-23,- #54003 Include compressed rollouts in doctor storage statistics @jif-oai
+rust-v0.164.0,2026-10-23,- #54008 Fix session lookup and resume after rollout compression @jif-oai
+rust-v0.164.0,2026-10-23,- #54044 Keep fork lineage ahead of paginated transcript history @fcoury-oai
+rust-v0.164.0,2026-10-23,- #54060 Limit unarchive scans to the requested thread's archived rollouts @bz-openai
+rust-v0.164.0,2026-10-23,- #54216 Show image previews in the fullscreen transcript @etraut-openai
+rust-v0.164.0,2026-10-23,- #54257 Preserve recent speech when trimming realtime transcripts @jif-oai
+rust-v0.164.0,2026-10-23,- #54264 Track Guardian transcript admission across failed reviews @jif-oai
+rust-v0.164.0,2026-10-23,- #54281 Attribute compaction summaries to the assistant in Guardian transcripts @jif-oai
+rust-v0.164.0,2026-10-23,- #54445 Remove obsolete protected-path monitoring from the Linux sandbox @viyatb-oai
+rust-v0.164.0,2026-10-23,- #54619 Bind plugin hook approval to plugin contents @jif-oai
+rust-v0.164.0,2026-10-23,- #54639 Stream rollout records during thread history materialization @chess-oai
+rust-v0.164.0,2026-10-23,- #54739 Close arg0 lock files before removing temporary directories @dkovalenko-oai
+rust-v0.164.0,2026-10-23,- #55144 Add observation-only model request lifecycle hooks @vivi
+rust-v0.164.0,2026-10-23,- #55252 Preserve rollout access metadata across compression and restoration @jif-oai
+rust-v0.164.0,2026-10-23,- #55263 Start dormant MCP servers for hook calls @charliemarsh-oai
+rust-v0.164.0,2026-10-23,- #55324 Remove thread title generation spinners from the TUI @cconger
+rust-v0.164.0,2026-10-23,- #55355 Remove the long-thread accuracy warning after compaction @asohrabi-oai
+rust-v0.164.0,2026-10-23,- #55380 Preserve thread metadata before rollout files are materialized @jif-oai
+rust-v0.164.0,2026-10-23,- #55388 Mark `transcript_v2` as removed @etraut-openai
+rust-v0.164.0,2026-10-23,- #55396 Prefetch sibling rollout paths when reading history pages @bz-openai
+rust-v0.164.0,2026-10-23,- #55545 Improve diagnostics for compressed rollout read failures @jif-oai
+rust-v0.164.0,2026-10-23,- #55627 Reserve a sibling rollout candidate slot for the first ancestor @bz-openai
+rust-v0.164.0,2026-10-23,- #55652 Search compressed rollouts concurrently @ethernetdan-openai
+rust-v0.164.0,2026-10-23,- #55657 Add lifecycle hooks for inter-agent messages @euroelessar
+rust-v0.164.0,2026-10-23,- #55710 Resolve MCP backend identity from runtime events in rollout traces @cassirer-openai
+rust-v0.164.0,2026-10-23,- #55725 Preserve code cell response metadata in rollout traces @cassirer-openai
+rust-v0.164.0,2026-10-23,- #55733 Box session metadata and compaction payloads in `RolloutItem` @charliemarsh-oai
+rust-v0.164.0,2026-10-23,- #56011 Keep rollout trace terminal sessions distinct when process IDs are reused @cassirer-openai
+rust-v0.164.0,2026-10-23,- #56044 Enable executor cleanup hooks with V2 capability discovery @TAFOYA-OAI
+rust-v0.165.0,2026-10-27,- #56182 Add AWS SigV4 signing to network proxy MITM hooks @viyatb-oai
+rust-v0.165.0,2026-10-27,- #56214 Remove the `u64` cast from WSL DrvFS detection @felixxia-oai
+rust-v0.165.0,2026-10-27,- #56234 Emit prompt telemetry only after hooks accept input @abhinav-oai
+rust-v0.165.0,2026-10-27,- #56280 Group consecutive transcript prompts into one background block @bc-openai
+rust-v0.165.0,2026-10-27,- #56302 Add hook configuration to environment attachments @andrewgu-oai
+rust-v0.165.0,2026-10-27,- #56304 Add support for environment-scoped managed hooks @andrewgu-oai
+rust-v0.165.0,2026-10-27,- #56312 Track accepted conversation history in rollout traces @cassirer-openai
+rust-v0.165.0,2026-10-27,- #56342 Match rollout trace image content across request snapshots @cassirer-openai
+rust-v0.165.0,2026-10-27,- #56343 Run environment hooks on their owning executors @andrewgu-oai
+rust-v0.166.0,2026-10-29,"- Added keyboard-driven transcript selection with word, line, and page motions, integrated search, and configurable shortcuts. (#57221, #57222, #57223, #57224)"
+rust-v0.166.0,2026-10-29,"- Rendered Markdown consistently in async questions, choices, answers, and transcript replies. (#57259, #57292)"
+rust-v0.166.0,2026-10-29,- #56525 Remove the 1 MiB response limit for explicit model catalogs @eternal-openai
+rust-v0.166.0,2026-10-29,- #56533 Defer sync Guardian tool-output truncation to transcript preparation @ioanbudea-OAI
+rust-v0.166.0,2026-10-29,- #56553 Include environment hooks in thread hook listings @andrewgu-oai
+rust-v0.166.0,2026-10-29,- #56555 Apply sync Guardian message limits during transcript preparation @ioanbudea-OAI
+rust-v0.166.0,2026-10-29,- #56559 Remove Guardian snapshot-specific context helpers @felixxia-oai
+rust-v0.166.0,2026-10-29,- #57174 Add scoped request-body secret substitution to MITM hooks @viyatb-oai
+rust-v0.166.0,2026-10-29,- #57187 Allow advisory rollout budgets with optional limit enforcement @nvogt-oai
+rust-v0.166.0,2026-10-29,- #57193 Preserve failed `write_stdin` calls in rollout trace replay @cassirer-openai
+rust-v0.166.0,2026-10-29,- #57194 Classify rollout tool calls by their runtime handler @cassirer-openai
+rust-v0.166.0,2026-10-29,- #57198 Report the local command working directory in PreToolUse hooks @eternal-openai
+rust-v0.166.0,2026-10-29,- #57199 Truncate rollout JSON summaries at UTF-8 character boundaries @cassirer-openai
+rust-v0.166.0,2026-10-29,- #57203 Preserve command cwd in permission and post-tool hooks @eternal-openai
+rust-v0.166.0,2026-10-29,- #57221 Expand keyboard navigation and selection in the transcript @fcoury-oai
+rust-v0.166.0,2026-10-29,- #57222 Integrate Find with transcript selection mode @fcoury-oai
+rust-v0.166.0,2026-10-29,- #57223 Wire keyboard selection into transcript overlays @fcoury-oai
+rust-v0.166.0,2026-10-29,- #57224 Fix transcript selection input routing and preserve composer drafts @fcoury-oai
+rust-v0.166.0,2026-10-29,- #57241 Honor configured message limits for encrypted guardian transcripts @ioanbudea-OAI
+rust-v0.166.0,2026-10-29,- #57247 Release the rollout maintenance lock when its guard is dropped @goodman-oai
+rust-v0.166.0,2026-10-29,- #57280 Preserve full MCP results in rollout traces @cassirer-openai
+rust-v0.166.0,2026-10-29,- #57311 Preserve tool output versions and history order in rollout traces @cassirer-openai
+rust-v0.166.0,2026-10-29,- #57483 Skip unrelated indexed rollouts during selected thread migration @charliemarsh-oai
+rust-v0.166.0,2026-10-29,- #57593 Remove empty local staging routing files @fcoury-oai
+rust-v0.166.0,2026-10-29,- #57615 Preserve rollout tracing across sub-agent reloads @cassirer-openai
+rust-v0.166.0,2026-10-29,- #57667 Remove detached delivery from `review/start` @yansenzhou-oai
+rust-v0.166.0,2026-10-29,- #57729 Remove `free_guardian` configuration from Guardian tests @ioanbudea-OAI
+rust-v0.167.0,2026-11-06,"- Preview local image attachments while composing on supported terminals, and open viewed local images from clickable transcript paths (#58261, #58446)."
+rust-v0.167.0,2026-11-06,- Expand patch details directly in the transcript while an approval prompt is open (#58281).
+rust-v0.167.0,2026-11-06,"- Saved chats stay visible after you switch model providers. If a chat can’t resume, you can read its transcript and prepare an editable prompt to continue in a new chat (#58202)."
+rust-v0.167.0,2026-11-06,- Long realtime V3 conversations save completed speech to chat history as the transcript grows (#58221).
+rust-v0.167.0,2026-11-06,- The `openai-docs` skill recommends the documented replacement when migrating away from a deprecated model (#58134).
+rust-v0.167.0,2026-11-06,- #58134 Prefer documented replacements for deprecation-driven model migrations @kkahadze-oai
+rust-v0.167.0,2026-11-06,- #58166 Make rollout recording failures and completion explicit @cassirer-openai
+rust-v0.167.0,2026-11-06,- #58221 Preserve realtime V3 transcripts in conversation history @guinness-oai
+rust-v0.167.0,2026-11-06,- #58264 Show unread sessions and acknowledge viewed transcripts in the picker @etraut-openai
+rust-v0.167.0,2026-11-06,- #58266 Preserve transcript history when clearing the terminal with Ctrl+L @xma-oai
+rust-v0.167.0,2026-11-06,- #58357 Extract pre-tool-use hook handling into a helper @swastik-oai
+rust-v0.167.0,2026-11-06,- #58368 Apply PreToolUse hooks before direct Guardian review policy checks @swastik-oai
+rust-v0.167.0,2026-11-06,- #58395 Add scoped host metadata hooks for MCP tool requests @rhan-oai
+rust-v0.167.0,2026-11-06,- #58757 Remove Bazel outputs from DotSlash release configs @fcoury-oai
+rust-v0.168.0,2026-11-13,"- Steering messages reach running turns when sent during the final transcript save or after switching back to a long-running chat. (#58877, #58998)"
+rust-v0.168.0,2026-11-13,- #58877 Handle steers accepted during the final transcript flush @charliemarsh-oai
+rust-v0.168.0,2026-11-13,- #58959 Recover inherited history from alternate rollout copies @charliemarsh-oai
+rust-v0.168.0,2026-11-13,- #58960 Prefer indexed rollout paths when resolving ancestors @charliemarsh-oai
+rust-v0.168.0,2026-11-13,- #58996 Deliver environment hook decisions while output reads are queued @andrewgu-oai
+rust-v0.168.0,2026-11-13,- #59025 Remove strict third-party tool deferral in Code Mode Only @rishab-openai
+rust-v0.168.0,2026-11-13,- #59047 Decode live transcript updates in the cloud client @bc-openai
+rust-v0.168.0,2026-11-13,- #59124 Remove a redundant permission profile clone in exec policy tests @jif-oai
+rust-v0.168.0,2026-11-13,- #59472 Preserve transcript interaction when switching panes with arrow keys @fcoury-oai
+rust-v0.168.0,2026-11-13,- #59479 Deprecate the `multi_agent` feature flag @jif-oai
+rust-v0.168.0,2026-11-13,- #59632 Remove the legacy Seatbelt network policy wrapper @ioanbudea-OAI
+rust-v0.168.0,2026-11-13,- #59677 Remove the legacy sandbox policy summary helper @ioanbudea-OAI
+rust-v0.169.0,2026-11-13,"- Turn on **Collapse turn details** in the full-screen transcript to fold completed activity beneath each prompt while keeping answers visible and tool output searchable. (#60554, #60555, #60556, #60557)"
+rust-v0.169.0,2026-11-13,- #59772 Remove the legacy sandbox policy constructor @ioanbudea-OAI
+rust-v0.169.0,2026-11-13,- #59774 Remove the legacy Seatbelt command wrapper @ioanbudea-OAI
+rust-v0.169.0,2026-11-13,- #59778 Expose acceptance metadata and code-cell links in rollout traces @tz-openai
+rust-v0.169.0,2026-11-13,- #59887 Remove incomplete prereleases after asset upload failures @jif-oai
+rust-v0.169.0,2026-11-13,- #60118 Buffer payload JSON reads during rollout trace replay @tz-openai
+rust-v0.169.0,2026-11-13,- #60122 Preserve code mode dispatch errors in rollout traces @tz-openai
+rust-v0.169.0,2026-11-13,- #60190 Expose agent tree IDs and environment removal @richardopenai
+rust-v0.169.0,2026-11-13,- #60320 Include older itemless Cloud failures in full transcripts @bc-openai
+rust-v0.169.0,2026-11-13,- #60416 Keep fitting URLs intact in fullscreen Markdown transcripts @etraut-openai
+rust-v0.169.0,2026-11-13,- #60488 Remove the Xcode 26.4 MCP elicitation compatibility workaround @jameswt-oai
+rust-v0.169.0,2026-11-13,- #60511 Treat inference hook denials as terminal errors @ccui-oai
+rust-v0.169.0,2026-11-13,- #60554 Add optional tool call summaries to the full-screen transcript @etraut-openai
+rust-v0.169.0,2026-11-13,- #60555 Extend output-free transcript summaries to more tools @etraut-openai
+rust-v0.169.0,2026-11-13,- #60557 Collapse completed turn activity beneath transcript prompts @etraut-openai
+rust-v0.169.0,2026-11-13,- #60673 Preserve agent message deliveries in rollout traces @cassirer-openai
+rust-v0.170.0,2026-11-18,"- Removed duplicate file search results and fixed thread search snippets for queries containing whitespace. (#60845, #60846)"
+rust-v0.170.0,2026-11-18,- #60839 Preserve retained assistant revisions across rollout replay @euroelessar
+rust-v0.170.0,2026-11-18,- #61017 Record reasoning replay removal metrics @akira-oai
+rust-v0.170.0,2026-11-18,- #61144 Remove the legacy sandbox policy setter from `Config` @ioanbudea-OAI
+rust-v0.171.0,2026-11-20,"- Enabled the TUI workspace by default, with searchable document previews, image previews, and subagent transcripts alongside the main conversation. (#61352, #61888, #61889, #61919, #62157)"
+rust-v0.171.0,2026-11-20,- Updated XML dependencies and removed obsolete security advisory exceptions. (#62068)
+rust-v0.171.0,2026-11-20,- #61194 Remove redundant legacy permission helpers @ioanbudea-OAI
+rust-v0.171.0,2026-11-20,- #61199 Align rollout trace replay with the same-binary contract @cassirer-openai
+rust-v0.171.0,2026-11-20,- #61222 Store rollout trace payloads in compressed shards @cassirer-openai
+rust-v0.171.0,2026-11-20,- #61253 Move rollout trace recording to a background worker @cassirer-openai
+rust-v0.171.0,2026-11-20,- #61338 Record host-confirmed Code Mode wait targets in rollout traces @tz-openai
+rust-v0.171.0,2026-11-20,- #61357 Clarify removal scope for profile MCP servers @etraut-openai
+rust-v0.171.0,2026-11-20,- #61370 Remove BuildBuddy presets from the checked-in Bazel configuration @hintz-openai
+rust-v0.171.0,2026-11-20,- #61379 Remove unused workspace entries and simplify Rust code @andrewgu-oai
+rust-v0.171.0,2026-11-20,- #61380 Add cell-aware mouse selection to transcript tables @fcoury-oai
+rust-v0.171.0,2026-11-20,- #61382 Make clock reads synchronous and remove client clock requests @euroelessar
+rust-v0.171.0,2026-11-20,- #61395 Remove legacy sandbox-policy accessors from configuration @ioanbudea-OAI
+rust-v0.171.0,2026-11-20,- #61422 Add keyboard table selection to the transcript @fcoury-oai
+rust-v0.171.0,2026-11-20,- #61424 Refill the transcript viewport when collapsing tool groups @fcoury-oai
+rust-v0.171.0,2026-11-20,- #61437 Avoid starting dormant REPL servers for cleanup hooks @dob-oai
+rust-v0.171.0,2026-11-20,- #61562 Unify model request hook lifecycles across sampling and compaction @tz-openai
+rust-v0.171.0,2026-11-20,- #61578 Recheck rollout budgets before starting tool work @tz-openai
+rust-v0.171.0,2026-11-20,- #61579 Support fractional rollout budgets and configurable context reminders @tz-openai
+rust-v0.171.0,2026-11-20,- #61580 Account for synchronous MCP post-hook costs in rollout budgets @tz-openai
+rust-v0.171.0,2026-11-20,- #61581 Record neutral interruption markers for rollout budget stops @tz-openai
+rust-v0.171.0,2026-11-20,- #61582 Gate new rollout work on shared budget exhaustion @tz-openai
+rust-v0.171.0,2026-11-20,- #61583 Refactor rollout budget checks and turn completion state @tz-openai
+rust-v0.171.0,2026-11-20,- #61587 Add request IDs and attempt numbers to model request hooks @tz-openai
+rust-v0.171.0,2026-11-20,- #61709 Avoid legacy transcript reads in the agents overview @etraut-openai
+rust-v0.171.0,2026-11-20,- #61771 Remove numeric positions from project responses @apanasenko-oai
+rust-v0.171.0,2026-11-20,- #61833 Avoid unnecessary rollout item copies during child thread creation @charliemarsh-oai
+rust-v0.171.0,2026-11-20,- #61880 Preserve local Markdown document targets in transcript rendering @fcoury-oai
+rust-v0.171.0,2026-11-20,- #61896 Bound rollout trace capture with configurable storage limits @cassirer-openai
+rust-v0.171.0,2026-11-20,- #61902 Filter thread listings before scanning rollout previews @charliemarsh-oai
+rust-v0.171.0,2026-11-20,- #61973 Preserve accepted tool outputs and local resets in rollout traces @cassirer-openai
+rust-v0.171.0,2026-11-20,- #62061 Use Bazel's Python runtime for MCP permission hook tests @bencodes-oai
+rust-v0.171.0,2026-11-20,- #62068 Upgrade XML dependencies and remove obsolete advisory ignores @jif-oai
+rust-v0.171.0,2026-11-20,- #62076 Reuse regexes across rollout snippet searches @charliemarsh-oai
+rust-v0.171.0,2026-11-20,- #62080 Add policy-checked dispatch for bundled App hooks @jif-oai
+rust-v0.171.0,2026-11-20,- #62090 Append transcript provenance to Guardian JSON instructions @jif-oai
+rust-v0.171.0,2026-11-20,- #62092 Skip recent rollouts before reading headers during compression @charliemarsh-oai
+rust-v0.171.0,2026-11-20,- #62112 Trust the bundled Memory session hook without saved hashes @nvogt-oai
+rust-v0.171.0,2026-11-20,- #62137 Remove fixed message-board views and bulk subscriptions @felixxia-oai
+rust-v0.171.0,2026-11-20,- #62142 Add audio transcription to the backend client @ax-openai
+rust-v0.171.0,2026-11-20,- #62157 Open subagent transcripts in the TUI sidebar @fcoury-oai
+rust-v0.171.0,2026-11-20,- #62159 Open subagent transcripts from activity links in the TUI @fcoury-oai
+rust-v0.171.0,2026-11-20,- #62172 Remove Python from MCP permission request hook tests @seanh-oai
+rust-v0.172.0,2026-11-24,- Follow thread links from search results and transcripts to open saved conversations and nested agents in the terminal. (#62332)
+rust-v0.172.0,2026-11-24,"- Cloud replies that finish after history loads now update in place, keeping the terminal transcript in order. (#62403)"
+rust-v0.172.0,2026-11-24,- Code Mode now uses gRPC for all host connections. The `code_mode_host_grpc` setting is deprecated. (#62476)
+rust-v0.172.0,2026-11-24,- #62190 Route turn and response checkpoints through the rollout budget policy @anp-oai
+rust-v0.172.0,2026-11-24,"- #62378 Remove the 4,000-byte prompt limit for `thread/sample` @keyz"
+rust-v0.172.0,2026-11-24,- #62384 Centralize transcript overlay input routing @fcoury-oai
+rust-v0.172.0,2026-11-24,- #62403 Reconcile unfinished Cloud replies in the TUI transcript @bc-openai
+rust-v0.172.0,2026-11-24,- #62407 Deduplicate large tool output strings in rollout traces @cassirer-openai

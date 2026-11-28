@@ -1,0 +1,4 @@
+sanity zero hazards: PASS
+sanity removal of each capability: PASS
+seed stability (max abs diff across 3 seeds): {'cap_works': 0.0112, 'cap_full': 0.0117, 'inj_works': 0.0073, 'inj_clean': 0.0076, 'silent_cap': 0.0364, 'silent_inj': 0.0367, 'silent_any': 0.0418, 'cost': 0.2766}
+done in 187.7 s
