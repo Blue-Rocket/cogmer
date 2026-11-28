@@ -156,3 +156,25 @@ func TestADerivedNameSharedByTwoKeysIsReportedAsChance(t *testing.T) {
 		t.Errorf("the refusal does not say the shared derived name is chance:\n%v", err)
 	}
 }
+
+// Once one of two keys that derive one name is given a name, the derived name
+// reaches the other, so naming one tells them apart for commands too (D-174).
+func TestNamingOneOfTwoKeysThatShareADerivedNameTellsThemApart(t *testing.T) {
+	m := testMembership(t)
+	a, b := twoKeysDerivingOneName(t)
+	for _, p := range []string{a, b} {
+		if err := m.Allow(p, ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := m.Allow(a, "alice"); err != nil {
+		t.Fatal(err)
+	}
+	got, err := resolvePeer(m, PeerName(b))
+	if err != nil || got != b {
+		t.Fatalf("the shared derived name resolved to %q (%v), want the colleague still shown by it", got, err)
+	}
+	if got, err := resolvePeer(m, "alice"); err != nil || got != a {
+		t.Fatalf("the chosen name resolved to %q (%v)", got, err)
+	}
+}
