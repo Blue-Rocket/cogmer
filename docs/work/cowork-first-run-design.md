@@ -229,7 +229,7 @@ Limits. cogmer runs the host, and its trust is the trust D-302's Limits give the
 
 Revisit when cogmer gives up the domain.
 
-## Draft 4: the cloud page remembers the user's machines, and a directory cogmer runs answers when it cannot
+## Draft 4: the cloud page is the user's page, reading their rooms from whichever of their machines answers, and a directory cogmer runs finds the machines when the page cannot
 
 Decision. The cloud page keeps, in its own storage on each device, the addresses of the user's machines,
 which it reads from any task it is open on that has reached one of them, and gives them to a new task with
@@ -247,6 +247,14 @@ holds up to 64 bytes and comes back at every sign-in on every device, and the us
 from pairing, so a colleague also finds a machine the user added since they last spoke. A user with a
 hosted machine needs neither, since the user handle names the hosted machine.
 
+The cloud page shows the user's rooms, and a room holds the turns of every session of every guest in it,
+so the page belongs to the user and not to one session. It reads the user's rooms from whichever of the
+user's machines answers: a hosted machine first, since it is always reachable and holds every room the user
+is in; then the user's own computer, which holds every room too while it is awake and reachable; and a cloud
+task's daemon last, since it holds only the rooms the task joined and only while the task lives. The link a
+task prints opens the page at that task's room. The page opens on any device on which the user has signed
+in with the passkey, a phone among them, and a sign-in expires and can be revoked from the machines page.
+
 A task takes its user's lists only from one of the user's machines (D-245, a cloud session takes its
 user's lists only from one of the user's machines), and today the cloud value carries their relay
 addresses. A machine that approves or renews a task gives it the addresses then, and the first
@@ -263,6 +271,12 @@ certificate, which the page makes, gives them in one of three ways:
   (`docs/work/cloud-run-20261025T171545Z.txt`), more than a user handle holds itself.
 
 Rejected.
+- *A page for each session, reading only that session's daemon.* The page shows rooms, which hold every
+  session's turns, and a page tied to one task is lost when the task ends or sleeps.
+- *Reading from a cloud task's daemon first, to spare a hosted machine.* The task's turns wake the hosted
+  machine anyway, since each is a nudge it keeps, the page reaches a task only through cogmer's relay, so
+  the traffic moves rather than shrinks, the serving runs in the user's sandbox beside their session, and
+  the page would change sources as the user opens a room the task never joined or the task sleeps.
 - *A directory that cannot tell whose record it holds.* Storing records under a hash, sealing them, and
   refusing other writers without the identifier needs a write key derived from the shared key, a new
   identity record to publish it and a pointer to follow when the shared key changes, to hide from cogmer
