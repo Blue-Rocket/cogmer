@@ -162,7 +162,7 @@ func (m *Membership) LinkMachineKey(key, user string) (bool, error) {
 		// The ordinary case: the colleague's record moves to their user whole, with
 		// the label the user gave and the verification they made (D-242).
 		if name == PeerName(key) {
-			name = PeerName(user)
+			name = "" // the key's derived name is no name the user gave (D-021)
 		}
 		if _, err := tx.Exec(`UPDATE known_peers SET peer_id = ?, name = ? WHERE peer_id = ?`, user, name, key); err != nil {
 			return false, err
@@ -181,7 +181,7 @@ func (m *Membership) LinkMachineKey(key, user string) (bool, error) {
 				return false, err
 			}
 		}
-		if userName == PeerName(user) && name != PeerName(key) {
+		if (userName == "" || userName == PeerName(user)) && name != "" && name != PeerName(key) {
 			if _, err := tx.Exec(`UPDATE known_peers SET name = ? WHERE peer_id = ?`, name, user); err != nil {
 				return false, err
 			}

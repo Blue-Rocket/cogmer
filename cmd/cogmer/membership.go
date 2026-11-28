@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -310,6 +311,9 @@ func migrateMembership(db *sql.DB) error {
 	if err := copyPeerEndpointsToMachines(db); err != nil {
 		return err
 	}
+	if err := clearDerivedLabels(db); err != nil {
+		return err
+	}
 	if unique == "" {
 		return nil
 	}
@@ -339,6 +343,39 @@ func migrateMembership(db *sql.DB) error {
 		}
 	}
 	return tx.Commit()
+}
+
+// clearDerivedLabels empties every stored name that is the peer's derived name. A
+// colleague given no name was once stored under it, so two colleagues whose keys
+// derive one name looked like one name held by two keys, and the second was refused
+// as a changed key (D-074). A derived name is shown and never stored (D-021, peer
+// names are word pairs derived from the identity, never chosen).
+func clearDerivedLabels(db *sql.DB) error {
+	rows, err := db.Query(`SELECT peer_id, name FROM known_peers WHERE name <> ''`)
+	if err != nil {
+		return err
+	}
+	var derived []string
+	for rows.Next() {
+		var peer, name string
+		if err := rows.Scan(&peer, &name); err != nil {
+			rows.Close()
+			return err
+		}
+		if name == PeerName(peer) {
+			derived = append(derived, peer)
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, peer := range derived {
+		if _, err := db.Exec(`UPDATE known_peers SET name = '' WHERE peer_id = ?`, peer); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (m *Membership) Close() error { return m.db.Close() }
@@ -624,6 +661,18 @@ func (m *Membership) NameFree(name, peerID string) error {
 		name, peerID).Scan(&existing); err == nil {
 		return &NameTakenError{Name: name, Existing: existing, Offered: peerID}
 	}
+	// A colleague given no name is shown by the name derived from their key, so a
+	// name chosen for somebody else may not be that one either.
+	rows, err := m.db.Query(`SELECT peer_id FROM known_peers WHERE name = '' AND peer_id <> ?`, peerID)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	for rows.Next() {
+		if err := rows.Scan(&existing); err == nil && PeerName(existing) == name {
+			return &NameTakenError{Name: name, Existing: existing, Offered: peerID}
+		}
+	}
 	return nil
 }
 
@@ -637,11 +686,14 @@ func (m *Membership) Allow(peerID, name string) error {
 		return fmt.Errorf("refusing to record an identifier that names no key: %w", err)
 	}
 	peerID = m.colleagueOf(peerID)
-	if name == "" {
-		if m.Knows(peerID) {
-			return nil
-		}
-		name = PeerName(peerID)
+	if name == "" && m.Knows(peerID) {
+		return nil
+	}
+	// The derived name is shown wherever a colleague has no name, and never stored
+	// (D-021, peer names are word pairs derived from the identity, never chosen), so
+	// it is recorded as no name, and given outright it clears the name a colleague had.
+	if name == PeerName(peerID) {
+		name = ""
 	}
 	if err := m.NameFree(name, peerID); err != nil {
 		return err
@@ -723,7 +775,7 @@ func (m *Membership) KnownPeers() ([]KnownPeer, error) {
 	rows, err := m.db.Query(`SELECT peer_id, name, added_at, COALESCE(verified_at,''),
 		COALESCE((SELECT mc.endpoint FROM machines mc WHERE mc.user = known_peers.peer_id
 			AND mc.endpoint IS NOT NULL AND mc.endpoint <> '' ORDER BY mc.endpoint_at DESC LIMIT 1), '')
-		FROM known_peers ORDER BY name`)
+		FROM known_peers`)
 	if err != nil {
 		return nil, err
 	}
@@ -734,9 +786,15 @@ func (m *Membership) KnownPeers() ([]KnownPeer, error) {
 		if err := rows.Scan(&p.PeerID, &p.Name, &p.AddedAt, &p.VerifiedAt, &p.Endpoint); err != nil {
 			return nil, err
 		}
+		// A colleague given no name is listed by the name derived from their key.
+		p.Name = firstNonEmpty(p.Name, PeerName(p.PeerID))
 		out = append(out, p)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out, nil
 }
 
 // CreateRoom mints a room and makes its creator the first guest.
