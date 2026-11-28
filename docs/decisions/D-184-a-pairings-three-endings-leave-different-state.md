@@ -2,8 +2,8 @@
 
 **Date:** 2026-09-20 · **Status:** active · **Areas:** pairing, identity
 
-**Decision.** An abandoned pairing leaves the key unverified, with the derived name as its
-label, and resumable. A match leaves the key verified with the label the user chose. A
+**Decision.** An abandoned pairing leaves the key unverified, with no label, shown by its
+derived name, and resumable. A match leaves the key verified with the label the user chose. A
 mismatch leaves nothing when this pairing created the row, and removes only what the pairing
 created.
 

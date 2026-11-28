@@ -105,3 +105,33 @@ func TestADerivedNameStoredBeforeIsCleared(t *testing.T) {
 		t.Fatalf("a colleague deriving the same name was refused after the migration: %v", err)
 	}
 }
+
+// A label the user cleared on one machine is cleared on the others when the user's
+// lists are copied (D-228, a user's labels are copied between the user's machines).
+func TestAClearedLabelIsClearedWhereTheListsAreCopied(t *testing.T) {
+	m := testMembership(t)
+	a := testIdentity(t).PeerID
+	if err := m.Allow(a, "alice"); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.applyColleague(a, colleagueEntry{Label: ""}); err != nil {
+		t.Fatal(err)
+	}
+	if m.Label(a) != "" {
+		t.Errorf("the copy kept the label %q that the user cleared", m.Label(a))
+	}
+}
+
+// A colleague who has a label is still shown by their derived name beside it
+// (D-094), so that name is not free for somebody else either.
+func TestALabelledColleaguesDerivedNameIsNotFreeForAnother(t *testing.T) {
+	m := testMembership(t)
+	a, b := testIdentity(t).PeerID, testIdentity(t).PeerID
+	if err := m.Allow(a, "alice"); err != nil {
+		t.Fatal(err)
+	}
+	var taken *NameTakenError
+	if err := m.Allow(b, PeerName(a)); !errors.As(err, &taken) || taken.Existing != a {
+		t.Fatalf("a labelled colleague's derived name was given to another: %v", err)
+	}
+}

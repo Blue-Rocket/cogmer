@@ -12,8 +12,8 @@ since its certificates end at the master key the name holds (D-219, a user is a 
 that certifies machines through a shared key), so only a new master key meets this rule.
 A peer the user gave no name holds none, since its derived name is shown and never stored
 (D-021, peer names are word pairs derived from the identity, never chosen), so two peers whose
-keys derive one name are both recorded, and a name chosen for one peer may not be the derived
-name another peer is shown by.
+keys derive one name are both recorded, and a name chosen for one peer may not be another
+peer's derived name, which the view shows beside a label or in its place.
 
 **Support.**
 - A peer's identifier is the user's master key, so a user who makes a new master key

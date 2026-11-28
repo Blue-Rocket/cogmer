@@ -661,9 +661,9 @@ func (m *Membership) NameFree(name, peerID string) error {
 		name, peerID).Scan(&existing); err == nil {
 		return &NameTakenError{Name: name, Existing: existing, Offered: peerID}
 	}
-	// A colleague given no name is shown by the name derived from their key, so a
-	// name chosen for somebody else may not be that one either.
-	rows, err := m.db.Query(`SELECT peer_id FROM known_peers WHERE name = '' AND peer_id <> ?`, peerID)
+	// Every colleague is shown by the name derived from their key, alone or beside
+	// the name given them (D-094), so a name chosen for somebody else may not be it.
+	rows, err := m.db.Query(`SELECT peer_id FROM known_peers WHERE peer_id <> ?`, peerID)
 	if err != nil {
 		return nil
 	}
