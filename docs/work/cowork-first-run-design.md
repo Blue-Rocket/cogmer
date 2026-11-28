@@ -1,6 +1,6 @@
 # Cowork first-run design
 
-A route by which a Cowork-only user starts work by installing the plugin, with five draft decisions.
+A route by which a Cowork-only user starts work by installing the plugin, with six draft decisions.
 Material for the open item "A Cowork-only user cannot start by installing the plugin" in `docs/open.md`. The drafts become numbered decisions in `docs/decisions/` once they are agreed,
 and this page is deleted with the item.
 
@@ -46,9 +46,8 @@ their identity, serve their lists to each task (D-245, a cloud session takes its
 of the user's machines) and keep the turns their tasks write, since a task keeps nothing past its sandbox
 (spike C). cogmer provides hosted machines (D-285, a user with no computer of their own has a machine
 hosted for them), and onboarding suggests one to such a user beside the choice of a computer of their own.
-Whether the hosted machine is the default is not decided. The hosted machine holds the shared key, certifies the passkey and renews the
-user's tasks, and deriving the master and shared keys from the passkey is set aside, since the passkey
-signs and carries no secret.
+Whether the hosted machine is the default is not decided. The user's passkey is their master key (Draft 6), and the hosted machine holds the shared key the
+passkey certifies and renews the user's tasks.
 
 1. The user installs the cogmer plugin on their account (D-290, cogmer reaches a Cowork cloud session as
    the marketplace plugin installed on the user's Claude account).
@@ -58,11 +57,11 @@ signs and carries no secret.
    and prints the link to the cloud page (D-302, a cloud session's room is read on a static page) with a
    token made for this task. `/cogmer:start` does the same with no room, for a user who would set up first.
 3. The first time, the page asks where the user's identity will live, suggesting a hosted machine:
-   - A hosted machine: the page registers the user's passkey, and the hosted machine is made with the
-     user's identity and certifies the passkey, in one step.
+   - A hosted machine: the page creates the user's passkey, which is the user's master key, and the
+     hosted machine is made with a shared key the passkey certifies, in one step (Draft 6).
    - A computer of their own: the page gives one line to paste into Claude Code or Codex on the computer,
-     which installs cogmer there and opens its machines page, where the identity is made and the passkey
-     registered through the page under `cogmer.ai` (spike F).
+     which installs cogmer there and opens its machines page, where the passkey is created through the page under
+     `cogmer.ai` (spike F) and certifies the computer's shared key (Draft 6).
 4. The user answers the passkey prompt, and the page certifies the task's session key by an assertion of
    the passkey (Draft 1) and sends the task the certificate and what the task needs to reach the user's
    machines. A user at their own computer can instead approve the task on its machines page, which
@@ -80,13 +79,14 @@ plugin for the user to upload once).
 Decision. A cloud task holds no secret of its user's when it starts. Its daemon makes a session key, and
 the cloud page, opened from the link the task prints, has the user's passkey sign the session key and an
 expiry three days later as the challenge of an ordinary WebAuthn assertion, which is the task's first
-certificate. The passkey's public key is certified once, when the passkey is registered, by a machine that
-holds the user's shared key, as a cloud key is certified today (D-246, a cloud environment is added from the
-machines page; D-216, a cloud session signs with a key of its own that the user's shared key vouches for).
+certificate. The passkey is the user's master passkey, whose public key is the user's identifier (Draft 6), or
+another passkey of the user's whose public key a machine that holds the user's shared key certifies, as a
+cloud key is certified (D-246, a cloud environment is added from the machines page; D-216, a cloud session
+signs with a key of its own that the user's shared key vouches for).
 A receiver checks the assertion's signature with that key, that its site is `cogmer.ai`, that the
 authenticator confirmed the user with Face ID, a fingerprint or a PIN, and that the page it came from is
 the cloud page, before it accepts the session key. The
-task sends the passkey's certificate with its events, as a machine sends its own (D-219, a user is a master
+task sends the certificate of a passkey other than the master passkey with its events, as a machine sends its own (D-219, a user is a master
 key that certifies machines through a shared key), and the page gives it to the task from its memory or
 from the directory of Draft 4, with the addresses of the user's machines. From then on the task renews its certificate every two
 to four hours from whichever of the user's durable machines it reaches, hosted or their own computer, each
@@ -116,8 +116,8 @@ certified, by the cloud key or by the passkey with the user's machines renewing,
 rejection of an expiring cloud key does not reach the second.
 
 A passkey is not a cloud key, and D-280 (a user has one cloud key at a time) does not count it. A user may
-register several, such as one in iCloud Keychain and one in Windows Hello, each certified on its own, and
-may keep one uploaded cloud key beside them. D-280 refuses a second cloud key because the plugin that
+have passkeys with other providers beside the master passkey, such as one in Windows Hello beside a master
+passkey in iCloud Keychain, each certified by the shared key, and may keep one uploaded cloud key beside them. D-280 refuses a second cloud key because the plugin that
 carries it reaches every cloud session of the account, so a second would hold the same authority as the
 first with no use. A passkey is in no session, signs only when its user answers a prompt, and certifies
 one task's key at a time, so a second passkey serves another device and not the same sessions twice.
@@ -142,11 +142,11 @@ new version of the records that every receiver has to read before any task uses 
 schemes are kept, never replaced). D-058 leaves the scheme's version outside the signature, which it says
 is harmless because every scheme is Ed25519 and none is weaker to be downgraded to, so a P-256 scheme
 beside them needs that reason restated. The prompt names the site and the account and never what is
-signed, and the page chooses the challenge, so the user cannot see which key they certify, as the open item
-on holding a hosted user's master key says of a passkey that signs a record's hash. A hostile script that
+signed, and the page chooses the challenge, so the user cannot see which key they certify, as Draft 6 says of the
+master passkey. A hostile script that
 the user answers can therefore certify a key of its own for one certificate at a time. A task that ends
-while paused loses the turns it held. A passkey that is lost takes the certified key with it, and the user
-registers a new one from a machine that holds the shared key.
+while paused loses the turns it held. A lost passkey other than the master passkey is replaced by a new one
+that a machine holding the shared key certifies, and losing the master passkey loses the identity (Draft 6).
 
 Revisit when a passkey's prompt can show the user what it signs, or users find tasks paused often enough
 that three days is too short.
@@ -211,9 +211,8 @@ Revisit when a host shows a hook's message to the person in a cloud task.
 ## Draft 3: the cloud page is served from a name under cogmer.ai
 
 Decision. The cloud page is served from a name under `cogmer.ai`, such as `view.cogmer.ai`, rather
-than from GitHub Pages, so that the passkey it uses belongs to `cogmer.ai` and serves the hosted machine's
-page and the self-hosted page under that domain, as the open item on holding a hosted user's master key
-proposes. A passkey belongs to one site for life and a page may name any parent of its own name as the
+than from GitHub Pages, so that the passkey it uses belongs to `cogmer.ai`, the site of the user's master passkey (Draft 6),
+and serves the hosted machine's page and the self-hosted machines page through that domain. A passkey belongs to one site for life and a page may name any parent of its own name as the
 site, so one passkey under `cogmer.ai` serves every page under it, and one made for
 `blue-rocket.github.io` would serve that site only.
 
@@ -237,7 +236,7 @@ which it reads from any task it is open on that has reached one of them, and giv
 its first certificate, so a task started away from the user's computer reaches the computer when it answers.
 Where the page holds none, on a new device, after its storage is cleared, or when an address has changed,
 it asks a directory that cogmer runs under `cogmer.ai`, which holds for each user a record of their
-machines' addresses with each machine's certificate chain and the passkey's certificate, signed by one of their machines and stored
+machines' addresses with each machine's certificate chain, signed by one of their machines and stored
 under the user's identifier. The directory takes a write only when the chain leads to that identifier, as
 any machine checks a record of the user's, and a reader checks the record the same way, so the directory
 can withhold a record or serve an old one and never send a reader to a machine that is not the user's. It
@@ -310,7 +309,7 @@ the directory of Draft 4 under the identifier the opener's passkey names, and as
 as "Join *room* from Alice?" for an invitation or "Add Ben to *room*?" for a reply. The confirmation is a
 passkey assertion whose challenge is a fresh value from the opener's machine with a hash of the link, and the
 page sends it through a relay to a port of the overlay on which the machine accepts only a link signed so,
-checked against the passkey the machine certified (Draft 1). It works from any device the passkey reaches,
+checked against the user's passkey, which is the user's identifier (Draft 6). It works from any device the passkey reaches,
 the opener's phone among them, while one of the opener's machines answers. An opener who has no passkey,
 at the computer that runs cogmer, is sent by the page to the machines page at `127.0.0.1` with the link
 after `#`, as the passkey challenge was in spike F, and confirms there with a button. Where neither works,
@@ -435,3 +434,98 @@ is rewritten to hold both. D-026 (there is no join token at all), D-048 (verific
 commit-then-reveal exchange that derives two words), D-051 (stranger pairing is not a supported case) and
 D-074 (a name means one master key, and a collision is where a new master key surfaces) stand, and the
 links rely on D-074 to send a changed key to the words.
+
+## Draft 6: a user's master key is a passkey, and there is no recovery phrase
+
+Decision. A user is one passkey for the site `cogmer.ai`, whose P-256 public key is the user's
+identifier, and no recovery phrase is made, shown or kept. The passkey signs what a master key signs, each
+shared-key certificate and each removal (D-219, a user is a master key that certifies machines through a
+shared key; D-220, a removal names the last event of a machine that counts), as the challenge of a
+WebAuthn assertion whose challenge is the record's hash, on a page under `cogmer.ai` to which the user's
+machine sends the user and which hands the signature back by navigation (spike F). A receiver accepts
+such a record when the P-256 signature verifies over the assertion, its challenge is the record's hash, its
+site is `cogmer.ai` and the authenticator confirmed the user. The authenticator makes the passkey's key
+and never lets it out, so no page, machine or operator ever holds the master key, which a phrase typed
+into a page a hosted machine's operator serves cannot promise, and a user keeps a passkey that their
+devices sync with no step of their own, where a user keeps a phrase poorly or not at all.
+
+The identity is made when the passkey is made: the page creates the passkey, the user's first machine,
+their own computer or a hosted one, makes shared key version 1, and the passkey signs its certificate in
+the same step. A machine is added from another of the user's machines with the shared key, as D-229 (a
+machine is added from another of the user's machines with the two-word check) has it, and needs no
+passkey. A new shared key, after a removal, needs the passkey.
+
+Each shared-key certificate names the hash of the certificate before it, and a shared key's version is
+the length of that chain, so no signer chooses it, and a page that has the passkey sign a certificate gets
+only the next link after a real one. A receiver that lacks a link fetches it, as a machine fetches the
+identity records an event names (the fetch route in `cmd/cogmer/propagation.go`), and accepts a
+certificate only when the chain leads back to the user's passkey. The longest chain wins, and between two
+of one length the lowest hash (D-224, a conflict between identity records goes to the higher level, then to
+a removal, then to the lowest hash), so a user who finds a shared key they did not make signs one on top
+of their own chain, and every machine under the other is suspended (D-234, a machine not certified under
+the current shared key is suspended until it is certified again). Each of the user's machines that receives a
+new shared key tells the user when it was certified, and one that does not hold it says that it is
+suspended until it is added again, and that a user who did not make the key signs a new one from a machine
+they trust. A record the passkey signs counts at once.
+
+Rejected.
+- *A master key derived from the passkey's PRF secret.* The key would be in the page's memory while it
+  signed, which on a hosted machine's page is the operator's.
+- *The recovery phrase as the master key, with the passkey certified under it for daily use.* Every user
+  would still be shown a phrase, keep it and type it at recovery, and a user keeps a phrase poorly or not at
+  all, and one typed into a page a hosted machine's operator serves is the operator's too.
+- *A phrase or a second passkey kept beside the passkey, able to sign a replacement.* A second key able to
+  sign for the user is a second master key, which a thief or a hostile page can use as well as the first,
+  and a phrase kept as a backup is kept as poorly as one kept as the master key.
+- *A phrase that recovers the passkey's key.* The authenticator makes the key, and WebAuthn gives a page
+  no way to supply, import or derive one, so no phrase can produce it.
+- *The operator holding the master key.* A hosted user then has no recourse against the operator.
+- *A version the signer chooses, below a bound.* A hostile page could have the passkey sign the highest
+  version the bound allows, which no later key could exceed.
+- *Refusing a version more than one above the highest a receiver holds.* A machine that was off, or a
+  colleague who joined later, misses versions, and cannot tell a gap from a jump.
+- *A machine that sees a current shared key it does not hold telling the user that none of their machines
+  made it.* After a new key every machine but the one that made it lacks it, no machine knows what the
+  others did, and a field naming the machine that made it says whatever the page that had it signed chose.
+- *A new shared key co-signed by a machine certified under the one before, so the notice can name the
+  machine that made it.* It costs a field and a signature, and a hosted machine's operator holds a machine
+  that could co-sign, so it helps against a hostile page, which the chain and the notice already undo.
+- *A record the passkey signs counting only after a delay, such as 48 hours.* A new shared key after a
+  removal would leave the user's other machines suspended for the delay, and colleagues' daemons would hold
+  pending records, while the chain and the notice let the user supersede a key they did not make within
+  minutes.
+
+Limits. Losing the passkey loses the identity: a user whose passkey is gone makes a new one, which is a
+new user that each colleague verifies again and admits to each room again. A synced passkey survives the
+loss of a device and not the loss of the account that syncs it. A device outside that account, such as a
+Linux laptop, uses the passkey only through the browser's offer to use a phone. Every identity depends on
+the registration of `cogmer.ai`: if the domain is lost, no passkey made under it signs again, so no user
+can make a new shared key or a removal, while every record already signed still verifies. The prompt names
+the site and the account and never what is signed, so a hostile page under `cogmer.ai` that the user
+answers can have the passkey sign a shared key of its choosing, which speaks for the user until the user
+signs a longer chain, and a turn an assistant read from it in that time is not unread. A P-256
+master key is a new version of the identity records that every receiver has to read before any user made
+this way takes part (D-058, signature schemes are kept, never replaced), and D-058's reason that an
+unsigned scheme version is harmless, since every scheme is Ed25519, is restated for a scheme beside them.
+
+Revisit when a passkey's prompt can show the user what it signs, or users lose passkeys often enough that
+a new identity is a common cost.
+
+D-219 (a user is a master key that certifies machines through a shared key), D-042 (peer identity is an
+Ed25519 key pair), D-238 (identity records are signed over length-prefixed fields and carried as JSON),
+D-224 (a conflict between identity records goes to the higher level, then to a removal, then to the lowest
+hash) and D-230 (a user identity is made in the daemon's page the first time the user needs one) are rewritten to
+name the passkey. D-223 (the recovery phrase is typed only into the daemon's browser page), D-237 (the
+recovery phrase is eighteen words of the PGP word list), D-254 (a recovery phrase is read with the list
+numbers before its words ignored) and D-255 (the page that shows the recovery phrase offers to copy it)
+are withdrawn. D-115 (a centralized component must trace to a disclosed tradeoff that benefits the person)
+needs the dependence on `cogmer.ai` recorded and disclosed. In Draft 1 the passkey that signs a task's key
+is the master passkey, which needs no certificate, and a passkey with another provider is certified by
+the shared key as Draft 1 has it.
+
+0.11.0 is published only once the passkey is the master key, so that no user ever holds a recovery
+phrase. No published release has one: v0.10.5, the latest on
+`Blue-Rocket/cogmer`, has no user identity, and the phrase came with it in 5d4f601, which only
+`release-0.11.0` and the staging candidates hold, used by the user alone. Shipping the phrase would leave
+every user who upgrades a phrase identity to move to a passkey, by a record the phrase signs, and the code
+that reads phrase-signed records kept for good (D-058, signature schemes are kept, never replaced).
