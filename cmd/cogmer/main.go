@@ -941,6 +941,20 @@ func resolvePeer(m *Membership, arg string) (string, error) {
 	for _, k := range matches {
 		fmt.Fprintf(&b, "\n  %s", k)
 	}
+	chosen := false
+	for _, k := range matches {
+		if m.Label(k) == arg {
+			chosen = true
+		}
+	}
+	if !chosen {
+		// Every key matches by the name derived from it, which nobody chose, so two of
+		// them is chance and not a substituted key (D-074, D-140).
+		b.WriteString("\n\nNobody chose that name: it is derived from each of these keys, and two keys")
+		b.WriteString("\nderive the same name about once in 8,280 pairs. Give one of them a name of its")
+		b.WriteString(commandText("\nown with /cogmer:peer-rename <key> <name>, or use its key."))
+		return "", errors.New(b.String())
+	}
 	b.WriteString("\n\nTwo keys under one name is what a substituted key looks like once it has been")
 	b.WriteString("\nrecorded. If you did not knowingly record both, ask the person which is theirs")
 	b.WriteString(commandText("\nover a channel you can recognize them on, and /cogmer:peer-forget the other."))
